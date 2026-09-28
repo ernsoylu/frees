@@ -29,7 +29,7 @@ export async function fetchRawDocument(source: string, signal: AbortSignal): Pro
     throw new Error('Could not download the raw file. Check the URL and connection; the host must allow cross-origin access (CORS).')
   })
   if (!response.ok) throw new Error(`The raw file server returned HTTP ${response.status}.`)
-  if (response.headers.get('content-type')?.includes('text/html')) {
+  if (response.headers.get('content-type')?.toLowerCase().includes('text/html')) {
     throw new Error('The URL returned a web page. Use the raw text file URL instead.')
   }
   const reader = response.body?.getReader()
@@ -133,7 +133,10 @@ export function extractSharedText(hash: string): string | null {
     return null
   }
   const payload = hash.slice(SHARE_PREFIX.length)
-  if (payload.length === 0) {
+  // buildShareUrl never emits a longer link, and LZ decompression can expand
+  // its input quadratically, so an oversized fragment is refused before it can
+  // stall the tab at boot.
+  if (payload.length === 0 || payload.length > MAX_SHARE_URL_CHARS) {
     return null
   }
   try {

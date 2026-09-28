@@ -66,4 +66,10 @@ describe('share-by-URL', () => {
     const truncated = new URL(url).hash.slice(0, 12)
     expect(extractSharedText(truncated)).toBeNull()
   })
+
+  it('refuses a payload longer than any link buildShareUrl emits', () => {
+    const payload = new URL(buildShareUrl('x = 1', BASE)!).hash.slice('#share='.length)
+    const oversized = '#share=' + payload + 'A'.repeat(MAX_SHARE_URL_CHARS)
+    expect(extractSharedText(oversized)).toBeNull()
+  })
 })

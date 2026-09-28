@@ -622,9 +622,9 @@ fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> 
         overrides: None,
     };
     let extra_tables = function_table_defs_of(&request.function_tables);
-    let (_deadline, _budget) = install_analysis_deadline(
+    let (_deadline, budget) = install_analysis_deadline(
         facade.stop_criteria.as_ref(),
-        MAX_TABLE_SECONDS,
+        MAX_MC_SECONDS,
         "Monte Carlo propagation exceeded its elapsed-time budget and was stopped.".to_string(),
     );
     let settings = settings_of(&facade);
@@ -665,7 +665,7 @@ fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> 
         &base.uncertainties,
         n as usize,
         seed,
-        || (now_ms() - started) / 1000.0 > MAX_MC_SECONDS,
+        || (now_ms() - started) / 1000.0 > budget,
         &extra_tables,
         Some(&base.values),
         Some(&sampling),

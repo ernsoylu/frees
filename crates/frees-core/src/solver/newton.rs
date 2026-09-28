@@ -1596,19 +1596,25 @@ where
     jtj.fill(0.0);
     jtr.fill(0.0);
     let mut any_row = false;
-    for i in 0..n {
+    for (row, &r) in jacobian.iter().zip(residual) {
         // Rows stuck in an invalid region (non-finite residual or derivative)
         // carry no direction — leave them out of the normal equations.
-        if !residual[i].is_finite() || !jacobian[i].iter().all(|v| v.is_finite()) {
+        if !r.is_finite() || !row.iter().all(|v| v.is_finite()) {
             continue;
         }
         any_row = true;
-        let row = &jacobian[i];
-        for j in 0..n {
-            jtr[j] += row[j] * residual[i];
-            let j_offset = j * n;
-            for k in 0..n {
-                jtj[j_offset + k] += row[j] * row[k];
+        // A zero `row[j]` contributes only ±0.0 to `jtr[j]` and to row `j` of
+        // `JᵀJ`. The accumulators start at +0.0 and can never become −0.0
+        // (that needs −0.0 + −0.0), so adding ±0.0 leaves them bit-for-bit
+        // unchanged — skipping those terms is exact, and turns the O(n³)
+        // assembly into O(nnz·n) on the sparse Jacobians of large blocks.
+        for (j, &rj) in row.iter().enumerate() {
+            if rj == 0.0 {
+                continue;
+            }
+            jtr[j] += rj * r;
+            for (out, &rk) in jtj[j * n..(j + 1) * n].iter_mut().zip(row) {
+                *out += rj * rk;
             }
         }
     }

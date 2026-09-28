@@ -25,6 +25,7 @@ it.each(['', 'not a url', 'javascript:alert(1)', 'file:///tmp/model', 'http://ex
 it.each([
   [new Response('missing', { status: 404 }), /HTTP 404/],
   [new Response('<html>login</html>', { headers: { 'content-type': 'text/html' } }), /raw text file/],
+  [new Response('<html>login</html>', { headers: { 'content-type': 'Text/HTML; charset=utf-8' } }), /raw text file/],
   [new Response('  \n'), /empty/],
   [new Response('x'.repeat(2 * 1024 * 1024 + 1)), /2 MB/],
 ])('rejects unusable responses', async (response, error) => {

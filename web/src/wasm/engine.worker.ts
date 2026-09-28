@@ -115,6 +115,11 @@ async function prepareSource(source: string): Promise<string> {
         if (!response.ok) throw new Error(`property table fetch failed for ${fluid}: HTTP ${response.status}`)
         const result = JSON.parse(install_property_table(new Uint8Array(await response.arrayBuffer()))) as { error?: string }
         if (result.error) throw new Error(result.error)
+      }).catch((error: unknown) => {
+        // Cache successes only: a transient failure must not fail every later
+        // solve in this worker until the page is reloaded.
+        fetchedTables.delete(key)
+        throw error
       }))
     }
     await fetchedTables.get(key)
@@ -125,7 +130,12 @@ async function prepareSource(source: string): Promise<string> {
     const names = [...source.matchAll(/\b([A-Z][A-Za-z0-9_]*)\s+[A-Za-z_]\w*\s*\(/g)].map(match => match[1])
     for (const name of [...new Set(names)]) {
       if (!fetchedComponents.has(name)) {
-        fetchedComponents.set(name, fetch(new URL(`${name}.frees`, componentBase).href).then(async response => response.ok ? response.text() : null))
+        fetchedComponents.set(name, fetch(new URL(`${name}.frees`, componentBase).href)
+          .then(async response => response.ok ? response.text() : null)
+          .catch((error: unknown) => {
+            fetchedComponents.delete(name)
+            throw error
+          }))
       }
       const library = await fetchedComponents.get(name)
       if (library && !prepared.includes(library)) prepared = `${library}\n${prepared}`
@@ -200,6 +210,20 @@ const ready = init({
   throw err
 })
 
+/** Methods whose first argument is document text, which must see the same
+ *  prepared source (live currency rates, fetched libraries) as a plain solve —
+ *  otherwise a Monte Carlo or optimization run in a fresh worker would price
+ *  `[USD]` at the built-in fallback rates while the solve used today's. */
+const DOCUMENT_METHODS: ReadonlySet<EngineRequest['method']> = new Set([
+  'solve',
+  'solveTable',
+  'check',
+  'monteCarlo',
+  'sensitivity',
+  'optimize',
+  'optimizeMulti',
+])
+
 ctx.onmessage = (event: MessageEvent<EngineRequest>) => {
   void handle(event)
 }
@@ -208,16 +232,20 @@ const handle = async (event: MessageEvent<EngineRequest>) => {
   const { id, method, args } = event.data
   try {
     await ready
-    inFlightId = method === 'solve' || method === 'solveTable' ? id : null
     let result: string
     let matrix: Float64Array | null = null
     let odeBuffers: Float64Array[] | null = null
     const transferables: Transferable[] = []
 
-    if (method === 'solve' || method === 'solveTable' || method === 'check') {
+    if (DOCUMENT_METHODS.has(method)) {
       args[0] = await prepareSource(args[0] ?? '')
     }
 
+    // Claimed only after the last await: another request can run to completion
+    // while this one is suspended, and its `finally` would clear an earlier
+    // claim, silencing this solve's progress. From here to `finally` the
+    // handler is synchronous, so the claim cannot be disturbed.
+    inFlightId = method === 'solve' || method === 'solveTable' ? id : null
     switch (method) {
       case 'solve': {
         const out = solve_zerocopy(args[0] ?? '', args[1] ?? '')
