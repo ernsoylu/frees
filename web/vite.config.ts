@@ -4,6 +4,10 @@ import { visualizer } from 'rollup-plugin-visualizer'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json'
 
+/** The raw wasm size budget in KiB. CI's size gate checks that this equals
+ *  `WASM_BUDGET_KB` in .github/workflows/ci.yml, so the two cannot drift. */
+const WASM_BUDGET_KIB = 5120
+
 // Inject the runtime build-info.js script into the production HTML.
 // This classic (non-module) script sets window.__BUILD_COMMIT__ and is written
 // at container start by the nginx entrypoint (see docker-entrypoint.d/).
@@ -79,13 +83,12 @@ function pwaPlugin() {
       // (stripLegacyKatexFontsPlugin) and no other dependency ships pre-woff2
       // fonts worth caching.
       globPatterns: ['**/*.{js,css,html,wasm,svg,png,woff2,json}'],
-      // The ~3 MB wasm engine and Plotly are above workbox's 2 MiB default;
-      // the point of the PWA is that they work offline too. 4 MiB (D10 —
-      // down from the 8 MiB the removed 5.1 MB Univer chunk forced): the
-      // wasm module is the largest precached file and a new chunk past this
-      // cap silently falls out of the offline set, which the offline e2e
-      // gate would then catch.
-      maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      // The ~4 MB wasm engine and Plotly are above workbox's 2 MiB default;
+      // the point of the PWA is that they work offline too. The wasm module
+      // is the largest precached file, so the cap IS the wasm size budget: a
+      // module the CI size gate accepts must never silently fall out of the
+      // offline set (the old fixed 4 MiB sat below the 5,120 KiB gate).
+      maximumFileSizeToCacheInBytes: WASM_BUDGET_KIB * 1024,
       navigateFallback: 'index.html',
       // /api/ is the (optional, unwired) remote-fallback adapter's namespace —
       // a navigation there must fail honestly, not serve the app shell.

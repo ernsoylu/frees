@@ -145,12 +145,36 @@ function openDb(): Promise<IDBDatabase | null> {
   return dbPromise
 }
 
+/**
+ * Resolves once `tx` has committed. A request's success only means the write
+ * was accepted into its transaction, which can still abort afterwards; a save
+ * must not be reported (or broadcast) as durable before this settles. Call it
+ * when the transaction is created, so the handlers are attached before the
+ * `complete` event can fire.
+ */
+function committed(tx: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve()
+    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'))
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB transaction failed'))
+  })
+}
+
 /** Promise wrapper for a single IDB request. */
 function await_<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'))
   })
+}
+
+/** One write to the autosave store, resolved only after it commits. */
+async function writeAutosaveStore(db: IDBDatabase, write: (store: IDBObjectStore) => IDBRequest): Promise<void> {
+  const tx = db.transaction(AUTOSAVE_STORE, 'readwrite')
+  const done = committed(tx)
+  done.catch(() => {}) // observed below; this only keeps an early throw from leaving it unhandled
+  await await_(write(tx.objectStore(AUTOSAVE_STORE)))
+  await done
 }
 
 function normalizeName(name: string): string {
@@ -247,7 +271,12 @@ export async function saveStoredProject(
   if (!safe) return { status: 'unavailable' }
   const key = normalizeName(name)
   try {
-    const store = db.transaction(PROJECTS_STORE, 'readwrite').objectStore(PROJECTS_STORE)
+    const tx = db.transaction(PROJECTS_STORE, 'readwrite')
+    const done = committed(tx)
+    // A conflict return abandons `tx` with nothing written; its settlement is
+    // of no interest then.
+    done.catch(() => {})
+    const store = tx.objectStore(PROJECTS_STORE)
     const current = await await_(store.get(key) as IDBRequest<ProjectRow | undefined>)
     if (current && expected !== 'overwrite') {
       const currentRev = current.rev ?? LEGACY_REV
@@ -267,6 +296,7 @@ export async function saveStoredProject(
       project: safe,
     }
     await await_(store.put(row))
+    await done
     postLibraryChange({ kind: 'saved', name: row.name })
     return { status: 'saved', meta: metaOf(row) }
   } catch {
@@ -294,7 +324,11 @@ export async function deleteStoredProject(name: string): Promise<void> {
   const db = await openDb()
   if (!db) return
   try {
-    await await_(db.transaction(PROJECTS_STORE, 'readwrite').objectStore(PROJECTS_STORE).delete(normalizeName(name)))
+    const tx = db.transaction(PROJECTS_STORE, 'readwrite')
+    const done = committed(tx)
+    done.catch(() => {})
+    await await_(tx.objectStore(PROJECTS_STORE).delete(normalizeName(name)))
+    await done
     postLibraryChange({ kind: 'deleted', name: normalizeName(name) })
   } catch {
     // Deleting an absent row is not an error worth surfacing.
@@ -314,6 +348,8 @@ export async function renameStoredProject(from: string, to: string): Promise<boo
   if (source === target) return true
   try {
     const tx = db.transaction(PROJECTS_STORE, 'readwrite')
+    const done = committed(tx)
+    done.catch(() => {})
     const store = tx.objectStore(PROJECTS_STORE)
     const row = await await_(store.get(source) as IDBRequest<ProjectRow | undefined>)
     if (!row) return false
@@ -321,6 +357,7 @@ export async function renameStoredProject(from: string, to: string): Promise<boo
     if (existing) return false
     await await_(store.put({ ...row, name: target }))
     await await_(store.delete(source))
+    await done
     postLibraryChange({ kind: 'renamed', name: source, to: target })
     return true
   } catch {
@@ -346,7 +383,7 @@ export async function writeAutosaveMirror(project: FreesProject): Promise<void> 
   const safe = normalizeStoredProject(project)
   if (!safe) return
   try {
-    await await_(db.transaction(AUTOSAVE_STORE, 'readwrite').objectStore(AUTOSAVE_STORE).put(safe, AUTOSAVE_KEY))
+    await writeAutosaveStore(db, (store) => store.put(safe, AUTOSAVE_KEY))
   } catch {
     // Best-effort.
   }
@@ -369,7 +406,7 @@ export async function clearAutosaveMirror(): Promise<void> {
   const db = await openDb()
   if (!db) return
   try {
-    await await_(db.transaction(AUTOSAVE_STORE, 'readwrite').objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_KEY))
+    await writeAutosaveStore(db, (store) => store.delete(AUTOSAVE_KEY))
   } catch {
     // Best-effort.
   }
@@ -389,14 +426,18 @@ export interface StoredFileLink {
   /** The project display name at link time (the handle's name keeps the extension). */
   name: string
   handle: FileSystemFileHandle
+  /** Pairs the handle with the autosaved document it belongs to
+   *  (`saveProjectLocal`'s `fileLinkId`). Absent on links written before the
+   *  pairing existed, which are therefore never re-attached. */
+  id?: string
 }
 
-export async function writeFileLink(name: string, handle: FileSystemFileHandle): Promise<void> {
+export async function writeFileLink(name: string, handle: FileSystemFileHandle, id: string): Promise<void> {
   const db = await openDb()
   if (!db) return
   try {
-    const link: StoredFileLink = { name, handle }
-    await await_(db.transaction(AUTOSAVE_STORE, 'readwrite').objectStore(AUTOSAVE_STORE).put(link, FILE_LINK_KEY))
+    const link: StoredFileLink = { name, handle, id }
+    await writeAutosaveStore(db, (store) => store.put(link, FILE_LINK_KEY))
   } catch {
     // Best-effort: a handle that will not clone leaves this session's
     // in-memory handle working and the next session on the picker.
@@ -411,11 +452,11 @@ export async function readFileLink(): Promise<StoredFileLink | null> {
       db.transaction(AUTOSAVE_STORE, 'readonly').objectStore(AUTOSAVE_STORE).get(FILE_LINK_KEY),
     )
     if (raw == null || typeof raw !== 'object') return null
-    const { name, handle } = raw as Partial<StoredFileLink>
+    const { name, handle, id } = raw as Partial<StoredFileLink>
     // Storage is outside the trust boundary: require the shape we wrote. The
     // handle's own permission state is the app's problem at Save time.
     if (typeof name !== 'string' || handle == null || typeof handle !== 'object') return null
-    return { name, handle }
+    return typeof id === 'string' ? { name, handle, id } : { name, handle }
   } catch {
     return null
   }
@@ -425,7 +466,7 @@ export async function clearFileLink(): Promise<void> {
   const db = await openDb()
   if (!db) return
   try {
-    await await_(db.transaction(AUTOSAVE_STORE, 'readwrite').objectStore(AUTOSAVE_STORE).delete(FILE_LINK_KEY))
+    await writeAutosaveStore(db, (store) => store.delete(FILE_LINK_KEY))
   } catch {
     // Best-effort.
   }

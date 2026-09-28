@@ -117,6 +117,9 @@ export function deriveProjectTitle(source: string, text?: string): string {
  *  that truncates silently. */
 export const MAX_SHARE_URL_CHARS = 16000
 
+/** Largest document a share link may open — the raw-download size limit. */
+export const MAX_SHARED_TEXT_CHARS = 2 * 1024 * 1024
+
 /** Builds a share URL for the given document text, or null when the
  *  compressed link would exceed {@link MAX_SHARE_URL_CHARS}. */
 export function buildShareUrl(text: string, base?: string): string | null {
@@ -141,7 +144,9 @@ export function extractSharedText(hash: string): string | null {
   }
   try {
     const text = decompressFromEncodedURIComponent(payload)
-    return text === null || text.length === 0 ? null : text
+    // The encoded bound above caps the decoding work; this caps what reaches
+    // the editor, at the size a raw-document download may have.
+    return text === null || text.length === 0 || text.length > MAX_SHARED_TEXT_CHARS ? null : text
   } catch {
     return null
   }

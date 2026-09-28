@@ -31,6 +31,18 @@ describe('printable report', () => {
     expect(html).not.toContain('<sensible>')
   })
 
+  it('names the overridden inputs the solution was computed with', () => {
+    const plain = buildReportHtml('p', 'P_in = 350 [kPa]', RESPONSE)
+    expect(plain).not.toContain('overridden outside the document')
+    const html = buildReportHtml('p', 'P_in = 350 [kPa]', {
+      ...RESPONSE,
+      appliedOverrides: ['P_in = 999 [Pa]', 'x = <b>'],
+    })
+    expect(html).toContain('Inputs overridden outside the document')
+    expect(html).toContain('P_in = 999 [Pa]')
+    expect(html).toContain('x = &lt;b&gt;')
+  })
+
   it('formats extremes in exponential and omits zero uncertainty', () => {
     const html = buildReportHtml('p', 'x = 1', RESPONSE)
     expect(html).toContain('1.000000e-9')

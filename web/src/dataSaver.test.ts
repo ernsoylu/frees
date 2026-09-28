@@ -80,9 +80,12 @@ describe('decidePrecache', () => {
   })
 })
 
+const SCOPE = 'https://host/frees/'
+
 /** A registration double whose unregister() outcome is scripted. */
-function registration(result: boolean | Error) {
+function registration(result: boolean | Error, scope = SCOPE) {
   return {
+    scope,
     unregister: vi.fn(async () => {
       if (result instanceof Error) throw result
       return result
@@ -91,14 +94,35 @@ function registration(result: boolean | Error) {
 }
 
 describe('dropPrecache', () => {
+  it("leaves another app's worker and caches on the same origin alone", async () => {
+    const ours = registration(true)
+    const theirs = registration(true, 'https://host/other-app/')
+    const deleted: string[] = []
+    const result = await dropPrecache({
+      scope: SCOPE,
+      serviceWorker: { getRegistrations: async () => [ours, theirs] },
+      caches: {
+        keys: async () => [`workbox-precache-v2-${SCOPE}`, 'workbox-precache-v2-https://host/other-app/', 'other-app-offline'],
+        delete: async (key: string) => {
+          deleted.push(key)
+          return true
+        },
+      },
+    })
+    expect(result).toEqual({ unregistered: 1, cachesDeleted: 1 })
+    expect(theirs.unregister).not.toHaveBeenCalled()
+    expect(deleted).toEqual([`workbox-precache-v2-${SCOPE}`])
+  })
+
   it('unregisters every worker and deletes every cache', async () => {
     const a = registration(true)
     const b = registration(true)
     const deleted: string[] = []
     const result = await dropPrecache({
+      scope: SCOPE,
       serviceWorker: { getRegistrations: async () => [a, b] },
       caches: {
-        keys: async () => ['frees-precache-v2-http://x/', 'frees-runtime'],
+        keys: async () => [`workbox-precache-v2-${SCOPE}`, `frees-runtime-${SCOPE}`],
         delete: async (key: string) => {
           deleted.push(key)
           return true
@@ -106,18 +130,19 @@ describe('dropPrecache', () => {
       },
     })
     expect(result).toEqual({ unregistered: 2, cachesDeleted: 2 })
-    expect(deleted).toEqual(['frees-precache-v2-http://x/', 'frees-runtime'])
+    expect(deleted).toEqual([`workbox-precache-v2-${SCOPE}`, `frees-runtime-${SCOPE}`])
   })
 
   it('keeps going when one registration and one cache refuse', async () => {
     const ok = registration(true)
     const angry = registration(new Error('nope'))
     const result = await dropPrecache({
+      scope: SCOPE,
       serviceWorker: { getRegistrations: async () => [angry, ok] },
       caches: {
-        keys: async () => ['a', 'b'],
+        keys: async () => [`a-${SCOPE}`, `b-${SCOPE}`],
         delete: async (key: string) => {
-          if (key === 'a') throw new Error('locked')
+          if (key.startsWith('a-')) throw new Error('locked')
           return true
         },
       },
@@ -127,18 +152,20 @@ describe('dropPrecache', () => {
 
   it('counts a registration that reports nothing was removed as not removed', async () => {
     const result = await dropPrecache({
+      scope: SCOPE,
       serviceWorker: { getRegistrations: async () => [registration(false)] },
-      caches: { keys: async () => ['a'], delete: async () => false },
+      caches: { keys: async () => [`a-${SCOPE}`], delete: async () => false },
     })
     expect(result).toEqual({ unregistered: 0, cachesDeleted: 0 })
   })
 
   it('is a no-op where neither surface exists', async () => {
-    expect(await dropPrecache({})).toEqual({ unregistered: 0, cachesDeleted: 0 })
+    expect(await dropPrecache({ scope: SCOPE })).toEqual({ unregistered: 0, cachesDeleted: 0 })
   })
 
   it('survives getRegistrations() and caches.keys() rejecting', async () => {
     const result = await dropPrecache({
+      scope: SCOPE,
       serviceWorker: {
         getRegistrations: async () => {
           throw new DOMException('partitioned', 'SecurityError')

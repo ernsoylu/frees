@@ -380,7 +380,7 @@ connect(LINE.out, RET.in)
 dP = SUP.out.P - RET.in.P     { probe: frictional pressure drop, Pa }
 \`\`\`
 
-Solve (F2) and read \`dP\` in the Solution panel. Three things happened:
+Solve (F2) and read \`dP\` in the Variable Explorer. Three things happened:
 
 1. **Instantiation** — \`Pipe LINE(...)\` stamped a copy of the \`Pipe\` template, filling in its parameters. Every parameter is named (\`L=50\`), and unit annotations work exactly as in plain equations.
 2. **Connection** — each \`connect\` statement tied two ports into a node: pressures equalize, mass is conserved, enthalpy is carried through.
@@ -1144,7 +1144,7 @@ R = 0.287 [kJ/kg-K]
 P * Vol = m * R * T      { frees solves this for m }
 \`\`\`
 
-You never told frees to "compute \`m\`". It read the five equations, saw that \`m\` was the only unknown, and rearranged the ideal-gas relation to find it. The result appears in the **Solution** panel, in SI units, with any propagated uncertainty.
+You never told frees to "compute \`m\`". It read the five equations, saw that \`m\` was the only unknown, and rearranged the ideal-gas relation to find it. The result appears in the **Variable Explorer**, in SI units, with any propagated uncertainty.
 
 ## Any variable can be the unknown
 Swap one line — change \`T = 25 [C]\` to \`m = 0.3 [kg]\` — and the *same* equation now solves for temperature instead. You describe the physics; frees decides the calculation order. That is the whole idea, and the next page explains why it matters.
@@ -1154,7 +1154,7 @@ Every model follows the same rhythm:
 
 1. **Describe** the system — algebraic, matrix, or differential equations, in any order.
 2. **Check (F4)** — validates syntax and the degrees of freedom (see step 3).
-3. **Solve (F2)** — runs the Newton–Raphson solver; results land in the Solution panel.
+3. **Solve (F2)** — runs the Newton–Raphson solver; results land in the Variable Explorer.
 4. **Sweep** — optionally build a **Parametric Table** (\`Ctrl + T\`) to vary an input and plot the response.
 
 [Related: gs-declarative, shortcuts, variables]`,
@@ -1196,7 +1196,7 @@ A system is solvable only when the number of equations equals the number of unkn
 ### Guesses make nonlinear solves converge
 For nonlinear or transcendental equations, the Newton solver iterates from a **guess**. Open **Variable Info** (\`Ctrl + I\`) to set a starting guess and physical bounds (e.g. \`T ≥ 0\`, \`0 ≤ x ≤ 1\`). A good guess is usually the difference between convergence and divergence.
 
-> **Tip:** If a solve fails to converge, the cause is almost always a missing guess or a wrong unit annotation — not a bug. Check the Solution panel's diagnostics and the Variable Info guesses first.
+> **Tip:** If a solve fails to converge, start with the solve diagnostics and the Variable Info guesses and bounds — a missing guess or a wrong unit annotation is a common cause. A failure can also come from the model itself: an ill-conditioned or singular system, several roots with the guess nearer the wrong one, or a property call outside its valid range. The diagnostics name the block that failed, which narrows it down.
 
 [Related: gs-plots, units, variables]`,
   "gs-plots": `# 4. See It: Tables & Plots
@@ -1679,7 +1679,7 @@ UncertaintyOf(T) = 2.0 [K]
 { Propagated uncertainty in density }
 unc_rho = UncertaintyOf(rho)
 \`\`\`
-Only independent inputs should carry a declared uncertainty; assigning one to a computed output that you also query is redundant. Uncertainties are shown alongside each value in the Solution panel.
+Only independent inputs should carry a declared uncertainty; assigning one to a computed output that you also query is redundant. Uncertainties are shown alongside each value in the Variable Explorer.
 
 [Related: variables, units, api]`,
   "units": `# Units & Dimensional Consistency
@@ -2862,7 +2862,7 @@ Expect a COP a little above 3 for these conditions.
 
 ## Stage 3 — how well do you know it?
 
-Attach the instrument specs directly in code. \`UncertaintyOf(X) = value\` declares the measurement uncertainty of an input; frees then propagates all of them through the whole system (finite-difference Jacobian, root-sum-square) and every computed variable in the Solution panel gains a \`± band\`:
+Attach the instrument specs directly in code. \`UncertaintyOf(X) = value\` declares the measurement uncertainty of an input; frees then propagates all of them through the whole system (finite-difference Jacobian, root-sum-square) and every computed variable in the Variable Explorer gains a \`± band\`:
 
 \`\`\`
 UncertaintyOf(T_evap) = 0.5
@@ -3014,12 +3014,12 @@ P_shaft  = P_hyd / eta_pump
 [Related: digitizer-fit, tables-code, optimization]`,
   "verification": `# Verification Suite
 
-Engineers should not have to take a solver's word for it. Every case on this page ships in the repository as a test fixture (\`backend/core/src/test/resources/validation/\`) and runs as part of the backend test suite **on every commit** — the values below are enforced by CI, not curated by hand. Each fixture's header states its **basis**: the closed-form derivation, exact arithmetic, or public-standard table value the expectation rests on, so every number can be audited without trusting frees itself. Property-model comparisons are deliberately excluded so no expectation depends on the property backend.
+Engineers should not have to take a solver's word for it. Every case on this page ships in the repository as a test fixture (\`fixtures/corpus/validation-*.frees\`) and runs as part of the engine test suite **on every commit** — the values below are enforced by CI, not curated by hand. Two independent checks run on each case: the \`validation_suite\` test holds the solved values to the fixture's own \`EXPECT\` directives, and the golden parity replay pins the engine's complete output so any drift is caught. Each fixture's header states its **basis**: the closed-form derivation, exact arithmetic, or public-standard table value the expectation rests on, so every number can be audited without trusting frees itself. Property-model comparisons are deliberately excluded so no expectation depends on the property backend.
 
 Reproduce locally:
 
 \`\`\`text
-cd backend && ./gradlew :core:test --tests "com.frees.backend.core.ValidationSuiteTest"
+cargo test -p frees-core --test validation_suite
 \`\`\`
 
 ## Nonlinear algebra
@@ -3103,7 +3103,7 @@ cd backend && ./gradlew :core:test --tests "com.frees.backend.core.ValidationSui
 
 ## Adding a case
 
-A validation case is one \`.frees\` file: the problem, a \`// BASIS:\` header explaining how the expected value is derived *independently of frees*, and one \`// EXPECT <var> = <value> tol <abs>\` directive per asserted quantity (\`// EXPECT-UNC\` for a propagated uncertainty). Drop the file in \`backend/core/src/test/resources/validation/\` and the suite picks it up automatically — a case with no directive fails, because an unasserted case verifies nothing.
+A validation case is one \`.frees\` file: the problem, a \`// BASIS:\` header explaining how the expected value is derived *independently of frees*, and one \`// EXPECT <var> = <value> tol <abs>\` directive per asserted quantity (\`// EXPECT-UNC\` for a propagated uncertainty). Save it as \`fixtures/corpus/validation-<area>-<case>.frees\` and the suite picks it up automatically — a case with no directive fails, because an unasserted case verifies nothing.
 
 [Related: started, gs-units-check]`,
 };

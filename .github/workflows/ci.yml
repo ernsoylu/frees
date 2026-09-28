@@ -317,6 +317,12 @@ jobs:
           echo "| budget (raw) | ${WASM_BUDGET_KB} KiB |" >> "$GITHUB_STEP_SUMMARY"
           echo "| headroom | ${headroom} KiB |" >> "$GITHUB_STEP_SUMMARY"
           echo "| lazy chunk trigger | ${WASM_LAZY_CHUNK_TRIGGER_KB} KiB |" >> "$GITHUB_STEP_SUMMARY"
+          # The PWA precache cap derives from the same budget; a module this
+          # gate accepts must also stay inside the offline set.
+          if ! grep -q "^const WASM_BUDGET_KIB = ${WASM_BUDGET_KB}\$" web/vite.config.ts; then
+            echo "::error::web/vite.config.ts WASM_BUDGET_KIB must equal WASM_BUDGET_KB (${WASM_BUDGET_KB})"
+            exit 1
+          fi
           if (( kb > WASM_BUDGET_KB )); then
             echo "::error::wasm bundle ${kb} KiB exceeds the ${WASM_BUDGET_KB} KiB budget"
             echo "Raise WASM_BUDGET_KB deliberately, with a reason — do not bump it to go green."

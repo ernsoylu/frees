@@ -58,10 +58,14 @@ function buildSensitivityFigure(
 export default function SensitivityModal({
   opened,
   onClose,
+  onStop,
   onRun,
 }: Readonly<{
   opened: boolean
   onClose: () => void
+  /** Stops a running job — closing the dialog mid-run must not leave it
+   *  occupying the engine unseen, queueing every later solve behind it. */
+  onStop: () => void
   onRun: (params: Omit<SensitivityParams, 'text'>) => Promise<SensitivityResult>
 }>) {
   const [method, setMethod] = useState<'sobol' | 'morris'>('sobol')
@@ -220,7 +224,10 @@ export default function SensitivityModal({
   return (
     <Modal
       opened={opened}
-      onClose={onClose}
+      onClose={() => {
+        if (running) onStop()
+        onClose()
+      }}
       title="Global Sensitivity Analysis"
       size="xl"
       centered

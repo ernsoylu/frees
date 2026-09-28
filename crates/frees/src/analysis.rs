@@ -20,6 +20,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use wasm_bindgen::prelude::*;
 
+use frees_core::analysis::montecarlo::apply_overrides;
 use frees_core::analysis::parametric::{run_sweep, RowJob, RowOutcome};
 use frees_core::components::cyclepath;
 use frees_core::components::metadata::VariableRow;
@@ -519,6 +520,10 @@ struct MonteCarloRequest {
     design: Option<String>,
     /// Phase 4.3: extra output quantiles to report, each in `(0, 1)`.
     quantiles: Option<Vec<f64>>,
+    /// The terminal and slider overrides the workspace solves with — the
+    /// `SolveRequest.overrides` lines — so the run propagates uncertainty
+    /// around the parameter point on screen, not the bare document's.
+    overrides: Option<Vec<String>>,
 }
 
 /// Run a Monte Carlo uncertainty propagation. `request_json` is the
@@ -598,6 +603,10 @@ fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> 
     if source.trim().is_empty() {
         return Err("The document is empty.".to_string());
     }
+    // Before anything parses the document, exactly as `solve` does, so the
+    // base solve and every sample see the same effective inputs.
+    let overridden = apply_overrides(source, request.overrides.as_deref().unwrap_or_default());
+    let source = overridden.as_str();
     let n = request.samples.unwrap_or(MC_DEFAULT_SAMPLES as i64);
     if n < 2 || n > MAX_MC_SAMPLES as i64 {
         return Err(bad_sample_count_message(n));
@@ -616,9 +625,8 @@ fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> 
         fill_missing: None,
         function_tables: None,
         find_all_solutions: None,
-        // No analysis request carries the terminal's override lines; these
-        // routines build their own (`analysis::montecarlo`, `paramfit`) and
-        // apply them per candidate.
+        // The request's override lines are already in `source` (applied
+        // above); the sampler adds its own per candidate on top.
         overrides: None,
     };
     let extra_tables = function_table_defs_of(&request.function_tables);
@@ -815,6 +823,8 @@ struct SensitivityRequest {
     /// Bootstrap resamples for the Sobol' index standard errors; 0 disables.
     bootstrap: Option<i64>,
     seed: Option<i64>,
+    /// As `MonteCarloRequest::overrides`.
+    overrides: Option<Vec<String>>,
 }
 
 /// Global sensitivity analysis. `request_json` is a `SensitivityRequest`;
@@ -850,6 +860,8 @@ fn sensitivity_inner(source: &str, request_json: &str) -> Result<Value, String> 
     if source.trim().is_empty() {
         return Err("The document is empty.".to_string());
     }
+    let overridden = apply_overrides(source, request.overrides.as_deref().unwrap_or_default());
+    let source = overridden.as_str();
     if let Err(failure) = frees_core::parse_document(source) {
         return Err(format!("Syntax error: {}", failure.to_string_message()));
     }
@@ -864,9 +876,9 @@ fn sensitivity_inner(source: &str, request_json: &str) -> Result<Value, String> 
         overrides: None,
     };
     let extra_tables = function_table_defs_of(&request.function_tables);
-    let (_deadline, _budget) = install_analysis_deadline(
+    let (_deadline, budget) = install_analysis_deadline(
         facade.stop_criteria.as_ref(),
-        MAX_TABLE_SECONDS,
+        MAX_SENSITIVITY_SECONDS,
         "Sensitivity analysis exceeded its elapsed-time budget and was stopped.".to_string(),
     );
     let settings = settings_of(&facade);
@@ -909,7 +921,7 @@ fn sensitivity_inner(source: &str, request_json: &str) -> Result<Value, String> 
 
     let seed = request.seed.unwrap_or(MC_DEFAULT_SEED);
     let started = now_ms();
-    let expired = || (now_ms() - started) / 1000.0 > MAX_SENSITIVITY_SECONDS;
+    let expired = || (now_ms() - started) / 1000.0 > budget;
     let method = request
         .method
         .as_deref()

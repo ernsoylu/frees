@@ -29,7 +29,7 @@ connect(LINE.out, RET.in)
 dP = SUP.out.P - RET.in.P     { probe: frictional pressure drop, Pa }
 ```
 
-Solve (F2) and read `dP` in the Solution panel. Three things happened:
+Solve (F2) and read `dP` in the Variable Explorer. Three things happened:
 
 1. **Instantiation** — `Pipe LINE(...)` stamped a copy of the `Pipe` template, filling in its parameters. Every parameter is named (`L=50`), and unit annotations work exactly as in plain equations.
 2. **Connection** — each `connect` statement tied two ports into a node: pressures equalize, mass is conserved, enthalpy is carried through.

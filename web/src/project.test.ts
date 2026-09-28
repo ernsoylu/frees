@@ -16,7 +16,9 @@ import { DEFAULT_STOP_CRITERIA } from './api'
 import {
   buildProject,
   loadProjectLocal,
+  loadProjectFileLinkId,
   projectOnlyNotes,
+  QUARANTINE_KEY,
   readProjectFile,
   saveProjectLocal,
   type AnalyzerSpec,
@@ -141,6 +143,61 @@ describe('project v3 schematic slice', () => {
       const p = await readProjectFile(asFile({ ...buildProject(slices), schematic: bad }))
       expect(p.schematic).toEqual({})
     }
+  })
+})
+
+describe('project shape validation', () => {
+  it('rejects a plot the workspace cannot render, naming the field', async () => {
+    await expect(readProjectFile(asFile({ version: 3, text: 'x=1', plots: [{}] }))).rejects.toThrow(
+      /plots\[0\]\.kind/,
+    )
+    await expect(
+      readProjectFile(asFile({ version: 3, text: 'x=1', plots: [{ kind: 'xy', id: 'p1' }] })),
+    ).rejects.toThrow(/plots\[0\]\.name/)
+    await expect(
+      readProjectFile(asFile({ version: 3, plots: [{ kind: 'xy', id: 'p', name: 'P', xy: { yVars: 'y' } }] })),
+    ).rejects.toThrow(/plots\[0\]\.xy\.yVars/)
+  })
+
+  it('fills a partial plot from its kind defaults', async () => {
+    const p = await readProjectFile(asFile({ version: 3, plots: [{ kind: 'xy', id: 'p1', name: 'Plot 1' }] }))
+    expect(p.plots[0]).toMatchObject({ id: 'p1', name: 'Plot 1', kind: 'xy', xy: { yVars: [] } })
+    expect(p.plots[0].format.grid).toBe(true)
+  })
+
+  it('rejects malformed sliders, drafts and inert slices', async () => {
+    const base = buildProject(slices)
+    await expect(readProjectFile(asFile({ ...base, sliders: [{ name: 'x', value: 'hi' }] }))).rejects.toThrow(
+      /sliders\[0\]\.value/,
+    )
+    await expect(readProjectFile(asFile({ ...base, varDrafts: { x: { guess: 2 } } }))).rejects.toThrow(
+      /varDrafts\.x\.guess/,
+    )
+    await expect(readProjectFile(asFile({ ...base, analyzers: ['nope'] }))).rejects.toThrow(/analyzers\[0\]/)
+    await expect(readProjectFile(asFile({ ...base, text: 42 }))).rejects.toThrow(/text/)
+  })
+
+  it('gives a slider saved without a range the range pinning it would give', async () => {
+    const p = await readProjectFile(asFile({ ...buildProject(slices), sliders: [{ name: 'x', value: 10 }] }))
+    expect(p.sliders).toEqual([{ name: 'x', value: 10, units: '', min: 5, max: 15 }])
+  })
+
+  it('quarantines an unusable autosave instead of booting into it', () => {
+    const bad = { version: 3, text: 'x=1', plots: [{}] }
+    localStorage.setItem('frees.project', JSON.stringify(bad))
+    expect(loadProjectLocal()).toBeNull()
+    expect(localStorage.getItem('frees.project')).toBeNull()
+    expect(JSON.parse(localStorage.getItem(QUARANTINE_KEY)!)).toEqual(bad)
+  })
+})
+
+describe('autosave file-link pairing', () => {
+  it('stores the link id beside the document and clears it with the document', () => {
+    saveProjectLocal(buildProject(slices), 'link-a')
+    expect(loadProjectFileLinkId()).toBe('link-a')
+    // Another tab autosaving an unlinked document takes the pairing with it.
+    saveProjectLocal(buildProject({ ...slices, text: 'y = 2' }))
+    expect(loadProjectFileLinkId()).toBeNull()
   })
 })
 

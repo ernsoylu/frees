@@ -387,6 +387,9 @@ interface Props {
   unitSystem: UnitSystem
   getFunctionTables: () => FunctionTableDto[]
   onClose: () => void
+  /** Stops a running job — closing the dialog mid-run must not leave it
+   *  occupying the engine unseen, queueing every later solve behind it. */
+  onStop: () => void
   onApply?: (nextText: string) => void
 }
 
@@ -404,6 +407,7 @@ export default function MinMaxModal({
   unitSystem,
   getFunctionTables,
   onClose,
+  onStop,
   onApply,
 }: Readonly<Props>) {
   const [mode, setMode] = useState<Mode>('single')
@@ -592,7 +596,16 @@ export default function MinMaxModal({
   )
 
   return (
-    <Modal opened onClose={onClose} title="Min/Max — Optimization" centered size="xl">
+    <Modal
+      opened
+      onClose={() => {
+        if (running) onStop()
+        onClose()
+      }}
+      title="Min/Max — Optimization"
+      centered
+      size="xl"
+    >
       <Stack gap="sm">
         <SegmentedControl
           value={mode}

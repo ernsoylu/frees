@@ -13,8 +13,8 @@ import { writeToHandle } from './saveTarget'
 import type { StopCriteria, UnitSystem } from './api'
 import { DEFAULT_DRAFT, type VariableDraft } from './VariableInfoModal'
 import type { TableSpec } from './tables'
-import type { PlotSpec } from './plots/types'
-import type { PinnedSlider } from './sliders'
+import { newPlotSpec, type PlotKind, type PlotSpec } from './plots/types'
+import { sliderRange, type PinnedSlider } from './sliders'
 import type { SchematicOffsets } from './schematic/layout'
 
 // v2 (Data Analyzer Phase 2): + `analyzers` slice — layout, signal
@@ -238,35 +238,211 @@ function sanitizeProject(project: FreesProject): FreesProject | null {
   }
 }
 
+/** A project payload whose shape App cannot consume; the message names the field. */
+export class ProjectFormatError extends Error {}
+
+const PLOT_KINDS: readonly PlotKind[] = ['xy', 'property', 'psychro', 'bode', 'nyquist', 'nichols', 'polezero', 'rootlocus']
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function invalid(path: string, expected: string): never {
+  throw new ProjectFormatError(`Not a valid .frees project file: ${path} must be ${expected}.`)
+}
+
+function checkRecord(value: unknown, path: string): Record<string, unknown> {
+  return isRecord(value) ? value : invalid(path, 'an object')
+}
+
+function checkArray(value: unknown, path: string): unknown[] {
+  return Array.isArray(value) ? value : invalid(path, 'an array')
+}
+
+function checkString(value: unknown, path: string): string {
+  return typeof value === 'string' ? value : invalid(path, 'a string')
+}
+
+function checkFinite(value: unknown, path: string): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : invalid(path, 'a finite number')
+}
+
+function checkStrings(value: unknown, path: string): string[] {
+  return checkArray(value, path).map((s, i) => checkString(s, `${path}[${i}]`))
+}
+
+/** Overlay a stored sub-config on the defaults, requiring it to be an object. */
+function section<T extends object>(value: unknown, defaults: T, path: string): T {
+  return value === undefined ? defaults : { ...defaults, ...checkRecord(value, path) }
+}
+
+function checkPlot(raw: unknown, path: string): PlotSpec {
+  const p = checkRecord(raw, path)
+  const kind = p.kind as PlotKind
+  if (!PLOT_KINDS.includes(kind)) invalid(`${path}.kind`, `one of ${PLOT_KINDS.join(', ')}`)
+  const defaults = newPlotSpec(kind, checkString(p.name, `${path}.name`))
+  const xy = section(p.xy, defaults.xy, `${path}.xy`)
+  checkStrings(xy.yVars, `${path}.xy.yVars`)
+  // Optional fields: absent and null both mean "not set".
+  if (xy.y2Vars != null) checkStrings(xy.y2Vars, `${path}.xy.y2Vars`)
+  if (xy.xVar != null) checkString(xy.xVar, `${path}.xy.xVar`)
+  const format = section(p.format, defaults.format, `${path}.format`)
+  if (format.annotations != null) {
+    checkArray(format.annotations, `${path}.format.annotations`).forEach((a, i) =>
+      checkRecord(a, `${path}.format.annotations[${i}]`))
+  }
+  if (format.lineColors != null) checkRecord(format.lineColors, `${path}.format.lineColors`)
+  if (format.traceStyles != null) checkRecord(format.traceStyles, `${path}.format.traceStyles`)
+  if (p.source != null) {
+    const source = checkRecord(p.source, `${path}.source`)
+    if (source.kind === 'table') {
+      checkString(source.tableId, `${path}.source.tableId`)
+      if (source.data !== 'inputs' && source.data !== 'solved') invalid(`${path}.source.data`, '"inputs" or "solved"')
+    } else if (source.kind !== 'arrays') {
+      invalid(`${path}.source.kind`, '"arrays" or "table"')
+    }
+  }
+  if (p.codeDiagnostics != null) checkStrings(p.codeDiagnostics, `${path}.codeDiagnostics`)
+  return {
+    ...(p as unknown as PlotSpec),
+    id: checkString(p.id, `${path}.id`),
+    kind,
+    xy,
+    property: section(p.property, defaults.property, `${path}.property`),
+    psychro: section(p.psychro, defaults.psychro, `${path}.psychro`),
+    control: section(p.control, defaults.control, `${path}.control`),
+    format,
+  }
+}
+
+function checkSlider(raw: unknown, path: string): PinnedSlider {
+  const s = checkRecord(raw, path)
+  const value = checkFinite(s.value, `${path}.value`)
+  // A pin saved without a range (or unit) gets what pinning it now would give;
+  // only a field of the wrong type is refused.
+  const range = s.min == null || s.max == null ? sliderRange(value) : null
+  return {
+    name: checkString(s.name, `${path}.name`),
+    value,
+    units: s.units == null ? '' : checkString(s.units, `${path}.units`),
+    min: range ? range.min : checkFinite(s.min, `${path}.min`),
+    max: range ? range.max : checkFinite(s.max, `${path}.max`),
+  }
+}
+
+const DRAFT_TEXT_FIELDS = ['guess', 'lower', 'upper', 'units', 'uncertainty', 'relativeUncertainty'] as const
+
+function checkDraft(raw: unknown, path: string): VariableDraft {
+  const draft = { ...DEFAULT_DRAFT, ...checkRecord(raw, path) } as VariableDraft
+  for (const field of DRAFT_TEXT_FIELDS) checkString(draft[field], `${path}.${field}`)
+  if (draft.uncertaintyType !== 'absolute' && draft.uncertaintyType !== 'relative') {
+    invalid(`${path}.uncertaintyType`, '"absolute" or "relative"')
+  }
+  return draft
+}
+
+function mapRecord<T>(value: unknown, path: string, check: (v: unknown, path: string) => T): Record<string, T> {
+  const out: Record<string, T> = {}
+  for (const [key, v] of Object.entries(checkRecord(value, path))) out[key] = check(v, `${path}.${key}`)
+  return out
+}
+
+/**
+ * Migrate and validate a project from outside the app — an opened file or
+ * browser storage — against the shapes App consumes, throwing a
+ * {@link ProjectFormatError} that names the offending field. Validation runs
+ * completely before anything is applied, so a malformed file is refused with
+ * the current workspace intact instead of breaking rendering (or, once
+ * autosaved, every later boot). Inert legacy slices stay opaque but must at
+ * least be arrays of objects.
+ */
+export function parseProject(raw: unknown): FreesProject {
+  const p = migrate(checkRecord(raw, 'the project') as unknown as FreesProject)
+  const checked: FreesProject = {
+    ...p,
+    text: checkString(p.text, 'text'),
+    varDrafts: mapRecord(p.varDrafts, 'varDrafts', checkDraft),
+    stateUnitIds: mapRecord(p.stateUnitIds, 'stateUnitIds', checkString),
+    plots: checkArray(p.plots, 'plots').map((plot, i) => checkPlot(plot, `plots[${i}]`)),
+    sliders: checkArray(p.sliders, 'sliders').map((s, i) => checkSlider(s, `sliders[${i}]`)),
+    spreadsheets: checkArray(p.spreadsheets, 'spreadsheets').map((s, i) =>
+      checkRecord(s, `spreadsheets[${i}]`) as unknown as SpreadsheetSpec),
+    analyzers: checkArray(p.analyzers, 'analyzers').map((a, i) =>
+      checkRecord(a, `analyzers[${i}]`) as unknown as AnalyzerSpec),
+  }
+  if (p.stopCriteria !== undefined) checkRecord(p.stopCriteria, 'stopCriteria')
+  return sanitizeProject(checked)!
+}
+
 /**
  * Normalize a project read back from any browser storage (localStorage,
  * IndexedDB) to the current version and schema. Storage is outside the app's
  * trust boundary regardless of which API it hides behind, so reads go through
- * the same migrate-then-sanitize path as writes.
+ * the same validation as an opened file; a record that fails it is treated as
+ * absent rather than restored into a workspace that cannot render it.
  */
 export function normalizeStoredProject(raw: unknown): FreesProject | null {
-  if (raw == null || typeof raw !== 'object') return null
-  return sanitizeProject(migrate(raw as FreesProject))
+  try {
+    return parseProject(raw)
+  } catch {
+    return null
+  }
 }
 
-export function saveProjectLocal(project: FreesProject) {
+/** The id of the file link (projectStore) the autosaved document belongs to. */
+const FILE_LINK_ID_KEY = 'frees.project.fileLinkId'
+
+/**
+ * Autosave the workspace. `fileLinkId` names the persisted file handle this
+ * document belongs to, if any; it is written beside the document so that a
+ * reload attaches a handle only to the document it was linked with. Every tab
+ * of the origin shares this key and the handle store, so without the pairing
+ * one tab's text could be recovered under another tab's file.
+ */
+export function saveProjectLocal(project: FreesProject, fileLinkId: string | null = null) {
   const safe = sanitizeProject(project)
   if (safe == null) return
   try {
     localStorage.setItem(PROJECT_KEY, JSON.stringify(safe))
+    if (fileLinkId) localStorage.setItem(FILE_LINK_ID_KEY, fileLinkId)
+    else localStorage.removeItem(FILE_LINK_ID_KEY)
   } catch {
     // Autosave is best-effort; ignore quota errors.
   }
 }
 
+/** The file link id saved with the autosaved document, or null. */
+export function loadProjectFileLinkId(): string | null {
+  try {
+    return localStorage.getItem(FILE_LINK_ID_KEY)
+  } catch {
+    return null
+  }
+}
+
+/** Where an autosave that fails validation is moved, so the next autosave
+ *  cannot overwrite the only copy of whatever it held. */
+export const QUARANTINE_KEY = 'frees.project.quarantine'
+
 export function loadProjectLocal(): FreesProject | null {
   const raw = readJson(PROJECT_KEY)
-  return raw ? migrate(raw as FreesProject) : null
+  if (raw == null) return null
+  const project = normalizeStoredProject(raw)
+  if (project === null) {
+    try {
+      localStorage.setItem(QUARANTINE_KEY, JSON.stringify(raw))
+      localStorage.removeItem(PROJECT_KEY)
+    } catch {
+      // Best-effort: booting without the unusable record is what matters.
+    }
+  }
+  return project
 }
 
 export function clearProjectLocal() {
   try {
     localStorage.removeItem(PROJECT_KEY)
+    localStorage.removeItem(FILE_LINK_ID_KEY)
   } catch {
     // ignore
   }
@@ -444,5 +620,5 @@ export async function readProjectFile(file: File): Promise<FreesProject> {
       `This project was saved by a newer version of frees (v${(parsed as FreesProject).version}).`,
     )
   }
-  return migrate(parsed as FreesProject)
+  return parseProject(parsed)
 }

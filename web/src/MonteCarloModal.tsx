@@ -29,10 +29,14 @@ function fmt(v: number): string {
 export default function MonteCarloModal({
   opened,
   onClose,
+  onStop,
   onRun,
 }: Readonly<{
   opened: boolean
   onClose: () => void
+  /** Stops a running job — closing the dialog mid-run must not leave it
+   *  occupying the engine unseen, queueing every later solve behind it. */
+  onStop: () => void
   onRun: (samples: number, seed: number, design: MonteCarloDesign) => Promise<MonteCarloResult>
 }>) {
   const [samples, setSamples] = useState<number>(200)
@@ -86,7 +90,16 @@ export default function MonteCarloModal({
   const okSamples = result ? result.samples.length - result.failedSamples : 0
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Monte Carlo Uncertainty" size="xl" centered>
+    <Modal
+      opened={opened}
+      onClose={() => {
+        if (running) onStop()
+        onClose()
+      }}
+      title="Monte Carlo Uncertainty"
+      size="xl"
+      centered
+    >
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
           Samples every variable with a declared uncertainty (Variable Information window) around

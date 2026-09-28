@@ -193,7 +193,7 @@ UncertaintyOf(T) = 2.0 [K]
 { Propagated uncertainty in density }
 unc_rho = UncertaintyOf(rho)
 ```
-Only independent inputs should carry a declared uncertainty; assigning one to a computed output that you also query is redundant. Uncertainties are shown alongside each value in the Solution panel.
+Only independent inputs should carry a declared uncertainty; assigning one to a computed output that you also query is redundant. Uncertainties are shown alongside each value in the Variable Explorer.
 
 [Related: variables, units, api]
 

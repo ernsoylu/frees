@@ -381,7 +381,7 @@ Expect a COP a little above 3 for these conditions.
 
 ## Stage 3 — how well do you know it?
 
-Attach the instrument specs directly in code. `UncertaintyOf(X) = value` declares the measurement uncertainty of an input; frees then propagates all of them through the whole system (finite-difference Jacobian, root-sum-square) and every computed variable in the Solution panel gains a `± band`:
+Attach the instrument specs directly in code. `UncertaintyOf(X) = value` declares the measurement uncertainty of an input; frees then propagates all of them through the whole system (finite-difference Jacobian, root-sum-square) and every computed variable in the Variable Explorer gains a `± band`:
 
 ```
 UncertaintyOf(T_evap) = 0.5

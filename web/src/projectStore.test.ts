@@ -4,8 +4,8 @@
 // test, so these are behavioural tests of the storage contract, not mocks of
 // it. Each test gets a fresh database via a fresh IDBFactory.
 
-import { beforeEach, describe, expect, it } from 'vitest'
-import { IDBFactory } from 'fake-indexeddb'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { IDBFactory, IDBObjectStore as FakeObjectStore } from 'fake-indexeddb'
 import { buildProject } from './project'
 import type { FreesProject, ProjectSlices } from './project'
 import {
@@ -18,6 +18,8 @@ import {
   loadStoredProjectRev,
   mirrorIsNewer,
   readAutosaveMirror,
+  readFileLink,
+  writeFileLink,
   renameStoredProject,
   saveStoredProject,
   subscribeLibraryChanges,
@@ -238,6 +240,62 @@ describe('revision-checked saves', () => {
     } as unknown as IDBFactory
     __resetProjectStoreForTests()
     expect((await saveStoredProject('x', project(), 'new')).status).toBe('unavailable')
+  })
+})
+
+describe('commit acknowledgement', () => {
+  it('reports no save (and broadcasts nothing) when the transaction aborts after the write succeeded', async () => {
+    const events: LibraryChange[] = []
+    const unsubscribe = typeof BroadcastChannel !== 'undefined'
+      ? subscribeLibraryChanges((change) => events.push(change))
+      : () => {}
+    // Abort from inside the put's own success dispatch: the request succeeded,
+    // the transaction never commits.
+    const originalPut = FakeObjectStore.prototype.put
+    const put = vi.spyOn(FakeObjectStore.prototype, 'put').mockImplementation(function (
+      this: IDBObjectStore,
+      ...args: Parameters<IDBObjectStore['put']>
+    ) {
+      const request = originalPut.apply(this, args)
+      request.addEventListener('success', () => this.transaction.abort())
+      return request
+    })
+    try {
+      const outcome = await saveStoredProject('aborted', project('a = 1'), 'overwrite')
+      expect(outcome.status).toBe('unavailable')
+      expect(await loadStoredProject('aborted')).toBeNull()
+      await new Promise((resolve) => setTimeout(resolve, 25))
+      expect(events).toEqual([])
+    } finally {
+      put.mockRestore()
+      unsubscribe()
+    }
+  })
+})
+
+describe('the file link', () => {
+  // A plain object stands in for a FileSystemFileHandle: both structured-clone.
+  const handle = { kind: 'file', name: 'pump.frees' } as unknown as FileSystemFileHandle
+
+  it('round-trips the id that pairs it with an autosaved document', async () => {
+    await writeFileLink('pump', handle, 'link-1')
+    expect(await readFileLink()).toEqual({ name: 'pump', handle, id: 'link-1' })
+  })
+
+  it('reads a pre-pairing link without an id, so the app never re-attaches it', async () => {
+    await writeFileLink('pump', handle, 'x')
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      const r = indexedDB.open('frees')
+      r.onsuccess = () => resolve(r.result)
+    })
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction('autosave', 'readwrite')
+      tx.objectStore('autosave').put({ name: 'pump', handle }, 'fileLink')
+      tx.oncomplete = () => resolve()
+    })
+    db.close()
+    __resetProjectStoreForTests()
+    expect((await readFileLink())?.id).toBeUndefined()
   })
 })
 

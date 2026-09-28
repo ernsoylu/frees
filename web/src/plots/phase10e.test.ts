@@ -94,6 +94,22 @@ describe('Phase 10E: Plot performance, dense marker suppression, and decimation'
     expect(decimated.y).toContain(null)
   })
 
+  it('emits one gap marker per run of missing samples, never joining segments', () => {
+    // 20,000 samples: two 5,000-point curves separated by a 10,000-sample gap.
+    const x: (number | null)[] = []
+    const y: (number | null)[] = []
+    for (let i = 0; i < 20_000; i++) {
+      const missing = i >= 5_000 && i < 15_000
+      x.push(missing ? null : i)
+      y.push(missing ? null : Math.sin(i * 0.01))
+    }
+    const decimated = decimateMonotonicSeries(x, y, undefined, 2000)
+    expect(decimated.y.filter((v) => v === null)).toHaveLength(1)
+    expect(decimated.x.length).toBeLessThanOrEqual(2001)
+    expect(decimated.x).toContain(4999)
+    expect(decimated.x).toContain(15_000)
+  })
+
   it('suppresses markers on dense line series (> 300 points) unless explicitly configured', () => {
     const N = 500
     const denseSeries: XYSeries[] = [

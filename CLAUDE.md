@@ -27,9 +27,9 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Worker Pool**: Up to 4 Web Workers executing independent parametric sweep chunks in parallel with weighted progress, preserving deterministic row ordering.
 - **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-09-12 after D12: 3,981.7 KiB raw / 1,791.0 KiB gzipped, 1,138.3 KiB headroom). Raised from 4,096 on 2026-09-10, owner-authorized, to link every fluid the alias table names; the `ci.yml` header carries the full ledger and records that the lazy-chunk pay-down is now overdue.
 - **Test Suite Health**:
-  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,378 tests pass across all workspace crates.
+  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,380 tests pass across all workspace crates.
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 61 test files, 704 tests passing (needs the built `web/src/wasm/pkg`).
+  - `vitest run` (Node 22): 61 test files, 718 tests passing (needs the built `web/src/wasm/pkg`).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
   - `npm run check-docs`: 723/723 documentable symbols have a reference page. Every family is reconciled against the Rust registries (`eval::INTRINSICS`, `procedures::EXPANDED_CALL_TARGETS`, `parser::expand::MATRIX_FUNCTIONS`, `props::propfun`, `props::solids`, `repl::CAS_NAMES`) and the builder **exits non-zero** rather than reporting coverage from a cached list. It no longer reads the Java reference repo at all; the 100% it used to print from that fallback was stale, not earned.

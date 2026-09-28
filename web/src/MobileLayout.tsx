@@ -15,6 +15,7 @@ import {
   IconFilePlus,
   IconHelp,
   IconBook,
+  IconPlayerStopFilled,
   IconTargetArrow,
   IconWorld,
 } from '@tabler/icons-react'
@@ -105,6 +106,8 @@ interface MobileLayoutProps {
   solving: boolean
   onCheck: () => void
   onSolve: () => Promise<'workspace' | 'table' | void> | void
+  /** Stop whatever check or solve is running — the desktop Stop/Escape path. */
+  onStop: () => void
   checkingTableId: string | null
   solvingTableId: string | null
   onCheckTable: (id: string) => void
@@ -133,6 +136,7 @@ export default function MobileLayout({
   solving,
   onCheck,
   onSolve,
+  onStop,
   checkingTableId,
   solvingTableId,
   onCheckTable,
@@ -220,6 +224,9 @@ export default function MobileLayout({
   const isTableActive = activeTab === 'table' && selectedTableId !== null
   const isChecking = isTableActive && selectedTableId ? checkingTableId === selectedTableId : checking
   const isSolving = isTableActive && selectedTableId ? solvingTableId === selectedTableId : solving
+  // Any job at all, not only the active tab's: a sweep started from the Tables
+  // tab must stay stoppable after switching back to the equations.
+  const busy = solving || checking || solvingTableId !== null || checkingTableId !== null
 
   return (
     <Flex direction="column" h={shellHeight} style={{ overflow: 'hidden' }}>
@@ -283,6 +290,11 @@ export default function MobileLayout({
             >
               <IconTargetArrow size={18} />
             </ActionIcon>
+            {busy && (
+              <ActionIcon variant="filled" color="red" onClick={onStop} title="Stop" aria-label="Stop">
+                <IconPlayerStopFilled size={18} />
+              </ActionIcon>
+            )}
             <Menu position="bottom-end">
               <Menu.Target>
                 <ActionIcon variant="subtle" color="gray" aria-label="Menu" title="Menu">

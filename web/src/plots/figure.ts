@@ -174,7 +174,13 @@ function decimateSegment(
 /**
  * Render-only min-max decimation for dense monotonic series.
  * Preserves exact local extrema (peaks and valleys), segment endpoints, and
- * gaps (null values), while drastically reducing SVG path complexity.
+ * gaps, while drastically reducing SVG path complexity. A run of invalid
+ * samples is emitted as ONE null — a single null already breaks the line, so
+ * the rest were pure render cost — and separate segments are never joined.
+ *
+ * `maxPoints` is a soft target: every segment keeps its endpoints, so data
+ * fragmented into more segments than the budget still costs one point per
+ * segment plus one gap marker between them.
  */
 export function decimateMonotonicSeries(
   x: readonly (number | string | null)[],
@@ -194,6 +200,7 @@ export function decimateMonotonicSeries(
   const len = x.length
 
   while (segStart < len) {
+    const gapStart = segStart
     while (
       segStart < len &&
       (x[segStart] === null ||
@@ -201,10 +208,12 @@ export function decimateMonotonicSeries(
         Number.isNaN(x[segStart]) ||
         Number.isNaN(y[segStart]))
     ) {
+      segStart++
+    }
+    if (segStart > gapStart) {
       outX.push(null)
       outY.push(null)
-      if (outIds) outIds.push(sampleIds?.[segStart])
-      segStart++
+      if (outIds) outIds.push(sampleIds?.[gapStart])
     }
     if (segStart >= len) break
 

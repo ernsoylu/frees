@@ -1,12 +1,12 @@
 [Topic: verification]
 # Verification Suite
 
-Engineers should not have to take a solver's word for it. Every case on this page ships in the repository as a test fixture (`backend/core/src/test/resources/validation/`) and runs as part of the backend test suite **on every commit** — the values below are enforced by CI, not curated by hand. Each fixture's header states its **basis**: the closed-form derivation, exact arithmetic, or public-standard table value the expectation rests on, so every number can be audited without trusting frees itself. Property-model comparisons are deliberately excluded so no expectation depends on the property backend.
+Engineers should not have to take a solver's word for it. Every case on this page ships in the repository as a test fixture (`fixtures/corpus/validation-*.frees`) and runs as part of the engine test suite **on every commit** — the values below are enforced by CI, not curated by hand. Two independent checks run on each case: the `validation_suite` test holds the solved values to the fixture's own `EXPECT` directives, and the golden parity replay pins the engine's complete output so any drift is caught. Each fixture's header states its **basis**: the closed-form derivation, exact arithmetic, or public-standard table value the expectation rests on, so every number can be audited without trusting frees itself. Property-model comparisons are deliberately excluded so no expectation depends on the property backend.
 
 Reproduce locally:
 
 ```text
-cd backend && ./gradlew :core:test --tests "com.frees.backend.core.ValidationSuiteTest"
+cargo test -p frees-core --test validation_suite
 ```
 
 ## Nonlinear algebra
@@ -90,6 +90,6 @@ cd backend && ./gradlew :core:test --tests "com.frees.backend.core.ValidationSui
 
 ## Adding a case
 
-A validation case is one `.frees` file: the problem, a `// BASIS:` header explaining how the expected value is derived *independently of frees*, and one `// EXPECT <var> = <value> tol <abs>` directive per asserted quantity (`// EXPECT-UNC` for a propagated uncertainty). Drop the file in `backend/core/src/test/resources/validation/` and the suite picks it up automatically — a case with no directive fails, because an unasserted case verifies nothing.
+A validation case is one `.frees` file: the problem, a `// BASIS:` header explaining how the expected value is derived *independently of frees*, and one `// EXPECT <var> = <value> tol <abs>` directive per asserted quantity (`// EXPECT-UNC` for a propagated uncertainty). Save it as `fixtures/corpus/validation-<area>-<case>.frees` and the suite picks it up automatically — a case with no directive fails, because an unasserted case verifies nothing.
 
 [Related: started, gs-units-check]

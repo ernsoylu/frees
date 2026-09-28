@@ -42,6 +42,9 @@ export function buildReportHtml(
         `<td class="num mono">${esc(unc)}</td><td class="mono unit">${esc(v.units || '')}</td></tr>`
     })
     .join('\n')
+  const overrides = (response.appliedOverrides ?? [])
+    .map((line) => `<li class="mono">${esc(line)}</li>`)
+    .join('\n')
   const warnings = (response.unitWarnings ?? [])
     .map((w) => `<li>${esc(w)}</li>`)
     .join('\n')
@@ -82,6 +85,7 @@ ${statsLine ? `<div class="meta">${esc(statsLine)}</div>` : ''}
 
 <h2>Document</h2>
 <pre class="doc mono">${esc(documentText)}</pre>
+${overrides ? `\n<h2>Inputs overridden outside the document</h2>\n<p class="meta">The solution below was computed with these terminal and slider values in place of the document's own assignments.</p>\n<ul>\n${overrides}\n</ul>\n` : ''}
 
 <h2>Solution</h2>
 <table>

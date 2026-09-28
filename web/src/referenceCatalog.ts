@@ -5219,7 +5219,7 @@ hi.out.p = 900000
     guides: [],
     body: `Reusable acausal **ac-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -5307,7 +5307,7 @@ c1.p = 1000000
     guides: [],
     body: `Reusable acausal **ac-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -5392,7 +5392,7 @@ air.out.p = 101325
     guides: [],
     body: `Reusable acausal **ac-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -5816,7 +5816,7 @@ b.p.i = -9.6
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -5945,7 +5945,7 @@ final_state = 0.7988888889
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -6385,7 +6385,7 @@ V_final = 9.93262053
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -6585,7 +6585,7 @@ cs.p.i = -2
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -6888,7 +6888,7 @@ d.p.i = 4.545454545
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7024,7 +7024,7 @@ bt.p.i = 10
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7215,7 +7215,7 @@ fc.heat.qdot = -360.8040755
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7382,7 +7382,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7676,7 +7676,7 @@ il = 2 [A]
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7823,7 +7823,7 @@ bus.p.i = -13.88888889
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7967,7 +7967,7 @@ bus.p.i = -13.88888889
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8137,7 +8137,7 @@ load.a.tau = 3.74025974
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8310,7 +8310,7 @@ b.p.i = -5.714285714
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8438,7 +8438,7 @@ bt.p.i = 10
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8519,7 +8519,7 @@ i = 0 [A]
     guides: [],
     body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8807,7 +8807,7 @@ a2.p = 300000
     guides: [],
     body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8955,7 +8955,7 @@ b.in.p = 8000000
     guides: [],
     body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -9036,7 +9036,7 @@ g2.p = 580000
     guides: [],
     body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -9928,7 +9928,7 @@ fs.in.p = 100000
     guides: [],
     body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -10338,7 +10338,7 @@ line.mu = 0.0008930444195
     guides: [],
     body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -10593,7 +10593,7 @@ pm.head = 20
     guides: [],
     body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -11332,7 +11332,7 @@ snk.in.p = 100000
     guides: [],
     body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -11656,7 +11656,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -11978,7 +11978,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12071,7 +12071,7 @@ t_face2 = 286.0346154 [K]
     guides: [],
     body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12150,7 +12150,7 @@ T_end = 436.8458677
     guides: [],
     body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12357,7 +12357,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12699,7 +12699,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12819,7 +12819,7 @@ a2.port.qdot = -50
     guides: [],
     body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12910,7 +12910,7 @@ cva.a.qdot = 723.75
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12996,7 +12996,7 @@ c2.h = 0
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13077,7 +13077,7 @@ acc.port.p = 15000000
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13307,7 +13307,7 @@ cyl.in.p = 10000000
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13401,7 +13401,7 @@ cyl.a.p = 8000000
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13545,7 +13545,7 @@ cvf.in.h = 0
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13690,7 +13690,7 @@ cvf.in.h = 0
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13856,7 +13856,7 @@ ori.in.p = 10000000
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13943,7 +13943,7 @@ o2.mdot = -0.1021763182
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14181,7 +14181,7 @@ dis.port.p = 0
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14328,7 +14328,7 @@ cvf.in.h = 0
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14624,7 +14624,7 @@ ori.in.p = 10000000
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14826,7 +14826,7 @@ c.out.mdot = 0.1955760722
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14907,7 +14907,7 @@ sup.out.h = 0
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14994,7 +14994,7 @@ odn.in.p = 5100000
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15163,7 +15163,7 @@ rv.in.p = 4000000
     guides: [],
     body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15252,7 +15252,7 @@ sup.out.h = 0
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15338,7 +15338,7 @@ ct.q = 62481.82234
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15419,7 +15419,7 @@ g2.mdot = 0.378531707
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15516,7 +15516,7 @@ hg.port.w = 0
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15601,7 +15601,7 @@ b1.p = 200000
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15815,7 +15815,7 @@ cp.in.p = 200000
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -16274,7 +16274,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -16575,7 +16575,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -16662,7 +16662,7 @@ l1.mdot = 0.3
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -16802,7 +16802,7 @@ ck1.in.p = 100000
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17065,7 +17065,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17150,7 +17150,7 @@ o1.p = 101325
     guides: [],
     body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17245,7 +17245,7 @@ l1.mdot = 0.2
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17382,7 +17382,7 @@ bd.b.tau = -25
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17520,7 +17520,7 @@ bd.b.tau = -25
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17609,7 +17609,7 @@ final_state = 10
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17770,7 +17770,7 @@ cl.b.tau = -30
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17852,7 +17852,7 @@ cl.b.tau = -40
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -18015,7 +18015,7 @@ d1.b.f = 25
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -18340,7 +18340,7 @@ d.b.tau = -12
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -18624,7 +18624,7 @@ gr.port.tau = -20
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -18917,7 +18917,7 @@ g2.port.tau = 12
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19201,7 +19201,7 @@ d.b.tau = -10
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19511,7 +19511,7 @@ v_start = 0
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19592,7 +19592,7 @@ fs.b.f = 50
     guides: [],
     body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19689,7 +19689,7 @@ g2.port.tau = 90
     guides: [`tut-coil`],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19784,7 +19784,7 @@ oa.out.mdot = 1
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19972,7 +19972,7 @@ c.in.h = 60848.84667
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -20323,7 +20323,7 @@ c.proc_out.mdot = 1
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -20597,7 +20597,7 @@ c.g_lim = 0.9999999979
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -20688,7 +20688,7 @@ ex.out.p = 101325
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -21515,7 +21515,7 @@ c.ind_in.mdot = 2
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -21708,7 +21708,7 @@ c.mdot_w = 0.0042
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -21882,7 +21882,7 @@ a.out.h = 60000
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -21966,7 +21966,7 @@ a1.p = 101325
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -22054,7 +22054,7 @@ dct.in.h = 40414.42776
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -22723,7 +22723,7 @@ c.exh_out.mdot = 1
     guides: [],
     body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -22806,7 +22806,7 @@ z1.h = 37350.97869
     guides: [],
     body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -22966,7 +22966,7 @@ a.p = 100000
     guides: [],
     body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23372,7 +23372,7 @@ atm.port.p = 50000
     guides: [],
     body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23456,7 +23456,7 @@ atm.port.p = 100000
     guides: [],
     body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23717,7 +23717,7 @@ atm.port.p = 100000
     guides: [],
     body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23881,7 +23881,7 @@ atm.port.p = 50000
     guides: [],
     body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23983,7 +23983,7 @@ t_end = 315.5042778
     guides: [],
     body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24075,7 +24075,7 @@ atm.port.p = 100000
     guides: [],
     body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24268,7 +24268,7 @@ Pf = 700001.2966
     guides: [],
     body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24355,7 +24355,7 @@ atm.port.p = 100000
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24461,7 +24461,7 @@ at.in.w = 250
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24560,7 +24560,7 @@ cat.in.mdot = 0.05
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24668,7 +24668,7 @@ df.left.tau = -66.66666667
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24848,7 +24848,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24945,7 +24945,7 @@ exh.out.h = 893764.5365
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25063,7 +25063,7 @@ e1.shaft.w = 100
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25230,7 +25230,7 @@ road.shaft.tau = 2585.443476
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25428,7 +25428,7 @@ eng.t_fric = 9
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25588,7 +25588,7 @@ rl.shaft.tau = 91
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25700,7 +25700,7 @@ tl.fx = 3985.916842
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25814,7 +25814,7 @@ tl.fx = 3985.916842
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26003,7 +26003,7 @@ g2.port.tau = 40
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26089,7 +26089,7 @@ f_check = 556.6797 [J/kg]
     guides: [],
     body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26181,7 +26181,7 @@ wg.port.tau = 1197021.601
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26252,7 +26252,7 @@ a1.out.sig = 2.5
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26349,7 +26349,7 @@ ab.out.sig = 4
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26421,7 +26421,7 @@ ll.x = 2
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26521,7 +26521,7 @@ ab.out.sig = 4
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26597,7 +26597,7 @@ dv.y = 4
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26684,7 +26684,7 @@ err.out.sig = 0.1111111111
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26775,7 +26775,7 @@ ab.out.sig = 4
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26850,7 +26850,7 @@ f1.y = 3
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26935,7 +26935,7 @@ b.in.sig = 2
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27009,7 +27009,7 @@ final_state = 5
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27085,7 +27085,7 @@ ll.x = 2
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27169,7 +27169,7 @@ m2.in1.sig = 5
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27253,7 +27253,7 @@ m2.in1.sig = 5
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27344,7 +27344,7 @@ ab.out.sig = 4
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27415,7 +27415,7 @@ s3.sig = 7
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27516,7 +27516,7 @@ c.sp.sig = 1
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27587,7 +27587,7 @@ s3.sig = 7
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27663,7 +27663,7 @@ time = 2
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27738,7 +27738,7 @@ y = 4.00000025
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27815,7 +27815,7 @@ rl.y = 3
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27905,7 +27905,7 @@ highin.out.sig = 3
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27983,7 +27983,7 @@ s3.sig = 7
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28063,7 +28063,7 @@ so.v = 0
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28138,7 +28138,7 @@ time = 0.125
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28207,7 +28207,7 @@ pr.out.sig = 7
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28282,7 +28282,7 @@ time = 1
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28361,7 +28361,7 @@ b.in.sig = 2
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28450,7 +28450,7 @@ highin.out.sig = 3
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28527,7 +28527,7 @@ time = 1.5
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28589,7 +28589,7 @@ c.port.t = 300
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28655,7 +28655,7 @@ time = 2.5
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28728,7 +28728,7 @@ fs.b.f = 10
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28838,7 +28838,7 @@ bus.p.i = 0
     guides: [],
     body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29327,7 +29327,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29418,7 +29418,7 @@ ct.in.mdot = 0.00004465060012
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29507,7 +29507,7 @@ ej.mot_in.h = 430000
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29625,7 +29625,7 @@ final_state = 1215000
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29743,7 +29743,7 @@ ev.h3 = 364323.7355
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29828,7 +29828,7 @@ ft.in.h = 288754.43
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -30107,7 +30107,7 @@ ev.in.mdot = 0.02
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -30328,7 +30328,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -30518,7 +30518,7 @@ cook.wall.qdot = 3000
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -30699,7 +30699,7 @@ cold.out.p = 300000
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -31349,7 +31349,7 @@ cond.in.p = 1040885.197
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -31910,7 +31910,7 @@ line.f_lo = 0.02801750717
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -32204,7 +32204,7 @@ Instantiated in the verified example below:
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -32706,7 +32706,7 @@ line.f_lo = 0.02801750717
     guides: [],
     body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+> **Auto-generated** from the component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

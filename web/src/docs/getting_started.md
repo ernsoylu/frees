@@ -21,7 +21,7 @@ R = 0.287 [kJ/kg-K]
 P * Vol = m * R * T      { frees solves this for m }
 ```
 
-You never told frees to "compute `m`". It read the five equations, saw that `m` was the only unknown, and rearranged the ideal-gas relation to find it. The result appears in the **Solution** panel, in SI units, with any propagated uncertainty.
+You never told frees to "compute `m`". It read the five equations, saw that `m` was the only unknown, and rearranged the ideal-gas relation to find it. The result appears in the **Variable Explorer**, in SI units, with any propagated uncertainty.
 
 ## Any variable can be the unknown
 Swap one line — change `T = 25 [C]` to `m = 0.3 [kg]` — and the *same* equation now solves for temperature instead. You describe the physics; frees decides the calculation order. That is the whole idea, and the next page explains why it matters.
@@ -31,7 +31,7 @@ Every model follows the same rhythm:
 
 1. **Describe** the system — algebraic, matrix, or differential equations, in any order.
 2. **Check (F4)** — validates syntax and the degrees of freedom (see step 3).
-3. **Solve (F2)** — runs the Newton–Raphson solver; results land in the Solution panel.
+3. **Solve (F2)** — runs the Newton–Raphson solver; results land in the Variable Explorer.
 4. **Sweep** — optionally build a **Parametric Table** (`Ctrl + T`) to vary an input and plot the response.
 
 [Related: gs-declarative, shortcuts, variables]
@@ -77,7 +77,7 @@ A system is solvable only when the number of equations equals the number of unkn
 ### Guesses make nonlinear solves converge
 For nonlinear or transcendental equations, the Newton solver iterates from a **guess**. Open **Variable Info** (`Ctrl + I`) to set a starting guess and physical bounds (e.g. `T ≥ 0`, `0 ≤ x ≤ 1`). A good guess is usually the difference between convergence and divergence.
 
-> **Tip:** If a solve fails to converge, the cause is almost always a missing guess or a wrong unit annotation — not a bug. Check the Solution panel's diagnostics and the Variable Info guesses first.
+> **Tip:** If a solve fails to converge, start with the solve diagnostics and the Variable Info guesses and bounds — a missing guess or a wrong unit annotation is a common cause. A failure can also come from the model itself: an ill-conditioned or singular system, several roots with the guess nearer the wrong one, or a property call outside its valid range. The diagnostics name the block that failed, which narrows it down.
 
 [Related: gs-plots, units, variables]
 

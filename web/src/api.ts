@@ -108,6 +108,9 @@ export interface VariableUncertaintyResult {
 
 export interface SolveResponse {
   resultRevision?: number
+  /** Client-side: the override lines (terminal, sliders) this result was
+   *  solved with — the inputs that are not in the document text. */
+  appliedOverrides?: string[]
   success: boolean
   variables: VariableResult[]
   blocks: BlockResult[]
@@ -1091,6 +1094,8 @@ export interface MonteCarloParams {
   seed: number
   design?: MonteCarloDesign
   quantiles?: number[]
+  /** The workspace's override lines, so the run starts from the solved inputs. */
+  overrides?: string[]
 }
 
 /** `POST /api/solve/montecarlo` — served by the wasm `monte_carlo` export
@@ -1170,6 +1175,8 @@ export interface SensitivityParams {
   design?: 'sobol' | 'lhs' | 'random'
   bootstrap?: number
   seed?: number
+  /** The workspace's override lines, as for Monte Carlo. */
+  overrides?: string[]
 }
 
 /** `POST /api/solve/sensitivity` — served by wasm `sensitivity`. */

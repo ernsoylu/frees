@@ -28,7 +28,7 @@ it('opens analysis dialogs with invalid table drafts and reports validation on R
   expect(getFunctionTables).not.toHaveBeenCalled()
   fit.unmount()
   render(<MantineProvider env="test">
-    <MinMaxModal {...shared} variables={['x', 'y']} complexMode={false} unitSystem="SI" />
+    <MinMaxModal {...shared} variables={['x', 'y']} complexMode={false} unitSystem="SI" onStop={() => {}} />
   </MantineProvider>)
   expect(getFunctionTables).not.toHaveBeenCalled()
   fireEvent.click(screen.getByLabelText('Objective variable', { selector: 'input' }))
@@ -71,7 +71,7 @@ it('supports interactive Pareto point click, inspection and loading into documen
 
   render(
     <MantineProvider env="test">
-      <MinMaxModal {...shared} variables={['x', 'f1', 'f2']} complexMode={false} unitSystem="SI" />
+      <MinMaxModal {...shared} variables={['x', 'f1', 'f2']} complexMode={false} unitSystem="SI" onStop={() => {}} />
     </MantineProvider>,
   )
 
@@ -116,5 +116,44 @@ it('supports interactive Pareto point click, inspection and loading into documen
   expect(onApply).toHaveBeenCalledWith('x = 2.5\ny = 2')
   expect(await screen.findByText('✓ Applied to Document')).toBeInTheDocument()
 
+  optimizeMultiSpy.mockRestore()
+}, 15_000)
+
+it('stops a running optimization when its dialog is closed, and only then', async () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
+  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+  Object.defineProperty(document, 'fonts', { configurable: true, value: new EventTarget() })
+  const optimizeMultiSpy = vi.spyOn(await import('./api'), 'optimizeMulti').mockReturnValue(new Promise(() => {}))
+  const onStop = vi.fn()
+  const onClose = vi.fn()
+  render(
+    <MantineProvider env="test">
+      <MinMaxModal
+        text="x = 1" stopCriteria={DEFAULT_STOP_CRITERIA} variableInfo={[]} getFunctionTables={() => []}
+        variables={['x', 'f1', 'f2']} complexMode={false} unitSystem="SI"
+        onClose={onClose} onStop={onStop} onApply={() => {}}
+      />
+    </MantineProvider>,
+  )
+  const dialog = screen.getByRole('dialog')
+  // Idle: closing is just closing.
+  fireEvent.keyDown(dialog, { key: 'Escape' })
+  expect(onClose).toHaveBeenCalledTimes(1)
+  expect(onStop).not.toHaveBeenCalled()
+
+  fireEvent.click(screen.getByText('Multi-objective (Pareto)'))
+  fireEvent.click(screen.getByLabelText('Objective variables (2 or more)', { selector: 'input' }))
+  fireEvent.click(within(screen.getByLabelText('Objective variables (2 or more)', { selector: '[role=listbox]' })).getByText('f1'))
+  fireEvent.click(within(screen.getByLabelText('Objective variables (2 or more)', { selector: '[role=listbox]' })).getByText('f2'))
+  fireEvent.click(screen.getByLabelText('Independent (varied) variables', { selector: 'input' }))
+  fireEvent.click(within(screen.getByLabelText('Independent (varied) variables', { selector: '[role=listbox]' })).getByText('x'))
+  fireEvent.change(screen.getByLabelText('Lower bound of x'), { target: { value: '0' } })
+  fireEvent.change(screen.getByLabelText('Upper bound of x'), { target: { value: '10' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Find Pareto front' }))
+  expect(optimizeMultiSpy).toHaveBeenCalled()
+
+  fireEvent.keyDown(dialog, { key: 'Escape' })
+  expect(onStop).toHaveBeenCalledTimes(1)
+  expect(onClose).toHaveBeenCalledTimes(2)
   optimizeMultiSpy.mockRestore()
 }, 15_000)

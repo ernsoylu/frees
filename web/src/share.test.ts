@@ -1,3 +1,4 @@
+import { compressToEncodedURIComponent } from 'lz-string'
 import { describe, expect, it } from 'vitest'
 import {
   buildRawDocumentUrl,
@@ -5,6 +6,7 @@ import {
   clearRawDocumentUrl,
   extractSharedText,
   MAX_SHARE_URL_CHARS,
+  MAX_SHARED_TEXT_CHARS,
 } from './share'
 
 const BASE = 'https://frees.example/'
@@ -65,6 +67,14 @@ describe('share-by-URL', () => {
     const url = buildShareUrl('x = 1', BASE)!
     const truncated = new URL(url).hash.slice(0, 12)
     expect(extractSharedText(truncated)).toBeNull()
+  })
+
+  it('refuses a payload that decodes past the shared-document limit', () => {
+    // A highly repetitive document compresses far below the link ceiling.
+    const huge = 'x'.repeat(MAX_SHARED_TEXT_CHARS + 1)
+    const hash = '#share=' + compressToEncodedURIComponent(huge)
+    expect(hash.length).toBeLessThan(MAX_SHARE_URL_CHARS)
+    expect(extractSharedText(hash)).toBeNull()
   })
 
   it('refuses a payload longer than any link buildShareUrl emits', () => {

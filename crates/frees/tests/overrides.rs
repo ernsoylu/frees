@@ -232,3 +232,50 @@ fn a_multiline_comment_containing_an_assignment_is_a_known_edge() {
         "{v}"
     );
 }
+
+/// Monte Carlo and sensitivity must analyse the parameter point the workspace
+/// solves, not the bare document: with `a` overridden from 1 to 10, the base
+/// value the sampler reports for `y = 2·a + b` has to move with it.
+#[test]
+fn analyses_run_on_the_overridden_document() {
+    let source = "a = 1\nb = 0\ny = 2*a + b\n";
+    let variable_info = serde_json::json!([{ "name": "b", "uncertainty": 0.1 }]);
+
+    let mc = |overrides: &[&str]| {
+        let request = serde_json::json!({
+            "variableInfo": variable_info, "samples": 20, "seed": 1, "overrides": overrides,
+        });
+        parsed(&frees::monte_carlo(source, &request.to_string()))
+    };
+    let mean_y = |v: &Value| {
+        v["stats"]
+            .as_array()
+            .unwrap_or_else(|| panic!("no stats: {v}"))
+            .iter()
+            .find(|s| {
+                s["variable"]
+                    .as_str()
+                    .is_some_and(|n| n.eq_ignore_ascii_case("y"))
+            })
+            .unwrap_or_else(|| panic!("no y stat: {v}"))["mean"]
+            .as_f64()
+            .unwrap()
+    };
+    assert!((mean_y(&mc(&[])) - 2.0).abs() < 0.5);
+    assert!((mean_y(&mc(&["a = 10"])) - 20.0).abs() < 0.5);
+
+    // Sensitivity: `a = 10` makes `y` a function of `b` alone around 20, and
+    // an override that breaks the document must surface as its error.
+    let request = serde_json::json!({
+        "variableInfo": [{ "name": "b", "lower": -1, "upper": 1 }],
+        "method": "morris", "trajectories": 4, "levels": 4, "seed": 1,
+        "overrides": ["a = oops("],
+    });
+    let broken = parsed(&frees::sensitivity(source, &request.to_string()));
+    assert!(
+        broken["error"]
+            .as_str()
+            .is_some_and(|e| e.contains("Syntax")),
+        "{broken}"
+    );
+}

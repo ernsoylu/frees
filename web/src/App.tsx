@@ -183,6 +183,7 @@ import {
   FREES_FILE_TYPES,
   FreesProject,
   loadProjectLocal,
+  loadProjectFileLinkId,
   ProjectSlices,
   readProjectFile,
   downloadEquationText,
@@ -584,6 +585,14 @@ export default function App() {
   // load / new / save so the dirty-tracking effect doesn't fire falsely.
   const isDirtyRef = useRef(false)
   const suppressDirtyRef = useRef(false)
+  // Counts the edits the dirty effect records. A save snapshots it with the
+  // project and marks the workspace clean only if it is unchanged when the
+  // (asynchronous) write lands — an edit made while the write was in flight
+  // is not in the saved copy and must stay unsaved.
+  const editRevisionRef = useRef(0)
+  // Pairs the persisted handle with the autosaved document (saveProjectLocal),
+  // so a reload never attaches one tab's file to another tab's text.
+  const fileLinkIdRef = useRef<string | null>(null)
   // Stores the action to run once the save-check dialog is resolved.
   const pendingActionRef = useRef<(() => void) | null>(null)
   const [dismissedWarnings, setDismissedWarnings] = useState(false)
@@ -858,10 +867,22 @@ export default function App() {
   useEffect(() => {
     const id = setTimeout(() => {
       const project = buildProject(currentSlices())
-      saveProjectLocal(project)
+      saveProjectLocal(project, fileLinkIdRef.current)
       void writeAutosaveMirror(project)
     }, 800)
     return () => clearTimeout(id)
+  }, [currentSlices])
+
+  // The debounce above loses the last edits whenever the page goes away inside
+  // its window: a close or refresh, and the app's own "Reload to update" and
+  // stale-chunk reloads. `pagehide` fires for all of them, and localStorage —
+  // what boot reads — is synchronous, so this write lands before the page is
+  // gone. (The IndexedDB mirror cannot be awaited here; it catches up next
+  // session from this copy.)
+  useEffect(() => {
+    const flush = () => saveProjectLocal(buildProject(currentSlices()), fileLinkIdRef.current)
+    window.addEventListener('pagehide', flush)
+    return () => window.removeEventListener('pagehide', flush)
   }, [currentSlices])
 
 
@@ -894,9 +915,26 @@ export default function App() {
       isDirtyRef.current = false
       return
     }
+    editRevisionRef.current += 1
     isDirtyRef.current = true
+    // Every slice the project file persists (currentSlices) — a changed solver
+    // setting or display unit is as unsaved as an edited equation.
+  }, [text, tables, plots, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, pinnedSliders, schematicOffsets])
 
-  }, [text, tables, plots, varDrafts, pinnedSliders, schematicOffsets])
+  // Terminal assignments and slider pins are overrides the next solve applies on
+  // top of the document, so they belong to the project that made them. Every
+  // project replacement (open, library, recovery, new, example, shared link)
+  // passes through here: otherwise a fresh editor declaring `P_in = 350 [kPa]`
+  // would solve with the previous project's `P_in = 999 [Pa]`. Ordinary edits
+  // keep their overrides; only a change of project drops them.
+  const resetCalculationSession = useCallback((sliders: PinnedSlider[]) => {
+    setReplVars({})
+    void replClear(sessionId)
+    setPinnedSliders(sliders)
+    if (sliderTimer.current) clearTimeout(sliderTimer.current)
+    sliderPendingRef.current = false
+    setSlidersStale(false)
+  }, [sessionId])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -921,7 +959,7 @@ export default function App() {
     // nothing.
     spreadsheetsRef.current = p.spreadsheets ?? []
     analyzersRef.current = p.analyzers ?? []
-    setPinnedSliders(p.sliders ?? [])
+    resetCalculationSession(p.sliders ?? [])
     setSchematicOffsets(p.schematic ?? {})
     // D10/D11 compatibility notices: the spreadsheet and Data Analyzer
     // features are removed, but the data in the file is preserved (inert),
@@ -942,7 +980,7 @@ export default function App() {
     requestAnimationFrame(() => {
       dockRef.current?.restore(p.dockLayout)
     })
-  }, [applyText])
+  }, [applyText, resetCalculationSession])
 
   // D4 quota recovery, once per boot: when the IndexedDB mirror is strictly
   // newer than what localStorage booted, the localStorage autosave had started
@@ -1004,7 +1042,8 @@ export default function App() {
   /** Adopt (or clear) the current file handle, keeping the persisted link in step. */
   const adoptFileHandle = useCallback((handle: FileSystemFileHandle | null, name: string) => {
     projectHandleRef.current = handle
-    if (handle) void writeFileLink(name, handle)
+    fileLinkIdRef.current = handle ? crypto.randomUUID() : null
+    if (handle) void writeFileLink(name, handle, fileLinkIdRef.current!)
     else void clearFileLink()
   }, [])
 
@@ -1021,8 +1060,13 @@ export default function App() {
     void readFileLink().then((link) => {
       if (cancelled || link === null) return
       if (projectSourceRef.current !== null) return
+      // The handle store and the autosave are shared by every tab of the
+      // origin and written independently: attach the handle only when it was
+      // linked to the very document this tab recovered.
+      if (link.id === undefined || link.id !== loadProjectFileLinkId()) return
       projectSourceRef.current = 'file'
       projectHandleRef.current = link.handle
+      fileLinkIdRef.current = link.id
       setProjectName(link.name)
     })
     return () => {
@@ -1050,10 +1094,11 @@ export default function App() {
    */
   const saveToLibrary = useCallback(
     async (name: string, expected: ExpectedRev): Promise<SaveOutcome['status']> => {
+      const revision = editRevisionRef.current
       const outcome = await saveStoredProject(name, buildProject(currentSlices()), expected)
       if (outcome.status === 'saved') {
         libraryRevRef.current = { name, rev: outcome.meta.rev }
-        isDirtyRef.current = false
+        if (editRevisionRef.current === revision) isDirtyRef.current = false
         projectSourceRef.current = 'browser'
         // The library is the project's home now; drop any stale file link.
         adoptFileHandle(null, name)
@@ -1066,6 +1111,7 @@ export default function App() {
   )
 
   const performSave = useCallback(async (): Promise<boolean> => {
+    const revision = editRevisionRef.current
     const project = buildProject(currentSlices())
     const handle = projectHandleRef.current
     const permission = handle ? await queryWritePermission(handle) : 'unsupported'
@@ -1085,8 +1131,8 @@ export default function App() {
     if (target === 'handle' && handle) {
       const outcome = await saveProjectToHandle(project, handle)
       if (outcome === 'saved') {
-        isDirtyRef.current = false
-        void writeFileLink(projectName, handle)
+        if (editRevisionRef.current === revision) isDirtyRef.current = false
+        if (fileLinkIdRef.current) void writeFileLink(projectName, handle, fileLinkIdRef.current)
         notifications.show({
           color: 'teal',
           title: 'Saved',
@@ -1105,7 +1151,7 @@ export default function App() {
 
     const saved = await saveProject(project, projectName)
     if (saved.saved) {
-      isDirtyRef.current = false
+      if (editRevisionRef.current === revision) isDirtyRef.current = false
       projectSourceRef.current = 'file'
       adoptFileHandle(saved.handle, projectName)
     }
@@ -1199,9 +1245,10 @@ export default function App() {
     async (name: string) => {
       const clean = name.trim() || 'untitled'
       setProjectName(clean)
+      const revision = editRevisionRef.current
       const saved = await saveProject(buildProject(currentSlices()), clean)
       if (saved.saved) {
-        isDirtyRef.current = false
+        if (editRevisionRef.current === revision) isDirtyRef.current = false
         projectSourceRef.current = 'file'
         adoptFileHandle(saved.handle, clean)
       }
@@ -1416,13 +1463,14 @@ export default function App() {
     setPlots([])
     spreadsheetsRef.current = []
     analyzersRef.current = []
+    resetCalculationSession([])
     setSchematicOffsets({})
     setResult(null)
     setCheckResult(null)
     setProjectName('untitled')
     setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => dockRef.current?.reset())
-  }, [stopCriteria, unitSystem, fillMissing, applyText, adoptFileHandle])
+  }, [stopCriteria, unitSystem, fillMissing, applyText, adoptFileHandle, resetCalculationSession])
 
   const handleNewProject = useCallback(() => guardedAction(performNewProject), [guardedAction, performNewProject])
 
@@ -1592,6 +1640,7 @@ export default function App() {
     setPlots([])
     spreadsheetsRef.current = []
     analyzersRef.current = []
+    resetCalculationSession([])
     setSchematicOffsets({})
     setResult(null)
     setCheckResult(null)
@@ -2079,6 +2128,7 @@ export default function App() {
         // interpolated cycle path, so request it when one is present.
         codePlots.some((p) => p.kind === 'property' && p.property.overlayStates)
       const shouldFillMissing = (forceFill === true) || fillMissing || needMissing
+      const overrides = solveOverrides()
       const response = await solve(
         effectiveText(),
         { ...stopCriteria, complexMode },
@@ -2090,13 +2140,13 @@ export default function App() {
         sessionId,
         // REPL-defined/changed variables take priority over the editor until the
         // user runs `clear` in the terminal.
-        solveOverrides(),
+        overrides,
         reportSolveProgress,
       )
       if (!modelRevisionRef.current.isCurrent(solveRevision)) {
         return false
       }
-      setResult({ ...response, resultRevision: solveRevision })
+      setResult({ ...response, resultRevision: solveRevision, appliedOverrides: overrides })
       // REPL overrides persist across solves (the terminal keeps priority over the
       // editor); they're dropped only by the `clear` command, not by solving.
       // The Variable Explorer lives in the right edge group (expanded by default)
@@ -3120,6 +3170,7 @@ export default function App() {
             solving={solving}
             onCheck={checkWithFallback}
             onSolve={checkThenSolve}
+            onStop={onStop}
             checkingTableId={checkingTableId}
             solvingTableId={solvingTableId}
             onCheckTable={onCheckTable}
@@ -3329,6 +3380,7 @@ export default function App() {
             unitSystem={unitSystem}
             getFunctionTables={functionTableDtos}
             onClose={() => setShowMinMax(false)}
+            onStop={onStop}
             onApply={(next) => applyText(next)}
           />
         </Suspense>
@@ -3365,6 +3417,7 @@ export default function App() {
           <MonteCarloModal
             opened
             onClose={() => setShowMonteCarlo(false)}
+            onStop={onStop}
             onRun={(samples, seed, design) =>
               runMonteCarlo({
                 text: effectiveText(),
@@ -3372,6 +3425,7 @@ export default function App() {
                 variableInfo: buildVariableInfo(),
                 displayUnitSystem: unitSystem,
                 functionTables: functionTableDtos(),
+                overrides: solveOverrides(),
                 samples,
                 seed,
                 design,
@@ -3386,6 +3440,7 @@ export default function App() {
           <SensitivityModal
             opened
             onClose={() => setShowSensitivity(false)}
+            onStop={onStop}
             onRun={(params) =>
               runSensitivity({
                 text: effectiveText(),
@@ -3394,6 +3449,7 @@ export default function App() {
                 variableInfo: buildVariableInfo(),
                 displayUnitSystem: unitSystem,
                 functionTables: functionTableDtos(),
+                overrides: solveOverrides(),
               })
             }
           />

@@ -70,10 +70,13 @@ export function decidePrecache(dataSaver: boolean, serviceWorkerSupported: boole
 }
 
 /** The two browser surfaces `dropPrecache` touches, narrowed so a test can
- *  supply doubles and so neither is assumed to exist. */
+ *  supply doubles and so neither is assumed to exist, plus this deployment's
+ *  service-worker scope (the absolute base URL, e.g. `https://host/frees/`;
+ *  defaults to the running build's). */
 export interface PrecacheEnv {
   serviceWorker?: Pick<ServiceWorkerContainer, 'getRegistrations'>
   caches?: Pick<CacheStorage, 'keys' | 'delete'>
+  scope?: string
 }
 
 export interface DropResult {
@@ -82,22 +85,26 @@ export interface DropResult {
 }
 
 /**
- * Remove the installed worker and its caches.
+ * Remove this app's installed worker and its caches — and nothing else.
  *
- * Every Cache Storage entry is dropped, not a name pattern: the service worker
- * is the only thing in this app that writes there (nothing under src/ touches
- * `caches`), and Workbox's cache names embed a build-time cacheId plus scope,
- * so matching them by name would rot silently the first time either changed.
+ * Service-worker registrations and Cache Storage are shared by every app on
+ * the origin (a GitHub Pages user site hosts many under one host), so both are
+ * filtered to this deployment's scope: the registration whose `scope` is ours,
+ * and the caches whose names end with it. Workbox names every cache
+ * `<prefix>-<name>-<scope>`, so the suffix survives a changed cacheId or
+ * precache version, while a sibling app at `/other-app/` never matches.
  *
  * Best-effort throughout. A refused unregister leaves the worker serving the
  * old precache, which is a stale-but-working app, not a broken one.
  */
 export async function dropPrecache(env: PrecacheEnv): Promise<DropResult> {
   const result: DropResult = { unregistered: 0, cachesDeleted: 0 }
+  const scope = env.scope ?? new URL(import.meta.env.BASE_URL, globalThis.location.href).href
 
   try {
     const registrations = (await env.serviceWorker?.getRegistrations()) ?? []
     for (const registration of registrations) {
+      if (registration.scope !== scope) continue
       try {
         if (await registration.unregister()) result.unregistered += 1
       } catch {
@@ -111,6 +118,7 @@ export async function dropPrecache(env: PrecacheEnv): Promise<DropResult> {
   try {
     const keys = (await env.caches?.keys()) ?? []
     for (const key of keys) {
+      if (!key.endsWith(scope)) continue
       try {
         if (await env.caches!.delete(key)) result.cachesDeleted += 1
       } catch {
