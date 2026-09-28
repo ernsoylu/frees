@@ -1,6 +1,6 @@
 # frees
 
-A high-performance declarative equation solver, physical systems modeler, and simulation environment built in Rust and WebAssembly that runs **entirely client-side in the browser** and as a **native desktop CLI**. Zero cloud compute dependencies, zero external API traffic, and zero network latency.
+A high-performance declarative equation solver, physical systems modeler, and simulation environment built in Rust and WebAssembly that runs **entirely client-side in the browser** and as a **native desktop CLI**. Zero cloud compute dependencies and zero server round-trips: model text never leaves the device. The only outbound requests are a public exchange-rate feed when a document uses currency units, and raw-document downloads the user asks for (`?url=` / Open URL).
 
 ```frees
 m_dot = 2.5 [kg/s]

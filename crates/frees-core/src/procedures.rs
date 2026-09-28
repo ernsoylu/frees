@@ -46,7 +46,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::ast::{Equation, Expr, Statement};
 use crate::diag::{FreesError, Result};
-use crate::eval::{eval_with, lookup_intrinsic, Body, EvalContext, Scope};
+use crate::eval::{eval_in, lookup_intrinsic, Body, Env, EvalContext, Scope};
 use crate::parser::defs::{Definitions, FunctionDef, ModuleDef, ProcStatement, ProcedureDef};
 
 /// `ProcedureEvaluator.MAX_ITERATIONS` — the REPEAT/WHILE guard (also applied
@@ -100,11 +100,53 @@ impl Drop for DepthGuard {
 // FUNCTION / PROCEDURE execution (ProcedureEvaluator)
 // ---------------------------------------------------------------------------
 
+/// A body's variables: its own assignments over the caller's environment.
+///
+/// The Java starts every activation with a **copy** of the caller's map. The
+/// caller cannot change while the body runs, so reading through to it is
+/// indistinguishable from the copy — and it does not cost a clone of every
+/// document variable per call, which made user-function calls quadratic in
+/// document size (a 2 000-call model spent 99 % of its solve copying maps).
+struct Locals<'a> {
+    own: Scope,
+    caller: Option<&'a Env<'a>>,
+}
+
+impl<'a> Locals<'a> {
+    fn new(caller: Option<&'a Env<'a>>) -> Self {
+        Locals {
+            own: Scope::default(),
+            caller,
+        }
+    }
+
+    fn get(&self, name: &str) -> Option<f64> {
+        match self.own.get(name) {
+            Some(value) => Some(*value),
+            None => self.caller?.get(name),
+        }
+    }
+
+    fn insert(&mut self, name: String, value: f64) {
+        self.own.insert(name, value);
+    }
+
+    /// The evaluation environment for a body expression — the counterpart of
+    /// the Java `Evaluator.eval(e, locals, defs)`.
+    fn env<'b>(&'b self, defs: &'b Definitions) -> Env<'b> {
+        Env::Frame {
+            scope: &self.own,
+            ctx: EvalContext::with_defs(defs),
+            parent: self.caller,
+        }
+    }
+}
+
 /// Execute a single-output `FUNCTION` body for an inline expression call.
 /// Arguments are already evaluated, positional, SI.
 ///
-/// Port of `ProcedureEvaluator.callFunction`: locals start as a **copy of the
-/// caller's scope** (dynamic scoping — the body sees the caller's variables),
+/// Port of `ProcedureEvaluator.callFunction`: locals start as the **caller's
+/// scope** (dynamic scoping — the body sees the caller's variables),
 /// parameters are bound over it, the body runs sequentially, and the value
 /// assigned to the function's own name is the result.
 pub fn call_function(
@@ -112,6 +154,16 @@ pub fn call_function(
     args: &[f64],
     defs: &Definitions,
     caller_scope: &Scope,
+) -> Result<f64> {
+    call_function_in(def, args, defs, &Env::Root(caller_scope))
+}
+
+/// [`call_function`] reading the caller's variables through its [`Env`].
+pub(crate) fn call_function_in(
+    def: &FunctionDef,
+    args: &[f64],
+    defs: &Definitions,
+    caller: &Env<'_>,
 ) -> Result<f64> {
     if args.len() != def.params.len() {
         return Err(FreesError::evaluation(format!(
@@ -130,11 +182,11 @@ pub fn call_function(
             validate_definite_assignment(&def.body, &mut assigned)?;
         }
     }
-    let mut locals = if def.output.is_some() {
-        Scope::default()
+    let mut locals = Locals::new(if def.output.is_some() {
+        None
     } else {
-        caller_scope.clone()
-    };
+        Some(caller)
+    });
     for (param, value) in def.params.iter().zip(args) {
         locals.insert(param.clone(), *value);
     }
@@ -149,7 +201,7 @@ pub fn call_function(
         execute_body(&def.body, &mut locals, defs)?;
     }
     match locals.get(output) {
-        Some(value) => Ok(*value),
+        Some(value) => Ok(value),
         None => solve_relational_output(&def.body, output, &mut locals, defs).ok_or_else(|| {
             FreesError::evaluation(format!(
                 "FUNCTION {} never assigned a return value ('{} := ...' missing)",
@@ -176,7 +228,7 @@ fn has_relational_output(body: &[ProcStatement], output: &str) -> bool {
 fn solve_relational_output(
     body: &[ProcStatement],
     output: &str,
-    locals: &mut Scope,
+    locals: &mut Locals<'_>,
     defs: &Definitions,
 ) -> Option<f64> {
     let equation = body.iter().find_map(|statement| match statement {
@@ -371,6 +423,15 @@ pub fn call_procedure(
     defs: &Definitions,
     caller_scope: &Scope,
 ) -> Result<HashMap<String, f64>> {
+    call_procedure_in(def, inputs, defs, &Env::Root(caller_scope))
+}
+
+fn call_procedure_in(
+    def: &ProcedureDef,
+    inputs: &[f64],
+    defs: &Definitions,
+    caller: &Env<'_>,
+) -> Result<HashMap<String, f64>> {
     if inputs.len() != def.inputs.len() {
         return Err(FreesError::evaluation(format!(
             "PROCEDURE {} expects {} input(s), got {}",
@@ -380,7 +441,7 @@ pub fn call_procedure(
         )));
     }
     let _guard = DepthGuard::enter("PROCEDURE", &def.name)?;
-    let mut locals = caller_scope.clone();
+    let mut locals = Locals::new(Some(caller));
     for (input, value) in def.inputs.iter().zip(inputs) {
         locals.insert(input.clone(), *value);
     }
@@ -389,7 +450,7 @@ pub fn call_procedure(
     for out in &def.outputs {
         match locals.get(out) {
             Some(value) => {
-                outputs.insert(out.clone(), *value);
+                outputs.insert(out.clone(), value);
             }
             None => {
                 return Err(FreesError::evaluation(format!(
@@ -437,11 +498,21 @@ pub fn call_proc_output(
     defs: &Definitions,
     caller_scope: &Scope,
 ) -> Result<f64> {
+    call_proc_output_in(function, args, defs, &Env::Root(caller_scope))
+}
+
+/// [`call_proc_output`] reading the caller's variables through its [`Env`].
+pub(crate) fn call_proc_output_in(
+    function: &str,
+    args: &[f64],
+    defs: &Definitions,
+    caller: &Env<'_>,
+) -> Result<f64> {
     let unknown = || FreesError::evaluation(format!("Unknown procedure output call: {function}"));
     let (name, index) = parse_proc_output_name(function).ok_or_else(unknown)?;
     let def = defs.procedure(name).ok_or_else(unknown)?;
     let key = def.outputs.get(index).ok_or_else(unknown)?.clone();
-    let outputs = call_procedure(def, args, defs, caller_scope)?;
+    let outputs = call_procedure_in(def, args, defs, caller)?;
     // `call_procedure` errors on a missing output, so the key is present.
     Ok(outputs[&key])
 }
@@ -450,14 +521,18 @@ pub fn call_proc_output(
 // Body execution (ProcedureEvaluator.executeBody / executeOne)
 // ---------------------------------------------------------------------------
 
-fn execute_body(body: &[ProcStatement], locals: &mut Scope, defs: &Definitions) -> Result<()> {
+fn execute_body(body: &[ProcStatement], locals: &mut Locals<'_>, defs: &Definitions) -> Result<()> {
     for statement in body {
         execute_one(statement, locals, defs)?;
     }
     Ok(())
 }
 
-fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions) -> Result<()> {
+fn execute_one(
+    statement: &ProcStatement,
+    locals: &mut Locals<'_>,
+    defs: &Definitions,
+) -> Result<()> {
     match statement {
         ProcStatement::Assign { var_name, value } => {
             let value = eval_proc_expr(value, locals, defs)?;
@@ -506,10 +581,13 @@ fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions
         }
 
         // Java: bounds round to integers, the step is ±1 from their order, and
-        // the loop is inclusive — `FOR i = 1 TO 0` runs i = 1, 0. Each
+        // the loop is inclusive — `FOR i = 1 TO 0` runs i = 1, 0. Each Java
         // iteration executes on a copy of the locals that is merged back
         // afterwards (`locals.putAll(loopLocals)`), so the loop variable stays
-        // visible after the loop with its final value.
+        // visible after the loop with its final value. A body cannot remove a
+        // binding and an error abandons the whole activation, so running the
+        // body on the locals directly is the same map without the per-pass
+        // copy.
         ProcStatement::For {
             var_name,
             start,
@@ -555,10 +633,8 @@ fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions
                         "FOR loop exceeded {MAX_ITERATIONS} iterations"
                     )));
                 }
-                let mut loop_locals = locals.clone();
-                loop_locals.insert(var_name.clone(), i as f64);
-                execute_body(body, &mut loop_locals, defs)?;
-                *locals = loop_locals;
+                locals.insert(var_name.clone(), i as f64);
+                execute_body(body, locals, defs)?;
                 i += i128::from(step);
             }
         }
@@ -598,9 +674,42 @@ fn execute_one(statement: &ProcStatement, locals: &mut Scope, defs: &Definitions
 /// *lazy* intrinsics (`if` branches, `sum`/`product` bodies) are the
 /// evaluator's to dispatch — same division of labour as the Java engine, where
 /// all dispatch lives in `Evaluator.evalCall`.
-fn eval_proc_expr(expr: &Expr, locals: &Scope, defs: &Definitions) -> Result<f64> {
+fn eval_proc_expr(expr: &Expr, locals: &Locals<'_>, defs: &Definitions) -> Result<f64> {
+    let env = locals.env(defs);
+    // With no user call anywhere, resolution would return an identical copy;
+    // skip rebuilding the tree on every statement of every call.
+    if !calls_user_function(expr, defs) {
+        return eval_in(expr, &env);
+    }
     let resolved = resolve_user_calls(expr, locals, defs)?;
-    eval_with(&resolved, locals, EvalContext::with_defs(defs))
+    eval_in(&resolved, &env)
+}
+
+/// Whether `expr` calls a user `FUNCTION` anywhere, lazy positions included —
+/// a superset of what [`resolve_user_calls`] rewrites, so `false` guarantees
+/// the rewrite would be a structural copy.
+fn calls_user_function(expr: &Expr, defs: &Definitions) -> bool {
+    if defs.functions.is_empty() {
+        return false;
+    }
+    match expr {
+        Expr::Num { .. } | Expr::Str(_) | Expr::Var(_) => false,
+        Expr::Call { function, args } => {
+            defs.function(function).is_some() || args.iter().any(|a| calls_user_function(a, defs))
+        }
+        Expr::Neg(inner) | Expr::Not(inner) => calls_user_function(inner, defs),
+        Expr::BinOp { left, right, .. }
+        | Expr::Compare { left, right, .. }
+        | Expr::Logical { left, right, .. } => {
+            calls_user_function(left, defs) || calls_user_function(right, defs)
+        }
+        Expr::Range { start, end } => {
+            calls_user_function(start, defs) || calls_user_function(end, defs)
+        }
+        Expr::ArrayLiteral(items) | Expr::ArrayAccess { indices: items, .. } => {
+            items.iter().any(|e| calls_user_function(e, defs))
+        }
+    }
 }
 
 /// Rewrite `expr` with every user-`FUNCTION` call in a strict (eagerly
@@ -608,7 +717,7 @@ fn eval_proc_expr(expr: &Expr, locals: &Scope, defs: &Definitions) -> Result<f64
 /// lazy intrinsics are left untouched — evaluating them here would break
 /// `if`'s laziness (and with it recursion guarded by `if`) and `sum`/
 /// `product`'s index binding.
-fn resolve_user_calls(expr: &Expr, locals: &Scope, defs: &Definitions) -> Result<Expr> {
+fn resolve_user_calls(expr: &Expr, locals: &Locals<'_>, defs: &Definitions) -> Result<Expr> {
     Ok(match expr {
         Expr::Num { .. } | Expr::Str(_) | Expr::Var(_) => expr.clone(),
 
@@ -618,7 +727,12 @@ fn resolve_user_calls(expr: &Expr, locals: &Scope, defs: &Definitions) -> Result
                 for arg in args {
                     values.push(eval_proc_expr(arg, locals, defs)?);
                 }
-                return Ok(Expr::num(call_function(def, &values, defs, locals)?));
+                return Ok(Expr::num(call_function_in(
+                    def,
+                    &values,
+                    defs,
+                    &locals.env(defs),
+                )?));
             }
             if is_lazy_call(function) {
                 return Ok(expr.clone());
@@ -1260,6 +1374,20 @@ mod tests {
         let mut scope = empty_scope();
         scope.insert("k".into(), 100.0);
         assert_eq!(call_function(f, &[1.0], &defs, &scope).unwrap(), 101.0);
+    }
+
+    #[test]
+    fn a_nested_call_sees_its_callers_locals_over_the_outer_scope() {
+        // Dynamic scoping chains: Inner reads Outer's `t` and Outer's
+        // shadowing `k`, not the document's `k`.
+        let defs = defs_of(
+            "FUNCTION Inner(x)\n  Inner := x + k + t\nEND\n\
+             FUNCTION Outer(x)\n  t := 10\n  k := 1\n  Outer := Inner(x) + k\nEND",
+        );
+        let f = defs.function("outer").unwrap();
+        let mut scope = empty_scope();
+        scope.insert("k".into(), 100.0);
+        assert_eq!(call_function(f, &[1.0], &defs, &scope).unwrap(), 13.0);
     }
 
     #[test]

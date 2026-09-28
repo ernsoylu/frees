@@ -185,6 +185,18 @@ pub enum Env<'a> {
         value: f64,
         parent: &'a Env<'a>,
     },
+    /// A FUNCTION/PROCEDURE activation: the body's locals over the caller's
+    /// environment. The Java copies the caller's map into the locals (dynamic
+    /// scoping); reading through `parent` instead gives the same answers
+    /// without copying every document variable on every call. `ctx` is the
+    /// frame's own context — a body sees its definitions, not the caller's
+    /// ODE or parametric channels. `parent` is `None` for a named-output
+    /// FUNCTION, whose locals start empty.
+    Frame {
+        scope: &'a Scope,
+        ctx: EvalContext<'a>,
+        parent: Option<&'a Env<'a>>,
+    },
 }
 
 impl<'a> Env<'a> {
@@ -205,6 +217,12 @@ impl<'a> Env<'a> {
                     }
                     cursor = parent;
                 }
+                Env::Frame { scope, parent, .. } => {
+                    if let Some(value) = scope.get(name) {
+                        return Some(*value);
+                    }
+                    cursor = (*parent)?;
+                }
             }
         }
     }
@@ -215,23 +233,32 @@ impl<'a> Env<'a> {
         loop {
             match cursor {
                 Env::Root(_) => return EvalContext::default(),
-                Env::Doc { ctx, .. } => return *ctx,
+                Env::Doc { ctx, .. } | Env::Frame { ctx, .. } => return *ctx,
                 Env::Bind { parent, .. } => cursor = parent,
             }
         }
     }
 
     /// Materialize the full binding chain into an owned [`Scope`] — what the
-    /// frozen kernel contracts ([`crate::integral`], [`crate::procedures`])
-    /// take, mirroring the mutable `values` map the Java passes along.
+    /// frozen kernel contracts ([`crate::integral`], ODE accessors) take, mirroring the mutable `values` map the Java passes along.
     /// Inner bindings shadow outer ones.
     pub fn to_scope(&self) -> Scope {
         let mut binds: Vec<(&str, f64)> = Vec::new();
         let mut cursor = self;
         loop {
             match cursor {
-                Env::Root(scope) | Env::Doc { scope, .. } => {
-                    let mut out: Scope = (*scope).clone();
+                Env::Root(scope) | Env::Doc { scope, .. } | Env::Frame { scope, .. } => {
+                    let mut out: Scope = match cursor {
+                        Env::Frame {
+                            parent: Some(parent),
+                            ..
+                        } => {
+                            let mut out = parent.to_scope();
+                            out.extend(scope.iter().map(|(k, v)| (k.clone(), *v)));
+                            out
+                        }
+                        _ => (*scope).clone(),
+                    };
                     // Applied outermost-first so the innermost binding wins.
                     for (name, value) in binds.into_iter().rev() {
                         out.insert(name.to_string(), value);
@@ -2193,15 +2220,15 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
         }
         if let Some(def) = defs.function(function) {
             let values = resolve_call_args(function, args, &def.params, env)?;
-            return crate::procedures::call_function(def, &values, defs, &env.to_scope());
+            return crate::procedures::call_function_in(def, &values, defs, env);
         }
         if let Some(def) = defs.procedure(function) {
             let values = resolve_call_args(function, args, &def.inputs, env)?;
-            return crate::procedures::call_proc_output(
+            return crate::procedures::call_proc_output_in(
                 &crate::procedures::proc_output_name(function, 0),
                 &values,
                 defs,
-                &env.to_scope(),
+                env,
             );
         }
     }
@@ -2434,11 +2461,10 @@ fn eval_integral_call<'a>(_name: &str, args: &'a [Expr], env: &'a Env<'a>) -> Re
         Some(expr) => Some(eval_in(expr, env)?),
         None => None,
     };
-    // `_with` rather than the bare contract: the Java threads its `defs` map
-    // through `SimpsonContext.evalAt`, so a user FUNCTION or TABLE inside the
-    // integrand has to resolve.
-    let scope = env.to_scope();
-    crate::integral::integral_with(&args[0], var, lower, upper, step, &scope, env.ctx())
+    // The integrand evaluates under `env` itself, not a context-free copy: the
+    // Java threads its `defs` map through `SimpsonContext.evalAt`, so a user
+    // FUNCTION or TABLE inside the integrand has to resolve.
+    crate::integral::integral_in(&args[0], var, lower, upper, step, env)
 }
 
 /// `GaussIntegral(f, t, a, b[, points])` — dispatch to
@@ -2462,8 +2488,7 @@ fn eval_gauss_integral_call<'a>(_name: &str, args: &'a [Expr], env: &'a Env<'a>)
         }
         None => None,
     };
-    let scope = env.to_scope();
-    crate::integral::gauss_integral_with(&args[0], var, lower, upper, points, &scope, env.ctx())
+    crate::integral::gauss_integral_in(&args[0], var, lower, upper, points, env)
 }
 
 /// Normalize a bracket literal to its rows of cells, or `None` when `expr` is
@@ -2823,9 +2848,8 @@ fn eval_synthetic<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Res
         // so this port matches it rather than caching behind the oracle's back.
         "proc" => {
             let inputs = eval_args(args, env)?;
-            let scope = env.to_scope();
             match env.ctx().defs {
-                Some(defs) => crate::procedures::call_proc_output(function, &inputs, defs, &scope),
+                Some(defs) => crate::procedures::call_proc_output_in(function, &inputs, defs, env),
                 // Java reaches the same throw when `defs.get(name)` is absent.
                 None => Err(FreesError::evaluation(format!(
                     "Unknown procedure output call: {function}"
