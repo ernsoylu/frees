@@ -1,19 +1,22 @@
 ---
 name: EjectorMomentum
 category: Component (twophase)
-summary: Acausal twophase-domain component EjectorMomentum with ports mot_in, suc_in, out.
+summary: "Momentum-based two-phase ejector: the motive stream expands (nozzle efficiency) to the suction pressure, momentum-mixes with the entrained stream at constant area, and the mixed velocity head recovers as the diffuser lift."
 related: []
 examples: []
 tags: [ejectormomentum, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # EjectorMomentum
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Momentum-based two-phase ejector: the motive stream expands (nozzle efficiency) to the suction pressure, momentum-mixes with the entrained stream at constant area, and the mixed velocity head recovers as the diffuser lift.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Total enthalpy is conserved exactly.
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -40,14 +43,14 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \begin{aligned}
-s_{m} &= \text{Entropy}\left(\mathrm{fluid}, =mot_{in.p}, p=mot_{in.h}\right) \\
-h_{mi} &= \text{Enthalpy}\left(\mathrm{fluid}, =suc_{in.p}, p=s_{m}\right) \\
+s_{m} &= \text{Entropy}\left(\mathrm{fluid\$}, p=mot_{in.p}, h=mot_{in.h}\right) \\
+h_{mi} &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=suc_{in.p}, s=s_{m}\right) \\
 v_{m} &= \sqrt{2\,eta_{n}\cdot \left(mot_{in.h} - h_{mi}\right)} \\
 out.mdot &= mot_{in.mdot} + suc_{in.mdot} \\
 v_{mix} &= \frac{eta_{m}\cdot mot_{in.mdot}\cdot v_{m}}{out.mdot} \\
 out.mdot\cdot out.h &= mot_{in.mdot}\cdot mot_{in.h} + suc_{in.mdot}\cdot suc_{in.h} \\
 h_{mix} &= out.h - \frac{v_{mix}^{2}}{2} \\
-rho_{mix} &= \text{Density}\left(\mathrm{fluid}, =suc_{in.p}, p=h_{mix}\right) \\
+rho_{mix} &= \text{Density}\left(\mathrm{fluid\$}, p=suc_{in.p}, h=h_{mix}\right) \\
 out.p &= suc_{in.p} + \frac{rho_{mix}\cdot v_{mix}^{2}}{2}
 \end{aligned}
 $$

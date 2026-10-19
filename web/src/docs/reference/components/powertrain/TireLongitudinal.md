@@ -1,19 +1,22 @@
 ---
 name: TireLongitudinal
 category: Component (powertrain)
-summary: Acausal powertrain-domain component TireLongitudinal with ports wheel, veh.
+summary: "Longitudinal tire (Pacejka-lite magic formula on longitudinal slip): bridges the wheel (rotational) to the vehicle (translational)."
 related: []
 examples: []
 tags: [tirelongitudinal, component, powertrain, acausal]
 references: []
-generated: true
 ---
 
 # TireLongitudinal
 
-Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Longitudinal tire (Pacejka-lite magic formula on longitudinal slip): bridges the wheel (rotational) to the vehicle (translational).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Fx = Fz·D·sin(C·atan(B·s)), s = (rω − v)/(|v| + epsv). Drive torque reaction r·Fx loads the wheel.
+
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/powertrain.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

@@ -1,19 +1,20 @@
 ---
 name: Combustor
 category: Component (fluid)
-summary: Acausal fluid-domain component Combustor with ports in, out.
+summary: "Combustor: fuel mass addition with combustion efficiency on the lower heating value and a rated pressure loss."
 related: []
 examples: []
 tags: [combustor, component, fluid, acausal]
 references: []
-generated: true
 ---
 
 # Combustor
 
-Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Combustor: fuel mass addition with combustion efficiency on the lower heating value and a rated pressure loss.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **fluid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/fluid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

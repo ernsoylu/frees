@@ -1,19 +1,20 @@
 ---
 name: LiquidThreeWayValve
 category: Component (liquid)
-summary: Acausal liquid-domain component LiquidThreeWayValve with ports in, outa, outb.
+summary: "Diverting three-way valve: routes fraction u of the inlet to outa, the rest to outb, both at the inlet pressure — the TMS loop-splitting staple."
 related: []
 examples: []
 tags: [liquidthreewayvalve, component, liquid, acausal]
 references: []
-generated: true
 ---
 
 # LiquidThreeWayValve
 
-Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Diverting three-way valve: routes fraction u of the inlet to outa, the rest to outb, both at the inlet pressure — the TMS loop-splitting staple.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/liquid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

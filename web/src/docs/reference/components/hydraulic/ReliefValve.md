@@ -31,7 +31,7 @@ ReliefValve inst(Pcrack, K, eps, domain$)
 | --- | --- | --- |
 | `Pcrack` | Number | Cracking (relief) pressure [Pa]. |
 | `K` | Number | Gain / coefficient. |
-| `eps` | Number | Effectiveness / roughness. |
+| `eps` | Number | Opening smoothing width [Pa] — the tanh transition around `Pcrack`. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations

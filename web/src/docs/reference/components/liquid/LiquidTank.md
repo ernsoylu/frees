@@ -1,19 +1,22 @@
 ---
 name: LiquidTank
 category: Component (liquid)
-summary: Acausal liquid-domain component LiquidTank with ports in, out, wall.
+summary: "Thermal-mass tank (m kg of coolant, perfectly mixed): the outlet leaves at the tank temperature state Tt; a wall heat port exchanges UA·(T_wall − Tt)."
 related: []
 examples: []
 tags: [liquidtank, component, liquid, acausal]
 references: []
-generated: true
 ---
 
 # LiquidTank
 
-Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Thermal-mass tank (m kg of coolant, perfectly mixed): the outlet leaves at the tank temperature state Tt; a wall heat port exchanges UA·(T_wall − Tt).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The loop warm-up element.
+
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/liquid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -43,8 +46,8 @@ $$
 \begin{aligned}
 out.p &= in.p \\
 out.mdot &= in.mdot \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=tt\right) \\
-cp_{t} &= \text{Cp}\left(\mathrm{fluid}, =in.p, p=tt\right) \\
+out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, t=tt\right) \\
+cp_{t} &= \text{Cp}\left(\mathrm{fluid\$}, p=in.p, t=tt\right) \\
 q &= ua\cdot \left(wall.t - tt\right) \\
 \text{der}\left(tt\right) &= \frac{in.mdot\cdot \left(in.h - out.h\right) + q}{m\cdot cp_{t}} \\
 \text{init}\left(tt\right) &= t0 \\

@@ -1,19 +1,20 @@
 ---
 name: PneumaticCheckValve
 category: Component (pneumatic)
-summary: Acausal pneumatic-domain component PneumaticCheckValve with ports in, out.
+summary: "Pneumatic check valve: ISO 6358 flow gated to forward ΔP."
 related: []
 examples: []
 tags: [pneumaticcheckvalve, component, pneumatic, acausal]
 references: []
-generated: true
 ---
 
 # PneumaticCheckValve
 
-Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Pneumatic check valve: ISO 6358 flow gated to forward ΔP.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/pneumatic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -44,7 +45,7 @@ $$
 out.mdot &= in.mdot \\
 out.h &= in.h \\
 g &= 0.5\,\left(1 + \tanh\left(\frac{in.p - out.p}{eps}\right)\right) \\
-t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 in.mdot &= g\cdot \text{iso6358}\left(c, b, in.p, t_{in}, out.p\right)
 \end{aligned}
 $$

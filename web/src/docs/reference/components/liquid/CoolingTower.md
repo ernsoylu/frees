@@ -1,19 +1,20 @@
 ---
 name: CoolingTower
 category: Component (liquid)
-summary: Acausal liquid-domain component CoolingTower with ports in, out, wb.
+summary: "Cooling tower (Merkel-lite): heat rejection on the enthalpy potential between saturated air at the water inlet temperature and ambient air at its wet-bulb (signal port), with a tower effectiveness and design air flow."
 related: []
 examples: []
 tags: [coolingtower, component, liquid, acausal]
 references: []
-generated: true
 ---
 
 # CoolingTower
 
-Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Cooling tower (Merkel-lite): heat rejection on the enthalpy potential between saturated air at the water inlet temperature and ambient air at its wet-bulb (signal port), with a tower effectiveness and design air flow.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/liquid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -41,7 +42,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \begin{aligned}
-t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 h_{s_in} &= \text{Enthalpy}\left(\mathrm{airh2o}, t=t_{in}, p=patm, r=1\right) \\
 h_{wb} &= \text{Enthalpy}\left(\mathrm{airh2o}, t=wb.sig, p=patm, r=1\right) \\
 q &= eps_{t}\cdot mdot_{a}\cdot \left(h_{s_in} - h_{wb}\right) \\

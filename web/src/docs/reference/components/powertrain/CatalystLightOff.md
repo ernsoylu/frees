@@ -1,19 +1,20 @@
 ---
 name: CatalystLightOff
 category: Component (powertrain)
-summary: Acausal powertrain-domain component CatalystLightOff with ports in, out.
+summary: "Catalyst light-off: brick thermal mass heated by the exhaust stream (effectiveness-free UA link) plus the exotherm of converted feed once the brick passes light-off; conversion is a C1 sigmoid in brick temperature."
 related: []
 examples: []
 tags: [catalystlightoff, component, powertrain, acausal]
 references: []
-generated: true
 ---
 
 # CatalystLightOff
 
-Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Catalyst light-off: brick thermal mass heated by the exhaust stream (effectiveness-free UA link) plus the exotherm of converted feed once the brick passes light-off; conversion is a C1 sigmoid in brick temperature.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/powertrain.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -43,7 +44,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \begin{aligned}
-t_{g} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+t_{g} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 eta &= 0.5\,\left(1 + \tanh\left(\frac{tb - t50}{k}\right)\right) \\
 q &= ua\cdot \left(t_{g} - tb\right) \\
 qexo &= eta\cdot in.mdot\cdot q_{exo} \\

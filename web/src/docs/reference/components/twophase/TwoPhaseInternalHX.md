@@ -1,19 +1,22 @@
 ---
 name: TwoPhaseInternalHX
 category: Component (twophase)
-summary: Acausal twophase-domain component TwoPhaseInternalHX with ports liq_in, liq_out, vap_in, vap_out.
+summary: "Internal (suction-line) heat exchanger: subcools the liquid line against the suction vapor at an effectiveness on the vapor side (the usual Cmin side)."
 related: []
 examples: []
 tags: [twophaseinternalhx, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # TwoPhaseInternalHX
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Internal (suction-line) heat exchanger: subcools the liquid line against the suction vapor at an effectiveness on the vapor side (the usual Cmin side).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Isobaric on both sides; energy is conserved exactly.
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -43,9 +46,9 @@ liq_{out.mdot} &= liq_{in.mdot} \\
 vap_{out.mdot} &= vap_{in.mdot} \\
 liq_{out.p} &= liq_{in.p} \\
 vap_{out.p} &= vap_{in.p} \\
-t_{liq} &= \text{Temperature}\left(\mathrm{fluid}, =liq_{in.p}, p=liq_{in.h}\right) \\
-t_{vap} &= \text{Temperature}\left(\mathrm{fluid}, =vap_{in.p}, p=vap_{in.h}\right) \\
-cp_{v} &= \text{Cp}\left(\mathrm{fluid}, =vap_{in.p}, p=vap_{in.h}\right) \\
+t_{liq} &= \text{Temperature}\left(\mathrm{fluid\$}, p=liq_{in.p}, h=liq_{in.h}\right) \\
+t_{vap} &= \text{Temperature}\left(\mathrm{fluid\$}, p=vap_{in.p}, h=vap_{in.h}\right) \\
+cp_{v} &= \text{Cp}\left(\mathrm{fluid\$}, p=vap_{in.p}, h=vap_{in.h}\right) \\
 q &= eps\cdot vap_{in.mdot}\cdot cp_{v}\cdot \left(t_{liq} - t_{vap}\right) \\
 vap_{out.h} &= vap_{in.h} + \frac{q}{vap_{in.mdot}} \\
 liq_{out.h} &= liq_{in.h} - \frac{q}{liq_{in.mdot}}

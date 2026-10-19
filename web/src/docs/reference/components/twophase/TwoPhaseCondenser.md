@@ -42,8 +42,8 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.p &= in.p - dp \\
-tsat &= \text{T\_sat}\left(\mathrm{fluid}, =out.p\right) \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid}, =out.p, p=tsat - sc_{set}\right) \\
+tsat &= \text{T\_sat}\left(\mathrm{fluid\$}, p=out.p\right) \\
+out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=tsat - sc_{set}\right) \\
 q &= in.mdot\cdot \left(in.h - out.h\right)
 \end{aligned}
 $$

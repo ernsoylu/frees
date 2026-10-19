@@ -18,7 +18,6 @@ has a negative real part.
 
 ```
 [pr, pi] = pole(num, den)
-[pr, pi] = pole(num, den)
 ```
 
 ## Description

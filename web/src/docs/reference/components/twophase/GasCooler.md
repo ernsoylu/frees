@@ -1,19 +1,20 @@
 ---
 name: GasCooler
 category: Component (twophase)
-summary: Acausal twophase-domain component GasCooler with ports in, out, wall.
+summary: "Transcritical gas cooler: supercritical single-phase cooling against a wall (no saturation clamp — the R744 high side has none); effectiveness on the local cp, LiquidWallHX sign conventions."
 related: []
 examples: []
 tags: [gascooler, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # GasCooler
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Transcritical gas cooler: supercritical single-phase cooling against a wall (no saturation clamp — the R744 high side has none); effectiveness on the local cp, LiquidWallHX sign conventions.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -42,8 +43,8 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.p &= in.p - dp \\
-t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
-cp_{g} &= \text{Cp}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+cp_{g} &= \text{Cp}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 epsg &= 1 - e^{\frac{-ua}{in.mdot\cdot cp_{g}}} \\
 q &= epsg\cdot in.mdot\cdot cp_{g}\cdot \left(t_{in} - wall.t\right) \\
 out.h &= in.h - \frac{q}{in.mdot} \\

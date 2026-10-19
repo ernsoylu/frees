@@ -1,19 +1,20 @@
 ---
 name: BeltDrive
 category: Component (mechanical)
-summary: Acausal mechanical-domain component BeltDrive with ports a, b.
+summary: "Belt/chain drive: speed ratio with a torque-transfer efficiency (Transmission's translational-free cousin, named for the application)."
 related: []
 examples: []
 tags: [beltdrive, component, mechanical, acausal]
 references: []
-generated: true
 ---
 
 # BeltDrive
 
-Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Belt/chain drive: speed ratio with a torque-transfer efficiency (Transmission's translational-free cousin, named for the application).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/mechanical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

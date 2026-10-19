@@ -1,29 +1,25 @@
 ---
 name: scal
-category: Matrix Functions
-summary: Reference page for scal.
-related: []
+category: Matrix
+summary: BLAS vector scaling α·x.
+related: [axpy, copy, ger]
 examples: []
 tags: [scal]
 ---
 
 # scal
 
-`scal` is available in the frees matrix functions surface.
+BLAS vector scaling α·x.
 
 ## Syntax
 
 ```
-scal(...)
+y = scal(alpha, x)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+`y = scal(alpha, x)` returns the BLAS level-1 scaling `alpha · x`.
 
 ## Examples
 
@@ -51,3 +47,16 @@ x[3] = 3
 ```
 
 <!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `alpha` | Number | Yes | Scale factor. |
+| `x` | Vector | Yes | Vector. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Vector | Scaled vector, same length as `x`. |

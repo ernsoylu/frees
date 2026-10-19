@@ -17,7 +17,6 @@ workhorse factorization behind linear solves and determinants.
 
 ```
 [L, U] = LUDecompose(A)
-[L, U] = LUDecompose(A)
 ```
 
 ## Mathematical Formulation

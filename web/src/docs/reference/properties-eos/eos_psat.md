@@ -96,5 +96,6 @@ the critical point is 304 K / 7.38 MPa).
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| `SUPERCRITICAL` | `T ≥ Tc` | No saturation pressure exists above the critical temperature. |
-| `UNKNOWN_FLUID` | `fluid$` not in the table | Use a supported fluid name. |
+| `Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.` | `fluid$` is not in the cubic-EOS table (aliases such as `co2` and `r717` are accepted) | Use one of the listed fluids. |
+| `Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.` | Unsupported `model$` | Pass `'SRK'` or `'PR'`. |
+| `Cubic EOS: saturation pressure needs T < Tc (304.13 K) for carbondioxide, got 400 K.` | `T` at or above the critical temperature | Saturation only exists below `Tc`. |

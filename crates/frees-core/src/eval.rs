@@ -395,7 +395,7 @@ pub enum Arity {
 }
 
 impl Arity {
-    fn accepts(self, n: usize) -> bool {
+    pub(crate) fn accepts(self, n: usize) -> bool {
         match self {
             Arity::Exact(k) => n == k,
             Arity::Range(lo, hi) => n >= lo && n <= hi,
@@ -770,9 +770,6 @@ pub const INTRINSICS: &[Intrinsic] = &[
         Ok(libm::atan2(0.0, a[0]) * 180.0 / std::f64::consts::PI)
     }),
     strict!("cis", Arity::Exact(1), |_, a| Ok(libm::cos(a[0]))),
-    // `pi()` is not a Java arm — the constant is spelled `pi#`. Kept as a
-    // zero-argument convenience so both spellings resolve.
-    strict!("pi", Arity::Exact(0), |_, _a| Ok(std::f64::consts::PI)),
     // ----- lazy forms --------------------------------------------------------
     lazy!("if", Arity::OneOf(&[3, 5]), eval_if),
     lazy!("sum", Arity::Any, |n, args, env| eval_reduction(
@@ -1878,8 +1875,14 @@ pub fn intrinsic_names() -> Vec<&'static str> {
 /// The two families whose names are implemented as a `CALL` intrinsic or a
 /// matrix construct rather than as a scalar expression function. Naming the
 /// *reason* keeps the message honest now that Phase 9 has wired both.
-const MATRIX_FAMILY: &str = "matrix constructs — use the CALL or matrix-assignment form";
-const CONTROL_FAMILY: &str = "control systems — use `CALL <name>(inputs : outputs)`";
+const MATRIX_FAMILY: &str =
+    "matrix constructs — assign the result on its own line, e.g. `d = det(A)`, \
+     or use the multi-output form `[outputs] = name(inputs)`";
+const CONTROL_FAMILY: &str =
+    "control systems — use the multi-output form `[outputs] = name(inputs)`, \
+     e.g. `[num, den] = ss2tf(A, B, C, D)`";
+const STATE_SPACE: &str = "frees has no state-space object — pass A, B, C, D directly, \
+     e.g. `[num, den] = ss2tf(A, B, C, D)`";
 
 const UNPORTED: &[(&str, &str)] = &[
     // Phase 7/8 emptied two sections: the ten ODE Table accessors
@@ -1898,14 +1901,13 @@ const UNPORTED: &[(&str, &str)] = &[
     ("eigvec", MATRIX_FAMILY),
     ("rank", MATRIX_FAMILY),
     ("norm", MATRIX_FAMILY),
-    ("cond", MATRIX_FAMILY),
     ("svd", MATRIX_FAMILY),
     ("qr", MATRIX_FAMILY),
     ("cholesky", MATRIX_FAMILY),
     ("matexp", MATRIX_FAMILY),
     // Control systems
     ("tf", CONTROL_FAMILY),
-    ("ss", CONTROL_FAMILY),
+    ("ss", STATE_SPACE),
     ("tf2ss", CONTROL_FAMILY),
     ("ss2tf", CONTROL_FAMILY),
     ("series", CONTROL_FAMILY),
@@ -2237,10 +2239,16 @@ fn eval_call<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Result<f
         if function.contains('$') {
             return eval_synthetic(function, args, env);
         }
+        // The matrix and control names work — as their own assignment or a
+        // multi-output call — just not nested in an expression; only `ss`
+        // has no form at all.
         return Err(match unported_family(function) {
-            Some(family) => {
-                FreesError::evaluation(format!("not yet supported: {function} ({family})"))
+            Some(STATE_SPACE) => {
+                FreesError::evaluation(format!("not yet supported: {function} ({STATE_SPACE})"))
             }
+            Some(family) => FreesError::evaluation(format!(
+                "{function} cannot be used inside an expression ({family})"
+            )),
             None => FreesError::evaluation(format!("unknown function: {function}")),
         });
     };
@@ -3020,7 +3028,7 @@ fn eval_synthetic<'a>(function: &str, args: &'a [Expr], env: &'a Env<'a>) -> Res
         // the one a user reaches without a CALL: `EquationParser` (and
         // `parser::expand`) emit it for `det(A)` whenever `A` is larger than
         // 3×3, because the closed-form cofactor expansion is O(n!).
-        "det" | "qr" | "chol" | "expm" | "svd" | "eigen" => {
+        "det" | "cond" | "qr" | "chol" | "expm" | "svd" | "eigen" => {
             let values = eval_args(args, env)?;
             match crate::linalg::eval_intrinsic(function, &values) {
                 Some(result) => result,
@@ -6539,11 +6547,10 @@ mod tests {
     }
 
     #[test]
-    fn pi_is_available_as_both_a_constant_and_a_nullary_call() {
-        assert_eq!(c("pi", &[]), std::f64::consts::PI);
+    fn pi_is_the_constant_pi_hash() {
+        // The language has no empty argument list (golden `fn_zero_argument`),
+        // so π is spelled only as the constant `pi#`.
         assert_eq!(ev(&Expr::var("pi#")), std::f64::consts::PI);
-        let message = cerr("pi", &[1.0]);
-        assert!(message.contains("0 arguments"), "{message}");
     }
 
     // -- if --------------------------------------------------------------------
@@ -6838,12 +6845,15 @@ mod tests {
             ("det", MATRIX_FAMILY),
             ("bode", CONTROL_FAMILY),
             ("lqr", CONTROL_FAMILY),
+            ("ss", STATE_SPACE),
         ] {
             let message = err(&Expr::call(name, vec![n(1.0)]));
-            assert!(
-                message.contains(&format!("not yet supported: {name}")),
-                "{name}: {message}"
-            );
+            let refusal = if family == STATE_SPACE {
+                format!("not yet supported: {name}")
+            } else {
+                format!("{name} cannot be used inside an expression")
+            };
+            assert!(message.contains(&refusal), "{name}: {message}");
             assert!(message.contains(family), "{name}: {message}");
         }
     }

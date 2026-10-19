@@ -1,15 +1,15 @@
 ---
 name: ss2tfij
 category: Control Systems
-summary: Reference page for ss2tfij.
-related: []
+summary: Transfer function from input j to output i of a state-space model.
+related: [ss2tf, tf2ss, bode]
 examples: []
 tags: [ss2tfij]
 ---
 
 # ss2tfij
 
-Converts one input/output channel of a state-space model to transfer-function coefficients.
+Transfer function from input j to output i of a state-space model.
 
 ## Syntax
 
@@ -19,11 +19,7 @@ Converts one input/output channel of a state-space model to transfer-function co
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+`[num, den] = ss2tfij(A, B, C, D, i, j)` returns the SISO transfer function `G_ij(s) = C_i (sI − A)⁻¹ B_j + D_ij` from input `j` to output `i`, using row `i` of `C`, column `j` of `B` and `D[i, j]`. Coefficients are in descending powers of `s`.
 
 ## Examples
 
@@ -55,3 +51,21 @@ den[3] = 2
 ```
 
 <!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `A` | Matrix | Yes | n × n state matrix. |
+| `B` | Matrix | Yes | n × m input matrix. |
+| `C` | Matrix | Yes | p × n output matrix. |
+| `D` | Matrix | Yes | p × m feed-through matrix. |
+| `i` | Number | Yes | Output index (1-based). |
+| `j` | Number | Yes | Input index (1-based). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `num` | Vector | Numerator coefficients. |
+| `den` | Vector | Denominator coefficients (length n + 1). |

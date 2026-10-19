@@ -72,6 +72,6 @@ rl.shaft.tau = 91
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: engine-map-2d]

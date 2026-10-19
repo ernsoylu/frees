@@ -1,19 +1,20 @@
 ---
 name: ChargerCCCV
 category: Component (electrical)
-summary: Acausal electrical-domain component ChargerCCCV with ports p, n.
+summary: "CC-CV charger: sources Imax until the terminal voltage approaches Vmax, then tapers (tanh, width epsV) — the constant-current / constant-voltage profile with no mode switch."
 related: []
 examples: []
 tags: [chargercccv, component, electrical, acausal]
 references: []
-generated: true
 ---
 
 # ChargerCCCV
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+CC-CV charger: sources Imax until the terminal voltage approaches Vmax, then tapers (tanh, width epsV) — the constant-current / constant-voltage profile with no mode switch.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/electrical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

@@ -1,19 +1,20 @@
 ---
 name: AHU
 category: Component (moistair)
-summary: Acausal moistair-domain component AHU with ports ret_in, oa_in, sup_out.
+summary: "Air-handling unit: mixing box + filter + cooling coil + reheat coil + supply fan in one block (all stateless stages, replaceable by editing the source)."
 related: []
 examples: []
 tags: [ahu, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # AHU
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Air-handling unit: mixing box + filter + cooling coil + reheat coil + supply fan in one block (all stateless stages, replaceable by editing the source).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/moistair.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

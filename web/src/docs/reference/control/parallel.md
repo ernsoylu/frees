@@ -17,7 +17,6 @@ same input whose outputs are summed.
 
 ```
 [num, den] = parallel(num1, den1, num2, den2)
-[num, den] = parallel(num1, den1, num2, den2)
 ```
 
 ## Mathematical Formulation

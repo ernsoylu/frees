@@ -19,17 +19,18 @@ serde = { workspace = true, optional = true }
 # features, so this build links exactly the fluids frees serves — nothing
 # monolithic. rustprop's shipped crates carry zero external dependencies, which
 # is what keeps frees-core clear of wasm-bindgen (the CLAUDE.md hard rule).
-# Pinned to the v0.1.0 tag rather than a branch: a git dependency on a moving
+# Pinned to a release tag (v0.2.0) rather than a branch: a git dependency on a moving
 # ref would let the property backend change under a green parity corpus. Once
 # the crates.io names are claimed this becomes a plain version requirement and
 # the `git`/`tag` keys come out. Not a path dependency any more, so GitHub CI
 # can finally build the wasm/web jobs, which needed a sibling checkout before.
-rustprop = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.1.0", features = [
+rustprop = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.2.0", features = [
     "heos",
+    "heos-mixtures",
     "humid-air",
     "incompressible",
 ], optional = true }
-rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.1.0", features = [
+rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.2.0", features = [
     "water",
     "r134a",
     "r1234yf",
@@ -89,13 +90,12 @@ rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.1.0", 
     "isobutane",
     "n_butane",
     "oxygen",
-    # NOT linked: `mixture-data`. The ten `.mix` refrigerant blends the alias
-    # table names (R448A, R449A, R452A/B, R454A/B/C, R455A, R513A, R515B) stay
-    # unbacked, and that is not a budget decision. rustprop ships the predefined
-    # mixture data but its `props_si` facade does not route to it — asked
-    # directly, `R454B.mix` and `R454B` both come back "key not found in
-    # JSONFluidLibrary". Enabling the feature links bytes nothing can reach.
-    # Reviving these needs mixture support upstream, not headroom.
+    # The low-GWP blends (2026-10-19). rustprop's `heos-mixtures` engine
+    # routes CoolProp's predefined `<name>.mix` blends; each blend needs its
+    # components linked. R32, R1234yf, R134a, R1234ze(E) and CO2 (R744) are
+    # above already; these two complete R448A–R455A, R513A and R515B.
+    "r125",
+    "r227ea",
 ], optional = true }
 # rustprop-core carries the shared parameter types. The warm adapter
 # (`props/rustprop_warm.rs`) drives rustprop's LOW-LEVEL `PtFlash` API, and
@@ -103,7 +103,7 @@ rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.1.0", 
 # does not re-export — using the low-level API means naming its types. Already
 # linked transitively by `rustprop`, so this adds nothing to the bundle, and it
 # has zero external dependencies like every other shipped rustprop crate.
-rustprop-core = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.1.0", optional = true }
+rustprop-core = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.2.0", optional = true }
 
 [features]
 # rustprop is the property backend everywhere — decision D12, which retires the

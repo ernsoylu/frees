@@ -1,29 +1,37 @@
 ---
 name: cube
-category: Built-in Functions
-summary: Reference page for cube.
-related: []
+category: Math
+summary: Cube, x³.
+related: [sqr]
 examples: []
-tags: [cube]
+tags: [cube, math, power]
 ---
 
 # cube
 
-`cube` is available in the frees built-in functions surface.
+Cube, x³.
 
 ## Syntax
 
 ```
-cube(...)
+y = cube(x)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`cube(x)` returns x·x·x.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Any real value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | x³. |
 
 ## Examples
 

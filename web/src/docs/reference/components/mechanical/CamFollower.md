@@ -1,19 +1,20 @@
 ---
 name: CamFollower
 category: Component (mechanical)
-summary: Acausal mechanical-domain component CamFollower with ports rod.
+summary: "Spring-loaded cam follower: mass held on the profile by a preloaded return spring to ground — pair with Cam for valvetrain/profile-driven kinematics."
 related: []
 examples: []
 tags: [camfollower, component, mechanical, acausal]
 references: []
-generated: true
 ---
 
 # CamFollower
 
-Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Spring-loaded cam follower: mass held on the profile by a preloaded return spring to ground — pair with Cam for valvetrain/profile-driven kinematics.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/mechanical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

@@ -1,19 +1,22 @@
 ---
 name: OpenTank
 category: Component (liquid)
-summary: Acausal liquid-domain component OpenTank with ports in, out.
+summary: "Open (vented) tank: level state from the flow imbalance; the inlet sees the free surface (P0), the outlet the gravity head at the base."
 related: []
 examples: []
 tags: [opentank, component, liquid, acausal]
 references: []
-generated: true
 ---
 
 # OpenTank
 
-Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Open (vented) tank: level state from the flow imbalance; the inlet sees the free surface (P0), the outlet the gravity head at the base.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Well-mixed and adiabatic in enthalpy.
+
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/liquid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

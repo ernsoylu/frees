@@ -1,29 +1,39 @@
 ---
 name: anova1_df_within
-category: Built-in Functions
-summary: Reference page for anova1_df_within.
-related: []
+category: Stats
+summary: One-way ANOVA within-group degrees of freedom (N − k).
+related: [anova1_f, anova1_pval, anova1_df_between]
 examples: []
-tags: [anova1_df_within]
+tags: [anova1_df_within, stats, anova, hypothesis test]
 ---
 
 # anova1_df_within
 
-`anova1_df_within` is available in the frees built-in functions surface.
+One-way ANOVA within-group degrees of freedom (N − k).
 
 ## Syntax
 
 ```
-anova1_df_within(...)
+df = anova1_df_within(g1, g2, ...)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`anova1_df_within(g1, g2, ...)` runs a one-way ANOVA F-test of whether all group means are equal, and returns the **within-group degrees of freedom (N − k)**. Pass two or more groups as vectors.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `g1, g2, ...` | Vector | Yes | Two or more groups of observations. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `df` | Number | Within-group degrees of freedom (N − k). |
 
 ## Examples
 

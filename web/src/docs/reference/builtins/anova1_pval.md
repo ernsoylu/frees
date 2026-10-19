@@ -1,29 +1,39 @@
 ---
 name: anova1_pval
-category: Built-in Functions
-summary: Reference page for anova1_pval.
-related: []
+category: Stats
+summary: One-way ANOVA p-value.
+related: [anova1_f, anova1_df_between, anova1_df_within]
 examples: []
-tags: [anova1_pval]
+tags: [anova1_pval, stats, anova, hypothesis test]
 ---
 
 # anova1_pval
 
-`anova1_pval` is available in the frees built-in functions surface.
+One-way ANOVA p-value.
 
 ## Syntax
 
 ```
-anova1_pval(...)
+p = anova1_pval(g1, g2, ...)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`anova1_pval(g1, g2, ...)` runs a one-way ANOVA F-test of whether all group means are equal, and returns the **p-value**. Pass two or more groups as vectors.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `g1, g2, ...` | Vector | Yes | Two or more groups of observations. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `p` | Number | P-value. |
 
 ## Examples
 

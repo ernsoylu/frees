@@ -1,29 +1,37 @@
 ---
 name: sqr
-category: Built-in Functions
-summary: Reference page for sqr.
-related: []
+category: Math
+summary: Square, x².
+related: [cube, sqrt]
 examples: []
-tags: [sqr]
+tags: [sqr, math, square]
 ---
 
 # sqr
 
-`sqr` is available in the frees built-in functions surface.
+Square, x².
 
 ## Syntax
 
 ```
-sqr(...)
+y = sqr(x)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`sqr(x)` returns x·x.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Any real value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | x², in squared units of x. |
 
 ## Examples
 

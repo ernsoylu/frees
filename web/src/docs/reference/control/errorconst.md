@@ -18,7 +18,6 @@ inputs.
 
 ```
 [Kp, Kv, Ka] = errorconst(num, den)
-[Kp, Kv, Ka] = errorconst(num, den)
 ```
 
 ## Mathematical Formulation

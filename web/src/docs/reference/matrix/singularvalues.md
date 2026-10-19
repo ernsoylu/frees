@@ -1,29 +1,25 @@
 ---
 name: singularvalues
 category: Matrix
-summary: Reference page for singularvalues.
-related: []
+summary: Singular values of a matrix, largest first.
+related: [svd, Eigenvalues, cond]
 examples: []
 tags: [singularvalues]
 ---
 
 # singularvalues
 
-Returns the singular values of a matrix.
+Singular values of a matrix, largest first.
 
 ## Syntax
 
 ```
-[s] = singularvalues(A)
+[s] = SingularValues(A)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+`[s] = SingularValues(A)` returns the singular values σ of `A` in descending order. The ratio `s[1] / s[n]` is the 2-norm condition number (see `cond`).
 
 ## Examples
 
@@ -51,3 +47,15 @@ A[1,1] = 4
 ```
 
 <!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `A` | Matrix | Yes | Real matrix. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `s` | Vector | Singular values, largest first. |

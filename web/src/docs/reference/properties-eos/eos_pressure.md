@@ -77,3 +77,13 @@ p_from_v = 4344014.54 [Pa]
 | `model$` | String | Yes | Selector — One of `SRK`, `PR`. |
 | `T` | Number | Yes | Temperature [K]. |
 | `v` | Number | Yes | Specific volume [m³/kg]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.` | `fluid$` is not in the cubic-EOS table (aliases such as `co2` and `r717` are accepted) | Use one of the listed fluids. |
+| `Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.` | Unsupported `model$` | Pass `'SRK'` or `'PR'`. |
+| `eos_pressure: specific volume v must be positive, got 0 m^3/kg.` | `v` is zero, negative or not a number | Pass the specific volume in m³/kg. Volumes between 0 and the co-volume `b` are answered but are not physical states. |
+
+No range check is applied to `v`: a non-physical specific volume (for example `v ≤ b`) returns a pressure without an error, so validate `v` first.

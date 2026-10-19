@@ -42,14 +42,14 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.h &= in.h \\
-hf &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-hg &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+hf &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+hg &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 x &= \frac{in.h - hf}{hg - hf} \\
-rho_{l} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-rho_{g} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=1\right) \\
-mu_{l} &= \text{Viscosity}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-mu_{g} &= \text{Viscosity}\left(\mathrm{fluid}, =in.p, p=1\right) \\
-sigma &= \text{Surfacetension}\left(\mathrm{fluid}, =in.p\right) \\
+rho_{l} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+rho_{g} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
+mu_{l} &= \text{Viscosity}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+mu_{g} &= \text{Viscosity}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
+sigma &= \text{Surfacetension}\left(\mathrm{fluid\$}, p=in.p\right) \\
 a &= \frac{3.141592653589793}{4}\cdot d^{2} \\
 g &= \frac{in.mdot}{a} \\
 v_{lo} &= \frac{g}{rho_{l}} \\

@@ -1,19 +1,20 @@
 ---
 name: TorsionalBacklash
 category: Component (mechanical)
-summary: Acausal mechanical-domain component TorsionalBacklash with ports a, b.
+summary: "Torsional backlash: a torsional spring dead over ±half of relative wind-up (the C¹ two-hinge deadband, width eps) — gear lash, spline play."
 related: []
 examples: []
 tags: [torsionalbacklash, component, mechanical, acausal]
 references: []
-generated: true
 ---
 
 # TorsionalBacklash
 
-Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Torsional backlash: a torsional spring dead over ±half of relative wind-up (the C¹ two-hinge deadband, width eps) — gear lash, spline play.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/mechanical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

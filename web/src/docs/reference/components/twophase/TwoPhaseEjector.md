@@ -1,19 +1,20 @@
 ---
 name: TwoPhaseEjector
 category: Component (twophase)
-summary: Acausal twophase-domain component TwoPhaseEjector with ports m, s, out.
+summary: "Two-phase ejector, lumped: motive m entrains suction s; mass and energy mix exactly, and the diffuser recovers a pressure lift parameterized as the pressure-lift ratio PLR = P_out / P_suction (rate it from CFD/test data)."
 related: []
 examples: []
 tags: [twophaseejector, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # TwoPhaseEjector
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Two-phase ejector, lumped: motive m entrains suction s; mass and energy mix exactly, and the diffuser recovers a pressure lift parameterized as the pressure-lift ratio PLR = P_out / P_suction (rate it from CFD/test data).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

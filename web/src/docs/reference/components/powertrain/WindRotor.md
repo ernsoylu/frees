@@ -1,19 +1,20 @@
 ---
 name: WindRotor
 category: Component (powertrain)
-summary: Acausal powertrain-domain component WindRotor with ports shaft, wind, pitch.
+summary: "Wind rotor: Cp(λ, pitch) from a 2-D map turns the swept-area wind power into shaft torque; tip-speed ratio and torque are eps-regularized at rest."
 related: []
 examples: []
 tags: [windrotor, component, powertrain, acausal]
 references: []
-generated: true
 ---
 
 # WindRotor
 
-Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Wind rotor: Cp(λ, pitch) from a 2-D map turns the swept-area wind power into shaft torque; tip-speed ratio and torque are eps-regularized at rest.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/powertrain.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

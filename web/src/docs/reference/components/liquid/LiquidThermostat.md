@@ -1,19 +1,20 @@
 ---
 name: LiquidThermostat
 category: Component (liquid)
-summary: Acausal liquid-domain component LiquidThermostat with ports in, out.
+summary: "Wax thermostat: the element opens smoothly over a temperature band (Topen ± Tband) sensed on the inlet coolant — the engine warm-up bypass switch, no discrete event."
 related: []
 examples: []
 tags: [liquidthermostat, component, liquid, acausal]
 references: []
-generated: true
 ---
 
 # LiquidThermostat
 
-Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Wax thermostat: the element opens smoothly over a temperature band (Topen ± Tband) sensed on the inlet coolant — the engine warm-up bypass switch, no discrete event.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/liquid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -44,7 +45,7 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.h &= in.h \\
-t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 u &= 0.5\,\left(1 + \tanh\left(\frac{t_{in} - topen}{tband}\right)\right) \\
 in.mdot\cdot \left|in.mdot\right| &= \left(u\cdot cda\right)^{2}\cdot 2\cdot rho\cdot \left(in.p - out.p\right)
 \end{aligned}

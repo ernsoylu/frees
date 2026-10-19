@@ -17,7 +17,6 @@ state model to the frequency-domain form needed for classical loop design.
 
 ```
 [num, den] = ss2tf(A, B, C, D)
-[num, den] = ss2tf(A, B, C, D)
 ```
 
 ## Description

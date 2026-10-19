@@ -78,3 +78,13 @@ p_from_v = 4344014.54 [Pa]
 | `T` | Number | Yes | Temperature [K]. |
 | `P` | Number | Yes | Pressure [Pa]. |
 | `phase$` | String | Yes | Selector — One of `vapor`, `liquid`. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.` | `fluid$` is not in the cubic-EOS table (aliases such as `co2` and `r717` are accepted) | Use one of the listed fluids. |
+| `Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.` | Unsupported `model$` | Pass `'SRK'` or `'PR'`. |
+| `Cubic EOS: no physical root for carbondioxide at T=-5 K, P=4000000 Pa.` | The cubic has no positive-volume root at `(T, P)` — usually a unit slip | Check `T` [K] and `P` [Pa]. |
+
+`phase$` = `'liquid'` selects the liquid root and `'vapor'` (or `'vapour'`, `'gas'`) the vapour root; any other word is refused with `Cubic EOS: phase$ must be 'liquid' or 'vapor'`.

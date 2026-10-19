@@ -45,11 +45,11 @@ out.p &= in.p \\
 out.h &= in.h \\
 \text{der}\left(in.p\right) &= \frac{in.mdot - out.mdot}{c} \\
 \text{init}\left(in.p\right) &= p0 \\
-hf &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-hg &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+hf &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+hg &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 x &= \frac{in.h - hf}{hg - hf} \\
-rho_{l} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-rho_{g} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+rho_{l} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+rho_{g} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 alpha &= \text{void\_zivi}\left(x, rho_{l}, rho_{g}\right) \\
 rho_{mix} &= alpha\cdot rho_{g} + \left(1 - alpha\right)\cdot rho_{l} \\
 m &= v\cdot rho_{mix}

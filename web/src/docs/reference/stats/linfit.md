@@ -1,15 +1,15 @@
 ---
 name: linfit
 category: Stats
-summary: Reference page for linfit.
-related: []
+summary: Straight-line least-squares fit: slope, intercept and R².
+related: [polyfit, slope, intercept, r2]
 examples: []
 tags: [linfit]
 ---
 
 # linfit
 
-Fits a straight line and returns its slope, intercept, and coefficient of determination.
+Straight-line least-squares fit: slope, intercept and R².
 
 ## Syntax
 
@@ -19,11 +19,7 @@ Fits a straight line and returns its slope, intercept, and coefficient of determ
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+`[slope, intercept, r2] = linfit(x, y)` fits `y ≈ slope·x + intercept` by ordinary least squares and returns the coefficient of determination with it — the three scalar accessors `slope`, `intercept` and `r2` in one call.
 
 ## Examples
 
@@ -53,3 +49,18 @@ slope = 2
 ```
 
 <!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | Sample abscissae. |
+| `y` | Vector | Yes | Sample ordinates (same length as `x`). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `slope` | Number | Fitted slope. |
+| `intercept` | Number | Fitted intercept. |
+| `r2` | Number | Coefficient of determination R². |

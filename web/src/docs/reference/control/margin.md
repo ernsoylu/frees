@@ -17,7 +17,6 @@ the classical frequency-domain measures of relative stability for the closed loo
 
 ```
 [gm, pm, w_cg, w_cp] = margin(num, den)
-[gm, pm, w_cg, w_cp] = margin(num, den)
 ```
 
 ## Description

@@ -42,7 +42,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \begin{aligned}
-rho &= \text{Density}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+rho &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 rod.f &= -\left(in.p - patm\right)\cdot area \\
 in.mdot &= rho\cdot area\cdot rod.vel
 \end{aligned}

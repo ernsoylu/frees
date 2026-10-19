@@ -1,29 +1,40 @@
 ---
 name: wmean
-category: Built-in Functions
-summary: Reference page for wmean.
-related: []
+category: Stats
+summary: Weighted arithmetic mean.
+related: [wvar, average, trimmedmean]
 examples: []
-tags: [wmean]
+tags: [wmean, stats, weighted, mean]
 ---
 
 # wmean
 
-`wmean` is available in the frees built-in functions surface.
+Weighted arithmetic mean.
 
 ## Syntax
 
 ```
-wmean(...)
+m = wmean(weights, values)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`wmean(weights, values)` returns Σwᵢxᵢ / Σwᵢ. Note the order: weights first.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `weights` | Vector | Yes | Non-negative weights with a positive sum. |
+| `values` | Vector | Yes | Values (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `m` | Number | Weighted mean, in the units of `values`. |
 
 ## Examples
 

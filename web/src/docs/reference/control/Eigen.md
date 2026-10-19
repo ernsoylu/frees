@@ -17,7 +17,6 @@ directions; the eigenvalues their rates/frequencies.
 
 ```
 [lambda, V] = Eigen(A)
-[lambda, V] = Eigen(A)
 ```
 
 ## Mathematical Formulation

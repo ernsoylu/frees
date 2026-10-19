@@ -1,19 +1,20 @@
 ---
 name: HydraulicResistance
 category: Component (hydraulic)
-summary: Acausal hydraulic-domain component HydraulicResistance with ports in, out.
+summary: Generic K-factor resistance (bend, tee, sudden expansion — set K from the standard flow-network loss correlations).
 related: []
 examples: []
 tags: [hydraulicresistance, component, hydraulic, acausal]
 references: []
-generated: true
 ---
 
 # HydraulicResistance
 
-Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Generic K-factor resistance (bend, tee, sudden expansion — set K from the standard flow-network loss correlations).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/hydraulic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

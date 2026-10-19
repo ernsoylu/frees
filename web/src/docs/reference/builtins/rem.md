@@ -1,29 +1,38 @@
 ---
 name: rem
-category: Built-in Functions
-summary: Reference page for rem.
-related: []
+category: Math
+summary: Remainder of a/b, with the sign of a.
+related: [mod, int]
 examples: []
-tags: [rem]
+tags: [rem, math, remainder, modulo]
 ---
 
 # rem
 
-`rem` is available in the frees built-in functions surface.
+Remainder of a/b, with the sign of a.
 
 ## Syntax
 
 ```
-rem(...)
+r = rem(a, b)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`rem(a, b)` returns a − b·trunc(a/b) (C `fmod`), so the result takes the sign of `a`: `rem(-7, 3) = -1`. `b` must be non-zero.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `a` | Number | Yes | Dividend. |
+| `b` | Number | Yes | Divisor (non-zero). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `r` | Number | Remainder, |r| < |b|. |
 
 ## Examples
 

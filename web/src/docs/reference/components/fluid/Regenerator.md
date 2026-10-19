@@ -1,19 +1,20 @@
 ---
 name: Regenerator
 category: Component (fluid)
-summary: Acausal fluid-domain component Regenerator with ports hot_in, hot_out, cold_in, cold_out.
+summary: "Effectiveness-rated regenerator/recuperator: Q = ε·Cmin·(Th − Tc) with ε given directly (rate it from the ε-NTU functions for a geometry design)."
 related: []
 examples: []
 tags: [regenerator, component, fluid, acausal]
 references: []
-generated: true
 ---
 
 # Regenerator
 
-Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Effectiveness-rated regenerator/recuperator: Q = ε·Cmin·(Th − Tc) with ε given directly (rate it from the ε-NTU functions for a geometry design).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **fluid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/fluid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -43,10 +44,10 @@ hot_{out.mdot} &= hot_{in.mdot} \\
 hot_{out.p} &= hot_{in.p} \\
 cold_{out.mdot} &= cold_{in.mdot} \\
 cold_{out.p} &= cold_{in.p} \\
-th &= \text{Temperature}\left(\mathrm{hot}, =hot_{in.p}, p=hot_{in.h}\right) \\
-tc &= \text{Temperature}\left(\mathrm{cold}, =cold_{in.p}, p=cold_{in.h}\right) \\
-c_{h} &= hot_{in.mdot}\cdot \text{Cp}\left(\mathrm{hot}, =hot_{in.p}, p=hot_{in.h}\right) \\
-c_{c} &= cold_{in.mdot}\cdot \text{Cp}\left(\mathrm{cold}, =cold_{in.p}, p=cold_{in.h}\right) \\
+th &= \text{Temperature}\left(\mathrm{hot\$}, p=hot_{in.p}, h=hot_{in.h}\right) \\
+tc &= \text{Temperature}\left(\mathrm{cold\$}, p=cold_{in.p}, h=cold_{in.h}\right) \\
+c_{h} &= hot_{in.mdot}\cdot \text{Cp}\left(\mathrm{hot\$}, p=hot_{in.p}, h=hot_{in.h}\right) \\
+c_{c} &= cold_{in.mdot}\cdot \text{Cp}\left(\mathrm{cold\$}, p=cold_{in.p}, h=cold_{in.h}\right) \\
 q &= eps\cdot \text{min}\left(c_{h}, c_{c}\right)\cdot \left(th - tc\right) \\
 hot_{out.h} &= hot_{in.h} - \frac{q}{hot_{in.mdot}} \\
 cold_{out.h} &= cold_{in.h} + \frac{q}{cold_{in.mdot}}

@@ -42,11 +42,11 @@ out.mdot &= in.mdot \\
 out.p &= in.p \\
 out.h &= in.h \\
 out.z &= in.z \\
-hf &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-hg &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+hf &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+hg &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 x &= \frac{in.h - hf}{hg - hf} \\
-bubble &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-dew &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+bubble &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+dew &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 glide &= dew - bubble
 \end{aligned}
 $$

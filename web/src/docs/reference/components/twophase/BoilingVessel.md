@@ -44,13 +44,13 @@ $$
 \text{der}\left(mass\right) &= -vent.mdot \\
 \text{init}\left(mass\right) &= m0 \\
 \text{der}\left(utot\right) &= wall.qdot - vent.mdot\cdot vent.h \\
-\text{init}\left(utot\right) &= m0\cdot \text{Intenergy}\left(\mathrm{fluid}, =t0, t=0\right) \\
+\text{init}\left(utot\right) &= m0\cdot \text{Intenergy}\left(\mathrm{fluid\$}, t=t0, x=0\right) \\
 rho_{cv} &= \frac{mass}{v} \\
 u_{cv} &= \frac{utot}{mass} \\
-vent.p &= \text{Pressure}\left(\mathrm{fluid}, =rho_{cv}, d=u_{cv}\right) \\
-t_{cv} &= \text{Temperature}\left(\mathrm{fluid}, =rho_{cv}, d=u_{cv}\right) \\
-x_{cv} &= \text{Quality}\left(\mathrm{fluid}, =rho_{cv}, d=u_{cv}\right) \\
-vent.h &= \text{Enthalpy}\left(\mathrm{fluid}, =vent.p, p=1\right) \\
+vent.p &= \text{Pressure}\left(\mathrm{fluid\$}, d=rho_{cv}, u=u_{cv}\right) \\
+t_{cv} &= \text{Temperature}\left(\mathrm{fluid\$}, d=rho_{cv}, u=u_{cv}\right) \\
+x_{cv} &= \text{Quality}\left(\mathrm{fluid\$}, d=rho_{cv}, u=u_{cv}\right) \\
+vent.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=vent.p, x=1\right) \\
 wall.t &= t_{cv}
 \end{aligned}
 $$

@@ -1,19 +1,20 @@
 ---
 name: FuelCellStackCooled
 category: Component (electrical)
-summary: Acausal electrical-domain component FuelCellStackCooled with ports p, n, cool_in, cool_out.
+summary: "PEM stack with a coolant jacket: the electrochemical stack's waste heat crosses into a liquid loop through a UA wall (drop-in for FuelCellStack when the thermal loop matters)."
 related: []
 examples: []
 tags: [fuelcellstackcooled, component, electrical, acausal]
 references: []
-generated: true
 ---
 
 # FuelCellStackCooled
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+PEM stack with a coolant jacket: the electrochemical stack's waste heat crosses into a liquid loop through a UA wall (drop-in for FuelCellStack when the thermal loop matters).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/electrical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

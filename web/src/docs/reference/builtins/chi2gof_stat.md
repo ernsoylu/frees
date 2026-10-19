@@ -1,29 +1,40 @@
 ---
 name: chi2gof_stat
-category: Built-in Functions
-summary: Reference page for chi2gof_stat.
-related: []
+category: Stats
+summary: Chi-square goodness-of-fit χ² statistic.
+related: [chi2gof_pval, chi2gof_df]
 examples: []
-tags: [chi2gof_stat]
+tags: [chi2gof_stat, stats, chi-square, goodness of fit]
 ---
 
 # chi2gof_stat
 
-`chi2gof_stat` is available in the frees built-in functions surface.
+Chi-square goodness-of-fit χ² statistic.
 
 ## Syntax
 
 ```
-chi2gof_stat(...)
+chi2 = chi2gof_stat(observed, expected)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`chi2gof_stat(observed, expected)` runs a Pearson χ² goodness-of-fit test of observed counts against expected counts (rescaled to the observed total), and returns the **χ² statistic**.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `observed` | Vector | Yes | Observed counts per category. |
+| `expected` | Vector | Yes | Expected counts per category (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `chi2` | Number | Χ² statistic. |
 
 ## Examples
 

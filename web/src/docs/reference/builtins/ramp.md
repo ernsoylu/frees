@@ -1,56 +1,59 @@
 ---
 name: ramp
-category: Built-in Functions
-summary: Reference page for ramp.
-related: []
+category: Math
+summary: Ramp function max(x, 0).
+related: [step, max, abs]
 examples: []
-tags: [ramp]
+tags: [ramp, math, positive part]
 ---
 
 # ramp
 
-`ramp` is available in the frees built-in functions surface.
+Ramp function max(x, 0).
 
 ## Syntax
 
 ```
-ramp(...)
+y = ramp(x)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`ramp(x)` returns x for x ≥ 0 and 0 otherwise — the positive part of x.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Any real value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | max(x, 0), in the units of x. |
 
 ## Examples
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Solve a complete model
+### Verified example — Positive part of a signed flow
 
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-// frees-language: 2
-DYNAMIC ramp (t = 0 .. 10, points = 101)
-  der(y) = 1
-  y(0) = 0
-END
-t7 = TimeAt('y', 7)
-y3 = ODEValue('y', 3)
+q_in  = ramp(-2)     { a reverse flow clips to zero }
+q_out = ramp(3.5)
 
-{ CHECK t7 7 0.000006999999999999998 }
-{ CHECK y3 3 0.0000030000000000000005 }
+{ CHECK q_in 0 0.000001 }
+{ CHECK q_out 3.5 0.0000035 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-t7 = 7
-y3 = 3
+q_in = 0
+q_out = 3.5
 ```
 
 <!-- verified-reference-example:end -->

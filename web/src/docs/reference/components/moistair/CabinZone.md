@@ -1,19 +1,22 @@
 ---
 name: CabinZone
 category: Component (moistair)
-summary: Acausal moistair-domain component CabinZone with ports in, out, wall.
+summary: "Cabin zone: a perfectly-mixed air volume Vz with temperature and humidity STATES, occupant sensible/moisture loads, a solar/auxiliary heat input, and a wall heat port (couple it to ThermalMass walls or an evaporator AirCoil)."
 related: []
 examples: []
 tags: [cabinzone, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # CabinZone
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Cabin zone: a perfectly-mixed air volume Vz with temperature and humidity STATES, occupant sensible/moisture loads, a solar/auxiliary heat input, and a wall heat port (couple it to ThermalMass walls or an evaporator AirCoil).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Ventilation air flows through (in → out at the zone state).
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/moistair.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

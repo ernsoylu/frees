@@ -28,6 +28,7 @@ const RUST_SOURCES = [
   'crates/frees-core/src/props/propfun.rs',
   'crates/frees-core/src/props/solids.rs',
   'crates/frees/src/repl.rs',
+  'crates/frees-core/src/token.rs',
 ]
 
 /** The names `rustIntrinsics()` in the generator reads, read the same way. */
@@ -149,6 +150,14 @@ describe('build-doc-manifest', () => {
         patch(root, 'crates/frees/src/repl.rs', '    "integrate",\n];', '    "integrate",\n    "residue",\n];'),
     })
     expect(manifest.replCasOps).toContain('residue')
+  })
+
+  it('takes keywords from token::keyword_or_ident', () => {
+    const { manifest } = generate({
+      edit: (root) =>
+        patch(root, 'crates/frees-core/src/token.rs', '"not" => TokenKind::Not,', '"not" => TokenKind::Not,\n            "xor" => TokenKind::Not,'),
+    })
+    expect(manifest.keywords).toEqual(expect.arrayContaining(['xor', 'dynamic', 'state table']))
   })
 
   // Membership is the engine's; the spelling a reader sees is the page's. The

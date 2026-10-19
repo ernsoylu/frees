@@ -43,13 +43,13 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.p &= in.p \\
-tcond &= \text{T\_sat}\left(\mathrm{fluid}, =in.p\right) \\
+tcond &= \text{T\_sat}\left(\mathrm{fluid\$}, p=in.p\right) \\
 q &= ua\cdot \left(tcond - t_{amb}\right) \\
 q &= in.mdot\cdot \left(in.h - out.h\right) \\
-rho_{in} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
-rho_{out} &= \text{Density}\left(\mathrm{fluid}, =out.p, p=out.h\right) \\
+rho_{in} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+rho_{out} &= \text{Density}\left(\mathrm{fluid\$}, p=out.p, h=out.h\right) \\
 m &= v\cdot 0.5\cdot \left(rho_{in} + rho_{out}\right) \\
-sc &= tcond - \text{Temperature}\left(\mathrm{fluid}, =out.p, p=out.h\right)
+sc &= tcond - \text{Temperature}\left(\mathrm{fluid\$}, p=out.p, h=out.h\right)
 \end{aligned}
 $$
 

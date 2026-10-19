@@ -1,19 +1,20 @@
 ---
 name: GradeProfile
 category: Component (powertrain)
-summary: Acausal powertrain-domain component GradeProfile with ports port.
+summary: "Road grade vs distance: the travelled distance integrates from the vehicle speed and the grade (rad) is looked up from a profile TABLE over distance — hilly-route load without scripting time profiles."
 related: []
 examples: []
 tags: [gradeprofile, component, powertrain, acausal]
 references: []
-generated: true
 ---
 
 # GradeProfile
 
-Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Road grade vs distance: the travelled distance integrates from the vehicle speed and the grade (rad) is looked up from a profile TABLE over distance — hilly-route load without scripting time profiles.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/powertrain.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

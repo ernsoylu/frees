@@ -1,6 +1,6 @@
 import { helpUrl } from './helpUrl'
 import { useState, useEffect, ReactNode } from 'react'
-import { Flex, Group, Title, UnstyledButton, Text, Box, Paper, ActionIcon, Menu } from '@mantine/core'
+import { Flex, Group, Title, UnstyledButton, Text, Box, Paper, ActionIcon, Menu, Button, Select } from '@mantine/core'
 import {
   IconMathFunction,
   IconVariable,
@@ -15,7 +15,9 @@ import {
   IconFilePlus,
   IconHelp,
   IconBook,
-  IconTargetArrow,
+  IconMenu2,
+  IconPlayerPlayFilled,
+  IconPlayerStopFilled,
   IconWorld,
 } from '@tabler/icons-react'
 import { TableSpec } from './tables'
@@ -105,6 +107,7 @@ interface MobileLayoutProps {
   solving: boolean
   onCheck: () => void
   onSolve: () => Promise<'workspace' | 'table' | void> | void
+  onStop: () => void
   checkingTableId: string | null
   solvingTableId: string | null
   onCheckTable: (id: string) => void
@@ -133,6 +136,7 @@ export default function MobileLayout({
   solving,
   onCheck,
   onSolve,
+  onStop,
   checkingTableId,
   solvingTableId,
   onCheckTable,
@@ -204,7 +208,15 @@ export default function MobileLayout({
   }
   if (activeTab === 'table') {
     if (tableEntries.length === 0) {
-      content = <Box p="md"><Text c="dimmed">No tables available.</Text></Box>
+      content = (
+        <Box p="md">
+          <Text fw={600} mb="xs">No tables yet</Text>
+          <Text c="dimmed" size="sm">
+            Start with an example to explore tables, or define a TABLE or PARAMETRIC block in the editor.
+          </Text>
+          <Button variant="light" mt="md" onClick={onOpenExamples}>Explore examples</Button>
+        </Box>
+      )
     } else {
       const entry = tableEntries.find((e) => e.id === selectedEntryId) ?? tableEntries[0]
       // STATE TABLE panels are keyed directly; editable tables live in the
@@ -216,10 +228,11 @@ export default function MobileLayout({
   }
 
   const selectedTableId =
-    selectedEntryId && tables.some((t) => t.id === selectedEntryId) ? selectedEntryId : null
+    selectedEntryId && tables.some((t) => t.id === selectedEntryId && t.kind === 'parametric') ? selectedEntryId : null
   const isTableActive = activeTab === 'table' && selectedTableId !== null
   const isChecking = isTableActive && selectedTableId ? checkingTableId === selectedTableId : checking
-  const isSolving = isTableActive && selectedTableId ? solvingTableId === selectedTableId : solving
+  const isSolving = solving || solvingTableId !== null
+  const isBusy = isSolving || checking || checkingTableId !== null
 
   return (
     <Flex direction="column" h={shellHeight} style={{ overflow: 'hidden' }}>
@@ -232,14 +245,14 @@ export default function MobileLayout({
           backgroundColor: 'var(--mantine-color-body)',
           zIndex: 10,
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
-          paddingBottom: '16px',
+          paddingBottom: '12px',
           paddingLeft: '16px',
           paddingRight: '16px'
         }}
       >
-        <Group justify="space-between" align="center">
-          <div>
-            <UnstyledButton onClick={onRenameProject}>
+        <Group justify="space-between" align="center" wrap="nowrap">
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <UnstyledButton onClick={onRenameProject} aria-label={`Rename project (currently ${projectName})`} style={{ maxWidth: '100%' }}>
               <Title order={5} c="teal" lineClamp={1}>
                 {projectName}
               </Title>
@@ -249,44 +262,10 @@ export default function MobileLayout({
             </Text>
           </div>
           <Group gap="xs">
-            <ActionIcon
-              variant="light"
-              color="teal"
-              loading={isChecking}
-              onClick={() => {
-                if (isTableActive && selectedTableId) {
-                  onCheckTable(selectedTableId)
-                } else {
-                  onCheck()
-                }
-              }}
-              title="Check"
-            >
-              <IconChecks size={18} />
-            </ActionIcon>
-            <ActionIcon
-              variant="filled"
-              color="teal"
-              loading={isSolving}
-              onClick={async () => {
-                let res: 'workspace' | 'table' | void | boolean
-                if (isTableActive && selectedTableId) {
-                  res = await onSolveTable(selectedTableId)
-                } else {
-                  res = await onSolve()
-                }
-                if (res === 'workspace' || res === 'table') {
-                  setActiveTab(res)
-                }
-              }}
-              title="Solve"
-            >
-              <IconTargetArrow size={18} />
-            </ActionIcon>
             <Menu position="bottom-end">
               <Menu.Target>
-                <ActionIcon variant="subtle" color="gray" aria-label="Menu" title="Menu">
-                  <IconSettings size={18} />
+                <ActionIcon size={44} variant="subtle" color="gray" aria-label="Menu" title="Menu">
+                  <IconMenu2 size={22} />
                 </ActionIcon>
               </Menu.Target>
               <Menu.Dropdown>
@@ -352,6 +331,43 @@ export default function MobileLayout({
             </Menu>
           </Group>
         </Group>
+        <Group gap="xs" mt="sm" wrap="nowrap">
+          <Button
+            variant="default"
+            h={44}
+            leftSection={<IconChecks size={18} />}
+            loading={isChecking}
+            disabled={isBusy}
+            onClick={() => {
+              if (isTableActive && selectedTableId) onCheckTable(selectedTableId)
+              else onCheck()
+            }}
+          >
+            Check
+          </Button>
+          {isSolving ? (
+            <Button h={44} flex={1} color="red" leftSection={<IconPlayerStopFilled size={16} />} onClick={onStop}>
+              Stop solving
+            </Button>
+          ) : (
+            <Button
+              h={44}
+              flex={1}
+              leftSection={<IconPlayerPlayFilled size={16} />}
+              disabled={isBusy}
+              onClick={async () => {
+                if (isTableActive && selectedTableId) {
+                  await onSolveTable(selectedTableId)
+                } else {
+                  const result = await onSolve()
+                  if (result === 'workspace' || result === 'table') setActiveTab(result)
+                }
+              }}
+            >
+              {isTableActive ? 'Solve table' : 'Solve'}
+            </Button>
+          )}
+        </Group>
       </Paper>
 
       {/* Main Content Area — the editor and the terminal fill edge-to-edge
@@ -365,52 +381,36 @@ export default function MobileLayout({
         p={activeTab === 'equations' || activeTab === 'terminal' ? 0 : 'xs'}
       >
         {activeTab === 'table' && tableEntries.length > 1 && (
-          <Group gap="xs" mb="sm" style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
-            {tableEntries.map((e) => (
-              <ActionIcon
-                key={e.id}
-                variant={(selectedEntryId ?? tableEntries[0].id) === e.id ? 'filled' : 'light'}
-                color={e.state ? 'blue' : 'teal'}
-                onClick={() => {
-                  setSelectedEntryId(e.id)
-                  // The workbook panel shows the App-level active table, so a
-                  // hosted (editable) table must be selected THERE too — a
-                  // local-only selection left the workbook on the old table.
-                  if (!e.state && tables.some((t) => t.id === e.id)) onActiveTableId(e.id)
-                }}
-                size="lg"
-                title={e.name}
-              >
-                <Text size="xs" fw={700}>
-                  {e.name.slice(0, 2).toUpperCase()}
-                </Text>
-              </ActionIcon>
-            ))}
-          </Group>
+          <Select
+            label="Active table"
+            mb="sm"
+            data={tableEntries.map((entry) => ({ value: entry.id, label: entry.name }))}
+            value={selectedEntryId ?? tableEntries[0].id}
+            allowDeselect={false}
+            onChange={(id) => {
+              if (!id) return
+              setSelectedEntryId(id)
+              if (tables.some((table) => table.id === id)) onActiveTableId(id)
+            }}
+          />
         )}
         {activeTab === 'plots' && plots.length > 1 && (
-          <Group gap="xs" mb="sm" style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
-            {plots.map((p) => (
-              <ActionIcon
-                key={p.id}
-                variant={activePlotId === p.id ? 'filled' : 'light'}
-                color="teal"
-                onClick={() => setActivePlotId(p.id)}
-                size="lg"
-                title={p.name}
-              >
-                <Text size="xs" fw={700}>
-                  {p.name.slice(0, 2).toUpperCase()}
-                </Text>
-              </ActionIcon>
-            ))}
-          </Group>
+          <Select
+            label="Active plot"
+            mb="sm"
+            data={plots.map((plot) => ({ value: plot.id, label: plot.name }))}
+            value={activePlotId ?? plots[0].id}
+            allowDeselect={false}
+            onChange={(id) => { if (id) setActivePlotId(id) }}
+          />
         )}
         {content}
       </Box>
 
       {/* Bottom Navigation */}
       <Paper
+        component="nav"
+        aria-label="Workspace navigation"
         shadow="lg"
         radius={0}
         style={{
@@ -439,7 +439,7 @@ export default function MobileLayout({
                   // starve the rest.
                   minWidth: 0,
                   color: isActive ? 'var(--mantine-color-teal-filled)' : 'var(--mantine-color-text)',
-                  opacity: isActive ? 1 : 0.6,
+                  minHeight: 48,
                   transition: 'opacity 0.2s, color 0.2s',
                 }}
               >
@@ -453,7 +453,7 @@ export default function MobileLayout({
                 >
                   <Icon size={22} stroke={isActive ? 2.5 : 1.5} />
                 </Box>
-                <Text size="0.62rem" fw={isActive ? 600 : 400} style={{ whiteSpace: 'nowrap' }}>
+                <Text size="0.7rem" fw={isActive ? 600 : 400} style={{ whiteSpace: 'nowrap' }}>
                   {tab.label}
                 </Text>
               </UnstyledButton>

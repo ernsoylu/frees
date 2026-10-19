@@ -9,10 +9,6 @@ tags: [control, zero pole gain, zpk, transfer function, factorization]
 
 # tf2zp
 
-**Current limitation:** the current parser cannot infer the value-dependent
-output shapes for the invocation below. Use the first-order working alternative
-in the verified example; the formulation describes the intended conversion.
-
 Converts a transfer function `G(s) = num/den` to **zero-pole-gain** form: the zeros
 (`zr`/`zi`), poles (`pr`/`pi`), and scalar gain `k`. It is the factored view of the
 rational system, the inverse of `zp2tf`.
@@ -36,49 +32,33 @@ leading-coefficient ratio.
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Find the poles and zeros of a first-order model
+### Verified example — Zeros, poles and gain of a third-order model
 
-**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
-
-```frees error="Expected vector array access"
-num = [1, 3]
-den = [1, 2]
-[zr, zi, pr, pi, k] = tf2zp(num, den)
-```
-
-Expected diagnostic:
-
-```text
-Syntax error: Expected vector array access: e.g. v[1:3]
-```
-
-Working alternative — paste this complete document into the editor and solve:
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation. `num` may be shorter than `den`; it is read with leading zeros.
 
 ```frees
-num = [1, 3]
-den = [1, 2]
-[pr, pi] = pole(num, den)
-zero_real = -3
-gain = 1
+num = [1, 3, 2]
+den = [1, 2, 5, 4]
+[zr, zi, pr, pi, k] = tf2zp(num, den)
 
-{ CHECK den[1] 1 0.000001 }
-{ CHECK den[2] 2 0.000002 }
-{ CHECK num[1] 1 0.000001 }
+{ CHECK zr[1] -2 0.000002 }
+{ CHECK zr[2] -1 0.000001 }
+{ CHECK pr[1] -0.5 0.0000005 }
+{ CHECK pi[1] 1.936491673 0.000001936491673 }
+{ CHECK pr[3] -1 0.000001 }
+{ CHECK k 1 0.000001 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-den[1] = 1
-den[2] = 2
-num[1] = 1
+zr = [-2, -1]
+pr = [-0.5, -0.5, -1]
+pi = [1.936491673, -1.936491673, 0]
+k = 1
 ```
 
 <!-- verified-reference-example:end -->
-
-```
-{ [zr,zi,pr,pi,k] = tf2zp(num, den) }
-```
 
 ## Input Arguments
 
@@ -91,6 +71,6 @@ num[1] = 1
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| `zr`, `zi` | Vector | Real / imaginary parts of the zeros. |
+| `zr`, `zi` | Vector | Real / imaginary parts of the zeros, one slot per numerator degree. A numerator with leading zeros has fewer finite zeros; the surplus slots read 0. |
 | `pr`, `pi` | Vector | Real / imaginary parts of the poles. |
 | `k` | Number | Scalar gain. |

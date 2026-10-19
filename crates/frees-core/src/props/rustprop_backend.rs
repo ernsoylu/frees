@@ -4,10 +4,11 @@
 //! emscripten `coolprop.wasm` blob.
 //!
 //! The four [`RealFluid`] calls forward 1:1 to `rustprop::props_si` /
-//! `rustprop::ha_props_si`; every rustprop error becomes a
+//! `rustprop::ha_props_si`. A rustprop error at a state becomes a
 //! [`FreesError::Property`] carrying the rustprop message, which the engine
 //! classifies exactly as it classifies the Java's
-//! `PropertyEvaluationException`.
+//! `PropertyEvaluationException`; one no state can cure (unknown fluid,
+//! output or input pair) stops the solve as a solver error — see `call_err`.
 //!
 //! Fluids go to rustprop **under their plain names, never an `IF97::`
 //! prefix**: the frees parity oracle is the native CoolProp default backend,
@@ -24,10 +25,36 @@ use crate::props::rustprop_warm;
 /// humid air.
 pub struct RustpropBackend;
 
-/// The property-error mapping: message = the rustprop error's message
-/// (rustprop's `Display` is upstream `what()`, message-only).
-fn property_err(e: rustprop::Error) -> FreesError {
-    FreesError::property(e.message())
+/// The error mapping: a rustprop refusal becomes a property error carrying
+/// its message (rustprop's `Display` is upstream `what()`, message-only) —
+/// except for the refusals no state can cure: an unknown fluid, an unknown
+/// output, an input pair that is not a pair, or a path rustprop does not
+/// implement. Those are a broken call, not an invalid
+/// region, so they become solver errors and stop the solve with their own
+/// message instead of being folded into `NaN` residuals and reported as a
+/// Newton stall. The phrases are upstream's verbatim `what()` text, which
+/// rustprop's error-parity suites pin.
+fn call_err(e: rustprop::Error, fluid: &str, call: impl FnOnce() -> String) -> FreesError {
+    let message = e.message();
+    if message.contains("was not found in string_to_index_map") {
+        return FreesError::solver(format!(
+            "Unknown fluid '{fluid}' in {}. Check the spelling against Help → Supported Fluids.",
+            call()
+        ));
+    }
+    let structural = matches!(e, rustprop::Error::NotImplemented(_))
+        || [
+            "Output string is invalid",
+            "Input pair variable is invalid",
+            "not understood to Name2Type",
+            "Pressure must be one of the inputs to HAPropsSI",
+        ]
+        .iter()
+        .any(|phrase| message.contains(phrase));
+    if structural {
+        return FreesError::solver(format!("{} is not supported: {message}", call()));
+    }
+    FreesError::property(message)
 }
 
 /// Refuses a state whose numbers are not numbers, before rustprop sees it.
@@ -113,7 +140,7 @@ impl RealFluid for RustpropBackend {
             return finite(v, call);
         }
         let value = rustprop::props_si(output, name1, value1, name2, value2, fluid)
-            .map_err(property_err)?;
+            .map_err(|e| call_err(e, fluid, call))?;
         finite(value, call)
     }
 
@@ -121,8 +148,10 @@ impl RealFluid for RustpropBackend {
         // rustprop's trivial route: a trivial output never needs a state
         // update, so the empty input names are deliberately never parsed —
         // this is exactly upstream's `Props1SI` shape.
-        let value = rustprop::props_si(param, "", 0.0, "", 0.0, fluid).map_err(property_err)?;
-        finite(value, || format!("{param} of {fluid}"))
+        let call = || format!("{param} of {fluid}");
+        let value = rustprop::props_si(param, "", 0.0, "", 0.0, fluid)
+            .map_err(|e| call_err(e, fluid, call))?;
+        finite(value, call)
     }
 
     fn ha_props_si(
@@ -139,7 +168,7 @@ impl RealFluid for RustpropBackend {
             || format!("{output}(AirH2O, {name1}={value1}, {name2}={value2}, {name3}={value3})");
         finite_inputs(&[(name1, value1), (name2, value2), (name3, value3)], call)?;
         let value = rustprop::ha_props_si(output, name1, value1, name2, value2, name3, value3)
-            .map_err(property_err)?;
+            .map_err(|e| call_err(e, "AirH2O", call))?;
         finite(value, call)
     }
 
@@ -689,7 +718,13 @@ mod tests {
             let err = B
                 .ha_props_si(out, n1, *v1, n2, *v2, n3, *v3)
                 .expect_err(want);
-            assert!(matches!(err, FreesError::Property { .. }));
+            // The vocabulary refusals no state can cure stop the solve.
+            let structural = want.contains("Name2Type") || want.contains("Pressure must be");
+            assert_eq!(
+                matches!(err, FreesError::Solver { .. }),
+                structural,
+                "{err}"
+            );
             let msg = err.to_string_message();
             assert!(
                 msg.contains(want),
@@ -716,16 +751,62 @@ mod tests {
         assert!(wetbulb_above_drybulb.is_finite() && wetbulb_above_drybulb > 0.0);
     }
 
+    /// The ten low-GWP blends against the CoolProp 8.0.0 wheel,
+    /// `PropsSI('Hmass', 'T', 300, 'P', 5e5, …)`: the nine predefined `.mix`
+    /// blends, and R515B spelled out as its two components.
     #[test]
-    fn errors_classify_as_property_errors() {
+    fn low_gwp_blends_match_coolprop() {
+        let oracle = [
+            ("r448a", 430_461.036_180_411_23),
+            ("r449a", 428_272.097_293_388_74),
+            ("r452a", 388_240.100_817_454_3),
+            ("r452b", 496_141.438_940_734_7),
+            ("r454a", 444_698.300_422_257_34),
+            ("r454b", 501_289.260_679_493_3),
+            ("r454c", 421_928.086_866_684_9),
+            ("r455a", 425_646.715_276_232_2),
+            ("r513a", 399_816.828_950_185_04),
+            ("r515b", 397_053.160_815_762_3),
+        ];
+        for (alias, expected) in oracle {
+            let fluid = crate::props::propfun::resolve_fluid(alias).unwrap();
+            let h = B.props_si("Hmass", "T", 300.0, "P", 5e5, &fluid).unwrap();
+            assert!(
+                (h - expected).abs() <= 1e-12 * expected,
+                "{alias}: {h} vs {expected}"
+            );
+        }
+    }
+
+    // A state the backend has no answer for is a property error the solver
+    // may step away from; a call no state can answer stops the solve.
+    #[test]
+    fn errors_classify_by_whether_a_state_could_cure_them() {
+        let out_of_range = B
+            .props_si("Hmass", "T", 1e30, "P", 101325.0, "Water")
+            .unwrap_err();
+        assert!(
+            matches!(out_of_range, FreesError::Property { .. }),
+            "{out_of_range}"
+        );
+
         let unknown = B
             .props_si("Hmass", "T", 300.0, "P", 101325.0, "NotAFluid")
             .unwrap_err();
-        assert!(matches!(unknown, FreesError::Property { .. }));
+        assert!(matches!(unknown, FreesError::Solver { .. }), "{unknown}");
+        assert!(
+            unknown.to_string().contains("Unknown fluid 'NotAFluid'"),
+            "{unknown}"
+        );
 
         let bad_pair = B
             .props_si("Hmass", "T", 300.0, "T", 300.0, "Water")
             .unwrap_err();
-        assert!(matches!(bad_pair, FreesError::Property { .. }));
+        assert!(matches!(bad_pair, FreesError::Solver { .. }), "{bad_pair}");
+
+        let no_gibbs = B
+            .ha_props_si("G", "T", 300.0, "P", 101325.0, "R", 0.5)
+            .unwrap_err();
+        assert!(matches!(no_gibbs, FreesError::Solver { .. }), "{no_gibbs}");
     }
 }

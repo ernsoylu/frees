@@ -1,19 +1,20 @@
 ---
 name: EndStop
 category: Component (mechanical)
-summary: Acausal mechanical-domain component EndStop with ports port.
+summary: "Translational end stop at x = gap: spring-damper contact engaged smoothly beyond the gap (penetration hinge + tanh-gated damping)."
 related: []
 examples: []
 tags: [endstop, component, mechanical, acausal]
 references: []
-generated: true
 ---
 
 # EndStop
 
-Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Translational end stop at x = gap: spring-damper contact engaged smoothly beyond the gap (penetration hinge + tanh-gated damping).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/mechanical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

@@ -8,6 +8,7 @@
 //! reimplement Newton. Sweeps are embarrassingly parallel and are the reason
 //! decision D3 chose a worker pool over shared-memory threads.
 pub mod allroots;
+pub mod bobyqa;
 pub mod curvefit;
 pub mod distributions;
 pub mod montecarlo;

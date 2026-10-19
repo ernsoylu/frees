@@ -22,7 +22,7 @@ import {
   type SchematicNode,
   type SchematicOffsets,
 } from './layout'
-import { glyphFilled, glyphPath, SHAPE_LABELS } from './symbols'
+import { glyphFillPath, glyphPath, SHAPE_LABELS } from './symbols'
 import { encapsulateSelection } from './encapsulation'
 import { badgeFor, formatCompact, indexVariables, readoutFor, type NodeReadout } from './readouts'
 import { COMPONENT_CATALOG } from '../componentCatalog'
@@ -829,14 +829,15 @@ function NodeBlock({
         strokeDasharray={node.terminal ? '4 2' : undefined}
       />
       {glyph && (
-        <g transform={`translate(6, ${(node.h - GLYPH) / 2}) scale(${GLYPH})`}>
+        <g color="#12b886" transform={`translate(6, ${(node.h - GLYPH) / 2}) scale(${GLYPH})`}>
           <path
             d={glyph}
-            fill={glyphFilled(node.shape) ? '#909296' : 'none'}
-            stroke="#909296"
-            strokeWidth={0.07}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.2}
             vectorEffect="non-scaling-stroke"
           />
+          <path d={glyphFillPath(node.shape)} fill="currentColor" />
         </g>
       )}
       <text x={GLYPH + 12} y={badge ? 19 : 22} fontSize={12.5} fontWeight={600} fill="#e9ecef">

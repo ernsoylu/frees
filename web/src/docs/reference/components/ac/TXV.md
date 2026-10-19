@@ -46,14 +46,14 @@ $$
 out.mdot &= in.mdot \\
 out.h &= in.h \\
 bulb.qdot &= 0 \\
-tsat &= \text{T\_sat}\left(\mathrm{fluid}, =out.p\right) \\
+tsat &= \text{T\_sat}\left(\mathrm{fluid\$}, p=out.p\right) \\
 sh_{sensed} &= bulb.t - tsat \\
 \text{der}\left(sh_{b}\right) &= \frac{sh_{sensed} - sh_{b}}{tau_{bulb}} \\
 \text{init}\left(sh_{b}\right) &= sh_{set} \\
 cda_{t} &= cda0 + kv\cdot \left(sh_{b} - sh_{set}\right) \\
 \text{der}\left(cda\right) &= \frac{cda_{t} - cda}{tau_{valve}} \\
 \text{init}\left(cda\right) &= cda0 \\
-rho_{in} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+rho_{in} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 in.mdot\cdot \left|in.mdot\right| &= cda^{2}\cdot 2\cdot rho_{in}\cdot \left(in.p - out.p\right)
 \end{aligned}
 $$
@@ -68,32 +68,34 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-function [out] = PSource(P, h0)
-port(out)
-  out.P = P
-  out.h = h0
-end
-function [in] = PSink(P)
-port(in)
-  in.P = P
-end
-PSource       SRC(P=1200000, h0=250000)
-ExpansionValve TXV(CdA=1e-6, rho_in=1200)
-PSink         SNK(P=300000)
-connect(SRC.out, TXV.in)
-connect(TXV.out, SNK.in)
+{ R134a thermostatic expansion valve: 12 bar liquid line to a 3 bar evaporator,
+  bulb held 8 K above evaporator saturation (3 K above the 5 K set point),
+  so the valve opens over its time constants. }
+TwoPhasePressureSource SRC(fluid$=R134a, P=1200000, x=0)
+TXV                    V1(fluid$=R134a, Kv=2e-8, SH_set=5, CdA0=1e-6, tau_valve=2, tau_bulb=10)
+TwoPhasePressureSink   SNK(P=300000)
+ThermalSource          BULB(T=T_sat(R134a, P=300000) + 8)
+connect(SRC.out, V1.in)
+connect(V1.out, SNK.in)
+connect(BULB.port, V1.bulb)
 
-{ CHECK snk.in.h 250000 0.25 }
-{ CHECK snk.in.mdot 0.04647580015 4.6475800154489004e-8 }
-{ CHECK snk.in.p 300000 0.3 }
+DYNAMIC opening (method = ida, time = 0 .. 60, points = 61)
+END
+CdA_end  = FinalValue('V1.CdA')     { valve opening after 60 s, m^2 }
+SH_b_end = FinalValue('V1.SH_b')    { bulb-filtered superheat, K }
+mdot_end = FinalValue('V1.in.mdot') { refrigerant flow after 60 s, kg/s }
+
+{ CHECK CdA_end 1.059813929e-6 1.06e-12 }
+{ CHECK SH_b_end 7.992557183 0.000007992557183 }
+{ CHECK mdot_end 0.04756816851 4.756816851e-8 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-snk.in.h = 250000
-snk.in.mdot = 0.04647580015
-snk.in.p = 300000
+CdA_end = 1.059813929e-6
+SH_b_end = 7.992557183
+mdot_end = 0.04756816851
 ```
 
 <!-- verified-reference-example:end -->

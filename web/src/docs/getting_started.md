@@ -134,7 +134,7 @@ The full command set is on the *REPL Terminal & Workspace* page. One step left: 
 [Topic: gs-components]
 # 6. Wire Components
 
-For system problems — loops, circuits, networks — frees has a library of ~295 **components**: parameterized, connectable blocks of physics. You wire them; frees turns the network into equations and solves it like everything else:
+For system problems — loops, circuits, networks — frees has a library of 312 **components**: parameterized, connectable blocks of physics. You wire them; frees turns the network into equations and solves it like everything else:
 
 ```run
 { What pressure does 50 m of pipe cost? }
@@ -170,7 +170,7 @@ You now know the whole loop: describe equations, Check (F4), Solve (F2), sweep a
 - **Go dynamic** — ODE transients, linearization, transfer functions, and Bode plots: *Dynamic Systems & Control*.
 - **Model whole systems** — the acausal component library, from a pipe run to a full refrigeration loop: *System Modeling with Components*.
 - **Work faster** — the REPL console, keyboard shortcuts, and automated reports: *Tools & Workflow*.
-- **Run it yourself** — the async architecture, the REST API, Docker, and Railway: *Architecture & Deployment*.
+- **Run it yourself** — the in-browser engine, the `frees-cli` command line, local development, and static deployment: *Architecture & Deployment*.
 
 ## Learn by example
 Three short journeys — a scalar with units, a component chain, and a map or transient upgrade — are in *Journey 1 — A scalar equation with units*. **Examples & Tutorials** has longer guided problems and a library of verified examples. When you need the exact signature of a function, the **Reference** A–Z index is the canonical home for every symbol.

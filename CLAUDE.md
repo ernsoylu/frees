@@ -21,18 +21,18 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 
 - **Solvers**: Scaled Newton-Raphson, trust-region line search, Powell hybrid dogleg, rank-deficient merge recovery, polish pass, and reusable prepared solvers (`PreparedDocument`).
 - **Dynamic Systems**: Adaptive Dormand-Prince Runge-Kutta (`ode45`), 5th-order Radau IIA (`radau5`/`radauiia`), and variable-coefficient DAE BDF/IDA with zero-crossing event root-finding.
-- **Properties**: Pure-Rust CoolProp 8.0.0 implementation (`rustprop`) for high-accuracy Helmholtz equations of state, cubic EoS, incompressibles, and psychrometrics (`HAPropsSI`). 26 real fluids are linked and served on the diagram picker — every pure fluid the alias table names. The ten `.mix` refrigerant blends remain unbacked pending mixture routing upstream. **rustprop is the property backend on every target** (decision D12): the precomputed `(P,h)`/`FRAUX1` tables D1 and D7 introduced are gone, and `props/tables.rs` retains only the `install_from_bytes` runtime fetch seam. Do not reintroduce a linked table path.
+- **Properties**: Pure-Rust CoolProp 8.0.0 implementation (`rustprop`) for high-accuracy Helmholtz equations of state, cubic EoS, incompressibles, and psychrometrics (`HAPropsSI`). 28 real fluids are linked; 26 are served on the diagram picker — every pure fluid the alias table names. The ten low-GWP refrigerant blends (R448A–R455A, R513A, R515B) are served through rustprop's `heos-mixtures` engine and match CoolProp 8.0.0 to the last digit; R515B, which CoolProp does not predefine, is spelled out as its two components. Mixtures have no property diagrams. **rustprop is the property backend on every target** (decision D12): the precomputed `(P,h)`/`FRAUX1` tables D1 and D7 introduced are gone, and `props/tables.rs` retains only the `install_from_bytes` runtime fetch seam. Do not reintroduce a linked table path.
 - **Component Library**: 295+ standard acausal components spanning fluid networks, thermal systems, moist air HVAC, mechanics, and electrical circuits.
 - **Experimental Data & Statistics** (`crates/frees-core/src/analysis/`): weighted/bounded/robust curve fitting and dynamic calibration with SVD parameter covariance; correlated and non-Gaussian input uncertainty declared in the document as `Correlation(A, B) = ρ` and `DistributionOf(X) = Uniform(…)`; truncated inverse-CDF sampling; seeded Latin-hypercube and scrambled Sobol designs; Sobol' and Morris global sensitivity. `signal.rs` carries an `O(n log n)` transform (radix-2 + Bluestein, any length) and the sensor kernels behind the `Detrend`, `Smooth`, `Window`, `Filter`, `FiltFilt`, `XCorr`, and `Welch` multi-output functions.
 - **Worker Pool**: Up to 4 Web Workers executing independent parametric sweep chunks in parallel with weighted progress, preserving deterministic row ordering.
-- **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-09-12 after D12: 3,981.7 KiB raw / 1,791.0 KiB gzipped, 1,138.3 KiB headroom). Raised from 4,096 on 2026-09-10, owner-authorized, to link every fluid the alias table names; the `ci.yml` header carries the full ledger and records that the lazy-chunk pay-down is now overdue.
+- **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-10-19 with rustprop v0.2.0's mixture engine: 4,366.5 KiB raw / 1,964.2 KiB gzipped, 753.5 KiB headroom). Raised from 4,096 on 2026-09-10, owner-authorized, to link every fluid the alias table names; the `ci.yml` header carries the full ledger and records that the lazy-chunk pay-down is now overdue.
 - **Test Suite Health**:
   - `cargo test --workspace -- --skip golden_corpus_parity`: 3,378 tests pass across all workspace crates.
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 61 test files, 702 tests passing (needs the built `web/src/wasm/pkg`).
+  - `vitest run` (Node 22): 64 test files, 720 tests passing (needs the built `web/src/wasm/pkg`; `componentPorts.test.tsx` can exceed its 5 s timeout under full-suite load; it passes alone).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
-  - `npm run check-docs`: 723/723 documentable symbols have a reference page. Every family is reconciled against the Rust registries (`eval::INTRINSICS`, `procedures::EXPANDED_CALL_TARGETS`, `parser::expand::MATRIX_FUNCTIONS`, `props::propfun`, `props::solids`, `repl::CAS_NAMES`) and the builder **exits non-zero** rather than reporting coverage from a cached list. It no longer reads the Java reference repo at all; the 100% it used to print from that fallback was stale, not earned.
+  - `npm run check-docs`: 754/754 documentable symbols have a reference page. Every family is reconciled against the Rust registries (`eval::INTRINSICS`, `procedures::EXPANDED_CALL_TARGETS`, `parser::expand::MATRIX_FUNCTIONS`, `props::propfun`, `props::solids`, `repl::CAS_NAMES`, `token::keyword_or_ident`); a keyword page lists companion keywords in `covers:` frontmatter and the builder **exits non-zero** rather than reporting coverage from a cached list. It no longer reads the Java reference repo at all; the 100% it used to print from that fallback was stale, not earned.
 
 ---
 
@@ -173,6 +173,7 @@ Keep essential findings here; Git history retains committed historical narrative
 | User declarations | `crates/frees-core/src/parser/defs.rs` — `Definitions`, with resolution and lowering in `parser/` |
 | Components and ports | `crates/frees-core/src/components/def.rs` and `components/library-data/` |
 | REPL/CAS | `crates/frees/src/repl.rs` — `CAS_NAMES` and context restrictions |
+| Language keywords | `crates/frees-core/src/token.rs` — `keyword_or_ident`, plus the lexer's `STATE TABLE`; pages in `web/src/docs/reference/keywords/` |
 
 Names such as `callProcedures` and `EXPANDED_CALL_TARGETS` are internal compatibility
 identifiers, not a public `CALL` syntax. Trace argument order, defaults, accepted

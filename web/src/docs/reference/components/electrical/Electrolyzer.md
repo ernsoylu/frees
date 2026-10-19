@@ -1,19 +1,20 @@
 ---
 name: Electrolyzer
 category: Component (electrical)
-summary: Acausal electrical-domain component Electrolyzer with ports p, n, heat.
+summary: "PEM electrolyzer stack (reverse fuel cell): reversible potential + activation (ln(i/i0 + 1), regular at zero current) + ohmic overpotentials; hydrogen production from Faraday's law; heat above the thermoneutral voltage Eth."
 related: []
 examples: []
 tags: [electrolyzer, component, electrical, acausal]
 references: []
-generated: true
 ---
 
 # Electrolyzer
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+PEM electrolyzer stack (reverse fuel cell): reversible potential + activation (ln(i/i0 + 1), regular at zero current) + ohmic overpotentials; hydrogen production from Faraday's law; heat above the thermoneutral voltage Eth.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/electrical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

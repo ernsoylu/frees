@@ -43,7 +43,7 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \begin{aligned}
 out.h &= in.h \\
-t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 in.mdot &= \text{iso6358}\left(c, b, in.p, t_{in}, out.p\right) \\
 out.mdot &= in.mdot
 \end{aligned}

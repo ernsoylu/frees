@@ -259,8 +259,10 @@ fn pressure_molar(p: &Params, t: f64, v_molar: f64) -> f64 {
 
 /// Compressibility factor `Z` for the requested phase at `(T, P)`.
 ///
-/// `phase` selects the root: anything whose trimmed lowercase form starts with
-/// `"liq"` picks the smallest physical root, everything else the largest.
+/// `phase` selects the root: `liquid` (any word starting with `l`) picks the
+/// smallest physical root, `vapor`/`vapour`/`gas` (`v` or `g`) the largest.
+/// Anything else is refused — the Java read every non-`liq` word as vapour,
+/// so a typo silently picked the other root.
 ///
 /// Port of `CubicEos.z` — the `eos_z(fluid$, model$, T, P, phase$)` intrinsic.
 pub fn z(fluid_tok: &str, model_tok: &str, t: f64, p: f64, phase: &str) -> Result<f64> {
@@ -287,7 +289,15 @@ fn z_with(f: &Fluid, m: Model, t: f64, p: f64, phase: &str) -> Result<f64> {
     let c1 = a_a + q * b_b * b_b - s * b_b * (b_b + 1.0);
     let c0 = -(a_a * b_b + q * b_b * b_b * (b_b + 1.0));
     let roots = real_cubic_roots(c2, c1, c0);
-    let vapor = !phase.trim().to_lowercase().starts_with("liq");
+    let vapor = match phase.trim().to_ascii_lowercase().chars().next() {
+        Some('l') => false,
+        Some('v' | 'g') => true,
+        _ => {
+            return Err(FreesError::property(format!(
+                "Cubic EOS: phase$ must be 'liquid' or 'vapor', got '{phase}'."
+            )))
+        }
+    };
     let mut chosen: Option<f64> = None;
     for zr in roots.iter() {
         if zr > b_b {
@@ -335,12 +345,31 @@ pub fn density(fluid_tok: &str, model_tok: &str, t: f64, p: f64, phase: &str) ->
 /// Pressure [Pa] from temperature [K] and specific volume [m³/kg].
 ///
 /// Port of `CubicEos.pressure` — `eos_pressure(fluid$, model$, T, v)`.
+///
+/// `v` must be a positive volume. Between 0 and the co-volume `b` the cubic
+/// still returns a number, and the frozen goldens pin those values, so they are
+/// served; a pole (`v = b`) or a non-positive volume has no answer.
 pub fn pressure(fluid_tok: &str, model_tok: &str, t: f64, v_specific: f64) -> Result<f64> {
     let f = fluid(fluid_tok)?;
     let m = model(model_tok)?;
+    if !(v_specific > 0.0 && v_specific.is_finite()) {
+        return Err(FreesError::property(format!(
+            "eos_pressure: specific volume v must be positive, got {v_specific} m^3/kg."
+        )));
+    }
     let pr = params(f, m, t);
     let v_molar = v_specific * (f.mw / 1000.0);
-    Ok(pressure_molar(&pr, t, v_molar))
+    let p = pressure_molar(&pr, t, v_molar);
+    if !p.is_finite() {
+        return Err(FreesError::property(format!(
+            "eos_pressure: no finite pressure for {} at T={t} K, v={v_specific} m^3/kg \
+             (the co-volume of the {} model is {} m^3/kg).",
+            f.name,
+            model_tok,
+            pr.b / (f.mw / 1000.0)
+        )));
+    }
+    Ok(p)
 }
 
 // ----- enthalpy / entropy --------------------------------------------------
@@ -945,9 +974,8 @@ mod tests {
 
     #[test]
     fn phase_token_selects_the_root() {
-        // Anything not starting with "liq" is vapour, per the Java.
         let liq = z("propane", "PR", 300.0, 1.0e6, "liquid").unwrap();
-        for vapour_token in ["vapor", "vapour", "gas", "", "  V  "] {
+        for vapour_token in ["vapor", "vapour", "gas", "  V  "] {
             let v = z("propane", "PR", 300.0, 1.0e6, vapour_token).unwrap();
             assert!(v > liq, "{vapour_token:?}: {v} vs liquid {liq}");
         }
@@ -955,6 +983,20 @@ mod tests {
             let v = z("propane", "PR", 300.0, 1.0e6, liquid_token).unwrap();
             assert_eq!(v, liq, "{liquid_token:?}");
         }
+        // A word that names neither phase is refused, not read as vapour.
+        for bad in ["", "steam", "superheated"] {
+            let err = z("propane", "PR", 300.0, 1.0e6, bad).unwrap_err();
+            assert!(err.to_string().contains("phase$ must be"), "{bad:?}: {err}");
+        }
+    }
+
+    #[test]
+    fn eos_pressure_refuses_volumes_with_no_state() {
+        for v in [0.0, -1e-3, f64::NAN] {
+            assert!(pressure("co2", "PR", 250.0, v).is_err(), "{v}");
+        }
+        // Below the co-volume the Java answered, and the goldens pin it.
+        assert!(pressure("co2", "PR", 250.0, 5e-5).unwrap().is_finite());
     }
 
     #[test]

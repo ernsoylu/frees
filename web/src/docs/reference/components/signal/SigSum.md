@@ -1,19 +1,20 @@
 ---
 name: SigSum
 category: Component (signal)
-summary: Acausal signal-domain component SigSum with ports in1, in2, out.
+summary: Sum of two signals, in1 + in2.
 related: []
 examples: []
 tags: [sigsum, component, signal, acausal]
 references: []
-generated: true
 ---
 
 # SigSum
 
-Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Sum of two signals, in1 + in2.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/signal.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -45,37 +46,22 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-function [out] = SigConst(k)
-port(out)
-  out.sig = k
-end
-function [in, out] = SigGain(k)
-port(in)
-port(out)
-  out.sig = k * in.sig
-end
-function [in1, in2, out] = SigSum()
-port(in1)
-port(in2)
-port(out)
-  out.sig = in1.sig + in2.sig
-end
-SigConst SRC(k=2)
-SigGain  A(k=3)
-SigGain  B(k=5)
-connect(SRC.out, A.in, B.in)
+{ Add two constant signals: y = 2 + 3. }
+SigConstant A(k=2)
+SigConstant B(k=3)
+SigSum      S()
+connect(A.out, S.in1)
+connect(B.out, S.in2)
 
-{ CHECK a.in.sig 2 0.000002 }
-{ CHECK a.out.sig 6 0.000006 }
-{ CHECK b.in.sig 2 0.000002 }
+y = S.out.sig
+
+{ CHECK y 5 0.000005 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-a.in.sig = 2
-a.out.sig = 6
-b.in.sig = 2
+y = 5
 ```
 
 <!-- verified-reference-example:end -->

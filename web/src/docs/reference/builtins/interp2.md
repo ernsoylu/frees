@@ -1,29 +1,43 @@
 ---
 name: interp2
-category: Built-in Functions
-summary: Reference page for interp2.
-related: []
+category: Interpolation
+summary: Regular-grid 2-D interpolation z = f(x, y).
+related: [interpolate, interpolate2d]
 examples: []
-tags: [interp2]
+tags: [interp2, interpolation, 2d, grid]
 ---
 
 # interp2
 
-`interp2` is available in the frees built-in functions surface.
+Regular-grid 2-D interpolation z = f(x, y).
 
 ## Syntax
 
 ```
-interp2(...)
+zq = interp2(x, y, Z, xq, yq)
+zq = interp2(xq, yq, x, y, Z)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`interp2(x, y, Z, xq, yq)` interpolates the grid `Z` (rows along `x`, columns along `y`) at the query point (xq, yq). The query-first order `interp2(xq, yq, x, y, Z)` is also accepted; the 2-D grid argument tells the two apart. Grids with at least 5 nodes per axis use a piecewise Akima bicubic spline; smaller grids are interpolated bilinearly. Queries outside the grid clamp to the boundary.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | Grid coordinates along the first axis (ascending). |
+| `y` | Vector | Yes | Grid coordinates along the second axis (ascending). |
+| `Z` | Matrix | Yes | Grid values, length(x) × length(y). |
+| `xq, yq` | Number | Yes | Query point. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `zq` | Number | Interpolated value. |
 
 ## Examples
 

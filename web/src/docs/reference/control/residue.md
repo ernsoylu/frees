@@ -18,7 +18,6 @@ maps to a time-domain mode.
 
 ```
 [rr, ri, pr, pi, k] = residue(num, den)
-[rr, ri, pr, pi, k] = residue(num, den)
 ```
 
 ## Description

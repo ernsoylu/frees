@@ -1,19 +1,22 @@
 ---
 name: SigPID
 category: Component (signal)
-summary: Acausal signal-domain component SigPID with ports sp, pv, out.
+summary: PID controller on the (sp − pv) error with an integrator state and a realizable filtered derivative (filter τ).
 related: []
 examples: []
 tags: [sigpid, component, signal, acausal]
 references: []
-generated: true
 ---
 
 # SigPID
 
-Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+PID controller on the (sp − pv) error with an integrator state and a realizable filtered derivative (filter τ).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The `clamped` variant saturates the output to [umin, umax] and back-calculates the integrator (anti-windup reset time Taw) so the integral unwinds while the output is pinned.
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/signal.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

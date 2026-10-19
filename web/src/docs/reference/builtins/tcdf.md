@@ -1,29 +1,38 @@
 ---
 name: tcdf
-category: Built-in Functions
-summary: Reference page for tcdf.
-related: []
+category: Stats
+summary: Student's t distribution — P(T ≤ x).
+related: [tpdf, tinv]
 examples: []
-tags: [tcdf]
+tags: [tcdf, stats, distribution, student t]
 ---
 
 # tcdf
 
-`tcdf` is available in the frees built-in functions surface.
+Student's t distribution — P(T ≤ x).
 
 ## Syntax
 
 ```
-tcdf(...)
+y = tcdf(x, df)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`tcdf(x, df)` returns the P(T ≤ x) of Student's t distribution with `df` degrees of freedom.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Evaluation point. |
+| `df` | Number | Yes | Degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Cumulative probability in [0, 1]. |
 
 ## Examples
 

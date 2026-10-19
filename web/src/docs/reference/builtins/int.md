@@ -1,29 +1,37 @@
 ---
 name: int
-category: Built-in Functions
-summary: Reference page for int.
-related: []
+category: Math
+summary: Integer part — truncate toward zero.
+related: [trunc, floor, round]
 examples: []
-tags: [int]
+tags: [int, math, truncate]
 ---
 
 # int
 
-`int` is available in the frees built-in functions surface.
+Integer part — truncate toward zero.
 
 ## Syntax
 
 ```
-int(...)
+y = int(x)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`int(x)` drops the fractional part, rounding toward zero (`int(-2.7) = -2`). Use `floor` to round toward −∞.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Any real value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Integer-valued result. |
 
 ## Examples
 

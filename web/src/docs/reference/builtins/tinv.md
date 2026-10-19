@@ -1,29 +1,38 @@
 ---
 name: tinv
-category: Built-in Functions
-summary: Reference page for tinv.
-related: []
+category: Stats
+summary: Student's t distribution — inverse CDF (quantile).
+related: [tcdf, tpdf]
 examples: []
-tags: [tinv]
+tags: [tinv, stats, distribution, student t]
 ---
 
 # tinv
 
-`tinv` is available in the frees built-in functions surface.
+Student's t distribution — inverse CDF (quantile).
 
 ## Syntax
 
 ```
-tinv(...)
+y = tinv(p, df)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`tinv(p, df)` returns the inverse CDF (quantile) of Student's t distribution with `df` degrees of freedom.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `p` | Number | Yes | Probability in (0, 1). |
+| `df` | Number | Yes | Degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Quantile t with P(T ≤ t) = p. |
 
 ## Examples
 

@@ -22,6 +22,8 @@ slope(xvals, yvals)
 
 Least-squares linear-fit slope
 
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
 ## Mathematical Formulation
 
 $$ m = \frac{\sum (x_i-\bar x)(y_i-\bar y)}{\sum (x_i-\bar x)^2} \quad\text{(least squares)} $$

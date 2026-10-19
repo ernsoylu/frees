@@ -1,17 +1,20 @@
 ---
 name: FanPoweredBox
 category: Component (moistair)
-summary: Acausal moistair-domain component FanPoweredBox with ports pri_in, ind_in, out.
+summary: Fan-powered terminal box.
 related: []
 examples: []
 tags: [fanpoweredbox, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # FanPoweredBox
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Fan-powered terminal box.
+
+Primary supply air mixes with air induced from the ceiling plenum, then takes the terminal fan's heat and any reheat. Series and parallel boxes differ in whether the fan sees the mixed stream or only the induced stream; both reduce to this mix-then-heat form for a psychrometric design calculation.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

@@ -31,7 +31,7 @@ Clutch inst(Tmax, eng, eps)
 | --- | --- | --- |
 | `Tmax` | Number | Maximum temperature [K]. |
 | `eng` | Number | Engagement fraction (0–1). |
-| `eps` | Number | Effectiveness / roughness. |
+| `eps` | Number | Slip smoothing speed [rad/s] — regularizes the sign of the slip speed. |
 
 ## Constitutive Equations
 

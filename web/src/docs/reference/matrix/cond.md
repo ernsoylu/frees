@@ -20,6 +20,7 @@ ill-conditioning.
 c = cond(A)
 ```
 
+
 ## Description
 
 A condition number near 1 indicates a well-conditioned problem; very large values
@@ -38,30 +39,27 @@ where the `σ` are the singular values of `A`.
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Solve a complete model
+### Verified example — Condition number of a 2 x 2 matrix
 
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-// frees-language: 2
-TwoPhaseEnthalpySource SRC(mdot=0.02, h=435000)
-TwoPhaseCondenserUA COND(fluid$=R134a, UA=400, T_amb=305, V=0.002)
-TwoPhaseSink SNK()
-connect(SRC.out, COND.in)
-connect(COND.out, SNK.in)
-COND.m = 1.200000
+A = [4, 1; 2, 3]
+c = cond(A)
 
-{ CHECK cond.in.h 435000 0.435 }
-{ CHECK cond.in.mdot 0.02 2e-8 }
-{ CHECK cond.in.p 1040885.197 1.0408851966633037 }
+{ The same number from the singular values: sigma_max / sigma_min. }
+[sv] = SingularValues(A)
+kappa = sv[1] / sv[2]
+
+{ CHECK c 2.618033989 0.000002618033989 }
+{ CHECK kappa 2.618033989 0.000002618033989 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-cond.in.h = 435000
-cond.in.mdot = 0.02
-cond.in.p = 1040885.197
+c = 2.618033989
+kappa = 2.618033989
 ```
 
 <!-- verified-reference-example:end -->
@@ -89,4 +87,4 @@ linear system is ill-conditioned.
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| `SINGULAR_MATRIX` | `σ_min = 0` | The matrix is singular — condition number is infinite. |
+| `cond: the matrix is singular, so its condition number is infinite` | `σ_min = 0` | The matrix is singular; check for a repeated or zero row or column. |

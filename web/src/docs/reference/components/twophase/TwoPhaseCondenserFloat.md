@@ -42,8 +42,8 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.p &= in.p \\
-tcond &= \text{T\_sat}\left(\mathrm{fluid}, =in.p\right) \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
+tcond &= \text{T\_sat}\left(\mathrm{fluid\$}, p=in.p\right) \\
+out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
 q &= in.mdot\cdot \left(in.h - out.h\right) \\
 q &= ua\cdot \left(tcond - t_{amb}\right)
 \end{aligned}

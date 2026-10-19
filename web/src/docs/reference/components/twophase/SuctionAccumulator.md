@@ -1,19 +1,22 @@
 ---
 name: SuctionAccumulator
 category: Component (twophase)
-summary: Acausal twophase-domain component SuctionAccumulator with ports in, out.
+summary: "Suction accumulator: traps liquid carryover and delivers SATURATED VAPOR to the compressor."
 related: []
 examples: []
 tags: [suctionaccumulator, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # SuctionAccumulator
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Suction accumulator: traps liquid carryover and delivers SATURATED VAPOR to the compressor.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The liquid inventory m is a state; its energy balance (liquid stored at h_f) closes the outlet flow. In steady state der(m)=0 forces h_in = h_g — a dry steady inlet, exactly the physical statement.
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -40,8 +43,8 @@ The acausal equations this component expands into (over its port members and par
 $$
 \begin{aligned}
 out.p &= in.p \\
-hf &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-hg &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+hf &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+hg &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 out.h &= hg \\
 \text{der}\left(m\right) &= in.mdot - out.mdot \\
 \text{init}\left(m\right) &= m0 \\

@@ -56,28 +56,22 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TABLE fanCurve(Q [m^3/s]) [Pa]
-  0.00   250
-  0.05   180
-  0.10    60
-END
-FanMap F1(rho=1.2, map$=fanCurve)
-F1.in.mdot = 0.06
+{ Quadratic fan curve: 250 Pa shut-off rise, zero rise at 0.12 m^3/s. }
+FanCurve F1(rho=1.2, dP0=250, Q0=0.12)
+F1.in.mdot = 0.06          { 0.05 m^3/s of air }
 F1.in.P    = 101325
 F1.in.h    = 300000
 F1.out.h   = 300000
 
-{ CHECK f1.dp 180 0.00017999999999999998 }
-{ CHECK f1.out.mdot 0.06 6e-8 }
-{ CHECK f1.out.p 101505 0.101505 }
+dP_fan = F1.out.P - F1.in.P
+
+{ CHECK dP_fan 206.5972222 0.0002065972222 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-f1.dp = 180
-f1.out.mdot = 0.06
-f1.out.p = 101505
+dP_fan = 206.5972222
 ```
 
 <!-- verified-reference-example:end -->

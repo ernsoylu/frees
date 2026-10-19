@@ -543,7 +543,8 @@ pub fn resolve_method(name: &str) -> Result<Box<dyn OdeMethod>> {
         _ => {
             return Err(FreesError::solver(format!(
                 "DYNAMIC: unknown method '{name}'. Supported: ode1, ode2, ode3, \
-                 ode4, ode5, ode45, ode23, ode23s (stiff), ode15s (stiff), radau (stiff)."
+                 ode4, ode5, ode45, ode23, ode23s (stiff), ode15s (stiff), \
+                 radau5 (stiff), ida (DAE)."
             )))
         }
     };

@@ -1,29 +1,40 @@
 ---
 name: corrcoef
-category: Built-in Functions
-summary: Reference page for corrcoef.
-related: []
+category: Stats
+summary: Pearson correlation coefficient (alias of pearson).
+related: [pearson, spearman]
 examples: []
-tags: [corrcoef]
+tags: [corrcoef, stats, correlation]
 ---
 
 # corrcoef
 
-`corrcoef` is available in the frees built-in functions surface.
+Pearson correlation coefficient (alias of pearson).
 
 ## Syntax
 
 ```
-corrcoef(...)
+r = corrcoef(x, y)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`corrcoef(x, y)` returns the Pearson correlation coefficient r ∈ [−1, 1]; it computes exactly what `pearson` does.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | First series. |
+| `y` | Vector | Yes | Second series (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `r` | Number | Correlation coefficient (dimensionless). |
 
 ## Examples
 

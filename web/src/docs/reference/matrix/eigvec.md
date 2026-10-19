@@ -1,26 +1,28 @@
 ---
 name: eigvec
 category: Matrix
-summary: Unavailable eigenvector alias; use Eigen.
-related: [Eigen, Eigenvalues]
+summary: Eigenvectors of a square matrix — the eigenvector half of Eigen.
+related: [Eigen, Eigenvalues, eig]
 examples: []
-tags: [eigvec, matrix]
+tags: [eigvec, eigenvectors, matrix, modes]
 ---
 
 # eigvec
 
-Registered eigenvector alias that is not implemented in the current runtime. Use `Eigen` instead.
-
+Returns the **eigenvectors** of a square matrix `A` as the columns of `V`.
+`[V] = eigvec(A)` is `[~, V] = Eigen(A)`: the same vectors, in the same order
+as the eigenvalues `eig` returns.
 
 ## Syntax
 
 ```
-eigvec(A)
+[V] = eigvec(A)
 ```
 
 ## Description
 
-The eigenvector problem below describes the intended operation, not an available implementation of this alias.
+Column `k` of `V` is the unit-length eigenvector for the `k`-th eigenvalue in
+ascending order. Use `Eigen` when you need the eigenvalues alongside them.
 
 ## Mathematical Formulation
 
@@ -30,38 +32,25 @@ $$ A v_i = \lambda_i v_i \quad\text{(columns are the eigenvectors)} $$
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Analyze a two-channel matrix
+### Verified example — Mode shapes of a coupled two-state system
 
-**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
-
-```frees error="Unknown PROCEDURE or MODULE: 'eigvec'"
-A = [4, 0; 0, 9]
-[result] = eigvec(A)
-```
-
-Expected diagnostic:
-
-```text
-Syntax error: Unknown PROCEDURE or MODULE: 'eigvec'
-```
-
-Working alternative — paste this complete document into the editor and solve:
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-A = [4, 0; 0, 9]
-[values, vectors] = Eigen(A)
+A = [4, 1; 2, 3]
+[V] = eigvec(A)
 
-{ CHECK values[1] 4 0.000004 }
-{ CHECK values[2] 9 0.000009 }
-{ CHECK vectors[1,1] 1 0.000001 }
+{ The first column belongs to lambda = 2, the second to lambda = 5. }
+{ CHECK V[1,1] -0.4472135955 0.0000004472135955 }
+{ CHECK V[2,1] 0.894427191 0.000000894427191 }
+{ CHECK V[1,2] 0.7071067812 0.0000007071067812 }
+{ CHECK V[2,2] 0.7071067812 0.0000007071067812 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-values[1] = 4
-values[2] = 9
-vectors[1,1] = 1
+V = [-0.4472135955, 0.7071067812; 0.894427191, 0.7071067812]
 ```
 
 <!-- verified-reference-example:end -->
@@ -70,4 +59,10 @@ vectors[1,1] = 1
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Square input matrix. |
+| `A` | Matrix | Yes | Square input matrix. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `V` | Matrix | Unit eigenvectors as columns, ordered like `eig(A)`. |

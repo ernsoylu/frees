@@ -39,7 +39,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \begin{aligned}
-v &= \text{Volume}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+v &= \text{Volume}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 out.mdot &= in.mdot \\
 out.h &= in.h + \frac{v\cdot \left(out.p - in.p\right)}{eta} \\
 w &= in.mdot\cdot \left(out.h - in.h\right)

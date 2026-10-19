@@ -1,19 +1,20 @@
 ---
 name: SigRamp
 category: Component (signal)
-summary: Acausal signal-domain component SigRamp with ports out.
+summary: Ramp of the given slope starting at t0 (C¹ smooth-max hinge of width eps).
 related: []
 examples: []
 tags: [sigramp, component, signal, acausal]
 references: []
-generated: true
 ---
 
 # SigRamp
 
-Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Ramp of the given slope starting at t0 (C¹ smooth-max hinge of width eps).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/signal.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

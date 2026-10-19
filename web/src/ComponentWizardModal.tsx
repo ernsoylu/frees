@@ -37,6 +37,7 @@ import { familyOf } from './componentFamilies'
 import { isUaParam, UaResult } from './uaCorrelation'
 import UaBuilderModal from './UaBuilderModal'
 import MapBuilderModal from './MapBuilderModal'
+import ComponentIllustration from './ComponentIllustration'
 
 interface Props {
   opened: boolean
@@ -237,8 +238,8 @@ export default function ComponentWizardModal({ opened, onClose, onInsert, existi
             </Box>
           ) : (
             <Stack gap="sm">
-              <Group justify="space-between" align="flex-start" wrap="nowrap">
-                <Box>
+              <Group justify="space-between" align="flex-start" wrap="wrap">
+                <Box style={{ flex: '1 1 240px', minWidth: 0 }}>
                   <Title order={4}>{spec.type}</Title>
                   <Text size="sm" c="dimmed">{spec.summary}</Text>
                   {override?.notes && (
@@ -247,6 +248,8 @@ export default function ComponentWizardModal({ opened, onClose, onInsert, existi
                 </Box>
                 <Badge variant="light" style={{ flexShrink: 0 }}>{libraryLabel(spec.library)}</Badge>
               </Group>
+
+              <ComponentIllustration spec={spec} />
 
               {family && (
                 <Box>
@@ -297,33 +300,6 @@ export default function ComponentWizardModal({ opened, onClose, onInsert, existi
                     </table>
                   </ScrollArea>
                 </Box>
-              )}
-
-              {/* Ports — read-only; the user wires these with connect(...). */}
-              {spec.ports.length > 0 && (
-                <Box>
-                  <Text size="xs" fw={600} c="dimmed" mb={4}>
-                    Ports — wire with connect(…)
-                  </Text>
-                  <Group gap={6}>
-                    {spec.ports.map((port) => (
-                      <Badge key={port} variant="outline" size="sm">{port}</Badge>
-                    ))}
-                  </Group>
-                </Box>
-              )}
-
-              {/* Illustration placeholder (real art is a follow-up). */}
-              {override?.illustration && (
-                <Paper
-                  withBorder
-                  radius="md"
-                  h={120}
-                  bg="var(--mantine-color-dark-6)"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Text size="xs" c="dimmed">▭ illustration: {override.illustration}</Text>
-                </Paper>
               )}
 
               <Divider />

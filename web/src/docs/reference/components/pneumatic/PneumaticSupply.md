@@ -43,7 +43,7 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \begin{aligned}
 out.p &= p \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid}, =p, p=t\right)
+out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=p, t=t\right)
 \end{aligned}
 $$
 

@@ -1,29 +1,40 @@
 ---
 name: ttest_paired_pval
-category: Built-in Functions
-summary: Reference page for ttest_paired_pval.
-related: []
+category: Stats
+summary: Two-sided p-value of the paired-samples t-test.
+related: [ttest_paired_stat, ttest_paired_df]
 examples: []
-tags: [ttest_paired_pval]
+tags: [ttest_paired_pval, stats, hypothesis test, t-test]
 ---
 
 # ttest_paired_pval
 
-`ttest_paired_pval` is available in the frees built-in functions surface.
+Two-sided p-value of the paired-samples t-test.
 
 ## Syntax
 
 ```
-ttest_paired_pval(...)
+p = ttest_paired_pval(x, y)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`ttest_paired_pval(x, y)` tests whether the mean difference x − y is zero — a one-sample t-test on the differences (two-sided p-value, n − 1 degrees of freedom) — and returns the **two-sided p-value**. The sibling accessors return the other results of the same test.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | First measurement of each pair. |
+| `y` | Vector | Yes | Second measurement of each pair (same length as `x`). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `p` | Number | Two-sided p-value. |
 
 ## Examples
 

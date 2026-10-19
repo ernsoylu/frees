@@ -40,7 +40,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \begin{aligned}
-rho &= \text{Density}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+rho &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 q &= \frac{in.mdot}{rho} \\
 dp &= dp0\cdot \left(1 - \left(\frac{q}{q0}\right)^{2}\right) \\
 out.mdot &= in.mdot \\

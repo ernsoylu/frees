@@ -18,6 +18,7 @@ import {
   IconChevronRight,
   IconComponents,
   IconPencil,
+  IconPlayerPlayFilled,
   IconSearch,
   IconTable,
   IconVariable,
@@ -394,6 +395,9 @@ function ComponentRow({
 
 interface Props {
   variables: VariableResult[]
+  onSolve?: () => void
+  solveBusy?: boolean
+  onOpenExamples?: () => void
   /** Lowercased names of variables defined/changed in the REPL (badged in the table). */
   replNames?: Set<string>
   /** Backend component metadata — supplies each instance's type pill and parameter datasheet. */
@@ -424,6 +428,9 @@ interface Props {
 
 export default function Workspace({
   variables,
+  onSolve,
+  solveBusy,
+  onOpenExamples,
   replNames,
   components: instances,
   onEdit,
@@ -481,7 +488,7 @@ export default function Workspace({
       <Group justify="space-between" mb="sm" gap="xs" wrap="wrap">
         <Group gap="xs" wrap="nowrap" style={{ flex: '1 1 auto', minWidth: 0 }}>
           <ThemeIcon variant="light" size="sm"><IconVariable size={14} /></ThemeIcon>
-          <Text fw={600} c="teal.4" truncate>Variable Explorer</Text>
+          <Text fw={600} truncate>Variable Explorer</Text>
           {!empty && <Badge variant="light" size="sm" style={{ flexShrink: 0 }}>{variables.length}</Badge>}
         </Group>
         <Group gap="xs" wrap="nowrap" style={{ flex: '1 1 auto' }}>
@@ -493,6 +500,7 @@ export default function Workspace({
             value={query}
             onChange={(e) => setQuery(e.currentTarget.value)}
             aria-label="Filter workspace variables"
+            disabled={empty}
           />
           {onEdit && (
             <Button
@@ -535,11 +543,16 @@ export default function Workspace({
       )}
 
       {empty ? (
-        <Text c="dimmed" size="sm">
-          Solve the document to populate the workspace. Variables, arrays and
-          matrices from the last solve appear here with their value, type, unit
-          and uncertainty.
-        </Text>
+        <Stack gap="sm" py="lg" align="flex-start">
+          <ThemeIcon size={44} radius="md" variant="light"><IconVariable size={24} /></ThemeIcon>
+          <Text fw={600}>Your results will appear here</Text>
+          <Text c="dimmed" size="sm">
+            Write equations in the editor, then solve to see variable values, units and uncertainties.
+            Solve checks your equations automatically.
+          </Text>
+          {onSolve && <Button leftSection={<IconPlayerPlayFilled size={14} />} onClick={onSolve} loading={solveBusy}>Solve equations</Button>}
+          {onOpenExamples && <Button variant="subtle" onClick={onOpenExamples}>Explore examples</Button>}
+        </Stack>
       ) : (
         <Stack gap="md">
           {sliderStrip}
@@ -572,7 +585,10 @@ export default function Workspace({
             </Stack>
           )}
           {plain.length === 0 && components.length === 0 && groups.length === 0 && (
-            <Text c="dimmed" size="sm">No variables match “{deferredQuery}”.</Text>
+            <Stack gap="xs" align="flex-start">
+              <Text c="dimmed" size="sm">No variables match “{deferredQuery}”.</Text>
+              <Button variant="light" size="xs" onClick={() => setQuery('')}>Clear filter</Button>
+            </Stack>
           )}
         </Stack>
       )}

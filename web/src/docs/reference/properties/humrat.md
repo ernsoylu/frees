@@ -1,28 +1,48 @@
 ---
 name: humrat
 category: Fluid Properties
-summary: Humid-air property: humrat from the real-fluid property backend.
+summary: Humidity ratio (kg water vapour per kg dry air) [kg/kg] of humid air (AirH2O) from three named inputs.
 related: []
 examples: []
-tags: [humrat, property, humid-air, coolprop]
+tags: [humrat, property, humid-air, rustprop]
 references: []
 ---
 
 # humrat
 
-Returns the **humrat** of a humid-air (AirH2O) from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+Humidity ratio (kg water vapour per kg dry air) [kg/kg] of humid air (AirH2O) from three named inputs.
 
 ## Syntax
 
 ```
-humrat(AirH2O, T=, P=, R=)
+w = HumRat(AirH2O, T=…, P=…, R=…)
+w = HumRat(AirH2O, X1=…, X2=…, P=…)
 ```
 
 ## Description
 
-A humid-air property; supply the dry-bulb T, total pressure P, and one humidity coordinate (R, W, B, or D). Property names are case-insensitive.
+`HumRat(AirH2O, T=…, P=…, R=…)` returns the humidity ratio (kg water vapour per kg dry air) [kg/kg] of moist air. Humid-air properties need three named inputs, one of which must be the pressure `P`; the order does not matter and names are case-insensitive.
+
+## Valid inputs
+
+Humid air takes **three** named inputs, one of which must be `P`. Combinations verified through the engine:
+
+| Inputs | Meaning |
+| --- | --- |
+| `T`, `P`, `R` | dry-bulb temperature, pressure, relative humidity (0–1) |
+| `T`, `P`, `w` | … humidity ratio |
+| `T`, `P`, `B` | … wet-bulb temperature (alias `Twb`) |
+| `T`, `P`, `D` | … dew-point temperature (alias `Tdp`) |
+| `h`, `P`, `R` | enthalpy per kg dry air, pressure, relative humidity |
+
+Indicators: `T`, `P`, `h`, `s`, `v`, `w`, `R` (`RH`), `B` (`Twb`), `D` (`Tdp`).
+
+## Fluid support
+
+| Fluid class | Supported |
+| --- | --- |
+| Humid air (`AirH2O`) | ✓ — three inputs, one of them `P` |
+| Real, pseudo-pure, ideal-gas and incompressible fluids | — (humid-air function only) |
 
 ## Examples
 
@@ -49,3 +69,24 @@ w = 0.009925739296
 ```
 
 <!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `AirH2O` | Name | Yes | The humid-air pseudo-fluid. |
+| three of `T`, `P`, `h`, `s`, `v`, `w`, `R`, `B`, `D` | Number | Yes | Named inputs; one must be `P` [Pa]. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `w` | Number | Humidity ratio (kg water vapour per kg dry air) [kg/kg]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `Pressure must be one of the inputs to HAPropsSI` | The three inputs do not include `P` | Add `P=…` as one of the three inputs. |
+| `The input for key (Rh) with value (1.5) is outside the range of validity: (0) to (1)` | Relative humidity given in percent | Pass `R` as a fraction, e.g. `R=0.5`. |
+| `HumRat requires …` | Fewer than three inputs | Humid air needs three inputs, e.g. `T`, `P`, `R`. |

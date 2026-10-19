@@ -1,29 +1,40 @@
 ---
 name: ttest1_pval
-category: Built-in Functions
-summary: Reference page for ttest1_pval.
-related: []
+category: Stats
+summary: Two-sided p-value of the one-sample t-test.
+related: [ttest1_stat, ttest1_df]
 examples: []
-tags: [ttest1_pval]
+tags: [ttest1_pval, stats, hypothesis test, t-test]
 ---
 
 # ttest1_pval
 
-`ttest1_pval` is available in the frees built-in functions surface.
+Two-sided p-value of the one-sample t-test.
 
 ## Syntax
 
 ```
-ttest1_pval(...)
+p = ttest1_pval(mu0, data)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`ttest1_pval(mu0, data)` tests whether the population mean of `data` equals `mu0` (t = (x̄ − μ₀)/(s/√n), two-sided p-value, n − 1 degrees of freedom) and returns the **two-sided p-value**. The sibling accessors return the other results of the same test.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mu0` | Number | Yes | Hypothesised population mean. |
+| `data` | Vector | Yes | Sample values (n ≥ 2). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `p` | Number | Two-sided p-value. |
 
 ## Examples
 

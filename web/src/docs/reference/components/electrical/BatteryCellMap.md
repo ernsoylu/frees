@@ -1,19 +1,22 @@
 ---
 name: BatteryCellMap
 category: Component (electrical)
-summary: Acausal electrical-domain component BatteryCellMap with ports p, n, heat.
+summary: "Map-based battery cell — the real ECM rung: open-circuit voltage from an OCV(SOC) TABLE, ohmic resistance with an Arrhenius temperature law, and the Bernardi heat Q = I²R − I·T·(dU/dT)(SOC) (entropic term from a dU/dT map)."
 related: []
 examples: []
 tags: [batterycellmap, component, electrical, acausal]
 references: []
-generated: true
 ---
 
 # BatteryCellMap
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Map-based battery cell — the real ECM rung: open-circuit voltage from an OCV(SOC) TABLE, ohmic resistance with an Arrhenius temperature law, and the Bernardi heat Q = I²R − I·T·(dU/dT)(SOC) (entropic term from a dU/dT map).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+SOC and cell temperature are states; the `aging` variant adds Ah-throughput capacity fade (Qcap = Q0·(1 − k_age·Ah)). Discharge current is positive (I = −p.I, matching the Battery sign convention).
+
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/electrical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

@@ -1,17 +1,20 @@
 ---
 name: SensibleAirToAirHX
 category: Component (moistair)
-summary: Acausal moistair-domain component SensibleAirToAirHX with ports sup_in, sup_out, exh_in, exh_out.
+summary: "Sensible air-to-air exchanger: the shared physics of every sensible-only recovery device."
 related: []
 examples: []
 tags: [sensibleairtoairhx, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # SensibleAirToAirHX
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Sensible air-to-air exchanger: the shared physics of every sensible-only recovery device.
+
+All five move heat and no moisture between the streams, and differ in the numbers they are rated at rather than in form (Std 84 / Handbook—Systems Ch. 25, Table 3):  fixed plate     eff 50-80%  eatr 0-5%    oacf 0.97-1.06 heat wheel      eff 50-85%  eatr 0.5-10% oacf 1.0-1.2 heat pipe       eff 45-65%  eatr 0-1%    oacf 0.99-1.01 run-around loop eff 55-65%  eatr 0       oacf 1.0 thermosiphon    eff 40-60%  eatr 0       oacf 1.0  eff follows Standard 84: actual transfer over the maximum possible, so the C_min stream is the one that would reach the other's inlet temperature at eff = 1. Sensible-only means the exchange is driven by TEMPERATURE, not by enthalpy — enthalpy carries the latent term, and using it here would move moisture that none of these devices can move.  A "sensible-only" device still moves some moisture, and that is what eatr is. A rotary matrix drags exhaust air round with it; a plate core leaks it through the seals. Either way a fraction of the supply leaving stream is really exhaust air, 0 to 10% of it, cut by a purge sector but never eliminated. It is a required parameter because cross-contamination is often the design question rather than an afterthought — a wheel serving an isolation room, say — and defaulting it to zero would answer that question wrongly and silently.  oacf is supply inlet flow over supply outlet flow: the leakage that makes an exchanger deliver less outdoor air than it is fed, and so the factor the supply fan must be oversized by. What leaks out of the supply side joins the exhaust, so the moisture and energy balances close over the whole device rather than per stream.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

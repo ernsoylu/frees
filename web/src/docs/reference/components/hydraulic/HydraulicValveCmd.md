@@ -1,19 +1,20 @@
 ---
 name: HydraulicValveCmd
 category: Component (hydraulic)
-summary: Acausal hydraulic-domain component HydraulicValveCmd with ports in, out, u.
+summary: "Signal-commanded proportional valve: spool command u.sig ∈ [0,1] scales the orifice CdA — the closed-loop counterpart of HydraulicValve."
 related: []
 examples: []
 tags: [hydraulicvalvecmd, component, hydraulic, acausal]
 references: []
-generated: true
 ---
 
 # HydraulicValveCmd
 
-Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Signal-commanded proportional valve: spool command u.sig ∈ [0,1] scales the orifice CdA — the closed-loop counterpart of HydraulicValve.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/hydraulic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

@@ -1,17 +1,20 @@
 ---
 name: FanCoilUnit
 category: Component (moistair)
-summary: Acausal moistair-domain component FanCoilUnit with ports in, out, wall.
+summary: "Fan coil unit: a room terminal that recirculates air through a filter and a wet coil with a blow-through fan, so the fan heat adds to the coil load."
 related: []
 examples: []
 tags: [fancoilunit, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # FanCoilUnit
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Fan coil unit: a room terminal that recirculates air through a filter and a wet coil with a blow-through fan, so the fan heat adds to the coil load.
+
+Fan coil unit: a room terminal that recirculates space air through a filter and a wet coil, with the fan BLOW-THROUGH — upstream of the coil, pushing air across it, which is the normal fan-coil arrangement (central station AHUs are the ones usually drawn through).  That ordering is not cosmetic. Blow-through puts the fan heat INTO the air the coil then has to cool, so the fan power appears in the coil load; draw it through instead and the same fan heat lands downstream of the coil, where it reheats the supply air the coil just conditioned. The two arrangements put the same watts in opposite places.  Unlike a chilled beam or an induction unit, a fan coil is built WITH a drain pan, so its coil may run wet and carry latent duty. That is the reason a fan coil can serve a space with no upstream dew-point control and a beam cannot.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

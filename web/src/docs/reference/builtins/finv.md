@@ -1,29 +1,39 @@
 ---
 name: finv
-category: Built-in Functions
-summary: Reference page for finv.
-related: []
+category: Stats
+summary: F distribution — inverse CDF (quantile).
+related: [fcdf, fpdf]
 examples: []
-tags: [finv]
+tags: [finv, stats, distribution, f distribution]
 ---
 
 # finv
 
-`finv` is available in the frees built-in functions surface.
+F distribution — inverse CDF (quantile).
 
 ## Syntax
 
 ```
-finv(...)
+y = finv(p, d1, d2)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`finv(p, d1, d2)` returns the inverse CDF (quantile) of the F distribution with `d1` numerator and `d2` denominator degrees of freedom.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `p` | Number | Yes | Probability in (0, 1). |
+| `d1` | Number | Yes | Numerator degrees of freedom (> 0). |
+| `d2` | Number | Yes | Denominator degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Quantile x with P(X ≤ x) = p. |
 
 ## Examples
 

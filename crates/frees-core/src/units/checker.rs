@@ -323,8 +323,8 @@ fn collect_arg_unit_equations(
 /// results' dimensions are not tracked: stay agnostic rather than asserting
 /// (and warning about) dimensionless arguments.
 const AGNOSTIC_CALL_PREFIXES: &[&str] = &[
-    "det$", "qr$", "chol$", "expm$", "svd$", "fft$", "ifft$", "conv$", "linfit$", "polyfit$",
-    "interp2$",
+    "det$", "cond$", "qr$", "chol$", "expm$", "svd$", "fft$", "ifft$", "conv$", "linfit$",
+    "polyfit$", "interp2$",
 ];
 
 /// Control-systems intrinsics whose results are treated as dimensionless.

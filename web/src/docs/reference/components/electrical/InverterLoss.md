@@ -1,19 +1,20 @@
 ---
 name: InverterLoss
 category: Component (electrical)
-summary: Acausal electrical-domain component InverterLoss with ports in_p, out_p, heat.
+summary: "Series inverter loss element: conduction (device drop V0 + r·I) plus switching loss folded into an equivalent drop Vsw = Esw·fsw·Vnom/(Iref·Vref) — energy-consistent (Q = ΔV·I exactly), tanh-smooth through zero current."
 related: []
 examples: []
 tags: [inverterloss, component, electrical, acausal]
 references: []
-generated: true
 ---
 
 # InverterLoss
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Series inverter loss element: conduction (device drop V0 + r·I) plus switching loss folded into an equivalent drop Vsw = Esw·fsw·Vnom/(Iref·Vref) — energy-consistent (Q = ΔV·I exactly), tanh-smooth through zero current.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/electrical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

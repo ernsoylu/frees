@@ -18,7 +18,6 @@ Plotting `im` against `re` and applying the Nyquist criterion (encirclements of 
 
 ```
 [re, im] = nyquist(num, den, omega)
-[re, im] = nyquist(num, den, omega)
 ```
 
 ## Description

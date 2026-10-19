@@ -38,8 +38,8 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \begin{aligned}
-s_{in} &= \text{Entropy}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
-h_{s} &= \text{Enthalpy}\left(\mathrm{fluid}, =out.p, p=s_{in}\right) \\
+s_{in} &= \text{Entropy}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+h_{s} &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, s=s_{in}\right) \\
 out.mdot &= in.mdot \\
 out.h &= in.h - eta\cdot \left(in.h - h_{s}\right) \\
 w &= in.mdot\cdot \left(in.h - out.h\right)

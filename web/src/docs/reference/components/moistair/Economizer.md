@@ -1,17 +1,20 @@
 ---
 name: Economizer
 category: Component (moistair)
-summary: Acausal moistair-domain component Economizer with ports oa_in, ret_in, mix_out.
+summary: "Airside economizer: a mixing box whose outdoor-air fraction is decided by a dry-bulb or enthalpy changeover against the return air and a high limit."
 related: []
 examples: []
 tags: [economizer, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # Economizer
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Airside economizer: a mixing box whose outdoor-air fraction is decided by a dry-bulb or enthalpy changeover against the return air and a high limit.
+
+Airside economizer. It is a mixing box whose outdoor-air fraction is DECIDED rather than given: when outdoor air is the cheaper source of cooling the dampers open toward 100%, and otherwise they fall back to the minimum ventilation fraction f_min.  Two changeover strategies, as the codes define them. `drybulb` compares dry- bulb temperatures; `enthalpy` compares total enthalpy and so counts the latent penalty of humid outdoor air, which dry-bulb changeover cannot see. Each is gated twice — the differential test against the return air AND a fixed high limit `lim` above which the economizer locks out regardless. `band` is the changeover width in the units of whichever variable the variant compares (K for drybulb, J/kg for enthalpy); it keeps the decision differentiable instead of stepping, which is what lets a solver cross it.  f_oa is exported because the operating-hours question — how much of the year the economizer actually runs against real weather — is the reason to model one at all.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

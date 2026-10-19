@@ -41,7 +41,7 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.p &= in.p \\
-t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 q &= ua\cdot \left(t_{in} - wall.t\right) \\
 out.h &= in.h - \frac{q}{in.mdot} \\
 wall.qdot &= -q

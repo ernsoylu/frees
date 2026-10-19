@@ -83,7 +83,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `EXVCmd`,
     library: `ac`,
-    summary: `Acausal ac-domain component EXVCmd with ports in, out, u.`,
+    summary: `Signal-commanded EXV: identical orifice physics to EXV, but the opening fraction arrives on a signal port \`u\` (u.sig ∈ [0,1]) so a controller (SigPID, SigTable schedule, …) can drive it in closed loop.`,
     tags: [`exvcmd`, `component`, `ac`, `acausal`],
     ports: [`in`, `out`, `u`],
     params: [
@@ -96,7 +96,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HeaterCore`,
     library: `ac`,
-    summary: `Acausal ac-domain component HeaterCore with ports cool_in, cool_out, air_in, air_out.`,
+    summary: `Heater core: the cabin-heating radiator — hot coolant warms the ventilation air stream through the shared wall node.`,
     tags: [`heatercore`, `component`, `ac`, `acausal`],
     ports: [`cool_in`, `cool_out`, `air_in`, `air_out`],
     params: [
@@ -109,7 +109,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Radiator`,
     library: `ac`,
-    summary: `Acausal ac-domain component Radiator with ports cool_in, cool_out, air_in, air_out.`,
+    summary: `Radiator: coolant rejects heat to ambient moist air through a shared wall node (hierarchical single-domain halves, per the §2.4 rule).`,
     tags: [`radiator`, `component`, `ac`, `acausal`],
     ports: [`cool_in`, `cool_out`, `air_in`, `air_out`],
     params: [
@@ -182,7 +182,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `BatteryCellMap`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component BatteryCellMap with ports p, n, heat.`,
+    summary: `Map-based battery cell — the real ECM rung: open-circuit voltage from an OCV(SOC) TABLE, ohmic resistance with an Arrhenius temperature law, and the Bernardi heat Q = I²R − I·T·(dU/dT)(SOC) (entropic term from a dU/dT map).`,
     tags: [`batterycellmap`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`, `heat`],
     params: [
@@ -207,7 +207,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `BatteryPack`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component BatteryPack with ports p, n, heat.`,
+    summary: `Battery pack: Ns series × Np parallel of the map cell, lumped (uniform SOC and temperature — the standard pack-level rung).`,
     tags: [`batterypack`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`, `heat`],
     params: [
@@ -283,7 +283,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ChargerCCCV`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component ChargerCCCV with ports p, n.`,
+    summary: `CC-CV charger: sources Imax until the terminal voltage approaches Vmax, then tapers (tanh, width epsV) — the constant-current / constant-voltage profile with no mode switch.`,
     tags: [`chargercccv`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`],
     params: [
@@ -307,7 +307,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `DCDCConverter`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component DCDCConverter with ports in_p, in_n, out_p, out_n.`,
+    summary: `Ideal-transformer DC/DC converter with a fixed voltage ratio and a four-quadrant efficiency (forward power / eta, reverse power · eta).`,
     tags: [`dcdcconverter`, `component`, `electrical`, `acausal`],
     ports: [`in_p`, `in_n`, `out_p`, `out_n`],
     params: [
@@ -338,14 +338,14 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     ports: [`p`, `n`],
     params: [
       { name: `Gon`, isString: false, isSelector: false, isMap: false, unit: `S`, description: `On-state conductance [S].`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Effectiveness / roughness.`, required: true, values: [], variants: [], defaultValue: `` }
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `V`, description: `Conduction smoothing voltage [V] — the tanh transition width around zero bias.`, required: true, values: [], variants: [], defaultValue: `` }
     ],
     variants: [],
   },
   {
     type: `Electrolyzer`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component Electrolyzer with ports p, n, heat.`,
+    summary: `PEM electrolyzer stack (reverse fuel cell): reversible potential + activation (ln(i/i0 + 1), regular at zero current) + ohmic overpotentials; hydrogen production from Faraday's law; heat above the thermoneutral voltage Eth.`,
     tags: [`electrolyzer`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`, `heat`],
     params: [
@@ -363,7 +363,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ElectrolyzerThermal`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component ElectrolyzerThermal with ports p, n, cool_in, cool_out.`,
+    summary: `Electrolyzer with a coolant jacket (same pattern as the cooled stack).`,
     tags: [`electrolyzerthermal`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`, `cool_in`, `cool_out`],
     params: [
@@ -402,7 +402,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `FuelCellStackCooled`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component FuelCellStackCooled with ports p, n, cool_in, cool_out.`,
+    summary: `PEM stack with a coolant jacket: the electrochemical stack's waste heat crosses into a liquid loop through a UA wall (drop-in for FuelCellStack when the thermal loop matters).`,
     tags: [`fuelcellstackcooled`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`, `cool_in`, `cool_out`],
     params: [
@@ -434,7 +434,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HarnessResistance`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component HarnessResistance with ports a, b, heat.`,
+    summary: `Harness/busbar resistance with the copper temperature coefficient, sensing its temperature on the heat port and dissipating I²R there.`,
     tags: [`harnessresistance`, `component`, `electrical`, `acausal`],
     ports: [`a`, `b`, `heat`],
     params: [
@@ -469,7 +469,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `InverterLoss`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component InverterLoss with ports in_p, out_p, heat.`,
+    summary: `Series inverter loss element: conduction (device drop V0 + r·I) plus switching loss folded into an equivalent drop Vsw = Esw·fsw·Vnom/(Iref·Vref) — energy-consistent (Q = ΔV·I exactly), tanh-smooth through zero current.`,
     tags: [`inverterloss`, `component`, `electrical`, `acausal`],
     ports: [`in_p`, `out_p`, `heat`],
     params: [
@@ -487,7 +487,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `MotorMap`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component MotorMap with ports p, n, shaft, heat, u.`,
+    summary: `Map-efficiency e-machine: torque command on the signal port u [N·m], losses from a 2-D efficiency map eff$(ω, τ).`,
     tags: [`motormap`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`, `shaft`, `heat`, `u`],
     params: [
@@ -499,7 +499,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `MPPTBlock`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component MPPTBlock with ports G, out.`,
+    summary: `Map-referenced maximum-power-point command: Vmp from an irradiance map (perturb-free analytic tracking; pair with PVSingleDiode + a DC-DC stage).`,
     tags: [`mpptblock`, `component`, `electrical`, `acausal`],
     ports: [`G`, `out`],
     params: [
@@ -523,7 +523,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `PVSingleDiode`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component PVSingleDiode with ports p, n, G.`,
+    summary: `Single-diode PV module: I = Iph − I0·(exp(Vd/(n·Vt)) − 1) − Vd/Rsh with the series-resistance diode voltage Vd = V + I·Rs — the physics rung above SolarArray's clamp model.`,
     tags: [`pvsinglediode`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`, `G`],
     params: [
@@ -551,7 +551,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SolarArray`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component SolarArray with ports p, n, G.`,
+    summary: `Solar array: photocurrent proportional to the irradiance signal G [W/m²], with a smooth open-circuit clamp at Voc — the constant-current PV rung.`,
     tags: [`solararray`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`, `G`],
     params: [
@@ -565,7 +565,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Supercapacitor`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component Supercapacitor with ports p, n.`,
+    summary: `Supercapacitor: ideal capacitance with an equivalent series resistance.`,
     tags: [`supercapacitor`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`],
     params: [
@@ -578,7 +578,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ThermalFuse`,
     library: `electrical`,
-    summary: `Acausal electrical-domain component ThermalFuse with ports p, n.`,
+    summary: `Thermal fuse: the element resistance multiplies by (1 + kR) once |I| exceeds the blow rating (tanh, width epsI) — a continuous overcurrent trip.`,
     tags: [`thermalfuse`, `component`, `electrical`, `acausal`],
     ports: [`p`, `n`],
     params: [
@@ -615,7 +615,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `AtmosphereSource`,
     library: `fluid`,
-    summary: `Acausal fluid-domain component AtmosphereSource with ports out.`,
+    summary: `ISA atmosphere boundary: the 1976 standard atmosphere state at altitude, as a flow source (use with ram/propulsion models).`,
     tags: [`atmospheresource`, `component`, `fluid`, `acausal`],
     ports: [`out`],
     params: [
@@ -638,7 +638,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Combustor`,
     library: `fluid`,
-    summary: `Acausal fluid-domain component Combustor with ports in, out.`,
+    summary: `Combustor: fuel mass addition with combustion efficiency on the lower heating value and a rated pressure loss.`,
     tags: [`combustor`, `component`, `fluid`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -652,7 +652,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `CombustorSpecies`,
     library: `fluid`,
-    summary: `Acausal fluid-domain component CombustorSpecies with ports in, out.`,
+    summary: `Combustor emitting product composition: complete combustion of a CxHy fuel stream into the E3 species riders — CO2/H2O produced and O2 consumed by stoichiometry per kg of fuel; N2 passes as the balance.`,
     tags: [`combustorspecies`, `component`, `fluid`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -789,7 +789,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HeatedDuct`,
     library: `fluid`,
-    summary: `Acausal fluid-domain component HeatedDuct with ports in, out, wall.`,
+    summary: `Heated duct: single-stream ε-NTU heat pickup from a wall node (ε = 1 − e^(−UA/ṁcp)), the exact single-stream limit.`,
     tags: [`heatedduct`, `component`, `fluid`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -856,7 +856,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Propeller`,
     library: `fluid`,
-    summary: `Acausal fluid-domain component Propeller with ports shaft, veh.`,
+    summary: `Propeller (actuator-line map form): thrust Ct(J)·ρn²D⁴ and shaft power Cp(J)·ρn³D⁵ from advance-ratio maps J = v/(nD) — bridges the shaft to the vehicle's translational port.`,
     tags: [`propeller`, `component`, `fluid`, `acausal`],
     ports: [`shaft`, `veh`],
     params: [
@@ -895,7 +895,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Regenerator`,
     library: `fluid`,
-    summary: `Acausal fluid-domain component Regenerator with ports hot_in, hot_out, cold_in, cold_out.`,
+    summary: `Effectiveness-rated regenerator/recuperator: Q = ε·Cmin·(Th − Tc) with ε given directly (rate it from the ε-NTU functions for a geometry design).`,
     tags: [`regenerator`, `component`, `fluid`, `acausal`],
     ports: [`hot_in`, `hot_out`, `cold_in`, `cold_out`],
     params: [
@@ -1010,7 +1010,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `CellToPackThermal`,
     library: `heat`,
-    summary: `Acausal heat-domain component CellToPackThermal with ports cell, plate.`,
+    summary: `Cell-to-plate thermal path: contact/interface resistance into the cold-plate mass — the network that makes pack gradients (cell hot spot vs plate) real.`,
     tags: [`celltopackthermal`, `component`, `heat`, `acausal`],
     ports: [`cell`, `plate`],
     params: [
@@ -1059,7 +1059,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HeatPipe`,
     library: `heat`,
-    summary: `Acausal heat-domain component HeatPipe with ports a, b.`,
+    summary: `Heat pipe: a very high effective conductance saturating smoothly at the transport limit Qmax (capillary/sonic), so overload degrades instead of diverging.`,
     tags: [`heatpipe`, `component`, `heat`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -1095,7 +1095,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `MultiZoneWall`,
     library: `heat`,
-    summary: `Acausal heat-domain component MultiZoneWall with ports a, b.`,
+    summary: `Two-zone partition wall: surface films (h_a, h_b) into two face masses with U·A conduction between them.`,
     tags: [`multizonewall`, `component`, `heat`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -1113,7 +1113,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `PCMMass`,
     library: `heat`,
-    summary: `Acausal heat-domain component PCMMass with ports port.`,
+    summary: `Phase-change-material mass: latent heat L released over a Gaussian mushy zone of width dTm around the melt point (∫cp_eff dT = cp·ΔT + L exactly).`,
     tags: [`pcmmass`, `component`, `heat`, `acausal`],
     ports: [`port`],
     params: [
@@ -1129,7 +1129,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `PeltierTEC`,
     library: `heat`,
-    summary: `Acausal heat-domain component PeltierTEC with ports p, n, hot, cold.`,
+    summary: `Peltier thermoelectric module: Seebeck voltage + ohmic drop electrically; Peltier pumping ± half-Joule and back-conduction thermally.`,
     tags: [`peltiertec`, `component`, `heat`, `acausal`],
     ports: [`p`, `n`, `hot`, `cold`],
     params: [
@@ -1154,7 +1154,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `RadiationTwoSurface`,
     library: `heat`,
-    summary: `Acausal heat-domain component RadiationTwoSurface with ports a, b.`,
+    summary: `Two-surface radiation enclosure: surface resistances (1−ε)/(εA) in series with the view-factor space resistance 1/(A1·F12), on the σ(T⁴−T⁴) potential.`,
     tags: [`radiationtwosurface`, `component`, `heat`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -1203,7 +1203,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ThermalSwitch`,
     library: `heat`,
-    summary: `Acausal heat-domain component ThermalSwitch with ports a, b.`,
+    summary: `Thermal switch / bimetal thermostat: a conductance that engages smoothly above the trip temperature (sensed on side a).`,
     tags: [`thermalswitch`, `component`, `heat`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -1216,7 +1216,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `WallRC`,
     library: `heat`,
-    summary: `Acausal heat-domain component WallRC with ports a, b.`,
+    summary: `Two-node transient wall: capacitance–conduction–capacitance, the classic RC warm-up wall between two heat ports.`,
     tags: [`wallrc`, `component`, `heat`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -1231,7 +1231,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `CounterbalanceValve`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component CounterbalanceValve with ports in, out, pilot.`,
+    summary: `Counterbalance (overcenter) valve: opens on the spring-referenced blend of load pressure and pilot assist (ratio R_p), then meters with the square law — controlled load lowering.`,
     tags: [`counterbalancevalve`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`, `pilot`],
     params: [
@@ -1247,7 +1247,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicAccumulator`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicAccumulator with ports port.`,
+    summary: `Gas-charged accumulator: precharge P0 filling gas volume V0; the oil drives the gas polytropically (P·V^γ = P0·V0^γ) with the gas volume as the state.`,
     tags: [`hydraulicaccumulator`, `component`, `hydraulic`, `acausal`],
     ports: [`port`],
     params: [
@@ -1263,7 +1263,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicCheckValve`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicCheckValve with ports in, out.`,
+    summary: `Check valve: square-law orifice gated smoothly to forward ΔP (width eps).`,
     tags: [`hydrauliccheckvalve`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1294,7 +1294,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicDoubleActingCylinder`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicDoubleActingCylinder with ports a, b, rod.`,
+    summary: `Double-acting cylinder: two bulk-modulus chambers (piston/rod areas Aa, Ab) and the rod force balance.`,
     tags: [`hydraulicdoubleactingcylinder`, `component`, `hydraulic`, `acausal`],
     ports: [`a`, `b`, `rod`],
     params: [
@@ -1313,7 +1313,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicFlowControl`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicFlowControl with ports in, out.`,
+    summary: `Ideal pressure-compensated flow control: holds the set volumetric flow regardless of ΔP (within authority — rate it against the circuit).`,
     tags: [`hydraulicflowcontrol`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1326,7 +1326,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicFlowDivider`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicFlowDivider with ports in, outa, outb.`,
+    summary: `Ideal spool flow divider: forces the flow split frac/(1-frac) regardless of the branch loads; the inlet pressure is the power-conserving mix.`,
     tags: [`hydraulicflowdivider`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `outa`, `outb`],
     params: [
@@ -1338,7 +1338,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicMotor`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicMotor with ports in, out, shaft.`,
+    summary: `Fixed-displacement motor: the exact dual of HydraulicPump (volumetric slip divides the flow, mechanical efficiency multiplies the torque).`,
     tags: [`hydraulicmotor`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`, `shaft`],
     params: [
@@ -1373,7 +1373,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicPilotCheckValve`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicPilotCheckValve with ports in, out, pilot.`,
+    summary: `Pilot-operated check valve: a pilot pressure (ratio rp) can hold the poppet open against reverse ΔP — the load-holding valve.`,
     tags: [`hydraulicpilotcheckvalve`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`, `pilot`],
     params: [
@@ -1388,7 +1388,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicPipe`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicPipe with ports in, out.`,
+    summary: `Hydraulic line with Darcy friction on the oil kinematic viscosity (laminar-turbulent via the Colebrook friction factor, sign-safe).`,
     tags: [`hydraulicpipe`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1419,7 +1419,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicResistance`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicResistance with ports in, out.`,
+    summary: `Generic K-factor resistance (bend, tee, sudden expansion — set K from the standard flow-network loss correlations).`,
     tags: [`hydraulicresistance`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1433,7 +1433,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicSequenceValve`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicSequenceValve with ports in, out.`,
+    summary: `Sequence valve: passes flow to the secondary circuit only above the primary pressure setpoint (tanh gate).`,
     tags: [`hydraulicsequencevalve`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1472,7 +1472,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicThermalVolume`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicThermalVolume with ports in, out, wall.`,
+    summary: `Oil volume with pressure AND temperature states plus a heat port — the thermal-hydraulic node for warm-up and cooling-loop studies.`,
     tags: [`hydraulicthermalvolume`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -1507,7 +1507,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicValveCmd`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicValveCmd with ports in, out, u.`,
+    summary: `Signal-commanded proportional valve: spool command u.sig ∈ [0,1] scales the orifice CdA — the closed-loop counterpart of HydraulicValve.`,
     tags: [`hydraulicvalvecmd`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`, `u`],
     params: [
@@ -1520,7 +1520,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydraulicVolume`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component HydraulicVolume with ports in, out.`,
+    summary: `Standalone bulk-modulus volume (the hydraulic C-node): der(P) from the net flow against the oil stiffness beta.`,
     tags: [`hydraulicvolume`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1535,7 +1535,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `LoadSensingPump`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component LoadSensingPump with ports in, out, ls.`,
+    summary: `Load-sensing pump: the displacement fraction integrates the compensator error (LS pressure + margin vs outlet), soft-clamped to 0..1 by a logistic; delivery is the effective displacement at the drive speed.`,
     tags: [`loadsensingpump`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`, `ls`],
     params: [
@@ -1558,7 +1558,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     params: [
       { name: `Pcrack`, isString: false, isSelector: false, isMap: false, unit: `Pa`, description: `Cracking (relief) pressure [Pa].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `K`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Gain / coefficient.`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Effectiveness / roughness.`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `Pa`, description: `Opening smoothing width [Pa] — the tanh transition around \`Pcrack\`.`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `domain$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`.`, required: false, values: [], variants: [], defaultValue: `oil` }
     ],
     variants: [],
@@ -1566,7 +1566,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ServoValveDynamic`,
     library: `hydraulic`,
-    summary: `Acausal hydraulic-domain component ServoValveDynamic with ports in, out, u.`,
+    summary: `Servo valve with 2nd-order spool dynamics: the spool position tracks the command through (wn, zeta) and gates the odd-symmetric square-law flow — the dynamic rung above HydraulicValveCmd.`,
     tags: [`servovalvedynamic`, `component`, `hydraulic`, `acausal`],
     ports: [`in`, `out`, `u`],
     params: [
@@ -1582,7 +1582,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `CoolingTower`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component CoolingTower with ports in, out, wb.`,
+    summary: `Cooling tower (Merkel-lite): heat rejection on the enthalpy potential between saturated air at the water inlet temperature and ambient air at its wet-bulb (signal port), with a tower effectiveness and design air flow.`,
     tags: [`coolingtower`, `component`, `liquid`, `acausal`],
     ports: [`in`, `out`, `wb`],
     params: [
@@ -1597,7 +1597,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `GravityDrain`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component GravityDrain with ports in, out.`,
+    summary: `Gravity drain (Torricelli): the C1 odd-symmetric flow law mdot|mdot| = (Cd*A)^2 * 2*rho*dP — smooth through zero head, reversible.`,
     tags: [`gravitydrain`, `component`, `liquid`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1611,7 +1611,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HydroTurbine`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component HydroTurbine with ports in, out, shaft.`,
+    summary: `Hydro turbine: shaft power eta·(V̇·ΔP) from the head across it, efficiency from a flow map; the extracted work leaves the stream enthalpy.`,
     tags: [`hydroturbine`, `component`, `liquid`, `acausal`],
     ports: [`in`, `out`, `shaft`],
     params: [
@@ -1626,7 +1626,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `IceStorageBrine`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component IceStorageBrine with ports in, out.`,
+    summary: `Ice/PCM storage on a brine loop: the latent mass sits behind a UA wall in the brine stream — charge below the melt band, discharge above it.`,
     tags: [`icestoragebrine`, `component`, `liquid`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1644,7 +1644,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `LiquidCheckValve`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component LiquidCheckValve with ports in, out.`,
+    summary: `Check valve: the square-law orifice gated smoothly to forward ΔP only (tanh gate of width eps [Pa]); reverse flow decays to zero, no branch switch.`,
     tags: [`liquidcheckvalve`, `component`, `liquid`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1670,7 +1670,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `LiquidExpansionTank`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component LiquidExpansionTank with ports port.`,
+    summary: `Expansion tank / degas bottle: pins the loop pressure datum — the one pressure reference every CLOSED coolant loop needs.`,
     tags: [`liquidexpansiontank`, `component`, `liquid`, `acausal`],
     ports: [`port`],
     params: [
@@ -1740,7 +1740,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `LiquidPumpMap`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component LiquidPumpMap with ports in, out.`,
+    summary: `Head-curve pump: rise from a tabulated head map [m] vs volumetric flow, with the hydraulic inefficiency heating the coolant (out.h mirrors LiquidPump).`,
     tags: [`pump`, `liquid-pump-family`, `liquidpumpmap`, `map`, `data:rho-map`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `map-driven`, `liquid`, `component`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1780,7 +1780,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `LiquidTank`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component LiquidTank with ports in, out, wall.`,
+    summary: `Thermal-mass tank (m kg of coolant, perfectly mixed): the outlet leaves at the tank temperature state Tt; a wall heat port exchanges UA·(T_wall − Tt).`,
     tags: [`liquidtank`, `component`, `liquid`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -1795,7 +1795,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `LiquidThermostat`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component LiquidThermostat with ports in, out.`,
+    summary: `Wax thermostat: the element opens smoothly over a temperature band (Topen ± Tband) sensed on the inlet coolant — the engine warm-up bypass switch, no discrete event.`,
     tags: [`liquidthermostat`, `component`, `liquid`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1811,7 +1811,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `LiquidThreeWayValve`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component LiquidThreeWayValve with ports in, outa, outb.`,
+    summary: `Diverting three-way valve: routes fraction u of the inlet to outa, the rest to outb, both at the inlet pressure — the TMS loop-splitting staple.`,
     tags: [`liquidthreewayvalve`, `component`, `liquid`, `acausal`],
     ports: [`in`, `outa`, `outb`],
     params: [
@@ -1849,7 +1849,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `OpenTank`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component OpenTank with ports in, out.`,
+    summary: `Open (vented) tank: level state from the flow imbalance; the inlet sees the free surface (P0), the outlet the gravity head at the base.`,
     tags: [`opentank`, `component`, `liquid`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1864,7 +1864,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ThermalStorageTank`,
     library: `liquid`,
-    summary: `Acausal liquid-domain component ThermalStorageTank with ports in, out.`,
+    summary: `Stratified thermal-storage tank: three plug-flow nodes top→bottom with inter-node mixing conductance and shell losses; charge enters the top node, draw leaves the bottom at its temperature.`,
     tags: [`thermalstoragetank`, `component`, `liquid`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -1884,7 +1884,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `BeltDrive`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component BeltDrive with ports a, b.`,
+    summary: `Belt/chain drive: speed ratio with a torque-transfer efficiency (Transmission's translational-free cousin, named for the application).`,
     tags: [`beltdrive`, `component`, `mechanical`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -1896,7 +1896,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Brake`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component Brake with ports a, b, u.`,
+    summary: `Commanded friction brake: clamp fraction from the signal port u scales the capacity, tanh-smooth through zero slip.`,
     tags: [`brake`, `component`, `mechanical`, `acausal`],
     ports: [`a`, `b`, `u`],
     params: [
@@ -1908,7 +1908,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Cam`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component Cam with ports shaft, rod.`,
+    summary: `Cam: rotational-to-translational profile drive.`,
     tags: [`cam`, `component`, `mechanical`, `acausal`],
     ports: [`shaft`, `rod`],
     params: [
@@ -1920,7 +1920,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `CamFollower`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component CamFollower with ports rod.`,
+    summary: `Spring-loaded cam follower: mass held on the profile by a preloaded return spring to ground — pair with Cam for valvetrain/profile-driven kinematics.`,
     tags: [`camfollower`, `component`, `mechanical`, `acausal`],
     ports: [`rod`],
     params: [
@@ -1940,14 +1940,14 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     params: [
       { name: `Tmax`, isString: false, isSelector: false, isMap: false, unit: `K`, description: `Maximum temperature [K].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `eng`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Engagement fraction (0–1).`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Effectiveness / roughness.`, required: true, values: [], variants: [], defaultValue: `` }
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `rad/s`, description: `Slip smoothing speed [rad/s] — regularizes the sign of the slip speed.`, required: true, values: [], variants: [], defaultValue: `` }
     ],
     variants: [],
   },
   {
     type: `ClutchCmd`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component ClutchCmd with ports a, b, u.`,
+    summary: `Signal-commanded clutch: engagement fraction from a signal port \`u\` (u.sig ∈ [0,1]) instead of a fixed \`eng\` parameter — launch/shift schedules.`,
     tags: [`clutchcmd`, `component`, `mechanical`, `acausal`],
     ports: [`a`, `b`, `u`],
     params: [
@@ -1959,7 +1959,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `EndStop`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component EndStop with ports port.`,
+    summary: `Translational end stop at x = gap: spring-damper contact engaged smoothly beyond the gap (penetration hinge + tanh-gated damping).`,
     tags: [`endstop`, `component`, `mechanical`, `acausal`],
     ports: [`port`],
     params: [
@@ -1985,7 +1985,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Freewheel`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component Freewheel with ports a, b.`,
+    summary: `One-way clutch (freewheel/overrunning sprag): transmits a stiff viscous torque only while the driver overruns the driven side (dw > 0) — the C1 smooth-max hinge of width eps; free in the reverse direction.`,
     tags: [`freewheel`, `component`, `mechanical`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -2005,7 +2005,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       { name: `Fs`, isString: false, isSelector: false, isMap: false, unit: `N`, description: `Static friction force [N].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `vs`, isString: false, isSelector: false, isMap: false, unit: `m/s`, description: `Reference / slip velocity [m/s].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `bv`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Viscous-friction coefficient.`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Effectiveness / roughness.`, required: true, values: [], variants: [], defaultValue: `` }
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `rad/s`, description: `Stick–slip smoothing speed [rad/s] — regularizes the sign of the slip speed.`, required: true, values: [], variants: [], defaultValue: `` }
     ],
     variants: [],
   },
@@ -2035,7 +2035,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Lever`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component Lever with ports a, b.`,
+    summary: `Ideal lever (translational ratio).`,
     tags: [`lever`, `component`, `mechanical`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -2068,7 +2068,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `RackPinion`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component RackPinion with ports shaft, rod.`,
+    summary: `Ideal rack and pinion of pitch radius r.`,
     tags: [`rackpinion`, `component`, `mechanical`, `acausal`],
     ports: [`shaft`, `rod`],
     params: [
@@ -2102,7 +2102,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ScrewDrive`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component ScrewDrive with ports shaft, rod.`,
+    summary: `Ideal power-conserving screw drive: lead [m/rev] couples rotation to translation (τ·ω + F·v = 0).`,
     tags: [`screwdrive`, `component`, `mechanical`, `acausal`],
     ports: [`shaft`, `rod`],
     params: [
@@ -2135,7 +2135,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TorsionalBacklash`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component TorsionalBacklash with ports a, b.`,
+    summary: `Torsional backlash: a torsional spring dead over ±half of relative wind-up (the C¹ two-hinge deadband, width eps) — gear lash, spline play.`,
     tags: [`torsionalbacklash`, `component`, `mechanical`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -2183,7 +2183,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TransSpring`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component TransSpring with ports a, b.`,
+    summary: `Translational spring (the missing twin of TransDamper/TransMass).`,
     tags: [`transspring`, `component`, `mechanical`, `acausal`],
     ports: [`a`, `b`],
     params: [
@@ -2195,7 +2195,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `WheelBrakeThermal`,
     library: `mechanical`,
-    summary: `Acausal mechanical-domain component WheelBrakeThermal with ports a, b, u.`,
+    summary: `Commanded friction brake with rotor thermal state and temperature fade: friction power heats the rotor mass (convecting hA to ambient) and the available torque derates through a C1 sigmoid above T_fade (fade studies).`,
     tags: [`wheelbrakethermal`, `component`, `mechanical`, `acausal`],
     ports: [`a`, `b`, `u`],
     params: [
@@ -2214,7 +2214,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `AHU`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component AHU with ports ret_in, oa_in, sup_out.`,
+    summary: `Air-handling unit: mixing box + filter + cooling coil + reheat coil + supply fan in one block (all stateless stages, replaceable by editing the source).`,
     tags: [`ahu`, `component`, `moistair`, `acausal`],
     ports: [`ret_in`, `oa_in`, `sup_out`],
     params: [
@@ -2230,7 +2230,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `AirFilter`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component AirFilter with ports in, out.`,
+    summary: `Air filter: quadratic loss with a fouling multiplier (foul = 1 clean; scale it up as the filter loads — fan-energy studies).`,
     tags: [`airfilter`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2243,7 +2243,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ApparatusDewPointCoil`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component ApparatusDewPointCoil with ports in, out.`,
+    summary: `Cooling coil stated the way a designer actually sizes one: by its APPARATUS DEW POINT and its BYPASS FACTOR, not by an imposed leaving temperature.`,
     tags: [`apparatusdewpointcoil`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2257,7 +2257,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `CabinZone`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component CabinZone with ports in, out, wall.`,
+    summary: `Cabin zone: a perfectly-mixed air volume Vz with temperature and humidity STATES, occupant sensible/moisture loads, a solar/auxiliary heat input, and a wall heat port (couple it to ThermalMass walls or an evaporator AirCoil).`,
     tags: [`cabinzone`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -2275,7 +2275,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ChilledBeam`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component ChilledBeam with ports in, out, wall.`,
+    summary: `Chilled beam, active or passive.`,
     tags: [`chilledbeam`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -2299,7 +2299,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `DesiccantWheel`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component DesiccantWheel with ports proc_in, proc_out, reg_in, reg_out.`,
+    summary: `Solid desiccant wheel: the process air leaves warmer and drier at near-constant enthalpy, with latent effectiveness against the sorbent equilibrium humidity ratio.`,
     tags: [`desiccantwheel`, `component`, `moistair`, `acausal`],
     ports: [`proc_in`, `proc_out`, `reg_in`, `reg_out`],
     params: [
@@ -2313,7 +2313,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Diffuser`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component Diffuser with ports in, out.`,
+    summary: `Diffuser/recovery section: converts velocity head to static pressure with a recovery efficiency between inlet area A1 and outlet area A2.`,
     tags: [`diffuser`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2327,7 +2327,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `DOAS`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component DOAS with ports oa_in, sup_out, exh_in, exh_out.`,
+    summary: `Dedicated outdoor air system: recovery wheel, cooling coil sized by apparatus dew point, and reheat, conditioning the VENTILATION air on its own.`,
     tags: [`doas`, `component`, `moistair`, `acausal`],
     ports: [`oa_in`, `sup_out`, `exh_in`, `exh_out`],
     params: [
@@ -2342,7 +2342,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Economizer`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component Economizer with ports oa_in, ret_in, mix_out.`,
+    summary: `Airside economizer: a mixing box whose outdoor-air fraction is decided by a dry-bulb or enthalpy changeover against the return air and a high limit.`,
     tags: [`economizer`, `component`, `moistair`, `acausal`],
     ports: [`oa_in`, `ret_in`, `mix_out`],
     params: [
@@ -2358,7 +2358,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `EnthalpyWheel`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component EnthalpyWheel with ports sup_in, sup_out, exh_in, exh_out.`,
+    summary: `Rotary enthalpy wheel: effectiveness recovery of both enthalpy and moisture between exhaust and supply, with exact water and energy balances on the dry-air basis.`,
     tags: [`enthalpywheel`, `component`, `moistair`, `acausal`],
     ports: [`sup_in`, `sup_out`, `exh_in`, `exh_out`],
     params: [
@@ -2371,7 +2371,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `EvaporativeCooler`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component EvaporativeCooler with ports in, out.`,
+    summary: `Adiabatic evaporative cooler: constant-enthalpy humidification toward saturation with effectiveness eff (eff=1 reaches the adiabatic-saturation state, W directly from the (h, P, R=1) property call — no implicit outlet temperature to iterate).`,
     tags: [`evaporativecooler`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2383,7 +2383,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `FaceAndBypassCoil`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component FaceAndBypassCoil with ports in, out, wall.`,
+    summary: `Face-and-bypass coil: the airstream splits at a damper, the face fraction passes over the coil and the rest bypasses it untouched, and the two remix adiabatically downstream.`,
     tags: [`faceandbypasscoil`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -2396,7 +2396,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `FanCoilUnit`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component FanCoilUnit with ports in, out, wall.`,
+    summary: `Fan coil unit: a room terminal that recirculates air through a filter and a wet coil with a blow-through fan, so the fan heat adds to the coil load.`,
     tags: [`fancoilunit`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -2411,7 +2411,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `FanPoweredBox`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component FanPoweredBox with ports pri_in, ind_in, out.`,
+    summary: `Fan-powered terminal box.`,
     tags: [`fanpoweredbox`, `component`, `moistair`, `acausal`],
     ports: [`pri_in`, `ind_in`, `out`],
     params: [
@@ -2436,7 +2436,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HeatPipeWrapAround`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component HeatPipeWrapAround with ports pre_in, pre_out, re_in, re_out.`,
+    summary: `Heat-pipe wrap-around, and the pumped run-around recuperative loop that is the same idea with a glycol circuit: a PASSIVE loop that takes sensible heat out of the air entering the cooling coil and puts exactly that heat back into the air leaving it.`,
     tags: [`heatpipewraparound`, `component`, `moistair`, `acausal`],
     ports: [`pre_in`, `pre_out`, `re_in`, `re_out`],
     params: [
@@ -2461,7 +2461,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `IndirectDirectEvaporativeCooler`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component IndirectDirectEvaporativeCooler with ports pri_in, pri_out, sec_in, sec_out.`,
+    summary: `Indirect/direct two-stage evaporative cooler.`,
     tags: [`indirectdirectevaporativecooler`, `component`, `moistair`, `acausal`],
     ports: [`pri_in`, `pri_out`, `sec_in`, `sec_out`],
     params: [
@@ -2474,7 +2474,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `IndirectEvaporativeCooler`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component IndirectEvaporativeCooler with ports pri_in, pri_out, sec_in, sec_out.`,
+    summary: `Indirect evaporative cooler.`,
     tags: [`indirectevaporativecooler`, `component`, `moistair`, `acausal`],
     ports: [`pri_in`, `pri_out`, `sec_in`, `sec_out`],
     params: [
@@ -2487,7 +2487,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `InductionUnit`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component InductionUnit with ports pri_in, ind_in, out, wall.`,
+    summary: `Induction unit — and the ACTIVE chilled beam, which is the same machine under a newer name.`,
     tags: [`inductionunit`, `component`, `moistair`, `acausal`],
     ports: [`pri_in`, `ind_in`, `out`, `wall`],
     params: [
@@ -2500,7 +2500,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Infiltration`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component Infiltration with ports in, out.`,
+    summary: `Infiltration: pressure-driven leakage path (power-law crack flow, C1-smooth odd law) between two humid-air nodes — zone to ambient, zone to zone.`,
     tags: [`infiltration`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2514,7 +2514,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `LiquidDesiccantContactor`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component LiquidDesiccantContactor with ports in, out, wall.`,
+    summary: `Liquid-desiccant contactor: air contacts a sorbent solution (lithium chloride, lithium bromide, glycol) whose surface water-vapour pressure is set by its CONCENTRATION and TEMPERATURE, not by a wheel position.`,
     tags: [`liquiddesiccantcontactor`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -2530,7 +2530,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `MembraneHumidifier`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component MembraneHumidifier with ports dry_in, dry_out, wet_in, wet_out.`,
+    summary: `Membrane humidifier: effectiveness exchange of BOTH enthalpy and moisture between a wet (cathode exhaust) and a dry (supply) stream; water and energy balances close exactly on the dry-air basis.`,
     tags: [`membranehumidifier`, `component`, `moistair`, `acausal`],
     ports: [`dry_in`, `dry_out`, `wet_in`, `wet_out`],
     params: [
@@ -2554,7 +2554,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `MoistAirDamper`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component MoistAirDamper with ports in, outa, outb.`,
+    summary: `Diverting damper: routes fraction u of the air to outa, the rest to outb (both riders carried).`,
     tags: [`moistairdamper`, `component`, `moistair`, `acausal`],
     ports: [`in`, `outa`, `outb`],
     params: [
@@ -2566,7 +2566,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `MoistAirDuct`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component MoistAirDuct with ports in, out.`,
+    summary: `Humid-air duct: Darcy friction pressure drop on the total (moist) mass flow; composition and enthalpy pass through.`,
     tags: [`moistairduct`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2581,7 +2581,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `MoistAirFan`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component MoistAirFan with ports in, out.`,
+    summary: `Blower: fixed pressure rise dP with motor+aero inefficiency heating the stream (shaft power = V̇·ΔP/η, all of it ends up in the air).`,
     tags: [`moistairfan`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2624,7 +2624,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     tags: [`moistairwallhx`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
-      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Effectiveness / roughness.`, required: true, values: [], variants: [`eps_t`], defaultValue: `` },
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Heat-exchanger effectiveness (0–1), used by the \`eps_t\` variant.`, required: true, values: [], variants: [`eps_t`], defaultValue: `` },
       { name: `NTU`, isString: false, isSelector: false, isMap: false, unit: ``, description: ``, required: true, values: [], variants: [`ntu_wet`], defaultValue: `` },
       { name: `domain$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`.`, required: false, values: [], variants: [], defaultValue: `moistair` },
       { name: `model$`, isString: true, isSelector: true, isMap: false, unit: ``, description: ``, required: false, values: [`eps_t`, `ntu_wet`], variants: [], defaultValue: `eps_t` }
@@ -2634,7 +2634,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `RadiantPanel`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component RadiantPanel with ports zone, wall.`,
+    summary: `Radiant panel or chilled ceiling.`,
     tags: [`radiantpanel`, `component`, `moistair`, `acausal`],
     ports: [`zone`, `wall`],
     params: [
@@ -2650,7 +2650,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SensibleAirToAirHX`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component SensibleAirToAirHX with ports sup_in, sup_out, exh_in, exh_out.`,
+    summary: `Sensible air-to-air exchanger: the shared physics of every sensible-only recovery device.`,
     tags: [`sensibleairtoairhx`, `component`, `moistair`, `acausal`],
     ports: [`sup_in`, `sup_out`, `exh_in`, `exh_out`],
     params: [
@@ -2664,7 +2664,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SteamHumidifier`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component SteamHumidifier with ports in, out.`,
+    summary: `Steam (isothermal) humidifier.`,
     tags: [`steamhumidifier`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2677,7 +2677,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TotalEnergyExchanger`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component TotalEnergyExchanger with ports sup_in, sup_out, exh_in, exh_out.`,
+    summary: `Total-energy exchanger in the ASHRAE Standard 84 form: separate sensible and latent effectivenesses plus the EATR and OACF leakage terms.`,
     tags: [`totalenergyexchanger`, `component`, `moistair`, `acausal`],
     ports: [`sup_in`, `sup_out`, `exh_in`, `exh_out`],
     params: [
@@ -2692,7 +2692,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `VAVBox`,
     library: `moistair`,
-    summary: `Acausal moistair-domain component VAVBox with ports in, out, u, ur.`,
+    summary: `VAV terminal box: a flow-determining (R) element — the damper command sets the supply flow directly (u in 0..1 of mdot_max) and the reheat command adds coil heat.`,
     tags: [`vavbox`, `component`, `moistair`, `acausal`],
     ports: [`in`, `out`, `u`, `ur`],
     params: [
@@ -2705,7 +2705,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `AnodeRecirc`,
     library: `pneumatic`,
-    summary: `Acausal pneumatic-domain component AnodeRecirc with ports sup_in, ret_in, out.`,
+    summary: `Anode recirculation: the supply ejector entrains stack return (H2 loop) — the VacuumEjector law as a named balance-of-plant stage (direct equations).`,
     tags: [`anoderecirc`, `component`, `pneumatic`, `acausal`],
     ports: [`sup_in`, `ret_in`, `out`],
     params: [
@@ -2731,7 +2731,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `GasMixerN`,
     library: `pneumatic`,
-    summary: `Acausal pneumatic-domain component GasMixerN with ports in1, in2, out.`,
+    summary: `Species-conserving mixer: merges two gas branches, flow-weighting enthalpy and every named species fraction exactly (the junction rule for the E3 multi-species rider).`,
     tags: [`gasmixern`, `component`, `pneumatic`, `acausal`],
     ports: [`in1`, `in2`, `out`],
     params: [
@@ -2793,7 +2793,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `PneumaticCheckValve`,
     library: `pneumatic`,
-    summary: `Acausal pneumatic-domain component PneumaticCheckValve with ports in, out.`,
+    summary: `Pneumatic check valve: ISO 6358 flow gated to forward ΔP.`,
     tags: [`pneumaticcheckvalve`, `component`, `pneumatic`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2808,7 +2808,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `PneumaticDoubleActingCylinder`,
     library: `pneumatic`,
-    summary: `Acausal pneumatic-domain component PneumaticDoubleActingCylinder with ports a, b, rod.`,
+    summary: `Double-acting pneumatic cylinder: two isothermal ideal-gas chambers at mid-stroke volumes and the rod force balance.`,
     tags: [`pneumaticdoubleactingcylinder`, `component`, `pneumatic`, `acausal`],
     ports: [`a`, `b`, `rod`],
     params: [
@@ -2856,7 +2856,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `PneumaticServoValveCmd`,
     library: `pneumatic`,
-    summary: `Acausal pneumatic-domain component PneumaticServoValveCmd with ports in, out, u.`,
+    summary: `Signal-commanded servo valve: ISO 6358 flow with the sonic conductance scaled by the spool command u.sig ∈ [0,1] — the closed-loop counterpart of PneumaticServoValve.`,
     tags: [`pneumaticservovalvecmd`, `component`, `pneumatic`, `acausal`],
     ports: [`in`, `out`, `u`],
     params: [
@@ -2884,7 +2884,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `PneumaticThermalVolume`,
     library: `pneumatic`,
-    summary: `Acausal pneumatic-domain component PneumaticThermalVolume with ports in, out, wall.`,
+    summary: `Thermal gas volume: mass AND temperature states with a heat port — the non-isothermal receiver (charge heating, blow-down cooling); pressure from the ideal-gas law.`,
     tags: [`pneumaticthermalvolume`, `component`, `pneumatic`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -2902,7 +2902,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `PneumaticValve32`,
     library: `pneumatic`,
-    summary: `Acausal pneumatic-domain component PneumaticValve32 with ports sup_in, work, exh_out, u.`,
+    summary: `3/2 directional valve: the spool command u blends supply->work (u·C) against work->exhaust ((1-u)·C), both ISO 6358 paths — u=1 pressurizes, u=0 vents.`,
     tags: [`pneumaticvalve32`, `component`, `pneumatic`, `acausal`],
     ports: [`sup_in`, `work`, `exh_out`, `u`],
     params: [
@@ -2916,7 +2916,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `PneumaticValve52`,
     library: `pneumatic`,
-    summary: `Acausal pneumatic-domain component PneumaticValve52 with ports sup_in, wa, wb, ea_out, eb_out, u.`,
+    summary: `5/2 directional valve: u=1 routes supply->A and B->exhaust; u=0 routes supply->B and A->exhaust (four ISO 6358 paths, complementary commands).`,
     tags: [`pneumaticvalve52`, `component`, `pneumatic`, `acausal`],
     ports: [`sup_in`, `wa`, `wb`, `ea_out`, `eb_out`, `u`],
     params: [
@@ -2945,7 +2945,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `VacuumEjector`,
     library: `pneumatic`,
-    summary: `Acausal pneumatic-domain component VacuumEjector with ports sup_in, suc_in, exh_out.`,
+    summary: `Vacuum ejector: motive ISO 6358 flow entrains ER times its mass flow from the suction port; mass and energy mix exactly at the exhaust.`,
     tags: [`vacuumejector`, `component`, `pneumatic`, `acausal`],
     ports: [`sup_in`, `suc_in`, `exh_out`],
     params: [
@@ -2960,7 +2960,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `AutomaticTransmission`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component AutomaticTransmission with ports in, out, gear, lock.`,
+    summary: `Automatic transmission: torque converter + scheduled gearbox + a commanded lockup clutch bridging pump and turbine (lock = 0 open, 1 locked).`,
     tags: [`automatictransmission`, `component`, `powertrain`, `acausal`],
     ports: [`in`, `out`, `gear`, `lock`],
     params: [
@@ -2975,7 +2975,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `CatalystLightOff`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component CatalystLightOff with ports in, out.`,
+    summary: `Catalyst light-off: brick thermal mass heated by the exhaust stream (effectiveness-free UA link) plus the exotherm of converted feed once the brick passes light-off; conversion is a C1 sigmoid in brick temperature.`,
     tags: [`catalystlightoff`, `component`, `powertrain`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -2992,7 +2992,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `Differential`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component Differential with ports in, left, right.`,
+    summary: `Open differential: splits torque evenly, averages speeds through the final ratio (power-conserving).`,
     tags: [`differential`, `component`, `powertrain`, `acausal`],
     ports: [`in`, `left`, `right`],
     params: [
@@ -3003,7 +3003,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `DriveCycleSource`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component DriveCycleSource with ports port.`,
+    summary: `Drive-cycle source: imposes a tabulated speed trace v = map$(t) on a translational port (WLTP, NEDC, any TABLE over time).`,
     tags: [`drivecyclesource`, `component`, `powertrain`, `acausal`],
     ports: [`port`],
     params: [
@@ -3027,7 +3027,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ExhaustPipeThermal`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component ExhaustPipeThermal with ports in, out, amb.`,
+    summary: `Exhaust pipe with thermal wall: gas duct exchanging with a two-node RC wall whose outer face convects (hA) to the ambient heat port (underhood soak studies).`,
     tags: [`exhaustpipethermal`, `component`, `powertrain`, `acausal`],
     ports: [`in`, `out`, `amb`],
     params: [
@@ -3045,7 +3045,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `GearboxScheduled`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component GearboxScheduled with ports in, out, u.`,
+    summary: `Scheduled gearbox: the ratio arrives on a signal port (a shift schedule via SigMap on speed, or any command source); torque transfer with efficiency.`,
     tags: [`gearboxscheduled`, `component`, `powertrain`, `acausal`],
     ports: [`in`, `out`, `u`],
     params: [
@@ -3056,7 +3056,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `GradeProfile`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component GradeProfile with ports port.`,
+    summary: `Road grade vs distance: the travelled distance integrates from the vehicle speed and the grade (rad) is looked up from a profile TABLE over distance — hilly-route load without scripting time profiles.`,
     tags: [`gradeprofile`, `component`, `powertrain`, `acausal`],
     ports: [`port`],
     params: [
@@ -3085,7 +3085,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `HybridPowerSplit`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component HybridPowerSplit with ports eng, out, sun, p, n, u1, u2, heat.`,
+    summary: `Power-split e-CVT: planetary with the engine on the carrier, MG1 on the sun (speeder) and MG2 on the ring/output (torquer), both motors on one DC bus.`,
     tags: [`hybridpowersplit`, `component`, `powertrain`, `acausal`],
     ports: [`eng`, `out`, `sun`, `p`, `n`, `u1`, `u2`, `heat`],
     params: [
@@ -3118,7 +3118,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `QuarterCar`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component QuarterCar with ports road.`,
+    summary: `Quarter-car suspension: sprung/unsprung masses, suspension spring+damper, tire stiffness — a composite of the translational primitives; excite \`road\` with a speed source or drive-cycle profile.`,
     tags: [`quartercar`, `component`, `powertrain`, `acausal`],
     ports: [`road`],
     params: [
@@ -3145,7 +3145,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TireLongitudinal`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component TireLongitudinal with ports wheel, veh.`,
+    summary: `Longitudinal tire (Pacejka-lite magic formula on longitudinal slip): bridges the wheel (rotational) to the vehicle (translational).`,
     tags: [`tirelongitudinal`, `component`, `powertrain`, `acausal`],
     ports: [`wheel`, `veh`],
     params: [
@@ -3161,7 +3161,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TirePacejka`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component TirePacejka with ports wheel, veh.`,
+    summary: `Full Pacejka magic formula on longitudinal slip (B stiffness, C shape, D peak, E curvature) — the fidelity rung above TireLongitudinal, which is recovered exactly at E = 0.`,
     tags: [`tirepacejka`, `component`, `powertrain`, `acausal`],
     ports: [`wheel`, `veh`],
     params: [
@@ -3178,7 +3178,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TorqueConverter`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component TorqueConverter with ports pump, turb.`,
+    summary: `Torque converter (K-factor form): pump torque (ω_p/K(SR))², torque ratio TR(SR), SR = ω_turbine/ω_pump — both from 1-D TABLEs of the converter sheet.`,
     tags: [`torqueconverter`, `component`, `powertrain`, `acausal`],
     ports: [`pump`, `turb`],
     params: [
@@ -3202,7 +3202,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `VehicleBody`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component VehicleBody with ports port.`,
+    summary: `Longitudinal vehicle body: mass with aero drag, rolling resistance (tanh-signed) and grade load; velocity is the state.`,
     tags: [`vehiclebody`, `component`, `powertrain`, `acausal`],
     ports: [`port`],
     params: [
@@ -3219,7 +3219,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `WindRotor`,
     library: `powertrain`,
-    summary: `Acausal powertrain-domain component WindRotor with ports shaft, wind, pitch.`,
+    summary: `Wind rotor: Cp(λ, pitch) from a 2-D map turns the swept-area wind power into shaft torque; tip-speed ratio and torque are eps-regularized at rest.`,
     tags: [`windrotor`, `component`, `powertrain`, `acausal`],
     ports: [`shaft`, `wind`, `pitch`],
     params: [
@@ -3234,7 +3234,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigAbs`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigAbs with ports in, out.`,
+    summary: `Absolute value of the input signal, |in|.`,
     tags: [`sigabs`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3245,7 +3245,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigBias`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigBias with ports in, out.`,
+    summary: `Adds a constant offset b to the input signal.`,
     tags: [`sigbias`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3256,7 +3256,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigConstant`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigConstant with ports out.`,
+    summary: `Constant signal source of value k.`,
     tags: [`sigconstant`, `component`, `signal`, `acausal`],
     ports: [`out`],
     params: [
@@ -3267,7 +3267,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigDeadband`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigDeadband with ports in, out.`,
+    summary: `Symmetric deadband of half-width w: zero inside ±w, unity-slope outside — the C¹ smooth composition of a positive and a negative hinge (width eps).`,
     tags: [`sigdeadband`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3279,7 +3279,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigDerivative`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigDerivative with ports in, out.`,
+    summary: `Filtered derivative s/(1+τs): exact derivative in the limit τ→0, realizable (proper) for τ>0.`,
     tags: [`sigderivative`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3291,7 +3291,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigDiff`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigDiff with ports in1, in2, out.`,
+    summary: `Difference in1 − in2 (the feedback comparator: connect the setpoint to in1, the measurement to in2).`,
     tags: [`sigdiff`, `component`, `signal`, `acausal`],
     ports: [`in1`, `in2`, `out`],
     params: [
@@ -3302,7 +3302,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigDivide`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigDivide with ports in1, in2, out.`,
+    summary: `Quotient of two signals, in1 / in2.`,
     tags: [`sigdivide`, `component`, `signal`, `acausal`],
     ports: [`in1`, `in2`, `out`],
     params: [
@@ -3313,7 +3313,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigFirstOrder`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigFirstOrder with ports in, out.`,
+    summary: `First-order lag 1/(1+τs).`,
     tags: [`sigfirstorder`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3325,7 +3325,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigGain`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigGain with ports in, out.`,
+    summary: `Multiplies the input signal by a constant gain k.`,
     tags: [`siggain`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3336,7 +3336,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigIntegrator`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigIntegrator with ports in, out.`,
+    summary: `Integrates the input signal over time from the initial value y0.`,
     tags: [`sigintegrator`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3347,7 +3347,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigLeadLag`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigLeadLag with ports in, out.`,
+    summary: `Lead-lag (1+T1·s)/(1+T2·s), the classical compensator.`,
     tags: [`sigleadlag`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3360,7 +3360,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigMap`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigMap with ports in, out.`,
+    summary: `1-D lookup: sig = map$(in).`,
     tags: [`sigmap`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3371,7 +3371,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigMap2`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigMap2 with ports in1, in2, out.`,
+    summary: `2-D lookup: sig = map$(in1, in2) on a curve-family TABLE (\`TABLE name(x : y = y1, y2, …)\`) — a torque map, a compressor map slice.`,
     tags: [`sigmap2`, `component`, `signal`, `acausal`],
     ports: [`in1`, `in2`, `out`],
     params: [
@@ -3382,7 +3382,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigMax`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigMax with ports in1, in2, out.`,
+    summary: `Larger of two signals, max(in1, in2).`,
     tags: [`sigmax`, `component`, `signal`, `acausal`],
     ports: [`in1`, `in2`, `out`],
     params: [
@@ -3393,7 +3393,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigMin`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigMin with ports in1, in2, out.`,
+    summary: `Smaller of two signals, min(in1, in2).`,
     tags: [`sigmin`, `component`, `signal`, `acausal`],
     ports: [`in1`, `in2`, `out`],
     params: [
@@ -3404,7 +3404,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigPID`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigPID with ports sp, pv, out.`,
+    summary: `PID controller on the (sp − pv) error with an integrator state and a realizable filtered derivative (filter τ).`,
     tags: [`sigpid`, `component`, `signal`, `acausal`],
     ports: [`sp`, `pv`, `out`],
     params: [
@@ -3424,7 +3424,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigProduct`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigProduct with ports in1, in2, out.`,
+    summary: `Product of two signals, in1 · in2.`,
     tags: [`sigproduct`, `component`, `signal`, `acausal`],
     ports: [`in1`, `in2`, `out`],
     params: [
@@ -3435,7 +3435,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigPulse`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigPulse with ports out.`,
+    summary: `Single rectangular pulse from t0 for \`width\` seconds, level \`low\`→\`high\`, with tanh edges of width eps.`,
     tags: [`sigpulse`, `component`, `signal`, `acausal`],
     ports: [`out`],
     params: [
@@ -3450,7 +3450,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigRamp`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigRamp with ports out.`,
+    summary: `Ramp of the given slope starting at t0 (C¹ smooth-max hinge of width eps).`,
     tags: [`sigramp`, `component`, `signal`, `acausal`],
     ports: [`out`],
     params: [
@@ -3463,7 +3463,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigRateLimiter`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigRateLimiter with ports in, out.`,
+    summary: `Rate limiter: tracks the input with slope bounded to ±rate (tanh-smooth; tau [s] is the tracking time constant inside the linear zone).`,
     tags: [`sigratelimiter`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3476,7 +3476,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigRelay`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigRelay with ports in, out.`,
+    summary: `Smooth relay/comparator: \`low\` below the threshold, \`high\` above it, with a tanh transition of width eps.`,
     tags: [`sigrelay`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3490,7 +3490,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigSaturation`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigSaturation with ports in, out.`,
+    summary: `Clamps the input signal to the range [lo, hi].`,
     tags: [`sigsaturation`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3502,7 +3502,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigSecondOrder`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigSecondOrder with ports in, out.`,
+    summary: `Second-order tracking filter ωn²/(s² + 2ζωn·s + ωn²).`,
     tags: [`sigsecondorder`, `component`, `signal`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3516,7 +3516,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigSine`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigSine with ports out.`,
+    summary: `Sine: bias + amp·sin(2π·freq·t + phase).`,
     tags: [`sigsine`, `component`, `signal`, `acausal`],
     ports: [`out`],
     params: [
@@ -3530,7 +3530,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigSpeedProbe`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigSpeedProbe with ports shaft, out.`,
+    summary: `Shaft-speed probe (torque-free).`,
     tags: [`sigspeedprobe`, `component`, `signal`, `acausal`],
     ports: [`shaft`, `out`],
     params: [
@@ -3541,7 +3541,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigStep`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigStep with ports out.`,
+    summary: `Smooth step from \`before\` to \`after\` at t0.`,
     tags: [`sigstep`, `component`, `signal`, `acausal`],
     ports: [`out`],
     params: [
@@ -3555,7 +3555,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigSum`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigSum with ports in1, in2, out.`,
+    summary: `Sum of two signals, in1 + in2.`,
     tags: [`sigsum`, `component`, `signal`, `acausal`],
     ports: [`in1`, `in2`, `out`],
     params: [
@@ -3566,7 +3566,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigSwitch`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigSwitch with ports in1, in2, ctrl, out.`,
+    summary: `Smooth 2-way switch: routes in1 when ctrl > thresh, in2 below, blended over a tanh width eps.`,
     tags: [`sigswitch`, `component`, `signal`, `acausal`],
     ports: [`in1`, `in2`, `ctrl`, `out`],
     params: [
@@ -3578,7 +3578,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigTable`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigTable with ports out.`,
+    summary: `Tabulated source: sig = map$(time).`,
     tags: [`sigtable`, `component`, `signal`, `acausal`],
     ports: [`out`],
     params: [
@@ -3589,7 +3589,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigThermalProbe`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigThermalProbe with ports port, out.`,
+    summary: `Temperature probe: reads the heat-node temperature onto a signal wire, drawing no heat.`,
     tags: [`sigthermalprobe`, `component`, `signal`, `acausal`],
     ports: [`port`, `out`],
     params: [
@@ -3600,7 +3600,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigTime`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigTime with ports out.`,
+    summary: `The clock: emits the simulation time itself.`,
     tags: [`sigtime`, `component`, `signal`, `acausal`],
     ports: [`out`],
     params: [
@@ -3611,7 +3611,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SigVelProbe`,
     library: `signal`,
-    summary: `Acausal signal-domain component SigVelProbe with ports port, out.`,
+    summary: `Translational velocity probe (force-free).`,
     tags: [`sigvelprobe`, `component`, `signal`, `acausal`],
     ports: [`port`, `out`],
     params: [
@@ -3622,7 +3622,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SupervisoryECMS`,
     library: `signal`,
-    summary: `Acausal signal-domain component SupervisoryECMS with ports soc, dem, eng, mot.`,
+    summary: `ECMS-lite torque-split supervisor: a C1 blend between engine-lean and motor-lean operation driven by battery SOC around its reference — an honest smooth surrogate for the argmin equivalence-cost rule (documented as such).`,
     tags: [`supervisoryecms`, `component`, `signal`, `acausal`],
     ports: [`soc`, `dem`, `eng`, `mot`],
     params: [
@@ -3634,7 +3634,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ZoneCO2`,
     library: `signal`,
-    summary: `Acausal signal-domain component ZoneCO2 with ports vent, occ, out.`,
+    summary: `Zone CO2 / IAQ balance (well-mixed): ventilation dilutes toward the ambient concentration while occupants generate.`,
     tags: [`zoneco2`, `component`, `signal`, `acausal`],
     ports: [`vent`, `occ`, `out`],
     params: [
@@ -3713,7 +3713,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `CapillaryTube`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component CapillaryTube with ports in, out.`,
+    summary: `Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure).`,
     tags: [`capillarytube`, `component`, `twophase`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3727,7 +3727,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `EjectorMomentum`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component EjectorMomentum with ports mot_in, suc_in, out.`,
+    summary: `Momentum-based two-phase ejector: the motive stream expands (nozzle efficiency) to the suction pressure, momentum-mixes with the entrained stream at constant area, and the mixed velocity head recovers as the diffuser lift.`,
     tags: [`ejectormomentum`, `component`, `twophase`, `acausal`],
     ports: [`mot_in`, `suc_in`, `out`],
     params: [
@@ -3741,7 +3741,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `FewCellCondenser`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component FewCellCondenser with ports in, out, w1, w2, w3.`,
+    summary: `Packaged 3-cell condenser: the same private-state C-R chain (heat leaves through the walls when they run colder than the refrigerant).`,
     tags: [`fewcellcondenser`, `component`, `twophase`, `acausal`],
     ports: [`in`, `out`, `w1`, `w2`, `w3`],
     params: [
@@ -3759,7 +3759,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `FewCellEvaporator`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component FewCellEvaporator with ports in, out, w1, w2, w3.`,
+    summary: `Packaged 3-cell evaporator: three well-mixed cells with their own pressure and enthalpy states, inter-cell conductances and a wall port per cell.`,
     tags: [`fewcellevaporator`, `component`, `twophase`, `acausal`],
     ports: [`in`, `out`, `w1`, `w2`, `w3`],
     params: [
@@ -3777,7 +3777,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `FlashTank`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component FlashTank with ports in, liq, vap.`,
+    summary: `Flash tank / economizer separator: splits a two-phase inlet into saturated liquid and saturated vapor streams at the tank pressure, conserving mass and energy (the split ratio IS the inlet quality).`,
     tags: [`flashtank`, `component`, `twophase`, `acausal`],
     ports: [`in`, `liq`, `vap`],
     params: [
@@ -3789,7 +3789,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `GasCooler`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component GasCooler with ports in, out, wall.`,
+    summary: `Transcritical gas cooler: supercritical single-phase cooling against a wall (no saturation clamp — the R744 high side has none); effectiveness on the local cp, LiquidWallHX sign conventions.`,
     tags: [`gascooler`, `component`, `twophase`, `acausal`],
     ports: [`in`, `out`, `wall`],
     params: [
@@ -3837,7 +3837,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `OilSeparator`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component OilSeparator with ports in, out, bleed.`,
+    summary: `Oil separator: bleeds a mass fraction f off the discharge line as saturated liquid (the oil-rich film) back toward the compressor sump; the main stream's enthalpy follows from the exact energy balance.`,
     tags: [`oilseparator`, `component`, `twophase`, `acausal`],
     ports: [`in`, `out`, `bleed`],
     params: [
@@ -3856,8 +3856,8 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     params: [
       { name: `fluid$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Fluid name (e.g. Water, R134a, Air).`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `Pcrack`, isString: false, isSelector: false, isMap: false, unit: `Pa`, description: `Cracking (relief) pressure [Pa].`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `grad`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Road grade (rise/run).`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Effectiveness / roughness.`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `grad`, isString: false, isSelector: false, isMap: false, unit: `kg/s per Pa`, description: `Flow gain above the set pressure [kg/s per Pa]: ṁ ≈ grad · (P − Pcrack).`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `Pa`, description: `Smoothing width [Pa] of the max(0, P − Pcrack) regularization.`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `domain$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`.`, required: false, values: [], variants: [], defaultValue: `twophase` }
     ],
     variants: [],
@@ -3865,7 +3865,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `ReversingValve`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component ReversingValve with ports d, s, i, o.`,
+    summary: `Four-way reversing valve (heat pump mode switch).`,
     tags: [`reversingvalve`, `component`, `twophase`, `acausal`],
     ports: [`d`, `s`, `i`, `o`],
     params: [
@@ -3887,7 +3887,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       { name: `Cd`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Discharge coefficient.`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `kgas`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Gas specific-heat ratio.`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `Rgas`, isString: false, isSelector: false, isMap: false, unit: `J/kg-K`, description: `Specific gas constant [J/kg·K].`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Effectiveness / roughness.`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `Pa`, description: `Opening smoothing width [Pa] — the tanh transition around \`Pset\`.`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `domain$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`.`, required: false, values: [], variants: [], defaultValue: `twophase` }
     ],
     variants: [],
@@ -3895,7 +3895,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `SuctionAccumulator`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component SuctionAccumulator with ports in, out.`,
+    summary: `Suction accumulator: traps liquid carryover and delivers SATURATED VAPOR to the compressor.`,
     tags: [`suctionaccumulator`, `component`, `twophase`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -3922,7 +3922,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TranscriticalBackPressureValve`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component TranscriticalBackPressureValve with ports in, out, u.`,
+    summary: `Transcritical back-pressure valve: signal-commanded high-side pressure control (CO2 cycles) — commanded-area odd-symmetric square law.`,
     tags: [`transcriticalbackpressurevalve`, `component`, `twophase`, `acausal`],
     ports: [`in`, `out`, `u`],
     params: [
@@ -4025,7 +4025,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TwoPhaseEjector`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component TwoPhaseEjector with ports m, s, out.`,
+    summary: `Two-phase ejector, lumped: motive m entrains suction s; mass and energy mix exactly, and the diffuser recovers a pressure lift parameterized as the pressure-lift ratio PLR = P_out / P_suction (rate it from CFD/test data).`,
     tags: [`twophaseejector`, `component`, `twophase`, `acausal`],
     ports: [`m`, `s`, `out`],
     params: [
@@ -4106,7 +4106,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TwoPhaseInternalHX`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component TwoPhaseInternalHX with ports liq_in, liq_out, vap_in, vap_out.`,
+    summary: `Internal (suction-line) heat exchanger: subcools the liquid line against the suction vapor at an effectiveness on the vapor side (the usual Cmin side).`,
     tags: [`twophaseinternalhx`, `component`, `twophase`, `acausal`],
     ports: [`liq_in`, `liq_out`, `vap_in`, `vap_out`],
     params: [
@@ -4143,7 +4143,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TwoPhaseOilRider`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component TwoPhaseOilRider with ports in, out.`,
+    summary: `Oil-circulation-rate rider: declares the oil mass fraction on the stream (it rides every downstream pass-through node like W/z) and exposes the documented HTC degradation factor f_deg = 1 - k_deg*OCR to inject into downstream UA parameters.`,
     tags: [`twophaseoilrider`, `component`, `twophase`, `acausal`],
     ports: [`in`, `out`],
     params: [
@@ -4226,7 +4226,7 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     type: `TwoPhaseShortTube`,
     library: `twophase`,
-    summary: `Acausal twophase-domain component TwoPhaseShortTube with ports in, out.`,
+    summary: `Short-tube (fixed) orifice that chokes on flashing: below the upstream saturation pressure the flow depends on P_up − P_sat(T_up), not on the evaporator pressure.`,
     tags: [`twophaseshorttube`, `component`, `twophase`, `acausal`],
     ports: [`in`, `out`],
     params: [

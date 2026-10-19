@@ -1,29 +1,40 @@
 ---
 name: chi2gof_df
-category: Built-in Functions
-summary: Reference page for chi2gof_df.
-related: []
+category: Stats
+summary: Chi-square goodness-of-fit degrees of freedom (k − 1).
+related: [chi2gof_stat, chi2gof_pval]
 examples: []
-tags: [chi2gof_df]
+tags: [chi2gof_df, stats, chi-square, goodness of fit]
 ---
 
 # chi2gof_df
 
-`chi2gof_df` is available in the frees built-in functions surface.
+Chi-square goodness-of-fit degrees of freedom (k − 1).
 
 ## Syntax
 
 ```
-chi2gof_df(...)
+df = chi2gof_df(observed, expected)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`chi2gof_df(observed, expected)` runs a Pearson χ² goodness-of-fit test of observed counts against expected counts (rescaled to the observed total), and returns the **degrees of freedom (k − 1)**.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `observed` | Vector | Yes | Observed counts per category. |
+| `expected` | Vector | Yes | Expected counts per category (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `df` | Number | Degrees of freedom (k − 1). |
 
 ## Examples
 

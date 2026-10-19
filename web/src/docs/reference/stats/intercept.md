@@ -22,6 +22,8 @@ intercept(xvals, yvals)
 
 Least-squares linear-fit intercept
 
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
 ## Mathematical Formulation
 
 $$ b = \bar y - m\,\bar x $$

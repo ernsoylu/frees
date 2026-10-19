@@ -1,19 +1,20 @@
 ---
 name: AnodeRecirc
 category: Component (pneumatic)
-summary: Acausal pneumatic-domain component AnodeRecirc with ports sup_in, ret_in, out.
+summary: "Anode recirculation: the supply ejector entrains stack return (H2 loop) — the VacuumEjector law as a named balance-of-plant stage (direct equations)."
 related: []
 examples: []
 tags: [anoderecirc, component, pneumatic, acausal]
 references: []
-generated: true
 ---
 
 # AnodeRecirc
 
-Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Anode recirculation: the supply ejector entrains stack return (H2 loop) — the VacuumEjector law as a named balance-of-plant stage (direct equations).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/pneumatic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -41,7 +42,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \begin{aligned}
-t_{s} &= \text{Temperature}\left(\mathrm{fluid}, =sup_{in.p}, p=sup_{in.h}\right) \\
+t_{s} &= \text{Temperature}\left(\mathrm{fluid\$}, p=sup_{in.p}, h=sup_{in.h}\right) \\
 sup_{in.mdot} &= \text{iso6358}\left(c, b, sup_{in.p}, t_{s}, out.p\right) \\
 ret_{in.mdot} &= er\cdot sup_{in.mdot} \\
 out.mdot &= sup_{in.mdot} + ret_{in.mdot} \\

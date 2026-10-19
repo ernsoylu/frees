@@ -1,29 +1,39 @@
 ---
 name: fcdf
-category: Built-in Functions
-summary: Reference page for fcdf.
-related: []
+category: Stats
+summary: F distribution — P(X ≤ x).
+related: [fpdf, finv]
 examples: []
-tags: [fcdf]
+tags: [fcdf, stats, distribution, f distribution]
 ---
 
 # fcdf
 
-`fcdf` is available in the frees built-in functions surface.
+F distribution — P(X ≤ x).
 
 ## Syntax
 
 ```
-fcdf(...)
+y = fcdf(x, d1, d2)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`fcdf(x, d1, d2)` returns the P(X ≤ x) of the F distribution with `d1` numerator and `d2` denominator degrees of freedom.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Evaluation point (≥ 0). |
+| `d1` | Number | Yes | Numerator degrees of freedom (> 0). |
+| `d2` | Number | Yes | Denominator degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Cumulative probability in [0, 1]. |
 
 ## Examples
 

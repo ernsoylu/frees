@@ -1,19 +1,20 @@
 ---
 name: TranscriticalBackPressureValve
 category: Component (twophase)
-summary: Acausal twophase-domain component TranscriticalBackPressureValve with ports in, out, u.
+summary: "Transcritical back-pressure valve: signal-commanded high-side pressure control (CO2 cycles) — commanded-area odd-symmetric square law."
 related: []
 examples: []
 tags: [transcriticalbackpressurevalve, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # TranscriticalBackPressureValve
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Transcritical back-pressure valve: signal-commanded high-side pressure control (CO2 cycles) — commanded-area odd-symmetric square law.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -39,7 +40,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \begin{aligned}
-rho &= \text{Density}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+rho &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 out.mdot &= in.mdot \\
 out.h &= in.h \\
 in.mdot\cdot \left|in.mdot\right| &= \left(u.sig\cdot cda_{max}\right)^{2}\cdot 2\cdot rho\cdot \left(in.p - out.p\right)

@@ -1,19 +1,20 @@
 ---
 name: FewCellCondenser
 category: Component (twophase)
-summary: Acausal twophase-domain component FewCellCondenser with ports in, out, w1, w2, w3.
+summary: "Packaged 3-cell condenser: the same private-state C-R chain (heat leaves through the walls when they run colder than the refrigerant)."
 related: []
 examples: []
 tags: [fewcellcondenser, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # FewCellCondenser
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Packaged 3-cell condenser: the same private-state C-R chain (heat leaves through the walls when they run colder than the refrigerant).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -54,18 +55,18 @@ out.mdot &= kv\cdot \left(p3 - out.p\right) \\
 \text{init}\left(p2\right) &= p0 \\
 \text{der}\left(p3\right) &= \frac{m3 - out.mdot}{cc} \\
 \text{init}\left(p3\right) &= p0 \\
-t1 &= \text{Temperature}\left(\mathrm{fluid}, =p1, p=h1\right) \\
-t2 &= \text{Temperature}\left(\mathrm{fluid}, =p2, p=h2\right) \\
-t3 &= \text{Temperature}\left(\mathrm{fluid}, =p3, p=h3\right) \\
+t1 &= \text{Temperature}\left(\mathrm{fluid\$}, p=p1, h=h1\right) \\
+t2 &= \text{Temperature}\left(\mathrm{fluid\$}, p=p2, h=h2\right) \\
+t3 &= \text{Temperature}\left(\mathrm{fluid\$}, p=p3, h=h3\right) \\
 q1 &= ua\cdot \left(w1.t - t1\right) \\
 q2 &= ua\cdot \left(w2.t - t2\right) \\
 q3 &= ua\cdot \left(w3.t - t3\right) \\
 w1.qdot &= q1 \\
 w2.qdot &= q2 \\
 w3.qdot &= q3 \\
-rho1 &= \text{Density}\left(\mathrm{fluid}, =p1, p=h1\right) \\
-rho2 &= \text{Density}\left(\mathrm{fluid}, =p2, p=h2\right) \\
-rho3 &= \text{Density}\left(\mathrm{fluid}, =p3, p=h3\right) \\
+rho1 &= \text{Density}\left(\mathrm{fluid\$}, p=p1, h=h1\right) \\
+rho2 &= \text{Density}\left(\mathrm{fluid\$}, p=p2, h=h2\right) \\
+rho3 &= \text{Density}\left(\mathrm{fluid\$}, p=p3, h=h3\right) \\
 \text{der}\left(h1\right) &= \frac{in.mdot\cdot \left(in.h - h1\right) + q1}{rho1\cdot v} \\
 \text{init}\left(h1\right) &= h0 \\
 \text{der}\left(h2\right) &= \frac{m2\cdot \left(h1 - h2\right) + q2}{rho2\cdot v} \\

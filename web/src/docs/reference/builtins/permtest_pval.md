@@ -1,29 +1,42 @@
 ---
 name: permtest_pval
-category: Built-in Functions
-summary: Reference page for permtest_pval.
-related: []
+category: Stats
+summary: Permutation test for equal means — p-value.
+related: [permtest_stat, ttest2_pval]
 examples: []
-tags: [permtest_pval]
+tags: [permtest_pval, stats, permutation, nonparametric]
 ---
 
 # permtest_pval
 
-`permtest_pval` is available in the frees built-in functions surface.
+Permutation test for equal means — p-value.
 
 ## Syntax
 
 ```
-permtest_pval(...)
+y = permtest_pval(n_perms, seed, x, y)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`permtest_pval(n_perms, seed, x, y)` runs a seeded permutation test of whether two independent samples have equal means: labels are reshuffled `n_perms` times and the result is the **p-value (count + 1)/(n_perms + 1)**. The same seed always gives the same result.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `n_perms` | Number | Yes | Number of random permutations. |
+| `seed` | Number | Yes | Random seed (integer) for reproducibility. |
+| `x` | Vector | Yes | First sample. |
+| `y` | Vector | Yes | Second sample. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | P-value (count + 1)/(n_perms + 1). |
 
 ## Examples
 

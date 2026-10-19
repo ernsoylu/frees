@@ -23,28 +23,13 @@
 //! front rather than silently returning the initial guess — from a flat
 //! landscape every direction looks identical.
 //!
-//! # The multivariate optimizer is Nelder–Mead, not BOBYQA — stated plainly
+//! # Optimizers
 //!
-//! The Java uses `BOBYQAOptimizer(2n+1, 0.2, 1e-6)` for two or more parameters
-//! and `BrentOptimizer(1e-8, 1e-10)` for one.
-//!
-//! * The **one-parameter** path is a faithful transcription of Commons Math's
-//!   `BrentOptimizer`, so its evaluation sequence — and therefore the tracked
-//!   best iterate and the reported `evaluations` — follows the Java's.
-//! * The **multi-parameter** path is a bound-constrained Nelder–Mead simplex,
-//!   not BOBYQA. Porting BOBYQA means porting 2,470 lines of Fortran-derived
-//!   trust-region code, which is a project of its own. The substitution is not
-//!   invented for this port: the parent engine's own `core/Optimizer.java`
-//!   treats `SimplexOptimizer` (Nelder–Mead) as its *default* multivariate
-//!   optimizer and BOBYQA as the opt-in alternative, so this is the reference
-//!   implementation's own second choice. The Java's two trust-region knobs keep
-//!   their meaning: [`INITIAL_RADIUS`] sizes the initial simplex and
-//!   [`STOPPING_RADIUS`] is the convergence radius.
-//!
-//!   **Consequence, so nobody is surprised:** for two or more parameters the
-//!   *optimum* should agree with the Java to within the stopping radius, but
-//!   `evaluations` and the exact fitted vector will not match iterate for
-//!   iterate. Do not build an iteration-sensitive golden on this path.
+//! As in the Java: `BrentOptimizer(1e-8, 1e-10)` for one parameter and
+//! `BOBYQAOptimizer(2n+1, INITIAL_RADIUS, STOPPING_RADIUS)` for two or more,
+//! both on the normalized unit box. Both are faithful transcriptions of Commons
+//! Math (the latter in [`super::bobyqa`]), so the evaluation sequence — the
+//! tracked best iterate and the reported `evaluations` — follows the Java's.
 //!
 //! # The solve seam
 //!
@@ -62,7 +47,7 @@ use crate::diag::{FreesError, Result};
 /// The flat score a failed solve receives. Port of `ParameterFit.PENALTY`.
 const PENALTY: f64 = 1.0e100;
 /// Initial trust-region size on the normalized unit box. Port of
-/// `ParameterFit.INITIAL_RADIUS`; here it sizes the initial simplex.
+/// `ParameterFit.INITIAL_RADIUS`.
 pub const INITIAL_RADIUS: f64 = 0.2;
 /// Terminal trust-region size on the normalized unit box. Port of
 /// `ParameterFit.STOPPING_RADIUS`.
@@ -386,7 +371,27 @@ where
     let stop = if n == 1 {
         brent_minimize(&mut objective, 0.0, 1.0, unit0[0], 1.0e-8, 1.0e-10).err()
     } else {
-        nelder_mead_unit_box(&mut objective, &unit0).err()
+        // `new BOBYQAOptimizer(2n + 1, INITIAL_RADIUS, STOPPING_RADIUS)` on the
+        // unit box.
+        let (lower, upper) = (vec![0.0; n], vec![1.0; n]);
+        let spec = super::bobyqa::BobyqaProblem {
+            start: &unit0,
+            lower: &lower,
+            upper: &upper,
+            minimize: true,
+            interpolation_points: 2 * n + 1,
+            initial_radius: INITIAL_RADIUS,
+            stopping_radius: STOPPING_RADIUS,
+        };
+        match super::bobyqa::bobyqa(&spec, &mut objective) {
+            Ok(_) => None,
+            Err(super::bobyqa::BobyqaError::Objective(stop)) => Some(stop),
+            Err(other) => {
+                return Err(FreesError::solver(format!(
+                    "Parameter fit: BOBYQA stopped without an answer ({other:?})."
+                )))
+            }
+        }
     };
     // `TooManyEvaluationsException`: the budget is the point, the best tracked
     // iterate stands. `BudgetExhausted`: same, and the outcome says so.
@@ -933,109 +938,6 @@ fn precision_equals(x: f64, y: f64) -> bool {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Bound-constrained Nelder-Mead — the BOBYQA stand-in
-// ---------------------------------------------------------------------------
-
-/// Minimizes `f` over the unit box `[0, 1]ⁿ` from `start`.
-///
-/// See the module docs for why this stands in for `BOBYQAOptimizer`. The
-/// simplex is built with edge [`INITIAL_RADIUS`] (folded inwards where a vertex
-/// would leave the box), every trial point is clamped back into the box, and
-/// the search stops when the simplex is smaller than [`STOPPING_RADIUS`].
-/// Deterministic: no restarts, no randomization.
-fn nelder_mead_unit_box<F>(f: &mut F, start: &[f64]) -> std::result::Result<Vec<f64>, Stop>
-where
-    F: FnMut(&[f64]) -> std::result::Result<f64, Stop>,
-{
-    let n = start.len();
-    let clamp_box = |p: &[f64]| -> Vec<f64> { p.iter().map(|x| clamp(*x, 0.0, 1.0)).collect() };
-
-    // Vertices: the start, plus one step of INITIAL_RADIUS along each axis,
-    // folded to the inside when the step would leave the box.
-    let mut simplex: Vec<(Vec<f64>, f64)> = Vec::with_capacity(n + 1);
-    let p0 = clamp_box(start);
-    let f0 = f(&p0)?;
-    simplex.push((p0.clone(), f0));
-    for i in 0..n {
-        let mut p = p0.clone();
-        p[i] = if p0[i] + INITIAL_RADIUS <= 1.0 {
-            p0[i] + INITIAL_RADIUS
-        } else {
-            p0[i] - INITIAL_RADIUS
-        };
-        let p = clamp_box(&p);
-        let value = f(&p)?;
-        simplex.push((p, value));
-    }
-
-    loop {
-        simplex.sort_by(|a, b| a.1.total_cmp(&b.1));
-        // Converged once the simplex has collapsed below the stopping radius.
-        let size = simplex[1..]
-            .iter()
-            .map(|(p, _)| {
-                p.iter()
-                    .zip(&simplex[0].0)
-                    .map(|(a, b)| (a - b).abs())
-                    .fold(0.0f64, f64::max)
-            })
-            .fold(0.0f64, f64::max);
-        if size <= STOPPING_RADIUS {
-            return Ok(simplex[0].0.clone());
-        }
-
-        // Centroid of everything but the worst vertex.
-        let worst = simplex.len() - 1;
-        let centroid: Vec<f64> = (0..n)
-            .map(|i| simplex[..worst].iter().map(|(p, _)| p[i]).sum::<f64>() / worst as f64)
-            .collect();
-        let step = |coefficient: f64| -> Vec<f64> {
-            clamp_box(
-                &(0..n)
-                    .map(|i| centroid[i] + coefficient * (centroid[i] - simplex[worst].0[i]))
-                    .collect::<Vec<_>>(),
-            )
-        };
-
-        let reflected = step(1.0);
-        let f_reflected = f(&reflected)?;
-        if f_reflected < simplex[0].1 {
-            // Better than the best: try to go further.
-            let expanded = step(2.0);
-            let f_expanded = f(&expanded)?;
-            simplex[worst] = if f_expanded < f_reflected {
-                (expanded, f_expanded)
-            } else {
-                (reflected, f_reflected)
-            };
-            continue;
-        }
-        if f_reflected < simplex[worst - 1].1 {
-            simplex[worst] = (reflected, f_reflected);
-            continue;
-        }
-        // Contract.
-        let contracted = step(-0.5);
-        let f_contracted = f(&contracted)?;
-        if f_contracted < simplex[worst].1 {
-            simplex[worst] = (contracted, f_contracted);
-            continue;
-        }
-        // Shrink towards the best vertex.
-        let best = simplex[0].0.clone();
-        for slot in simplex[1..].iter_mut() {
-            let p = clamp_box(
-                &(0..n)
-                    .map(|i| best[i] + 0.5 * (slot.0[i] - best[i]))
-                    .collect::<Vec<_>>(),
-            );
-            let value = f(&p)?;
-            *slot = (p, value);
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1447,9 +1349,8 @@ mod tests {
         //   rmse        0.006837653868351035
         //   initialRmse 1.4391421696594269
         //   evaluations 39
-        // `evaluations` is deliberately NOT asserted: this is the Nelder-Mead
-        // path standing in for BOBYQA (see the module docs), so the route to the
-        // optimum differs even though the optimum does not.
+        // The model here is integrated analytically rather than by the Java's
+        // stepper, so the optimum agrees to ~1e-9, not to the last bit.
         let (t, v) = synthetic_decay(0.7, 4.2);
         let parameters = ["k".to_string(), "x0".to_string()];
         let out = run(
@@ -1472,12 +1373,14 @@ mod tests {
         .expect("fit");
 
         close(out.initial_rmse, 1.4391421696594269, 1e-9);
+        // BOBYQA is a full port, so the route to the optimum is the Java's.
+        assert_eq!(out.evaluations, 39);
         // The reference test's own acceptance tolerances on the true values.
         assert!((out.fitted[0] - 0.7).abs() < 0.03, "k = {}", out.fitted[0]);
         assert!((out.fitted[1] - 4.2).abs() < 0.05, "x0 = {}", out.fitted[1]);
         // And, more tightly, agreement with the Java's own optimum.
-        close(out.fitted[0], 0.7009254245691521, 1e-3);
-        close(out.fitted[1], 4.204854659927836, 1e-3);
+        close(out.fitted[0], 0.7009254245691521, 1e-8);
+        close(out.fitted[1], 4.204854659927836, 1e-8);
         assert!(
             out.rmse <= 0.006837653868351035 * 1.001,
             "rmse {} must reach the reference optimum",
@@ -1691,22 +1594,6 @@ mod tests {
         assert!(precision_equals(0.0, -0.0));
     }
 
-    #[test]
-    fn nelder_mead_stays_inside_the_unit_box() {
-        // The unconstrained minimum sits outside the box, so the search must
-        // stop on the boundary rather than walking out of it.
-        let mut seen_outside = false;
-        let mut f = |p: &[f64]| -> std::result::Result<f64, Stop> {
-            if p.iter().any(|x| *x < 0.0 || *x > 1.0) {
-                seen_outside = true;
-            }
-            Ok((p[0] + 0.5).powi(2) + (p[1] - 0.4).powi(2))
-        };
-        let best = nelder_mead_unit_box(&mut f, &[0.5, 0.5]).expect("simplex");
-        assert!(!seen_outside);
-        close(best[0], 0.0, 1e-4);
-        close(best[1], 0.4, 1e-4);
-    }
     // ── Phase 4.2: weighting, robust loss and diagnostics ───────────────────
 
     /// The oracle run above must be untouched by the new fields — this is the

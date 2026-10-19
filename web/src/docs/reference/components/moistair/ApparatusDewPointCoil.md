@@ -1,17 +1,20 @@
 ---
 name: ApparatusDewPointCoil
 category: Component (moistair)
-summary: Acausal moistair-domain component ApparatusDewPointCoil with ports in, out.
+summary: "Cooling coil stated the way a designer actually sizes one: by its APPARATUS DEW POINT and its BYPASS FACTOR, not by an imposed leaving temperature."
 related: []
 examples: []
 tags: [apparatusdewpointcoil, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # ApparatusDewPointCoil
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Cooling coil stated the way a designer actually sizes one: by its APPARATUS DEW POINT and its BYPASS FACTOR, not by an imposed leaving temperature.
+
+The leaving state lies on the straight line from the entering state to the ADP — the saturated state the coil surface would drive the air to if none of it slipped past unconditioned. BF is the fraction that does slip past, so the leaving state sits BF of the way back from the ADP toward the entering state. Because the construction is one linear interpolation on the (W, h) pair, all three textbook forms of the bypass factor hold identically:  BF = (t_lvg - t_adp)/(t_ent - t_adp) = (W_lvg - W_adp)/(W_ent - W_adp) = (h_lvg - h_adp)/(h_ent - h_adp)  which is worth checking rather than assuming: it is what makes a coil result reproducible against any textbook. Typical BF is 0.05-0.25. BF = 0 recovers the saturated-leaving-air idealisation that `CoolingCoil` imposes, which is a perfect coil — real leaving air sits at 85-95% RH, not on the saturation line.  The condensate leaves the airstream carrying its own enthalpy, so the coil load is NOT simply the air-side enthalpy drop. `h_f` is the ASHRAE condensate term, 4.186*t at the leaving temperature. It is under 1% of the total at ordinary conditions, which is exactly why it gets dropped silently — and why `Q_air` (the air-side drop) and `Q` (the load the plant actually sees) are both written out here instead of quietly conflated.  The construction only applies to a coil that GETS WET. Run it on a surface above the entering dew point and it interpolates toward an apparatus dew point that does not exist, handing back air wetter than it entered — a cooling coil that humidifies. The `dry` rung is the coil in that regime, and `margin_adp` (entering dew point less T_adp) is the number that says which rung a design belongs on rather than leaving it to judgement.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

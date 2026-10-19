@@ -1,19 +1,22 @@
 ---
 name: EnthalpyWheel
 category: Component (moistair)
-summary: Acausal moistair-domain component EnthalpyWheel with ports sup_in, sup_out, exh_in, exh_out.
+summary: "Rotary enthalpy wheel: effectiveness recovery of both enthalpy and moisture between exhaust and supply, with exact water and energy balances on the dry-air basis."
 related: []
 examples: []
 tags: [enthalpywheel, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # EnthalpyWheel
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Rotary enthalpy wheel: effectiveness recovery of both enthalpy and moisture between exhaust and supply, with exact water and energy balances on the dry-air basis.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Rotary enthalpy wheel: paired effectiveness recovery of BOTH enthalpy and moisture between exhaust and supply streams; water and energy balances close exactly on the dry-air basis (same exchange math as the membrane humidifier, wheel-rated effectivenesses).
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/moistair.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

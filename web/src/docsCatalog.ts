@@ -32,7 +32,7 @@ V   = V0 - drop          { water volume at t = 60 s }
 The \`DYNAMIC ... END\` block integrates coupled, multi-state ODE systems. A variable becomes a **state** the moment \`der(X)\` appears; each state needs one derivative equation and one initial condition. Algebraic auxiliaries (any equation without a \`der\`) are recomputed every step and become extra columns you can plot.
 
 \`\`\`
-DYNAMIC name (method = solver, t = t0 .. tf, points = n_samples)
+DYNAMIC name (method = solver, time = t0 .. tf, points = n_samples)
   der(state) = rate_equation
   state(0)   = initial_value
   auxiliary  = algebraic_calc      { an extra output column }
@@ -41,9 +41,9 @@ DYNAMIC name (method = solver, t = t0 .. tf, points = n_samples)
 END
 \`\`\`
 
-An \`EVENT\` watches the zero crossing of its condition (\`| rising\` / \`| falling\` filters the direction). **\`stop\`** ends the run at the crossing; **\`record\`** logs it and continues; **\`set state = expr\`** reassigns a state at the crossing and restarts integration from the modified value — a *discrete* switch. That is what makes true hysteresis possible: a thermostat latch (\`der(q) = 0\`, one event setting \`q = 1\` at the low threshold, another setting \`q = 0\` at the high one) shows two distinct switching temperatures, which no smooth relay can. Give set events an explicit direction so the reassignment can't immediately retrigger itself.
+The interval option may be spelled \`time\`, \`t\` or \`tspan\`; \`rtol\` and \`atol\` set the integrator tolerances.
 
-[Diagram: GuessConvergence]
+An \`EVENT\` watches the zero crossing of its condition (\`| rising\` / \`| falling\` filters the direction). **\`stop\`** ends the run at the crossing; **\`record\`** logs it and continues; **\`set state = expr\`** reassigns a state at the crossing and restarts integration from the modified value — a *discrete* switch. That is what makes true hysteresis possible: a thermostat latch (\`der(q) = 0\`, one event setting \`q = 1\` at the low threshold, another setting \`q = 0\` at the high one) shows two distinct switching temperatures, which no smooth relay can. Give set events an explicit direction so the reassignment can't immediately retrigger itself.
 
 ## Choosing a solver
 | Need | Method | Notes |
@@ -52,6 +52,8 @@ An \`EVENT\` watches the zero crossing of its condition (\`| rising\` / \`| fall
 | Mildly stiff / cheaper | \`ode23\` | Bogacki–Shampine 3(2) adaptive. |
 | Fixed-step teaching | \`ode1\`–\`ode5\` | Euler, Heun, RK3, RK4, Dormand–Prince. Use many points. |
 | Stiff | \`ode23s\` / \`ode15s\` | Implicit Rosenbrock / BDF. Use when \`ode45\` needs tiny steps or stalls. |
+| Stiff, high accuracy | \`radau5\` | 5th-order Radau IIA (also \`radau\`, \`radauiia\`). |
+| Component networks (DAE) | \`ida\` | SUNDIALS-style implicit DAE solver — the default choice for fluid loops; see *Steady ↔ Transient Networks*. |
 
 Stiffness shows up when rates differ by orders of magnitude (e.g. fast chemistry alongside slow dynamics). If \`ode45\` runs slowly or the trajectory looks jagged, switch to \`ode15s\`.
 
@@ -131,6 +133,8 @@ Newton iterates from the guess in **Variable Info** (\`Ctrl + I\`); a guess near
 2. Solve — every variable now gets a physically sensible value.
 3. Copy those values into the guesses (Variable Info), restore the real equation, and solve again from the good starting point.
 
+[Diagram: GuessConvergence]
+
 ## Common stalls
 - **Singular Jacobian** — two equations are effectively the same, so the system is rank-deficient. A subtle version: two property calls from the *same* independent pair add no new information — \`h = Enthalpy(Water, T=T, P=P)\` together with \`T = Temperature(Water, h=h, P=P)\` just restate one relationship and stall the solver. Supply a genuinely independent equation instead.
 - **Max iterations / diverged** — usually a guess or bound problem. Set a guess near the expected order of magnitude and bound the variable to its physical range (e.g. \`T ≥ 0\`, \`0 ≤ x ≤ 1\`).
@@ -191,13 +195,12 @@ Warnings never block a solve, but they are usually pointing at a real slip: a mi
 
 \`connect\` domain mismatches, port-count errors, mismatched fluid families, missing \`PARAM\`/\`REQUIRE\` values, and the shared-stream limit are all **deliberate hard errors** with their own page — see *Troubleshooting Networks*.
 
-## Job FAILED without a diagnostic / stuck in PENDING
+## "Operation stopped" or the engine restarted
 
-These come from the compute tier, not your model:
+These come from the in-browser worker pool, not your model:
 
-- **Stuck PENDING** — no compute workers are consuming the queue. Check \`GET /api/health\`: the \`compute\` entry counts live workers (see *Health & Scaling*).
-- **FAILED after a worker crash** — a redelivered task is dropped by design (the poison-message guard) so one pathological job can't crash-loop the tier. Re-submit once; if it fails again, the model itself is killing the worker — reduce it and report.
-- **429 Too many requests** — the API rate-limits bursts; wait a moment and retry.
+- **Operation stopped** — you pressed **Stop**, a parametric sweep, optimization or Monte Carlo run hit its cooperative deadline (120 s by default), or the worker pool was reduced while the request was running. Shorten the sweep or raise the elapsed-time limit in **Preferences**, then run again.
+- **The engine restarted** — a fatal WebAssembly trap or an out-of-memory condition ends every worker, rejects the requests in flight, and starts fresh workers on the next request. Your document is untouched; solve again. If the same model restarts the engine every time, reduce it and report it.
 
 [Related: debugging, comp-troubleshooting, api]`,
   "api": `# Solver Reference & API
@@ -347,7 +350,7 @@ Because frees executes in the user's browser, execution boundaries and resource 
 ## Memory and Bundle Budgets
 
 - **WASM Memory**: WebAssembly linear memory grows dynamically as needed for large systems and matrices, bounded by browser tab memory limits.
-- **Binary Size**: The release WebAssembly binary is strictly budgeted and monitored in CI (~3.1 MB uncompressed / ~1.2 MB gzipped), including complete fluid property tables and 295 physical components.
+- **Binary Size**: The release WebAssembly binary is gated in CI at ≤ 5,120 KiB raw (3,981.7 KiB raw / 1,791.0 KiB gzipped as measured on 2026-09-12). It includes the rustprop real-fluid equations of state for 26 fluids and the 312-component library; there are no precomputed property tables.
 
 [Related: arch-async, deploy-railway]`,
   "comp-first-network": `# Your First Component Network
@@ -594,7 +597,7 @@ Several fluid-like domains share the same \`(P, mdot, h)\` bond but must never b
 | \`oil\` | Oil hydraulics | \`HydraulicPump\`, \`ReliefValve\` |
 | \`moistair\` | Humid air (HVAC) | \`MoistAirSource\`, \`CoolingCoil\`, \`MixingBox\` |
 
-Connecting mismatched families is, again, a hard error. The built-ins carry the right tag already; your own components opt in with \`PARAM domain$ = gas\` (see *Writing Your Own Component*).
+Connecting mismatched families is, again, a hard error. The built-ins carry the right tag already; your own components opt in with a \`domain$=gas\` header parameter (see *Writing Your Own Component*).
 
 ## Humid air: the W rider
 
@@ -678,7 +681,7 @@ The rules:
 - **Ports** carry whatever members your equations reference. Use \`(P, mdot, h)\` members and the port is a fluid port; use \`(T, Qdot)\` and it is a heat port — domain inference is automatic (see *Domains & Fluid Families*). A port referenced only as \`port.sig\` becomes a causal **signal** port: one writer, any readers — use one for every command input rather than pinning a component's internals from outside.
 - **Parameters** — a trailing \`$\` marks a string parameter (\`fluid$\` is special: it names the stream's fluid for property calls and per-port fluid inference). Defaults live directly in the function header.
 - **Locals and outputs** — any bare name in the body is instance-private (auto-namespaced). Reading it from outside as \`inst.name\` makes it a named output.
-- **Fluid family** — a component for a non-default family opts in with \`PARAM domain$ = gas\` (or \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`), so the connector guard protects your lines too.
+- **Fluid family** — a component for a non-default family opts in with a \`domain$=gas\` header parameter, e.g. \`function [in, out] = MyValve(fluid$=Air, domain$=gas)\` (or \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`), so the connector guard protects your lines too.
 - **Composition** — a component body may instantiate other components and \`connect\` them: build a subsystem once, stamp it many times.
 - **Time** — a body may reference the reserved global \`time\` (never namespaced) to build time-driven behavior; the \`DYNAMIC\` integrators pin it, and a steady document sets \`time = 0\` explicitly.
 - **Keep closures C¹-smooth.** Newton differentiates everything, so a hard \`if\`/corner in a constitutive law stalls convergence. Use smooth surrogates — a \`tanh\` gate, the hinge \`0.5*(x + sqrt(x^2 + eps^2))\`, odd-symmetric flow laws — and expose the smoothing width as an \`eps\` parameter.
@@ -1247,7 +1250,7 @@ The full command set is on the *REPL Terminal & Workspace* page. One step left: 
 [Related: gs-components, repl, shortcuts]`,
   "gs-components": `# 6. Wire Components
 
-For system problems — loops, circuits, networks — frees has a library of ~295 **components**: parameterized, connectable blocks of physics. You wire them; frees turns the network into equations and solves it like everything else:
+For system problems — loops, circuits, networks — frees has a library of 312 **components**: parameterized, connectable blocks of physics. You wire them; frees turns the network into equations and solves it like everything else:
 
 \`\`\`run
 { What pressure does 50 m of pipe cost? }
@@ -1281,7 +1284,7 @@ You now know the whole loop: describe equations, Check (F4), Solve (F2), sweep a
 - **Go dynamic** — ODE transients, linearization, transfer functions, and Bode plots: *Dynamic Systems & Control*.
 - **Model whole systems** — the acausal component library, from a pipe run to a full refrigeration loop: *System Modeling with Components*.
 - **Work faster** — the REPL console, keyboard shortcuts, and automated reports: *Tools & Workflow*.
-- **Run it yourself** — the async architecture, the REST API, Docker, and Railway: *Architecture & Deployment*.
+- **Run it yourself** — the in-browser engine, the \`frees-cli\` command line, local development, and static deployment: *Architecture & Deployment*.
 
 ## Learn by example
 Three short journeys — a scalar with units, a component chain, and a map or transient upgrade — are in *Journey 1 — A scalar equation with units*. **Examples & Tutorials** has longer guided problems and a library of verified examples. When you need the exact signature of a function, the **Reference** A–Z index is the canonical home for every symbol.
@@ -1925,8 +1928,8 @@ x[1:3] = SolveLinear(A[1:3,1:3], b[1:3])
   "fluids-overview": `frees ships high-precision property data so you never hand-look-up a state. Real fluids (water, refrigerants, ammonia, …) are computed in the browser by rustprop, a pure-Rust port of CoolProp 8.0.0; ideal-gas species use NASA polynomials; \`AirH2O\` handles humid air from three coordinates; and a built-in database carries bulk properties for common solids. Every property function returns SI base units. Group a circuit's state points with a \`STATE TABLE\` to isolate fluids and overlay cycles on property charts.`,
   "solving-overview": `How frees actually solves — and what to do when it doesn't. These pages explain the pipeline (Tarjan blocking, then Newton's method per block), the guesses and bounds that make nonlinear systems converge, and a methodical debugging workflow for solves that stall. The same solved state powers two system-level analyses: first-order **uncertainty propagation** (\`val ± unc\` on every result) and **optimization** — parametric sweeps, single-objective search, and NSGA-II Pareto fronts.`,
   "dynamics-overview": `Models that move. A \`DYNAMIC\` block integrates coupled, stiff, even event-driven ODE/DAE systems in time; \`LINEARIZE\` extracts state-space matrices about an operating point; and the control suite takes it from there — transfer functions, frequency response (Bode, Nyquist), pole placement, LQR, and PID tuning, with figures declared in code via \`PLOT\`. The symbolic CAS pages cover the Laplace-domain algebra that backs the control work.`,
-  "components-overview": `Model whole systems, not just equations: instantiate parameterized **components** (pumps, pipes, heat exchangers, resistors, gears, cooling coils, signal blocks — ~295 shipped), connect their ports, and frees expands the network into ordinary scalar equations for the same solver. The modeling is **acausal** (no inputs or outputs — fix any consistent boundary values), spans five physical domains plus a causal **signal** domain for command wires and six fluid families with strict cross-wiring guards, selects physics fidelity per component with \`model$\` variants, and turns the *same wiring* into a steady operating point or a transient. Start with *Your First Component Network*.`,
-  "deploy-overview": `frees is a client–server system you can run anywhere Docker runs. These pages explain the asynchronous compute model (API → queue → compute workers → job store) and why it makes solves robust and scalable, document the REST API so scripts can drive frees directly, and walk through both deployment paths: local Docker via \`frees.sh\`, and Railway (or any container platform) with the hard-won production configuration already baked in.`,
+  "components-overview": `Model whole systems, not just equations: instantiate parameterized **components** (pumps, pipes, heat exchangers, resistors, gears, cooling coils, signal blocks — 312 shipped), connect their ports, and frees expands the network into ordinary scalar equations for the same solver. The modeling is **acausal** (no inputs or outputs — fix any consistent boundary values), spans five physical domains plus a causal **signal** domain for command wires and six fluid families with strict cross-wiring guards, selects physics fidelity per component with \`model$\` variants, and turns the *same wiring* into a steady operating point or a transient. Start with *Your First Component Network*.`,
+  "deploy-overview": `frees has no server: the Rust engine is compiled to WebAssembly and runs in Web Workers inside your browser tab, so models solve locally and keep working offline. These pages explain how a solve travels from the editor to the worker pool and back, how to drive the same engine from scripts with the headless \`frees-cli\` and its JSON envelope, how to build and run frees locally, how to deploy the production bundle to any static host, and the worker deadlines and size budgets that keep it responsive.`,
   "tools-overview": `These are the tools around the editor: a dockable **REPL** for scalar expressions
 and symbolic CAS after a solve, **keyboard shortcuts** for Solve/Check, a
 **Markdown report** system for live values and plots, and **Graph Digitizer &

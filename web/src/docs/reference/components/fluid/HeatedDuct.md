@@ -1,19 +1,20 @@
 ---
 name: HeatedDuct
 category: Component (fluid)
-summary: Acausal fluid-domain component HeatedDuct with ports in, out, wall.
+summary: "Heated duct: single-stream ε-NTU heat pickup from a wall node (ε = 1 − e^(−UA/ṁcp)), the exact single-stream limit."
 related: []
 examples: []
 tags: [heatedduct, component, fluid, acausal]
 references: []
-generated: true
 ---
 
 # HeatedDuct
 
-Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Heated duct: single-stream ε-NTU heat pickup from a wall node (ε = 1 − e^(−UA/ṁcp)), the exact single-stream limit.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **fluid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/fluid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -40,8 +41,8 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.p &= in.p \\
-t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
-cp_{d} &= \text{Cp}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+cp_{d} &= \text{Cp}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 epsd &= 1 - e^{\frac{-ua}{in.mdot\cdot cp_{d}}} \\
 q &= epsd\cdot in.mdot\cdot cp_{d}\cdot \left(wall.t - t_{in}\right) \\
 out.h &= in.h + \frac{q}{in.mdot} \\

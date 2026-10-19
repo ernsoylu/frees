@@ -1,29 +1,39 @@
 ---
 name: anova1_df_between
-category: Built-in Functions
-summary: Reference page for anova1_df_between.
-related: []
+category: Stats
+summary: One-way ANOVA between-group degrees of freedom (k − 1).
+related: [anova1_f, anova1_pval, anova1_df_within]
 examples: []
-tags: [anova1_df_between]
+tags: [anova1_df_between, stats, anova, hypothesis test]
 ---
 
 # anova1_df_between
 
-`anova1_df_between` is available in the frees built-in functions surface.
+One-way ANOVA between-group degrees of freedom (k − 1).
 
 ## Syntax
 
 ```
-anova1_df_between(...)
+df = anova1_df_between(g1, g2, ...)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`anova1_df_between(g1, g2, ...)` runs a one-way ANOVA F-test of whether all group means are equal, and returns the **between-group degrees of freedom (k − 1)**. Pass two or more groups as vectors.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `g1, g2, ...` | Vector | Yes | Two or more groups of observations. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `df` | Number | Between-group degrees of freedom (k − 1). |
 
 ## Examples
 

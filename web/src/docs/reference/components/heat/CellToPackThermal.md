@@ -1,19 +1,22 @@
 ---
 name: CellToPackThermal
 category: Component (heat)
-summary: Acausal heat-domain component CellToPackThermal with ports cell, plate.
+summary: "Cell-to-plate thermal path: contact/interface resistance into the cold-plate mass — the network that makes pack gradients (cell hot spot vs plate) real."
 related: []
 examples: []
 tags: [celltopackthermal, component, heat, acausal]
 references: []
-generated: true
 ---
 
 # CellToPackThermal
 
-Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Cell-to-plate thermal path: contact/interface resistance into the cold-plate mass — the network that makes pack gradients (cell hot spot vs plate) real.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+(Direct equations: the plate node carries this component's own state.)
+
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/heat.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
