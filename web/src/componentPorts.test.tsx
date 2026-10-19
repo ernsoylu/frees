@@ -41,7 +41,9 @@ it('provides a local Figma symbol and renders every catalog port exactly once', 
       expect([...figure.querySelectorAll('*')].filter(node => node.childElementCount === 0 && node.textContent === port), `${spec.type}.${port}`).toHaveLength(1)
     }
   }
-})
+  // Renders every catalog component (~300); under full-suite load on CI this
+  // exceeds vitest's 5 s default though it takes ~2 s alone.
+}, 30_000)
 
 it('keeps electrical, fluid and mechanical devices distinct', () => {
   const cases: Record<string, Shape> = {
