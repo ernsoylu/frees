@@ -1,29 +1,40 @@
 ---
 name: wvar
-category: Built-in Functions
-summary: Reference page for wvar.
-related: []
+category: Stats
+summary: Bessel-corrected weighted sample variance (reliability weights).
+related: [wmean]
 examples: []
-tags: [wvar]
+tags: [wvar, stats, weighted, variance]
 ---
 
 # wvar
 
-`wvar` is available in the frees built-in functions surface.
+Bessel-corrected weighted sample variance (reliability weights).
 
 ## Syntax
 
 ```
-wvar(...)
+v = wvar(weights, values)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`wvar(weights, values)` returns the unbiased weighted variance with denominator Σwᵢ − Σwᵢ²/Σwᵢ (the statsmodels `DescrStatsW` convention). Weights first.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `weights` | Vector | Yes | Non-negative weights with a positive sum. |
+| `values` | Vector | Yes | Values (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `v` | Number | Weighted variance, in squared units of `values`. |
 
 ## Examples
 

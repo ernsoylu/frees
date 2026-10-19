@@ -1,35 +1,60 @@
 ---
 name: quality
 category: Fluid Properties
-summary: Vapour mass fraction, or -1 for single-phase states.
+summary: Vapour quality (mass fraction of vapour) [–] of a fluid at a state fixed by named inputs.
 related: [enthalpy, temperature, pressure]
 examples: []
-tags: [quality, property, fluid, coolprop]
+tags: [quality, property, fluid, rustprop]
 references: []
 ---
 
 # quality
 
-Returns the vapour mass fraction of a real fluid, or `-1` outside the two-phase region.
+Vapour quality (mass fraction of vapour) [–] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 ```
-x = Quality(Fluid, P=p, h=h)
-```
-
-```
-x = Quality(Fluid, P=p, T=t)
+x = Quality(Fluid, X1=…, X2=…)
 ```
 
 ## Description
 
-Supply a real-fluid name and two independent state coordinates supported by the
-backend. Names are case-insensitive. In the two-phase region, quality is between
-0 (saturated liquid) and 1 (saturated vapour). At saturation, temperature and
-pressure alone do not determine quality; use pressure and enthalpy, for example.
-For a single-phase state, the default rustprop backend returns `-1`. Do not
-interpret this sentinel as a negative physical vapour fraction or clamp it to zero.
+`Quality(Fluid, X1=…, X2=…)` returns the vapour quality (mass fraction of vapour) [–] of `Fluid` at the state fixed by two named inputs (see *Valid input pairs*). `Fluid` is a fluid name or alias, bare (`Water`) or as a string variable (`fluid$`); names and indicators are case-insensitive. Results are in SI base units.
+
+Returns a value in [0, 1] inside the two-phase dome and **−1** for any single-phase state (subcooled liquid, superheated vapour or supercritical) — the CoolProp convention, so test `x >= 0` before using it as a fraction.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: `T` [K], `P` [Pa], `h` [J/kg], `s` [J/kg-K], `u` [J/kg], `v` [m^3/kg] (or `d`/`rho` [kg/m^3]), `x` (or `q`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| `T`, `P` | ✓ |
+| `T`, `h` | ✓ |
+| `T`, `s` | ✓ |
+| `T`, `u` | ✓ |
+| `T`, `v` | ✓ |
+| `P`, `h` | ✓ |
+| `P`, `s` | ✓ |
+| `P`, `u` | ✓ |
+| `P`, `v` | ✓ |
+| `h`, `s` | ✓ |
+| `h`, `v` | ✓ |
+| `s`, `v` | ✓ |
+| `u`, `v` | ✓ |
+
+Inside the two-phase dome use quality with `T`, `P` or `v`: `(T, x)`, `(P, x)`, `(v, x)`. **Not supported:** `(h, u)`, `(s, u)`, and quality with `h`, `s` or `u` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (`Water`, `R134a`, `CarbonDioxide`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (`Air`) | ✓ | Pairs containing `T` or `P`; `x` only 0 or 1 |
+| Ideal gases (spelled formulas: `N2`, `CO2`, `CH4`, …) | — | Use the full fluid name for the real-fluid value |
+| Incompressibles and glycols (`EG50`, …) | — | — |
+| Humid air (`AirH2O`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -88,47 +113,29 @@ x = -1
 
 ## Input Arguments
 
-### Fluid — Real-fluid name
-
-Name or alias recognized by the real-fluid backend.
-
-**Example:** `Water`
-
-**Data Types:** `identifier` | `string`
-
-### p — Absolute pressure
-
-Pressure coordinate in pascals; unit-annotated values convert to SI.
-
-**Example:** `P=101325 [Pa]`
-
-**Data Types:** `number`
-
-### h — Specific enthalpy
-
-Enthalpy coordinate in J/kg, used with pressure to identify a two-phase state.
-
-**Example:** `h=1000000 [J/kg]`
-
-**Data Types:** `number`
-
-### t — Absolute temperature
-
-Temperature coordinate in kelvin, used with pressure for a single-phase state.
-
-**Example:** `T=400 [K]`
-
-**Data Types:** `number`
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `Fluid` | Name or string | Yes | Fluid name or alias (`Water`, `R134a`, `r744`, …) or a string variable such as `fluid$`. See *Supported Fluids*. |
+| `X1=…, X2=…` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
 
 ## Output Arguments
 
-### x — Vapour mass fraction or sentinel
+| Argument | Type | Description |
+| --- | --- | --- |
+| `x` | Number | Vapour quality (mass fraction of vapour) [–]. |
 
-Dimensionless scalar; `-1` denotes a single-phase state for the default backend.
+## Common Errors
 
-**Example:** `x = -1`
-
-**Data Types:** `number`
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `Quality requires a fluid and exactly two property indicators, e.g. …` | One indicator (or three) was given | Pass exactly two, e.g. `T=…, P=…`. |
+| `Unknown property indicator 'z' in Quality(...). Supported: d, h, p, q, rho, s, t, u, v, x` | Misspelled indicator | Use one of the listed indicators. |
+| `Input pair variable is invalid and output(s) are non-trivial; cannot do state update` | Unsupported pair, e.g. `(h, u)`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| `Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| `For now, we don't support T [200 K] below Tmelt(p) [273.15… K]` | State below the melting line | Raise `T`, or check the unit annotation (`[C]` vs K). |
+| `For pseudo-pure fluid, quality must be equal to 0 or 1.` | Two-phase quality on a pseudo-pure mixture such as `Air` | Use `x=0` or `x=1`, or a single-phase pair. |
+| `Function 'quality' is not available for the ideal gas N2. Use the full fluid name for real-fluid properties.` | Spelled formula selects the ideal-gas model | Use `Nitrogen`, `CarbonDioxide`, … for the real fluid. |
+| `Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb` | `Quality` called with `AirH2O` | Use one of the humid-air functions listed. |
 
 ## Version History
 

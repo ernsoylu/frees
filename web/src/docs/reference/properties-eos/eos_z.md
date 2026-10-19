@@ -104,5 +104,8 @@ just above the CO₂ critical temperature (304 K) at near-critical pressure.
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| `UNKNOWN_FLUID` | `fluid$` not in the critical-constant table | Use a supported fluid name. |
-| `UNKNOWN_MODEL` | `model$` not `'SRK'`/`'PR'` | Pass `'SRK'` or `'PR'`. |
+| `Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.` | `fluid$` is not in the cubic-EOS table (aliases such as `co2` and `r717` are accepted) | Use one of the listed fluids. |
+| `Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.` | Unsupported `model$` | Pass `'SRK'` or `'PR'`. |
+| `Cubic EOS: no physical root for carbondioxide at T=-5 K, P=4000000 Pa.` | The cubic has no positive-volume root at `(T, P)` — usually a unit slip | Check `T` [K] and `P` [Pa]. |
+
+`phase$` = `'liquid'` selects the liquid root and `'vapor'` (or `'vapour'`, `'gas'`) the vapour root; any other word is refused with `Cubic EOS: phase$ must be 'liquid' or 'vapor'`.

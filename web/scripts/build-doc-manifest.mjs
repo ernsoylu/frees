@@ -9,6 +9,7 @@
 //   4. crates/frees-core/src/props/propfun.rs  — OUTPUTS / HA_OUTPUTS
 //   5. crates/frees-core/src/props/solids.rs   — MATERIALS
 //   6. crates/frees/src/repl.rs                — CAS_NAMES
+//   6b. crates/frees-core/src/token.rs         — keyword_or_ident (+ STATE TABLE)
 //   7. components/library-data/*.frees         — the component library
 //   8. src/helpReference.ts                    — CALL + matrix signatures/descriptions
 //   9. src/docs/reference/**/*.md              — authored pages (frontmatter `name:`)
@@ -106,6 +107,11 @@ function authoredPages() {
         const fm = read(p).match(/^---\n([\s\S]*?)\n---/);
         const nm = fm && fm[1].match(/^name:\s*(.+)$/m);
         if (nm) names.set(nm[1].trim().toLowerCase(), nm[1].trim());
+        // A keyword page documents its companion keywords too (`covers: [event]`).
+        const cv = fm && fm[1].match(/^covers:\s*\[([^\]]*)\]/m);
+        for (const c of cv ? cv[1].split(',').map((x) => x.trim()).filter(Boolean) : []) {
+          names.set(c.toLowerCase(), c);
+        }
       }
     }
   };
@@ -129,6 +135,7 @@ const EXPAND_RS = path.join(WASM_REPO, 'crates/frees-core/src/parser/expand.rs')
 const PROPFUN_RS = path.join(WASM_REPO, 'crates/frees-core/src/props/propfun.rs');
 const SOLIDS_RS = path.join(WASM_REPO, 'crates/frees-core/src/props/solids.rs');
 const REPL_RS = path.join(WASM_REPO, 'crates/frees/src/repl.rs');
+const TOKEN_RS = path.join(WASM_REPO, 'crates/frees-core/src/token.rs');
 
 /** The `("name", …)` heads of a `const NAME: &[(&str, &str)] = &[ … ];` table. */
 function rustPairTable(src, name) {
@@ -225,6 +232,13 @@ function rustReplCasOps() {
   return [...new Set([...block[1].matchAll(/"([^"]+)"/g)].map((m) => m[1].toLowerCase()))].sort();
 }
 
+/** Reserved words, from `token.rs::keyword_or_ident`, plus the lexer's two-word `STATE TABLE`. */
+function rustKeywords() {
+  const block = read(TOKEN_RS).match(/fn keyword_or_ident[\s\S]*?match[^{]*\{([\s\S]*?)\n\s*_ =>/);
+  if (!block) return [];
+  return [...new Set([...block[1].matchAll(/"([a-z]+)" =>/g)].map((m) => m[1]).concat('state table'))].sort();
+}
+
 /**
  * Fold the Rust registries into the committed manifest and report what only
  * one of them knows about.
@@ -259,8 +273,19 @@ function mergeRustRegistries(manifest) {
       documented: pages.has(name),
     });
   }
-  // The reverse check — "a documented function the engine no longer dispatches"
-  // — is deliberately NOT made here. `eval::INTRINSICS` is only one of the
+  // Entries this loop added from the intrinsic table (`source: 'rust'`) leave
+  // with it: when the name is gone from `eval::INTRINSICS`, nothing else could
+  // have registered it.
+  const live = new Set(intrinsics);
+  report.functionsRemoved = manifest.functions
+    .filter((f) => f.source === 'rust' && !live.has(f.name.toLowerCase()))
+    .map((f) => f.name);
+  manifest.functions = manifest.functions.filter(
+    (f) => f.source !== 'rust' || live.has(f.name.toLowerCase()),
+  );
+
+  // The broader reverse check — "a documented function the engine no longer
+  // dispatches" — is deliberately NOT made here. `eval::INTRINSICS` is only one of the
   // port's dispatch paths: the dense linear algebra goes through
   // `linalg::eval_intrinsic`, the control suite through `control::eval`, and
   // both are reached by synthetic `$` names this regex cannot see. Comparing
@@ -314,6 +339,12 @@ function reportMerge(report) {
       `build-doc-manifest: ${report.functionsAdded.length} intrinsic(s) live in ` +
         `eval::INTRINSICS but not in the committed manifest: ` +
         report.functionsAdded.join(', '),
+    );
+  }
+  if (report.functionsRemoved?.length) {
+    console.warn(
+      `build-doc-manifest: ${report.functionsRemoved.length} intrinsic(s) no longer in ` +
+        `eval::INTRINSICS were removed: ${report.functionsRemoved.join(', ')}`,
     );
   }
   if (report.callsAdded.length) {
@@ -377,6 +408,7 @@ function recountCoverage(manifest) {
   for (const c of manifest.components || []) note(c.name, pages.has(c.name.toLowerCase()));
   for (const f of manifest.materials?.functions || []) note(f, pages.has(String(f).toLowerCase()));
   for (const r of manifest.replCasOps || []) note(r, pages.has(String(r).toLowerCase()));
+  for (const k of manifest.keywords || []) note(k, pages.has(k));
   // Every count comes off the FINAL arrays. `registeredFunctions` and
   // `callProcedures` used to be left at whatever the pre-merge build set, so a
   // manifest holding 326 functions and 63 CALL targets reported 276 and 44.
@@ -389,6 +421,7 @@ function recountCoverage(manifest) {
   cov.callProcedures = (manifest.callProcedures || []).length;
   cov.materialFunctions = (manifest.materials?.functions || []).length;
   cov.replCasOps = (manifest.replCasOps || []).length;
+  cov.keywords = (manifest.keywords || []).length;
   cov.dispatchOnlyNeedingRegistry = (manifest.dispatchOnly || []).length;
   cov.documented = [...all.values()].filter(Boolean).length;
 }
@@ -433,11 +466,13 @@ manifest.materials = rustMaterials();
 // Membership from `solids.rs`, spelling from the authored page (`E_`, not `e_`).
 manifest.materials.functions = manifest.materials.functions.map((f) => pages.get(f) || f);
 manifest.replCasOps = rustReplCasOps();
+manifest.keywords = rustKeywords();
 
 manifest.note =
   'GENERATED by scripts/build-doc-manifest.mjs. Every family is reconciled against ' +
   'the Rust registries (eval::INTRINSICS, procedures::EXPANDED_CALL_TARGETS, ' +
-  'parser::expand::MATRIX_FUNCTIONS, props::propfun, props::solids, repl::CAS_NAMES) ' +
+  'parser::expand::MATRIX_FUNCTIONS, props::propfun, props::solids, repl::CAS_NAMES, ' +
+  'token::keyword_or_ident) ' +
   'and this repo\'s component library. Signatures and descriptions are authored ' +
   'prose, kept as committed. Do not edit by hand.';
 // Nothing is cached-membership any more. The field stays, empty, because
@@ -454,6 +489,6 @@ console.log(
     `(${cov.documented} documented) — ${cov.registeredFunctions} functions, ` +
     `${cov.matrixFunctions} matrix fns, ${cov.components} components, ` +
     `${cov.propertyFunctions} property fns, ${cov.callProcedures} multi-output fns, ` +
-    `${cov.materialFunctions} material fns, ${cov.replCasOps} CAS ops → ` +
+    `${cov.materialFunctions} material fns, ${cov.replCasOps} CAS ops, ${cov.keywords} keywords → ` +
     `${path.relative(WASM_REPO, OUT)}`,
 );

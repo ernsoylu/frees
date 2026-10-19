@@ -1,19 +1,20 @@
 ---
 name: LoadSensingPump
 category: Component (hydraulic)
-summary: Acausal hydraulic-domain component LoadSensingPump with ports in, out, ls.
+summary: "Load-sensing pump: the displacement fraction integrates the compensator error (LS pressure + margin vs outlet), soft-clamped to 0..1 by a logistic; delivery is the effective displacement at the drive speed."
 related: []
 examples: []
 tags: [loadsensingpump, component, hydraulic, acausal]
 references: []
-generated: true
 ---
 
 # LoadSensingPump
 
-Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Load-sensing pump: the displacement fraction integrates the compensator error (LS pressure + margin vs outlet), soft-clamped to 0..1 by a logistic; delivery is the effective displacement at the drive speed.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/hydraulic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

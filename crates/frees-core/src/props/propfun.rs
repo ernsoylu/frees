@@ -151,7 +151,14 @@ const FLUIDS: &[(&str, &str)] = &[
     ("r454c", "R454C.mix"),
     ("r455a", "R455A.mix"),
     ("r513a", "R513A.mix"),
-    ("r515b", "R515B.mix"),
+    // R515B is not one of CoolProp's predefined blends, so it is spelled out:
+    // R1234ze(E)/R227ea at 91.1/8.9 mass-% (ASHRAE 34), converted to mole
+    // fractions with CoolProp 8's own molar masses (0.1140415928 and
+    // 0.17002886 kg/mol). CoolProp answers this string identically.
+    (
+        "r515b",
+        "R1234ze(E)[0.9385037978733598]&R227EA[0.0614962021266402]",
+    ),
     ("r1234yf", "R1234yf"),
     ("r1234ze", "R1234ze(E)"),
     ("ammonia", "Ammonia"),
@@ -205,7 +212,6 @@ const HA_OUTPUTS: &[(&str, &str)] = &[
     ("dewpoint", "D"),
     ("cp", "C"),
     ("specheat", "C"),
-    ("gibbs", "G"),
 ];
 
 /// Humid-air indicator -> `HAPropsSI` input key (`HA_INPUTS`).
@@ -1238,15 +1244,17 @@ fn evaluate_saturation(output: &str, parts: &[&str], values: &[f64], encoded: &s
 /// `AirH2O` calls map to `HAPropsSI` and need three indicators (e.g. T, P, R).
 /// Port of `evaluateHumidAir`.
 fn evaluate_humid_air(output: &str, parts: &[&str], values: &[f64], encoded: &str) -> Result<f64> {
+    // Vocabulary and arity refusals: no state cures them, so they stop the
+    // solve instead of reading as an invalid region (see `call_err`).
     let Some(output_key) = lookup(HA_OUTPUTS, output) else {
-        return Err(FreesError::property(format!(
+        return Err(FreesError::solver(format!(
             "Unknown humid-air function: {output}. Supported: {}",
             sorted_keys(HA_OUTPUTS)
         )));
     };
     if parts.len() != 6 || values.len() != 3 {
         let cap = capitalize(output);
-        return Err(FreesError::property(format!(
+        return Err(FreesError::solver(format!(
             "{cap}(AirH2O, ...) requires exactly three property indicators, \
              e.g. {cap}(AirH2O, T=300, P=101325, R=0.5)"
         )));

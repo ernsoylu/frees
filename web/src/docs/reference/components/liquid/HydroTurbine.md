@@ -1,19 +1,20 @@
 ---
 name: HydroTurbine
 category: Component (liquid)
-summary: Acausal liquid-domain component HydroTurbine with ports in, out, shaft.
+summary: "Hydro turbine: shaft power eta·(V̇·ΔP) from the head across it, efficiency from a flow map; the extracted work leaves the stream enthalpy."
 related: []
 examples: []
 tags: [hydroturbine, component, liquid, acausal]
 references: []
-generated: true
 ---
 
 # HydroTurbine
 
-Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Hydro turbine: shaft power eta·(V̇·ΔP) from the head across it, efficiency from a flow map; the extracted work leaves the stream enthalpy.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/liquid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

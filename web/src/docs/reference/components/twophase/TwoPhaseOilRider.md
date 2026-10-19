@@ -1,19 +1,20 @@
 ---
 name: TwoPhaseOilRider
 category: Component (twophase)
-summary: Acausal twophase-domain component TwoPhaseOilRider with ports in, out.
+summary: "Oil-circulation-rate rider: declares the oil mass fraction on the stream (it rides every downstream pass-through node like W/z) and exposes the documented HTC degradation factor f_deg = 1 - k_deg*OCR to inject into downstream UA parameters."
 related: []
 examples: []
 tags: [twophaseoilrider, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # TwoPhaseOilRider
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Oil-circulation-rate rider: declares the oil mass fraction on the stream (it rides every downstream pass-through node like W/z) and exposes the documented HTC degradation factor f_deg = 1 - k_deg*OCR to inject into downstream UA parameters.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

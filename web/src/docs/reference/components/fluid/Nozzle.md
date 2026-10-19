@@ -82,6 +82,6 @@ n.thrust = 2786.981066
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: cd-nozzle-shock]

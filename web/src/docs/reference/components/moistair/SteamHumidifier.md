@@ -1,17 +1,20 @@
 ---
 name: SteamHumidifier
 category: Component (moistair)
-summary: Acausal moistair-domain component SteamHumidifier with ports in, out.
+summary: Steam (isothermal) humidifier.
 related: []
 examples: []
 tags: [steamhumidifier, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # SteamHumidifier
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Steam (isothermal) humidifier.
+
+The latent heat was already supplied in the boiler or the electrode cylinder, so injecting saturated steam is closer to mixing two gases than to heating air: the dry-bulb temperature barely moves. The process slope is dh/dW = h_g of the injected steam, which is what makes the line near-vertical on the chart — as opposed to the adiabatic humidifier, which runs up a constant wet-bulb line.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

@@ -43,7 +43,7 @@ $$
 out.mdot &= in.mdot \\
 out.h &= in.h \\
 bulb.qdot &= 0 \\
-t_{sat} &= \text{Temperature}\left(\mathrm{fluid}, =out.p, p=1\right) \\
+t_{sat} &= \text{Temperature}\left(\mathrm{fluid\$}, p=out.p, x=1\right) \\
 sh &= bulb.t - t_{sat} \\
 in.mdot &= kv\cdot \left(sh - sh_{set}\right)
 \end{aligned}

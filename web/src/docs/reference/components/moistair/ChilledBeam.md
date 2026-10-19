@@ -1,17 +1,20 @@
 ---
 name: ChilledBeam
 category: Component (moistair)
-summary: Acausal moistair-domain component ChilledBeam with ports in, out, wall.
+summary: Chilled beam, active or passive.
 related: []
 examples: []
 tags: [chilledbeam, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # ChilledBeam
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Chilled beam, active or passive.
+
+SENSIBLE ONLY: it has no drain, so it must never be given latent capacity. `T_dp_in` and `margin_dp` are exported so a design can be checked rather than assumed — if the entering dew point reaches the water temperature the beam condenses onto the room, which is the failure mode that makes a DOAS (drying the ventilation air upstream) a requirement rather than a preference. margin_dp < 0 means the design is condensing.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

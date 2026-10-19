@@ -85,6 +85,25 @@ fn canonical_functions_reject_structural_equations_inside_control_flow() {
 }
 
 #[test]
+fn canonical_functions_reject_an_equation_that_redefines_an_assignment() {
+    let source = "function y = f(x)\n  y := 2*x\n  y = 3*x\nend\nz = f(2)";
+    let error = solve(source, &SolverSettings::default())
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("defines 'y' with the equation `y = 3*x`"),
+        "{error}"
+    );
+    // Different variables may mix the two forms.
+    let solution = solve(
+        "function y = g(x)\n  a = 2*x\n  y := a + 1\nend\nz = g(2)",
+        &SolverSettings::default(),
+    )
+    .unwrap();
+    assert_eq!(solution.values["z"], 5.0);
+}
+
+#[test]
 fn single_result_procedure_is_a_scalar_expression_call() {
     let solution = solve(
         "function result = increment(a)\n  result := a + 1\nend\ny = increment(4)",

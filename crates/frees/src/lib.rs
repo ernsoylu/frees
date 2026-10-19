@@ -1676,6 +1676,17 @@ pub fn property_diagram(fluid: &str, kind: &str) -> String {
         Ok(name) => name,
         Err(_) => fluid.to_string(),
     };
+    // A blend has no dome to draw: rustprop, like CoolProp 8, has no mixture
+    // phase-envelope machinery, so every dome point would fail anonymously.
+    if canonical.ends_with(".mix") || canonical.contains('&') {
+        return json!({
+            "error": format!(
+                "No property diagram for {fluid}: it is a mixture, and mixtures have no \
+                 saturation dome to draw (no phase envelope in CoolProp 8 or rustprop)."
+            )
+        })
+        .to_string();
+    }
     match frees_core::props::diagrams::generate(&canonical, kind) {
         Ok(diagram) => diagram_json(&diagram).to_string(),
         Err(e) => json!({ "error": e.to_string() }).to_string(),
@@ -2676,10 +2687,8 @@ END\n\
         let _guard = backend_guard();
         // This case has now outlived two fluids: it named Ammonia until
         // 2026-09-09 and Argon until 2026-09-10, each time because the fluid it
-        // relied on stopped being untabulated. `R454B` should be the last move
-        // — the `.mix` blends are unbacked for an upstream reason (rustprop's
-        // facade does not route predefined mixtures) rather than a budget one,
-        // so linking more fluids cannot quietly retire this assertion again.
+        // relied on stopped being untabulated. Since 2026-10-19 `R454B` has
+        // properties but still no diagram: a blend has no saturation dome.
         let payload = parsed(&property_diagram("R454B", "T-s"));
         assert_key(&payload, "error", Value::is_string);
         let message = payload["error"].as_str().expect("string");

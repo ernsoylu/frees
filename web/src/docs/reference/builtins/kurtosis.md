@@ -1,29 +1,37 @@
 ---
 name: kurtosis
-category: Built-in Functions
-summary: Reference page for kurtosis.
-related: []
+category: Stats
+summary: Bias-corrected sample excess kurtosis (Fisher).
+related: [skewness, mad]
 examples: []
-tags: [kurtosis]
+tags: [kurtosis, stats, moment]
 ---
 
 # kurtosis
 
-`kurtosis` is available in the frees built-in functions surface.
+Bias-corrected sample excess kurtosis (Fisher).
 
 ## Syntax
 
 ```
-kurtosis(...)
+k = kurtosis(x1, x2, x3, x4, ...)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`kurtosis(x1, ..., xn)` returns the bias-corrected **excess** kurtosis (SciPy `kurtosis(bias=False, fisher=True)`), so a normal sample gives ≈ 0. Needs at least four values.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x1, x2, x3, x4, ...` | Number | Yes | Four or more values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `k` | Number | Excess kurtosis (dimensionless). |
 
 ## Examples
 

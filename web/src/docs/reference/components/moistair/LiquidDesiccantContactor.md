@@ -1,17 +1,20 @@
 ---
 name: LiquidDesiccantContactor
 category: Component (moistair)
-summary: Acausal moistair-domain component LiquidDesiccantContactor with ports in, out, wall.
+summary: "Liquid-desiccant contactor: air contacts a sorbent solution (lithium chloride, lithium bromide, glycol) whose surface water-vapour pressure is set by its CONCENTRATION and TEMPERATURE, not by a wheel position."
 related: []
 examples: []
 tags: [liquiddesiccantcontactor, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # LiquidDesiccantContactor
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Liquid-desiccant contactor: air contacts a sorbent solution (lithium chloride, lithium bromide, glycol) whose surface water-vapour pressure is set by its CONCENTRATION and TEMPERATURE, not by a wheel position.
+
+The air is driven toward the equilibrium humidity ratio W_eq of that solution — lower the solution temperature or raise its concentration and W_eq falls.  The two rungs are genuinely different processes, and this is the component where that shows:  adiabatic — the heat of absorption stays in the air, which leaves WARMER and drier, down and to the right near a constant wet-bulb line. Gatley notes the real dry-bulb rise runs 20-30% ABOVE a pure latent-to-sensible conversion, from solution heat carried over from the regenerator and the heat of wetting; f_excess is that fraction. It is NOT `DesiccantWheel`'s `f_carry`, which is a fraction of the ENTHALPY GAP to a regeneration stream the wheel actually has a port for. Same phenomenon, two different quantities, so two different names.  cooled — an internally cooled contactor (bare-pipe coils in the contact bed with the solution sprayed over them) removes the heat of absorption as it is released, so the air leaves COOLER and drier. Run at eps_T such that the leaving dry bulb equals the entering one, this is the only device in the library that draws the DEHUMIDIFICATION-ONLY vector — straight down a constant-dry-bulb line — which Gatley uses as the textbook example of that process. It is one process, not chemical drying followed by cooling: there is no intermediate state to point at.  The absorbed water leaves with the solution carrying its own liquid enthalpy, so that term is taken out of the air rather than left in the balance.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

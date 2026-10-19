@@ -41,9 +41,9 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.p &= in.p \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-rho_{l} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=0\right) \\
-rho_{g} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+rho_{l} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
+rho_{g} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 m &= v\cdot \left(ll\cdot rho_{l} + \left(1 - ll\right)\cdot rho_{g}\right)
 \end{aligned}
 $$

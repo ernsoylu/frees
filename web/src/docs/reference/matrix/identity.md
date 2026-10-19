@@ -1,29 +1,25 @@
 ---
 name: identity
-category: Matrix Functions
-summary: Reference page for identity.
-related: []
+category: Matrix
+summary: n × n identity matrix.
+related: [eye, zeros, ones, diag]
 examples: []
 tags: [identity]
 ---
 
 # identity
 
-`identity` is available in the frees matrix functions surface.
+n × n identity matrix.
 
 ## Syntax
 
 ```
-identity(...)
+A = identity(n)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+`A = identity(n)` returns the `n × n` identity matrix (same as `eye(n)`).
 
 ## Examples
 
@@ -50,3 +46,15 @@ A[1,3] = 0
 ```
 
 <!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `n` | Number | Yes | Matrix size (positive integer). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `A` | Matrix | n × n identity. |

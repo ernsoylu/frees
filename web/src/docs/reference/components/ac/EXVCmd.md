@@ -1,19 +1,20 @@
 ---
 name: EXVCmd
 category: Component (ac)
-summary: Acausal ac-domain component EXVCmd with ports in, out, u.
+summary: "Signal-commanded EXV: identical orifice physics to EXV, but the opening fraction arrives on a signal port `u` (u.sig ∈ [0,1]) so a controller (SigPID, SigTable schedule, …) can drive it in closed loop."
 related: []
 examples: []
 tags: [exvcmd, component, ac, acausal]
 references: []
-generated: true
 ---
 
 # EXVCmd
 
-Reusable acausal **ac-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Signal-commanded EXV: identical orifice physics to EXV, but the opening fraction arrives on a signal port `u` (u.sig ∈ [0,1]) so a controller (SigPID, SigTable schedule, …) can drive it in closed loop.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **ac-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/ac.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -41,7 +42,7 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.h &= in.h \\
-rho_{in} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+rho_{in} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 in.mdot\cdot \left|in.mdot\right| &= \left(u.sig\cdot cda_{max}\right)^{2}\cdot 2\cdot rho_{in}\cdot \left(in.p - out.p\right)
 \end{aligned}
 $$

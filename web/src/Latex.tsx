@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function Latex({ math, block = false }: Readonly<Props>) {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (containerRef.current) {
@@ -32,5 +32,8 @@ export default function Latex({ math, block = false }: Readonly<Props>) {
     }
   }, [math, block])
 
-  return <div ref={containerRef} style={{ display: block ? 'block' : 'inline-block' }} />
+  // Inline math sits inside paragraphs, where only phrasing content (a span) is valid.
+  return block
+    ? <div ref={containerRef as React.RefObject<HTMLDivElement>} />
+    : <span ref={containerRef as React.RefObject<HTMLSpanElement>} style={{ display: 'inline-block' }} />
 }

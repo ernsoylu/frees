@@ -1,29 +1,42 @@
 ---
 name: bootstrap_ci_hi
-category: Built-in Functions
-summary: Reference page for bootstrap_ci_hi.
-related: []
+category: Stats
+summary: Upper bound of a seeded bootstrap confidence interval for the mean.
+related: [bootstrap_ci_lo, ci_mean_hi]
 examples: []
-tags: [bootstrap_ci_hi]
+tags: [bootstrap_ci_hi, stats, bootstrap, confidence interval]
 ---
 
 # bootstrap_ci_hi
 
-`bootstrap_ci_hi` is available in the frees built-in functions surface.
+Upper bound of a seeded bootstrap confidence interval for the mean.
 
 ## Syntax
 
 ```
-bootstrap_ci_hi(...)
+b = bootstrap_ci_hi(confidence, n_resamples, seed, data)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`bootstrap_ci_hi(confidence, n_resamples, seed, data)` draws `n_resamples` bootstrap samples (with replacement) from `data` and returns the **upper percentile bound** of the resampled means. The same seed always gives the same interval.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `confidence` | Number | Yes | Confidence level in (0, 1). |
+| `n_resamples` | Number | Yes | Number of bootstrap resamples. |
+| `seed` | Number | Yes | Random seed (integer). |
+| `data` | Vector | Yes | Sample values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `b` | Number | Upper bound, in the units of `data`. |
 
 ## Examples
 

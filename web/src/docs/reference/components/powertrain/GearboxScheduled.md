@@ -1,19 +1,20 @@
 ---
 name: GearboxScheduled
 category: Component (powertrain)
-summary: Acausal powertrain-domain component GearboxScheduled with ports in, out, u.
+summary: "Scheduled gearbox: the ratio arrives on a signal port (a shift schedule via SigMap on speed, or any command source); torque transfer with efficiency."
 related: []
 examples: []
 tags: [gearboxscheduled, component, powertrain, acausal]
 references: []
-generated: true
 ---
 
 # GearboxScheduled
 
-Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Scheduled gearbox: the ratio arrives on a signal port (a shift schedule via SigMap on speed, or any command source); torque transfer with efficiency.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/powertrain.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

@@ -43,8 +43,8 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.h &= in.h \\
-rho &= \text{Density}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
-mu &= \text{Viscosity}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+rho &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+mu &= \text{Viscosity}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 a &= \frac{3.141592653589793}{4}\cdot d^{2} \\
 v &= \frac{in.mdot}{rho\cdot a} \\
 re_{d} &= \text{reynolds}\left(rho, v, d, mu\right) \\

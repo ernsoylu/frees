@@ -31,8 +31,8 @@ ProportionalReliefValve inst(fluid$, Pcrack, grad, eps, domain$)
 | --- | --- | --- |
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
 | `Pcrack` | Number | Cracking (relief) pressure [Pa]. |
-| `grad` | Number | Road grade (rise/run). |
-| `eps` | Number | Effectiveness / roughness. |
+| `grad` | Number | Flow gain above the set pressure [kg/s per Pa]: ṁ ≈ grad · (P − Pcrack). |
+| `eps` | Number | Smoothing width [Pa] of the max(0, P − Pcrack) regularization. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations

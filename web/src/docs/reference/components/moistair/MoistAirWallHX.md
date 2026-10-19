@@ -29,7 +29,7 @@ MoistAirWallHX inst(eps, domain$)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `eps` | Number | Effectiveness / roughness. |
+| `eps` | Number | Heat-exchanger effectiveness (0–1), used by the `eps_t` variant. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations

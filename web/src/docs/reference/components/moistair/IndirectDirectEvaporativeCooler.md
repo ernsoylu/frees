@@ -1,17 +1,20 @@
 ---
 name: IndirectDirectEvaporativeCooler
 category: Component (moistair)
-summary: Acausal moistair-domain component IndirectDirectEvaporativeCooler with ports pri_in, pri_out, sec_in, sec_out.
+summary: Indirect/direct two-stage evaporative cooler.
 related: []
 examples: []
 tags: [indirectdirectevaporativecooler, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # IndirectDirectEvaporativeCooler
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Indirect/direct two-stage evaporative cooler.
+
+The indirect stage cools the primary air SENSIBLY, which lowers its wet bulb; the direct stage that follows then runs up that LOWER wet-bulb line and so reaches a dry bulb no single direct stage could. That is the whole point of staging — a direct cooler can never go below the entering wet bulb, so the way to go lower is to move the wet bulb first.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

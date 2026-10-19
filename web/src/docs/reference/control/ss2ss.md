@@ -9,10 +9,6 @@ tags: [control, similarity transform, state space, coordinate change]
 
 # ss2ss
 
-**Current limitation:** automatic output-shape inference rejects the invocation
-shown below. Use the explicit matrix products in the verified example. The
-formulation describes the intended similarity transform.
-
 Applies a **similarity (coordinate) transform** `x = P·z` to a state-space model,
 returning the equivalent realization `(An, Bn, Cn, Dn)`. The input-output behavior
 is unchanged; only the state coordinates differ — used to reach canonical or
@@ -38,56 +34,35 @@ The transfer function $C(sI-A)^{-1}B + D$ is invariant under the transform.
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Rescale a two-state model
+### Verified example — Change coordinates of a two-state plant
 
-**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
-
-```frees error="Matrix must have exactly 2 dimensions: bn"
-A = [-1, 0; 0, -2]
-B = [1, 0; 0, 1]
-C = [1, 0; 0, 1]
-D = [0, 0; 0, 0]
-P = [2, 0; 0, 1]
-[An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
-```
-
-Expected diagnostic:
-
-```text
-Syntax error: Matrix must have exactly 2 dimensions: bn
-```
-
-Working alternative — paste this complete document into the editor and solve:
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation. A single-input, single-output model can give `B` as a column and `C` as a row.
 
 ```frees
-A = [-1, 0; 0, -2]
-B = [1, 0; 0, 1]
-C = [1, 0; 0, 1]
-D = [0, 0; 0, 0]
-P = [2, 0; 0, 1]
-An = inverse(P)*A*P
-Bn = inverse(P)*B
-Cn = C*P
-Dn = copy(D)
+A = [0, 1; -2, -3]
+B = [0; 1]
+C = [1, 0]
+D = [0]
+P = [1, 1; 0, 1]
+[An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
 
-{ CHECK An[1,1] -1 0.000001 }
-{ CHECK An[1,2] 0 1e-8 }
-{ CHECK An[2,1] 0 1e-8 }
+{ CHECK An[1,1] 2 0.000002 }
+{ CHECK An[1,2] 6 0.000006 }
+{ CHECK An[2,1] -2 0.000002 }
+{ CHECK An[2,2] -5 0.000005 }
+{ CHECK Bn[1,1] -1 0.000001 }
+{ CHECK Cn[1,2] 1 0.000001 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-An[1,1] = -1
-An[1,2] = 0
-An[2,1] = 0
+An = [2, 6; -2, -5]
+Bn = [-1; 1]
+Cn = [1, 1]
 ```
 
 <!-- verified-reference-example:end -->
-
-```
-{ [An,Bn,Cn,Dn] = ss2ss(A,B,C,D,P) }
-```
 
 ## Input Arguments
 

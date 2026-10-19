@@ -39,8 +39,8 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \begin{aligned}
-s_{in} &= \text{Entropy}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
-h_{s} &= \text{Enthalpy}\left(\mathrm{fluid}, =out.p, p=s_{in}\right) \\
+s_{in} &= \text{Entropy}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+h_{s} &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, s=s_{in}\right) \\
 out.mdot &= in.mdot \\
 out.h &= in.h + \frac{h_{s} - in.h}{eta} \\
 w &= in.mdot\cdot \left(out.h - in.h\right)
@@ -59,7 +59,7 @@ _No additional equations (uses the shared body)._
 
 $$
 \begin{aligned}
-rho_{in} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+rho_{in} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 in.mdot &= eta_{v}\cdot disp\cdot \frac{rpm}{60}\cdot rho_{in}
 \end{aligned}
 $$
@@ -95,6 +95,6 @@ k.w = 2312.063806
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: ev-thermal-management]

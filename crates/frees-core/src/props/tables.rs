@@ -44,10 +44,10 @@ use crate::props::satsplit::SaturationSplitTable;
 /// first and rustprop answers everything it declines, so adding a table can
 /// only add coverage, never remove it.
 ///
-/// Two properties a host taking this path has to know, unchanged from D9: a
-/// second call replaces the first fluid rather than adding to it, and the
-/// `FRAUX1` transport grids have no runtime install path at all (`FRPHTAB1` is
-/// the only format this reads).
+/// Two properties a host taking this path has to know: a second call stacks
+/// over the first rather than replacing it (each table is consulted in turn,
+/// newest first), and the `FRAUX1` transport grids have no runtime install
+/// path at all (`FRPHTAB1` is the only format this reads).
 pub fn install_from_bytes(bytes: &[u8]) -> Result<Vec<String>> {
     let incoming = SaturationSplitTable::decode_generated(bytes)?;
     let backend = TableBackend::new(vec![incoming]);
@@ -99,6 +99,7 @@ pub(crate) fn fixture(rel: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::props::propfun::RealFluid;
     use crate::props::satsplit::{LiquidCoord, Region};
 
     fn water_phtab() -> Vec<u8> {
@@ -162,6 +163,90 @@ mod tests {
         assert!(
             (h - 419_099.340_939_9).abs() / 419_099.34 < 1e-4,
             "h_f(1 atm) = {h}"
+        );
+
+        match previous {
+            Some(p) => {
+                propfun::install(p);
+            }
+            None => {
+                propfun::uninstall();
+            }
+        }
+    }
+
+    /// Two fetched tables stack: each install layers over the backend already
+    /// there, so both fluids are table-served and every other fluid is still
+    /// rustprop's — and the property cache never serves an answer from before
+    /// an install.
+    #[test]
+    fn successive_installs_stack_and_never_serve_a_stale_answer() {
+        let _guard = propfun::test_swap_guard();
+        let previous = propfun::backend();
+        install_builtin_once();
+        let base = propfun::backend().expect("rustprop is installed");
+
+        // Superheated water at 1 bar, h = 3 MJ/kg, asked before any table:
+        // rustprop's value, and now cached.
+        let state = [100_000.0, 3.0e6];
+        let t_key = "prop$temperature$water$p$h";
+        let before = propfun::evaluate(t_key, &state).unwrap();
+        assert_eq!(
+            before,
+            base.props_si("T", "P", state[0], "Hmass", state[1], "Water")
+                .unwrap()
+        );
+
+        install_from_bytes(&water_phtab()).expect("water");
+        let fluids = install_from_bytes(&fixture("proptables/r134a.phtab")).expect("r134a");
+        assert_eq!(fluids, ["R134a"]);
+        let stacked = propfun::backend().unwrap();
+        assert_eq!(
+            stacked.describe(),
+            format!(
+                "fetched tables over fetched tables over {}",
+                base.describe()
+            )
+        );
+        let served = stacked.served_fluids().unwrap();
+        for fluid in ["Water", "R134a"] {
+            assert!(
+                served.iter().any(|f| f == fluid),
+                "{fluid} missing from {served:?}"
+            );
+        }
+
+        // Each fluid answers from its own table, not the cached rustprop value.
+        let water = TableBackend::new(vec![
+            SaturationSplitTable::decode_generated(&water_phtab()).unwrap()
+        ]);
+        let after = propfun::evaluate(t_key, &state).unwrap();
+        assert_eq!(
+            after,
+            water
+                .props_si("T", "P", state[0], "Hmass", state[1], "Water")
+                .unwrap()
+        );
+        assert!(
+            (after - before).abs() / before < 2.1e-4,
+            "{after} vs {before}"
+        );
+        let r134a = TableBackend::new(vec![SaturationSplitTable::decode_generated(&fixture(
+            "proptables/r134a.phtab",
+        ))
+        .unwrap()]);
+        assert_eq!(
+            propfun::evaluate("prop$temperature$r134a$p$h", &[500_000.0, 420_000.0]).unwrap(),
+            r134a
+                .props_si("T", "P", 500_000.0, "Hmass", 420_000.0, "R134a")
+                .unwrap()
+        );
+
+        // A fluid with no table is still rustprop's, to the bit.
+        assert_eq!(
+            propfun::evaluate("prop$enthalpy$r1234yf$p$t", &[500_000.0, 300.0]).unwrap(),
+            base.props_si("Hmass", "P", 500_000.0, "T", 300.0, "R1234yf")
+                .unwrap()
         );
 
         match previous {

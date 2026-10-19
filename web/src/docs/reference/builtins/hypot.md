@@ -1,6 +1,6 @@
 ---
 name: hypot
-category: Built-in Functions
+category: Math
 summary: Euclidean length of two real components.
 related: [sqrt, abs, magnitude]
 examples: []

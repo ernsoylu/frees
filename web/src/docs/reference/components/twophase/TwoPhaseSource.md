@@ -43,7 +43,7 @@ $$
 \begin{aligned}
 out.mdot &= mdot \\
 out.p &= p \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid}, =p, p=x\right)
+out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=p, x=x\right)
 \end{aligned}
 $$
 

@@ -1,29 +1,25 @@
 ---
 name: copy
-category: Matrix Functions
-summary: Reference page for copy.
-related: []
+category: Matrix
+summary: BLAS vector copy.
+related: [scal, axpy]
 examples: []
 tags: [copy]
 ---
 
 # copy
 
-`copy` is available in the frees matrix functions surface.
+BLAS vector copy.
 
 ## Syntax
 
 ```
-copy(...)
+y = copy(x)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+`y = copy(x)` returns a copy of the vector `x` (BLAS level-1 `copy`).
 
 ## Examples
 
@@ -51,3 +47,15 @@ x[3] = 3
 ```
 
 <!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | Vector. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Vector | Same values as `x`. |

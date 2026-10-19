@@ -45,14 +45,14 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.p &= in.p \\
-tsat &= \text{T\_sat}\left(\mathrm{fluid}, =in.p\right) \\
-hf &= \text{Enthalpy}\left(\mathrm{fluid}, =in.p, p=0\right) \\
+tsat &= \text{T\_sat}\left(\mathrm{fluid\$}, p=in.p\right) \\
+hf &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
 l_{need} &= \frac{in.mdot\cdot \left(in.h - hf\right)}{u_{cond}\cdot 3.141592653589793\cdot d\cdot \left(tsat - wall.t\right)} \\
 l_{cond} &= 0.5\,\left(l_{need} + l - \sqrt{\left(l_{need} - l\right)^{2} + eps_{zone}^{2}}\right) \\
 q_{cond} &= u_{cond}\cdot 3.141592653589793\cdot d\cdot l_{cond}\cdot \left(tsat - wall.t\right) \\
 l_{sc} &= l - l_{cond} \\
 r_{sc} &= \text{zone\_ramp}\left(l_{sc}, eps_{zone}\right) \\
-t_{out} &= \text{Temperature}\left(\mathrm{fluid}, =out.p, p=out.h\right) \\
+t_{out} &= \text{Temperature}\left(\mathrm{fluid\$}, p=out.p, h=out.h\right) \\
 q_{sc} &= u_{sc}\cdot 3.141592653589793\cdot d\cdot l_{sc}\cdot \left(0.5\,\left(tsat + t_{out}\right) - wall.t\right)\cdot r_{sc} \\
 out.h &= in.h - \frac{q_{cond} + q_{sc}}{in.mdot} \\
 q &= q_{cond} + q_{sc} \\

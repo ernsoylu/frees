@@ -1,19 +1,20 @@
 ---
 name: PneumaticValve52
 category: Component (pneumatic)
-summary: Acausal pneumatic-domain component PneumaticValve52 with ports sup_in, wa, wb, ea_out, eb_out, u.
+summary: "5/2 directional valve: u=1 routes supply->A and B->exhaust; u=0 routes supply->B and A->exhaust (four ISO 6358 paths, complementary commands)."
 related: []
 examples: []
 tags: [pneumaticvalve52, component, pneumatic, acausal]
 references: []
-generated: true
 ---
 
 # PneumaticValve52
 
-Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+5/2 directional valve: u=1 routes supply->A and B->exhaust; u=0 routes supply->B and A->exhaust (four ISO 6358 paths, complementary commands).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/pneumatic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -40,9 +41,9 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \begin{aligned}
-t_{s} &= \text{Temperature}\left(\mathrm{fluid}, =sup_{in.p}, p=sup_{in.h}\right) \\
-t_{a} &= \text{Temperature}\left(\mathrm{fluid}, =wa.p, p=wa.h\right) \\
-t_{b} &= \text{Temperature}\left(\mathrm{fluid}, =wb.p, p=wb.h\right) \\
+t_{s} &= \text{Temperature}\left(\mathrm{fluid\$}, p=sup_{in.p}, h=sup_{in.h}\right) \\
+t_{a} &= \text{Temperature}\left(\mathrm{fluid\$}, p=wa.p, h=wa.h\right) \\
+t_{b} &= \text{Temperature}\left(\mathrm{fluid\$}, p=wb.p, h=wb.h\right) \\
 m_{sa} &= \text{iso6358}\left(u.sig\cdot c, b, sup_{in.p}, t_{s}, wa.p\right) \\
 m_{be} &= \text{iso6358}\left(u.sig\cdot c, b, wb.p, t_{b}, eb_{out.p}\right) \\
 m_{sb} &= \text{iso6358}\left(\left(1 - u.sig\right)\cdot c, b, sup_{in.p}, t_{s}, wb.p\right) \\

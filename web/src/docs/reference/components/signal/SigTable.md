@@ -1,19 +1,22 @@
 ---
 name: SigTable
 category: Component (signal)
-summary: Acausal signal-domain component SigTable with ports out.
+summary: "Tabulated source: sig = map$(time)."
 related: []
 examples: []
 tags: [sigtable, component, signal, acausal]
 references: []
-generated: true
 ---
 
 # SigTable
 
-Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Tabulated source: sig = map$(time).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+`map$` names a TABLE/FUNCTION declared in the document — THE drive-cycle primitive (WLTP speed trace, scheduled load, setpoint program).
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/signal.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

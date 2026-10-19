@@ -1,26 +1,31 @@
 ---
 name: eig
 category: Matrix
-summary: Unavailable eigenvalue alias; use Eigenvalues.
-related: [Eigenvalues, Eigen]
+summary: Eigenvalues of a square matrix — the array-language spelling of Eigenvalues.
+related: [Eigenvalues, Eigen, eigvec]
 examples: []
-tags: [eig, matrix]
+tags: [eig, eigenvalues, matrix, spectrum]
 ---
 
 # eig
 
-Registered eigenvalue alias that is not implemented in the current runtime. Use `Eigenvalues` instead.
-
+Returns the **eigenvalues** of a square matrix `A`. `eig` is the array-language
+spelling of `Eigenvalues` and behaves identically: one output for a real
+spectrum, two (real and imaginary parts) for a complex one.
 
 ## Syntax
 
 ```
-eig(A)
+[lambda] = eig(A)
+[re, im] = eig(A)
 ```
 
 ## Description
 
-The eigenvalue problem below describes the intended operation, not an available implementation of this alias.
+`[lambda] = eig(A)` sizes `lambda` to the order of `A` and returns the
+eigenvalues in ascending order. A matrix with complex eigenvalues needs the
+two-output form; the one-output form refuses it rather than dropping the
+imaginary parts.
 
 ## Mathematical Formulation
 
@@ -30,38 +35,23 @@ $$ A v = \lambda v, \qquad \det(A - \lambda I) = 0 $$
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Analyze a two-channel matrix
+### Verified example — Eigenvalues of a coupled two-state system
 
-**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
-
-```frees error="Unknown PROCEDURE or MODULE: 'eig'"
-A = [4, 0; 0, 9]
-[result] = eig(A)
-```
-
-Expected diagnostic:
-
-```text
-Syntax error: Unknown PROCEDURE or MODULE: 'eig'
-```
-
-Working alternative — paste this complete document into the editor and solve:
+Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-A = [4, 0; 0, 9]
-[values] = Eigenvalues(A)
+A = [4, 1; 2, 3]
+[lambda] = eig(A)
 
-{ CHECK values[1] 4 0.000004 }
-{ CHECK values[2] 9 0.000009 }
-{ CHECK A[1,1] 4 0.000004 }
+{ CHECK lambda[1] 2 0.000002 }
+{ CHECK lambda[2] 5 0.000005 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-values[1] = 4
-values[2] = 9
-A[1,1] = 4
+lambda[1] = 2
+lambda[2] = 5
 ```
 
 <!-- verified-reference-example:end -->
@@ -70,4 +60,17 @@ A[1,1] = 4
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| `A` | Number | Yes | Square input matrix. |
+| `A` | Matrix | Yes | Square input matrix. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `lambda` | Vector | Eigenvalues, ascending (real spectrum). |
+| `re`, `im` | Vector | Real and imaginary parts (two-output form). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `Matrix has complex eigenvalues; this form supports real spectra only` | `A` has complex eigenvalues and one output was requested | Use `[re, im] = eig(A)`. |

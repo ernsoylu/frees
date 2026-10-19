@@ -1,29 +1,40 @@
 ---
 name: trimmedmean
-category: Built-in Functions
-summary: Reference page for trimmedmean.
-related: []
+category: Stats
+summary: α-trimmed mean: drop the lowest and highest α fraction, average the rest.
+related: [wmean, mad, average]
 examples: []
-tags: [trimmedmean]
+tags: [trimmedmean, stats, robust, mean]
 ---
 
 # trimmedmean
 
-`trimmedmean` is available in the frees built-in functions surface.
+α-trimmed mean: drop the lowest and highest α fraction, average the rest.
 
 ## Syntax
 
 ```
-trimmedmean(...)
+m = trimmedmean(alpha, values)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`trimmedmean(alpha, values)` removes the lowest and the highest `alpha` fraction of the data (each side) and returns the mean of what remains — a mean that ignores outliers.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `alpha` | Number | Yes | Fraction trimmed from each side, in [0, 0.5). |
+| `values` | Vector | Yes | Sample values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `m` | Number | Trimmed mean, in the units of `values`. |
 
 ## Examples
 

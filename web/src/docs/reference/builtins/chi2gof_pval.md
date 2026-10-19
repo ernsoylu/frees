@@ -1,29 +1,40 @@
 ---
 name: chi2gof_pval
-category: Built-in Functions
-summary: Reference page for chi2gof_pval.
-related: []
+category: Stats
+summary: Chi-square goodness-of-fit p-value.
+related: [chi2gof_stat, chi2gof_df]
 examples: []
-tags: [chi2gof_pval]
+tags: [chi2gof_pval, stats, chi-square, goodness of fit]
 ---
 
 # chi2gof_pval
 
-`chi2gof_pval` is available in the frees built-in functions surface.
+Chi-square goodness-of-fit p-value.
 
 ## Syntax
 
 ```
-chi2gof_pval(...)
+p = chi2gof_pval(observed, expected)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`chi2gof_pval(observed, expected)` runs a Pearson χ² goodness-of-fit test of observed counts against expected counts (rescaled to the observed total), and returns the **p-value**.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `observed` | Vector | Yes | Observed counts per category. |
+| `expected` | Vector | Yes | Expected counts per category (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `p` | Number | P-value. |
 
 ## Examples
 

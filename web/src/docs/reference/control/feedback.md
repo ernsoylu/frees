@@ -17,7 +17,6 @@ Returns the **closed-loop transfer function** of a feedback interconnection —
 
 ```
 [num, den] = feedback(num1, den1, num2, den2)
-[num, den] = feedback(num1, den1, num2, den2)
 ```
 
 ## Description

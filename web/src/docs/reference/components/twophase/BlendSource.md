@@ -44,10 +44,10 @@ $$
 \begin{aligned}
 out.mdot &= mdot \\
 out.p &= p \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid}, =p, p=x\right) \\
+out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=p, x=x\right) \\
 out.z &= z \\
-bubble &= \text{Temperature}\left(\mathrm{fluid}, =p, p=0\right) \\
-dew &= \text{Temperature}\left(\mathrm{fluid}, =p, p=1\right) \\
+bubble &= \text{Temperature}\left(\mathrm{fluid\$}, p=p, x=0\right) \\
+dew &= \text{Temperature}\left(\mathrm{fluid\$}, p=p, x=1\right) \\
 glide &= dew - bubble
 \end{aligned}
 $$

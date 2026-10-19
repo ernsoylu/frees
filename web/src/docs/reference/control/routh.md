@@ -17,7 +17,6 @@ It decides stability without computing the roots — useful for symbolic gain ra
 
 ```
 [nRHP, stable] = routh(den)
-[nRHP, stable] = routh(den)
 ```
 
 ## Description

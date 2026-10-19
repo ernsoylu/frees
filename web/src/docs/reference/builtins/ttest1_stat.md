@@ -1,29 +1,40 @@
 ---
 name: ttest1_stat
-category: Built-in Functions
-summary: Reference page for ttest1_stat.
-related: []
+category: Stats
+summary: t statistic of the one-sample t-test.
+related: [ttest1_pval, ttest1_df]
 examples: []
-tags: [ttest1_stat]
+tags: [ttest1_stat, stats, hypothesis test, t-test]
 ---
 
 # ttest1_stat
 
-`ttest1_stat` is available in the frees built-in functions surface.
+t statistic of the one-sample t-test.
 
 ## Syntax
 
 ```
-ttest1_stat(...)
+t = ttest1_stat(mu0, data)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`ttest1_stat(mu0, data)` tests whether the population mean of `data` equals `mu0` (t = (x̄ − μ₀)/(s/√n), two-sided p-value, n − 1 degrees of freedom) and returns the **t statistic**. The sibling accessors return the other results of the same test.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mu0` | Number | Yes | Hypothesised population mean. |
+| `data` | Vector | Yes | Sample values (n ≥ 2). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `t` | Number | T statistic. |
 
 ## Examples
 

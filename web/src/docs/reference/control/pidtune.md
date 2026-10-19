@@ -17,7 +17,6 @@ for a quick, systematic classical controller without manual loop shaping.
 
 ```
 [Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
-[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
 ```
 
 ## Description

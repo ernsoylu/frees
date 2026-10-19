@@ -6,7 +6,6 @@ import {
   ScrollArea,
   Title,
   Text,
-  Container,
   Code,
   List,
   Paper,
@@ -24,10 +23,15 @@ import {
   SimpleGrid,
   Card,
   Anchor,
-  Slider
+  Slider,
+  Kbd,
+  Tabs,
+  TableOfContents,
+  UnstyledButton,
+  Collapse
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { useState, useEffect, useMemo } from 'react';
+import { useDisclosure, useHotkeys } from '@mantine/hooks';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getReference, getFluids, check, solve, DEFAULT_STOP_CRITERIA, type UnitInfo, type ConstantInfo, type VariableResult } from './api';
 import { DOCS_CATALOG } from './docsCatalog';
 import Latex from './Latex';
@@ -67,7 +71,7 @@ import {
 function CopyButton({ code }: Readonly<{ code: string }>) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
-    navigator.clipboard.writeText(code);
+    void navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -75,7 +79,7 @@ function CopyButton({ code }: Readonly<{ code: string }>) {
     <Button
       size="xs"
       variant="light"
-      color={copied ? "green" : "blue"}
+      color={copied ? "green" : "teal"}
       onClick={handleCopy}
       style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}
     >
@@ -249,7 +253,7 @@ function UnitsReference() {
 
   useEffect(() => {
     let cancelled = false;
-    getReference()
+    void getReference()
       .then((ref) => {
         if (cancelled) return;
         setUnits(ref.units);
@@ -292,7 +296,7 @@ function UnitsReference() {
       {[...groups.entries()].map(([dimension, list]) => (
         <Paper key={dimension} withBorder p="sm">
           <Group gap="xs" mb="xs">
-            <Badge variant="light" color="blue">{dimension === '-' ? 'dimensionless' : dimension}</Badge>
+            <Badge variant="light" color="teal">{dimension === '-' ? 'dimensionless' : dimension}</Badge>
             <Text size="xs" c="dimmed">{list.length} unit{list.length === 1 ? '' : 's'}</Text>
           </Group>
           <Group gap={6}>
@@ -369,7 +373,7 @@ function FluidsReference() {
 
   useEffect(() => {
     let cancelled = false;
-    getFluids().then((f) => { if (!cancelled) setFluids(f); });
+    void getFluids().then((f) => { if (!cancelled) setFluids(f); });
     return () => { cancelled = true; };
   }, []);
 
@@ -383,7 +387,7 @@ function FluidsReference() {
       </Text>
       <FunctionTable rows={FLUID_PROPERTY_OUTPUTS} />
 
-      <Title order={4} c="blue.3" mt="sm">State input indicators</Title>
+      <Title order={4} c="teal.3" mt="sm">State input indicators</Title>
       <Table striped withTableBorder withColumnBorders>
         <Table.Thead>
           <Table.Tr><Table.Th style={{ width: '26%' }}>Key</Table.Th><Table.Th>Meaning</Table.Th></Table.Tr>
@@ -422,6 +426,19 @@ function FluidsReference() {
           ))}
         </Group>
       )}
+
+      <Title order={3} mt="md">Low-GWP Refrigerant Blends</Title>
+      <Text size="sm" c="dimmed">
+        <Code>R448A</Code>, <Code>R449A</Code>, <Code>R452A</Code>, <Code>R452B</Code>,{' '}
+        <Code>R454A</Code>, <Code>R454B</Code>, <Code>R454C</Code>, <Code>R455A</Code>,{' '}
+        <Code>R513A</Code> and <Code>R515B</Code> are real mixtures, computed with
+        CoolProp 8's mixture model and matching it to the last digit. Use{' '}
+        <Code>T</Code>/<Code>P</Code>, or <Code>x</Code> with <Code>T</Code> or{' '}
+        <Code>P</Code> across the temperature glide. Blends have no property
+        diagram. A blend's critical point comes from CoolProp's critical-curve
+        search, which finds a single point only for <Code>R454C</Code>; the
+        others refuse, exactly as in CoolProp.
+      </Text>
 
       <Title order={3} mt="md">Humid Air (AirH2O)</Title>
       <Text size="sm" c="dimmed">
@@ -464,7 +481,7 @@ function ConstantsReference() {
   const [constants, setConstants] = useState<ConstantInfo[] | null>(null);
   useEffect(() => {
     let cancelled = false;
-    getReference().then((ref) => { if (!cancelled) setConstants(ref.constants); });
+    void getReference().then((ref) => { if (!cancelled) setConstants(ref.constants); });
     return () => { cancelled = true; };
   }, []);
   const rows = constants ?? [];
@@ -558,18 +575,7 @@ const ALL_EXAMPLE_CATEGORY_NAMES: string[] = (() => {
 import {
   IconSearch,
   IconBook,
-  IconCalculator,
-  IconGrid3x3,
-  IconCode,
-  IconFlask,
-  IconAdjustments,
-  IconFileText,
-  IconRocket,
-  IconTool,
-  IconList,
-  IconWaveSine,
-  IconTopologyStar3,
-  IconServerCog,
+  IconCheck,
   IconChevronLeft,
   IconChevronRight,
   IconArrowRight
@@ -583,7 +589,6 @@ interface NavItem {
 }
 interface NavCategory {
   title: string;
-  icon: React.ReactNode;
   /** The overview/landing page id for this group (rendered as a card grid). */
   overview?: string;
   items: NavItem[];
@@ -592,7 +597,6 @@ interface NavCategory {
 const CATEGORIES: NavCategory[] = [
   {
     title: 'Get Started',
-    icon: <IconRocket size={16} />,
     overview: 'started',
     items: [
       { id: 'started', label: 'Get Started Overview', blurb: 'What frees is, and a map of this documentation.', keywords: ['intro', 'philosophy', 'overview', 'getting started', 'welcome'] },
@@ -608,7 +612,6 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'Language Fundamentals',
-    icon: <IconCalculator size={16} />,
     overview: 'lang-overview',
     items: [
       { id: 'lang-overview', label: 'Overview', blurb: 'The grammar, variables, units, and built-in functions of the frees language.', keywords: ['language', 'fundamentals', 'overview', 'grammar'] },
@@ -624,7 +627,6 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'Matrices & Linear Algebra',
-    icon: <IconGrid3x3 size={16} />,
     overview: 'matrix-overview',
     items: [
       { id: 'matrix-overview', label: 'Overview', blurb: 'Declare, operate on, and solve with matrices and vectors.', keywords: ['matrix', 'linear algebra', 'overview', 'vector'] },
@@ -636,12 +638,11 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'Programming & Tables',
-    icon: <IconCode size={16} />,
     overview: 'prog-overview',
     items: [
       { id: 'prog-overview', label: 'Overview', blurb: 'Reusable functions, submodels, and tabulated data.', keywords: ['programming', 'tables', 'overview', 'logic'] },
-      { id: 'functions', label: 'Custom Functions & Procedures', blurb: 'FUNCTION/PROCEDURE bodies with imperative control flow.', keywords: ['functions', 'procedures', 'call', 'custom', 'outputs', 'while', 'repeat', 'until', 'loop', 'if', 'then', 'else'] },
-      { id: 'modules', label: 'Modular Submodels (MODULE)', blurb: 'Encapsulate and reuse whole equation subsystems.', keywords: ['module', 'submodel', 'modular', 'call module'] },
+      { id: 'functions', label: 'Custom Functions', blurb: 'function bodies, multiple outputs, and IF / WHILE / REPEAT control flow.', keywords: ['functions', 'procedures', 'call', 'custom', 'outputs', 'while', 'repeat', 'until', 'loop', 'if', 'then', 'else'] },
+      { id: 'modules', label: 'Equation Submodels', blurb: 'Declarative function bodies solved simultaneously with the rest of the model.', keywords: ['module', 'submodel', 'modular', 'call module'] },
       { id: 'tables-code', label: 'Custom Tables (TABLE)', blurb: 'Inline tabulated data callable as a function.', keywords: ['table', 'interp', 'tabulated', 'custom tables', 'curve fit'] },
       { id: 'lookup-tables', label: 'Lookup Tables & Interpolation', blurb: 'Interpolate, differentiate, and look up tabulated columns.', keywords: ['lookup', 'interpolate', 'differentiate', 'table', 'interpolation', 'spline'] },
       { id: 'table-accessors', label: 'Table Accessors & Aggregates', blurb: 'Query Parametric tables and whole-table aggregates.', keywords: ['parametric', 'integral', 'run', 'tablevalue', 'tablerun#', 'nparametricruns', 'sum', 'avg', 'min', 'max', 'stddev', 'integralvalue'] },
@@ -649,7 +650,6 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'Fluids, Materials & Psychrometrics',
-    icon: <IconFlask size={16} />,
     overview: 'fluids-overview',
     items: [
       { id: 'fluids-overview', label: 'Overview', blurb: 'Real-fluid, ideal-gas, humid-air, and solid-material property data.', keywords: ['fluids', 'materials', 'overview', 'properties'] },
@@ -662,7 +662,6 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'Solving & Optimization',
-    icon: <IconAdjustments size={16} />,
     overview: 'solving-overview',
     items: [
       { id: 'solving-overview', label: 'Overview', blurb: 'How frees solves, what to do when it doesn\'t, and the system-level analyses on top.', keywords: ['solving', 'optimization', 'overview', 'solver'] },
@@ -675,7 +674,6 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'Dynamic Systems & Control',
-    icon: <IconWaveSine size={16} />,
     overview: 'dynamics-overview',
     items: [
       { id: 'dynamics-overview', label: 'Overview', blurb: 'Transient integration, linearization, and the control-design suite.', keywords: ['dynamics', 'control', 'overview', 'transient'] },
@@ -686,17 +684,16 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'System Modeling with Components',
-    icon: <IconTopologyStar3 size={16} />,
     overview: 'components-overview',
     items: [
-      { id: 'components-overview', label: 'Overview', blurb: 'Acausal, multi-domain system modeling with a ~295-component library.', keywords: ['components', 'system modeling', 'overview', 'acausal', 'network', 'bond graph'] },
+      { id: 'components-overview', label: 'Overview', blurb: 'Acausal, multi-domain system modeling with a 312-component library.', keywords: ['components', 'system modeling', 'overview', 'acausal', 'network', 'bond graph'] },
       { id: 'comp-first-network', label: 'Your First Component Network', blurb: 'Instantiate, connect, probe — a pipe run solved as a network.', keywords: ['component', 'network', 'instantiate', 'first', 'source', 'pipe', 'sink', 'probe', 'port'] },
       { id: 'comp-connections', label: 'Connections & Junctions', blurb: 'connect statements vs shared streams; junction rules and boundary conditions.', keywords: ['connect', 'junction', 'node', 'stream', 'shared name', 'branch', 'split', 'mixer', 'boundary condition'] },
       { id: 'comp-schematic', label: 'Reading the Schematic', blurb: 'The auto-drawn circuit: per-fluid lines, symbols, and results on hover.', keywords: ['schematic', 'diagram', 'drawing', 'circuit', 'canvas', 'visualise', 'visualize', 'draw', 'symbol', 'band', 'legend', 'hover', 'drag', 'zoom', 'pan', 'export svg', 'svg', 'layout', 'topology'] },
       { id: 'comp-domains', label: 'Domains & Fluid Families', blurb: 'Fluid, heat, electrical, mechanical — and the guarded fluid families.', keywords: ['domain', 'fluid', 'heat', 'electrical', 'mechanical', 'signal', 'sig', 'command', 'probe', 'moistair', 'gas', 'oil', 'liquid', 'twophase', 'domain$', 'across', 'through', 'transducer', 'humid air'] },
       { id: 'comp-library', label: 'The Component Library', blurb: 'A map of the thirteen domain libraries and their conventions.', keywords: ['library', 'components', 'catalog', 'signal', 'fluid', 'liquid', 'twophase', 'moistair', 'pneumatic', 'hydraulic', 'electrical', 'mechanical', 'powertrain', 'heat'] },
       { id: 'comp-variants', label: 'Fidelity Variants (model$)', blurb: 'One component, many models — select physics fidelity per instance.', keywords: ['variant', 'model$', 'fidelity', 'require', 'isentropic', 'volumetric', 'map'] },
-      { id: 'comp-authoring', label: 'Writing Your Own Component', blurb: 'COMPONENT blocks: ports, PARAM, outputs, and VARIANT bodies.', keywords: ['component', 'custom', 'authoring', 'param', 'ports', 'variant', 'require', 'outputs'] },
+      { id: 'comp-authoring', label: 'Writing Your Own Component', blurb: 'function [ports] = Name(params): ports, outputs, and VARIANT bodies.', keywords: ['component', 'custom', 'authoring', 'param', 'ports', 'variant', 'require', 'outputs'] },
       { id: 'comp-transient', label: 'Steady ↔ Transient Networks', blurb: 'Storage components carry the states; one wiring, both analyses.', keywords: ['transient', 'steady', 'storage', 'thermalmass', 'inertia', 'capacitor', 'accumulator', 'soc', 'ida', 'dae', 'ramp', 'time', 'sigstep', 'sigramp', 'drive cycle'] },
       { id: 'comp-linearize', label: 'From Plant to Controller (LINEARIZE)', blurb: 'Extract (A,B,C,D) from a transient network and design the loop.', keywords: ['linearize', 'state space', 'plant', 'abcd', 'input', 'output', 'lqr', 'controller'] },
       { id: 'comp-cycle-plots', label: 'Cycle Plots & Diagnostics', blurb: 'Source-mapped diagnostics and cycle overlays on property charts.', keywords: ['cycle', 'overlay', 'property plot', 'diagnostics', 'source-mapped'] },
@@ -706,7 +703,6 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'Tools & Workflow',
-    icon: <IconTool size={16} />,
     overview: 'tools-overview',
     items: [
       { id: 'tools-overview', label: 'Overview', blurb: 'The interactive console, shortcuts, notes, and data-capture tools.', keywords: ['tools', 'workflow', 'overview'] },
@@ -719,7 +715,6 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'Examples & Tutorials',
-    icon: <IconFileText size={16} />,
     items: [
       { id: 'journey-scalar', label: 'Journey 1: Scalar with units', blurb: 'Solve one equation, read SI, recover a missing unit.', keywords: ['journey', 'units', 'first solve', 'kpa', 'temperature'] },
       { id: 'journey-chain', label: 'Journey 2: Component chain', blurb: 'Source–pipe–sink with connect, then recover a missing boundary.', keywords: ['journey', 'connect', 'pipe', 'source', 'sink', 'boundary'] },
@@ -735,20 +730,18 @@ const CATEGORIES: NavCategory[] = [
   },
   {
     title: 'Architecture & Deployment',
-    icon: <IconServerCog size={16} />,
     overview: 'deploy-overview',
     items: [
-      { id: 'deploy-overview', label: 'Overview', blurb: 'The async compute model, the REST API, and both deployment paths.', keywords: ['architecture', 'deployment', 'overview', 'server'] },
-      { id: 'arch-async', label: 'How a Solve Runs', blurb: 'Editor → API → queue → compute → job store, and why it\'s asynchronous.', keywords: ['async', 'asynchronous', 'architecture', 'rabbitmq', 'redis', 'queue', 'job', 'jobid', '202', 'poll', 'compute', 'check'] },
-      { id: 'arch-api', label: 'The REST API', blurb: 'Drive frees from scripts: check, solve, poll, REPL, and optimization endpoints.', keywords: ['api', 'rest', 'http', 'curl', 'endpoint', 'solve', 'check', 'jobs', 'integration', 'script'] },
-      { id: 'deploy-docker', label: 'Run Locally with Docker', blurb: 'frees.sh, the compose topology, and host-side development.', keywords: ['docker', 'compose', 'local', 'frees.sh', 'install', 'run', 'container', 'localhost'] },
-      { id: 'deploy-railway', label: 'Deploy to Railway', blurb: 'The five-service layout and the production configuration that must stay.', keywords: ['railway', 'deploy', 'production', 'cloud', 'nginx', 'private network', 'commit', 'about'] },
-      { id: 'deploy-health', label: 'Health & Scaling', blurb: 'The topology health endpoint, compute replicas, and the poison-message guard.', keywords: ['health', 'scaling', 'monitoring', 'replicas', 'workers', 'poison', 'redelivered', '503', 'degraded'] },
+      { id: 'deploy-overview', label: 'Overview', blurb: 'The in-browser engine, the headless CLI, and static deployment.', keywords: ['architecture', 'deployment', 'overview', 'wasm', 'webassembly', 'offline'] },
+      { id: 'arch-async', label: 'How a Solve Runs', blurb: 'Editor → Web Worker → WebAssembly engine → results, all inside the browser tab.', keywords: ['async', 'architecture', 'web worker', 'worker pool', 'wasm', 'webassembly', 'offline', 'compute', 'check'] },
+      { id: 'arch-api', label: 'Worker & CLI Interface', blurb: 'Drive frees from scripts with frees-cli and the JSON request/response envelope.', keywords: ['api', 'cli', 'frees-cli', 'json', 'request', 'response', 'solve', 'check', 'integration', 'script'] },
+      { id: 'deploy-docker', label: 'Local Development', blurb: 'Build the WebAssembly engine, run the Vite dev server, and run the test suites.', keywords: ['local', 'development', 'install', 'run', 'wasm-pack', 'vite', 'npm', 'localhost', 'tests'] },
+      { id: 'deploy-railway', label: 'Static Deployment', blurb: 'Build the production bundle and host it on any static web server.', keywords: ['deploy', 'production', 'static', 'hosting', 'build', 'pwa', 'cdn'] },
+      { id: 'deploy-health', label: 'Worker Lifecycle & Deadlines', blurb: 'Worker pool limits, cooperative deadlines, and memory and bundle budgets.', keywords: ['workers', 'worker pool', 'deadline', 'timeout', 'memory', 'bundle', 'budget', 'stop'] },
     ]
   },
   {
     title: 'Reference',
-    icon: <IconList size={16} />,
     overview: 'ref-index',
     items: [
       { id: 'ref-index', label: 'A–Z Function Index', blurb: 'Every documented symbol, alphabetically, linking to its reference page.', keywords: ['index', 'a-z', 'alphabetical', 'all functions', 'reference', 'list'] },
@@ -829,6 +822,11 @@ function renderInlineContent(text: string): React.ReactNode[] {
     i = nextIdx;
   }
   return result;
+}
+
+// A line that continues a paragraph: not blank and not the start of any other block.
+function isProseLine(t: string): boolean {
+  return t !== '' && !/^(\d+\.\s|```|\$\$|\||- |\* |>|#|\[(Diagram|Component|Run|Related):|<!--)/.test(t);
 }
 
 interface MarkdownRendererProps {
@@ -1036,11 +1034,14 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
       
       if (titleText) {
         const key = `heading-${i}`;
-        // H2 (rendered order 3) gets an anchor id so the "On this page" TOC can scroll to it.
-        const anchorId = order === 3 ? slugify(plainText(titleText)) : undefined;
+        // ## and ### get anchor ids: the "On this page" rail lists and scrolls to them.
+        const anchorId = order === 2 ? undefined : slugify(plainText(titleText));
         elements.push(
-          <Title key={key} id={anchorId} order={order} mt={order === 2 ? 'md' : 'sm'} mb="xs" c="blue.4"
-            style={anchorId ? { scrollMarginTop: '76px' } : undefined}>
+          <Title key={key} id={anchorId} order={order} mt={order === 4 ? 'sm' : 'lg'} mb="xs"
+            style={{
+              scrollMarginTop: '112px',
+              ...(order === 3 && { paddingBottom: 6, borderBottom: '1px solid var(--mantine-color-default-border)' }),
+            }}>
             {renderInlineContent(titleText)}
           </Title>
         );
@@ -1121,7 +1122,7 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
                   key={id}
                   component="a"
                   variant="light"
-                  color="blue"
+                  color="teal"
                   size="lg"
                   style={{ cursor: onNavigate ? 'pointer' : 'default', textTransform: 'none' }}
                   rightSection={<IconArrowRight size={12} />}
@@ -1138,116 +1139,242 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
       continue;
     }
 
-    // 7. Regular Paragraph or spacer
-    if (trimmed === '') {
-      elements.push(<div key={`spacer-${i}`} style={{ height: '0.8em' }} />);
-    } else {
-      elements.push(
-        <Text key={`p-${i}`} size="md" style={{ lineHeight: 1.6 }} mb="sm">
-          {renderInlineContent(line)}
-        </Text>
-      );
+    // 7. Regular Paragraph or spacer. HTML comments (the verified-example
+    // markers the docs gate reads) are authoring metadata, not prose.
+    if (trimmed.startsWith('<!--') && trimmed.endsWith('-->')) {
+      i++;
+      continue;
     }
+    if (trimmed === '') {
+      i++;
+      continue;
+    }
+    // Consecutive prose lines are one hard-wrapped paragraph.
+    const para = [trimmed];
     i++;
+    while (i < lines.length && isProseLine(lines[i].trim())) {
+      para.push(lines[i].trim());
+      i++;
+    }
+    elements.push(
+      <Text key={`p-${i}`} size="md" style={{ lineHeight: 1.6 }} mb="sm">
+        {renderInlineContent(para.join(' '))}
+      </Text>
+    );
   }
   
   return <>{elements}</>;
 }
 
-// Reference pages grouped by category, for the "Function Reference" nav.
-const REFERENCE_BY_CATEGORY: [string, ReferencePage[]][] = (() => {
+// Reference pages grouped by category (alphabetical within each): the
+// refcat: landing pages, the sibling nav of a reference page, and the home grid.
+const REFERENCE_BY_CATEGORY: Map<string, ReferencePage[]> = (() => {
   const map = new Map<string, ReferencePage[]>();
   for (const p of REFERENCE_PAGES) {
     if (!map.has(p.category)) map.set(p.category, []);
     map.get(p.category)!.push(p);
   }
-  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  for (const pages of map.values()) pages.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  return new Map([...map.entries()].sort((a, b) => a[0].localeCompare(b[0])));
 })();
 const REFERENCE_BY_SLUG = new Map(REFERENCE_PAGES.map((p) => [p.slug, p]));
 
-// Nav categories generated from the compiled reference pages, one per category.
-const REFERENCE_NAV_CATEGORIES = REFERENCE_BY_CATEGORY.map(([cat, pages]) => ({
+// Search narrows the nav to hits across the guides and every reference page.
+const REFERENCE_NAV_CATEGORIES: NavCategory[] = [...REFERENCE_BY_CATEGORY].map(([cat, pages]) => ({
   title: 'Reference · ' + cat,
-  icon: <IconBook size={16} />,
   items: pages.map((p) => ({
     id: 'refpage:' + p.slug,
     label: p.name,
     keywords: [p.name.toLowerCase(), cat.toLowerCase(), ...p.tags, ...p.related.map((r) => r.toLowerCase())],
   })),
 }));
-
-// Base nav: the hand-authored guides + the generated reference pages.
 const ALL_CATEGORIES = [...CATEGORIES, ...REFERENCE_NAV_CATEGORIES];
 
-// Renders a single reference page: frontmatter header + body +
-// references footer, with markdown/KaTeX/[Run:] handled by MarkdownRenderer.
-function ReferencePageView({ page, onNavigate, onNavigateTopic }: Readonly<{ page: ReferencePage; onNavigate: (slug: string) => void; onNavigateTopic?: (id: string) => void }>) {
+const HOME = 'home';
+const REFPAGE = 'refpage:';
+const REFCAT = 'refcat:';
+
+// Guide topic id → the nav category it belongs to (breadcrumbs, scope tabs).
+const CATEGORY_OF_TOPIC = new Map<string, NavCategory>();
+for (const cat of CATEGORIES) for (const it of cat.items) CATEGORY_OF_TOPIC.set(it.id, cat);
+
+const isComponentCategory = (category: string) => category.startsWith('Component');
+
+function pageFamily(page: ReferencePage): string {
+  if (isComponentCategory(page.category)) return 'Component';
+  if (page.category === 'Language Keywords') return 'Keyword';
+  if (page.category.startsWith('Cookbook')) return 'Guide';
+  return 'Function';
+}
+
+const SCOPE_TABS = [
+  { value: 'docs', label: 'Documentation', target: HOME },
+  { value: 'examples', label: 'Examples', target: 'examples' },
+  { value: 'functions', label: 'Functions', target: 'ref-index' },
+  { value: 'components', label: 'Components', target: 'components-overview' },
+  { value: 'tutorials', label: 'Tutorials', target: 'journey-scalar' },
+];
+
+function refCategoryOf(active: string): string | undefined {
+  if (active.startsWith(REFPAGE)) return REFERENCE_BY_SLUG.get(active.slice(REFPAGE.length))?.category;
+  if (active.startsWith(REFCAT)) return active.slice(REFCAT.length);
+  return undefined;
+}
+
+function scopeOf(active: string): string {
+  if (active === 'examples') return 'examples';
+  const refCategory = refCategoryOf(active);
+  if (refCategory !== undefined) return isComponentCategory(refCategory) ? 'components' : 'functions';
+  if (active === 'ref-index') return 'functions';
+  const cat = CATEGORY_OF_TOPIC.get(active)?.title;
+  if (cat === 'System Modeling with Components') return 'components';
+  if (cat === 'Examples & Tutorials') return 'tutorials';
+  return 'docs';
+}
+
+interface Crumb { label: string; id?: string }
+
+function trailOf(active: string): Crumb[] {
+  const home: Crumb = { label: 'Documentation Home', id: HOME };
+  if (active === HOME) return [{ label: home.label }];
+  const index: Crumb = { label: 'Function Index', id: 'ref-index' };
+  if (active.startsWith(REFPAGE)) {
+    const page = REFERENCE_BY_SLUG.get(active.slice(REFPAGE.length));
+    return page ? [home, index, { label: page.category, id: REFCAT + page.category }, { label: page.name }] : [home];
+  }
+  if (active.startsWith(REFCAT)) return [home, index, { label: active.slice(REFCAT.length) }];
+  const cat = CATEGORY_OF_TOPIC.get(active);
+  if (!cat) return [home];
+  if (cat.overview === active) return [home, { label: cat.title }];
+  return [home, { label: cat.title, id: cat.overview }, { label: NAV_LABELS[active] }];
+}
+
+// Markdown whose ##/### headings feed the "On this page" rail, if the page has one.
+function tocMarkdown(active: string): string | undefined {
+  if (active.startsWith(REFPAGE)) return REFERENCE_BY_SLUG.get(active.slice(REFPAGE.length))?.body;
+  if (CATEGORY_BY_OVERVIEW.has(active)) return undefined;
+  return DOCS_CATALOG[active];
+}
+
+function headingCount(markdown: string): number {
+  let inCode = false;
+  let count = 0;
+  for (const raw of markdown.split('\n')) {
+    const t = raw.trim();
+    if (t.startsWith('```')) inCode = !inCode;
+    else if (!inCode && (t.startsWith('## ') || t.startsWith('### '))) count++;
+  }
+  return count;
+}
+
+function Breadcrumbs({ trail, onNavigate }: Readonly<{ trail: Crumb[]; onNavigate: (id: string) => void }>) {
   return (
-    <Stack gap="sm">
-      <Group justify="space-between" align="flex-start">
-        <Title order={2} c="blue.4" style={{ fontFamily: page.category.startsWith('Cookbook') ? undefined : 'monospace' }}>{page.name}</Title>
-        <Badge color="grape" variant="light" size="lg">{page.category}</Badge>
-      </Group>
-      {page.summary && <Text size="md" c="dimmed">{page.summary}</Text>}
-      {page.tags.length > 0 && (
-        <Group gap="xs">
-          {page.tags.map((t) => <Badge key={t} color="gray" variant="outline" size="sm">{t}</Badge>)}
+    <Group gap={6} mb="md" wrap="wrap">
+      {trail.map((c, idx) => (
+        <Group key={c.label} gap={6} wrap="nowrap">
+          {c.id
+            ? <Anchor size="sm" c="teal.4" onClick={() => onNavigate(c.id!)}>{c.label}</Anchor>
+            : <Text size="sm" c="dimmed">{c.label}</Text>}
+          {idx < trail.length - 1 && <Text size="sm" c="dimmed">›</Text>}
         </Group>
-      )}
-      <Divider my="xs" />
-      <MarkdownRenderer content={page.body} />
-      {page.related.length > 0 && (
-        <Group gap="xs" mt="sm">
-          <Text size="sm" fw={600} c="dimmed">See also:</Text>
-          {page.related.map((r) => {
-            const target = REFERENCE_BY_SLUG.get(r.toLowerCase());
-            return target
-              ? <Badge key={r} component="a" style={{ cursor: 'pointer' }} color="blue" variant="light"
-                  onClick={() => onNavigate(target.slug)}>{r}</Badge>
-              : <Badge key={r} color="gray" variant="light">{r}</Badge>;
-          })}
-        </Group>
-      )}
-      {onNavigateTopic && page.guides.filter((g) => NAV_LABELS[g]).length > 0 && (
-        <Group gap="xs" mt="xs">
-          <Text size="sm" fw={600} c="dimmed">In the guides:</Text>
-          {page.guides.filter((g) => NAV_LABELS[g]).map((g) => (
-            <Badge key={g} component="a" style={{ cursor: 'pointer', textTransform: 'none' }} color="teal" variant="light"
-              onClick={() => onNavigateTopic(g)}>{NAV_LABELS[g]}</Badge>
-          ))}
-        </Group>
-      )}
-    </Stack>
+      ))}
+    </Group>
   );
 }
 
-// "On this page" mini-TOC built from the H2 (`##`) headings of a markdown doc.
-function OnThisPage({ content }: Readonly<{ content: string }>) {
-  const headings: string[] = [];
-  let inCode = false;
-  for (const raw of content.split('\n')) {
-    const t = raw.trim();
-    if (t.startsWith('```')) { inCode = !inCode; continue; }
-    if (!inCode && t.startsWith('## ') && !t.startsWith('### ')) headings.push(plainText(t.substring(3)));
-  }
-  if (headings.length < 2) return null;
+// "Functions | Topics | Examples" link rows closing a reference page.
+function SeeAlsoRow({ label, children }: Readonly<{ label: string; children: React.ReactNode[] }>) {
+  if (children.length === 0) return null;
   return (
-    <Paper withBorder p="sm" mb="lg" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-9))">
-      <Text size="xs" fw={700} c="dimmed" mb={6} style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-        On this page
-      </Text>
-      <Stack gap={2}>
-        {headings.map((h) => (
-          <Anchor key={h} size="sm" c="blue.4" href={`#${slugify(h)}`}
-            onClick={(e) => {
-              e.preventDefault();
-              document.getElementById(slugify(h))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}>
-            {h}
-          </Anchor>
-        ))}
-      </Stack>
-    </Paper>
+    <Group gap={8} align="baseline" wrap="wrap">
+      <Text size="sm" fw={700} w={84}>{label}</Text>
+      {children.flatMap((child, idx) => (idx ? [<Text key={`sep-${String((child as React.ReactElement).key)}`} size="sm" c="dimmed">|</Text>, child] : [child]))}
+    </Group>
+  );
+}
+
+// A reference page's `###` entries (examples, arguments, model variants) fold
+// open and shut; examples start open, the rest closed.
+interface BodySegment { text: string; title?: string; open?: boolean }
+
+function foldSubsections(body: string): BodySegment[] {
+  const segments: BodySegment[] = [{ text: '' }];
+  let inCode = false;
+  let section = '';
+  for (const line of body.split('\n')) {
+    const t = line.trim();
+    if (t.startsWith('```')) inCode = !inCode;
+    if (!inCode && t.startsWith('## ')) {
+      section = t.slice(3);
+      segments.push({ text: '' });
+    } else if (!inCode && t.startsWith('### ')) {
+      segments.push({ text: '', title: t.slice(4), open: section === 'Examples' });
+      continue;
+    }
+    segments[segments.length - 1].text += line + '\n';
+  }
+  return segments;
+}
+
+function FoldSection({ title, open, children }: Readonly<{ title: string; open: boolean; children: React.ReactNode }>) {
+  const [expanded, { toggle }] = useDisclosure(open);
+  return (
+    <Box mb="sm" style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 6 }}>
+      <UnstyledButton onClick={toggle} aria-expanded={expanded} w="100%" px="sm" py={8}>
+        <Group gap={8} wrap="nowrap">
+          <IconChevronRight size={16} style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : undefined, transition: 'transform 150ms' }} />
+          <Title order={4} fz="md" id={slugify(plainText(title))} style={{ scrollMarginTop: '112px' }}>
+            {renderInlineContent(title)}
+          </Title>
+        </Group>
+      </UnstyledButton>
+      <Collapse expanded={expanded}>
+        <Box px="md" pb="xs">{children}</Box>
+      </Collapse>
+    </Box>
+  );
+}
+
+function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage; onNavigate: (id: string) => void }>) {
+  const verified = page.body.includes('verified-reference-example');
+  const mono = pageFamily(page) === 'Guide' ? undefined : 'monospace';
+  const functions = page.related.map((r) => {
+    const target = REFERENCE_BY_SLUG.get(r.toLowerCase());
+    return target
+      ? <Anchor key={r} size="sm" ff="monospace" c="teal.4" onClick={() => onNavigate(REFPAGE + target.slug)}>{r}</Anchor>
+      : <Text key={r} size="sm" ff="monospace">{r}</Text>;
+  });
+  const topics = page.guides.filter((g) => NAV_LABELS[g]).map((g) => (
+    <Anchor key={g} size="sm" c="teal.4" onClick={() => onNavigate(g)}>{NAV_LABELS[g]}</Anchor>
+  ));
+  const examples = page.examples.map((id) => (
+    <Anchor key={id} size="sm" ff="monospace" c="teal.4" onClick={() => onNavigate('examples')}>{id}</Anchor>
+  ));
+  return (
+    <Stack gap="sm">
+      <Group gap="sm" align="center">
+        <Title order={1} fz={30} ff={mono}>{page.name}</Title>
+        <Badge variant="outline" color="gray" tt="none">{pageFamily(page)}</Badge>
+        {verified && <Badge variant="light" color="teal" tt="none" leftSection={<IconCheck size={12} />}>Verified example</Badge>}
+      </Group>
+      {page.summary && <Text size="lg" c="dimmed">{page.summary}</Text>}
+      {foldSubsections(page.body).map((seg, idx) => (seg.title === undefined
+        ? <MarkdownRenderer key={idx} content={seg.text} onNavigate={onNavigate} />
+        : <FoldSection key={idx} title={seg.title} open={seg.open!}><MarkdownRenderer content={seg.text} onNavigate={onNavigate} /></FoldSection>))}
+      {functions.length + topics.length + examples.length > 0 && (
+        <>
+          <Title id="see-also" order={3} mt="lg" mb="xs"
+            style={{ scrollMarginTop: '112px', paddingBottom: 6, borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+            See Also
+          </Title>
+          <Stack gap={6}>
+            <SeeAlsoRow label={isComponentCategory(page.category) ? 'Related' : 'Functions'}>{functions}</SeeAlsoRow>
+            <SeeAlsoRow label="Topics">{topics}</SeeAlsoRow>
+            <SeeAlsoRow label="Examples">{examples}</SeeAlsoRow>
+          </Stack>
+        </>
+      )}
+    </Stack>
   );
 }
 
@@ -1269,33 +1396,97 @@ function PrevNext({ active, onNavigate }: Readonly<{ active: string; onNavigate:
   );
 }
 
+function LandingCard({ title, blurb, meta, onClick }: Readonly<{ title: string; blurb?: string; meta?: string; onClick: () => void }>) {
+  return (
+    <Card withBorder padding="md" radius="md" style={{ cursor: 'pointer', height: '100%' }} onClick={onClick} className="doc-landing-card">
+      <Text fw={600} size="lg" c="teal.4">{title}</Text>
+      {blurb && <Text size="sm" mt={4}>{blurb}</Text>}
+      {meta && <Text size="xs" c="dimmed" mt={6}>{meta}</Text>}
+    </Card>
+  );
+}
+
 // Category landing page: optional intro markdown + a card grid of the group's pages.
 function CategoryLanding({ category, intro, onNavigate }: Readonly<{ category: NavCategory; intro?: string; onNavigate: (id: string) => void }>) {
   const cards = category.items.filter((it) => it.id !== category.overview);
   return (
     <Stack gap="md">
-      <Title order={2} c="blue.4">{category.title}</Title>
+      <Title order={1} fz={30}>{category.title}</Title>
       {intro && <MarkdownRenderer content={intro} onNavigate={onNavigate} />}
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mt="xs">
-        {cards.map((it) => (
-          <Card key={it.id} withBorder padding="md" radius="md"
-            style={{ cursor: 'pointer', height: '100%' }}
-            onClick={() => onNavigate(it.id)}
-            className="doc-landing-card">
-            <Group justify="space-between" wrap="nowrap" align="flex-start">
-              <Text fw={600} c="blue.4">{it.label}</Text>
-              <IconArrowRight size={16} style={{ flexShrink: 0, opacity: 0.5 }} />
-            </Group>
-            {it.blurb && <Text size="sm" c="dimmed" mt={4}>{it.blurb}</Text>}
-          </Card>
+        {cards.map((it) => <LandingCard key={it.id} title={it.label} blurb={it.blurb} onClick={() => onNavigate(it.id)} />)}
+      </SimpleGrid>
+    </Stack>
+  );
+}
+
+// Documentation Home: one card per guide category, then the reference families.
+function DocsHome({ onNavigate }: Readonly<{ onNavigate: (id: string) => void }>) {
+  return (
+    <Stack gap="md">
+      <Group justify="space-between" align="center">
+        <Group gap="sm" align="center">
+          <Title order={1} fz={34}>frees</Title>
+          <Badge variant="outline" color="gray" tt="none">{VERSION_LABEL}</Badge>
+        </Group>
+        <Anchor size="sm" c="teal.4" onClick={() => onNavigate('ref-index')}>Function Index ({REFERENCE_PAGES.length})</Anchor>
+      </Group>
+      <Text size="lg">
+        frees is a declarative equation-solving environment for engineering. Write the equations as they appear in a
+        textbook — algebraic, matrix, or differential — and frees works out what is unknown, in what order to solve it,
+        and with what uncertainty. Real-fluid properties, an acausal component library, and dynamic simulation all run
+        in your browser.
+      </Text>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+        {CATEGORIES.map((cat) => {
+          const first = cat.overview ?? cat.items[0].id;
+          const topics = cat.items.filter((it) => it.id !== cat.overview).length;
+          return (
+            <LandingCard key={cat.title} title={cat.title} blurb={NAV_BLURBS[first]}
+              meta={`${topics} ${topics === 1 ? 'topic' : 'topics'}`} onClick={() => onNavigate(first)} />
+          );
+        })}
+      </SimpleGrid>
+      <Title order={3} mt="lg" pb={6} style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
+        Reference by category
+      </Title>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing={6}>
+        {[...REFERENCE_BY_CATEGORY].map(([cat, pages]) => (
+          <Group key={cat} gap={6} wrap="nowrap">
+            <Anchor size="sm" c="teal.4" onClick={() => onNavigate(REFCAT + cat)}>{cat}</Anchor>
+            <Text size="xs" c="dimmed">{pages.length}</Text>
+          </Group>
         ))}
       </SimpleGrid>
     </Stack>
   );
 }
 
+// One reference category: every symbol with its one-line summary (MathWorks-style category page).
+function ReferenceCategory({ category, onNavigate }: Readonly<{ category: string; onNavigate: (id: string) => void }>) {
+  const pages = REFERENCE_BY_CATEGORY.get(category) ?? [];
+  return (
+    <Stack gap="md">
+      <Title order={1} fz={30}>{category}</Title>
+      <Text c="dimmed">{pages.length} reference {pages.length === 1 ? 'page' : 'pages'}</Text>
+      <Table verticalSpacing="xs" highlightOnHover>
+        <Table.Tbody>
+          {pages.map((p) => (
+            <Table.Tr key={p.slug}>
+              <Table.Td style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+                <Anchor ff="monospace" size="sm" c="teal.4" onClick={() => onNavigate(REFPAGE + p.slug)}>{p.name}</Anchor>
+              </Table.Td>
+              <Table.Td><Text size="sm">{p.summary}</Text></Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    </Stack>
+  );
+}
+
 // Alphabetical A–Z index of every per-symbol reference page (the single source of
-// truth for the function surface). Replaces the old hand-maintained tables.
+// truth for the function surface), with the categories as a second way in.
 function ReferenceIndex({ onNavigate }: Readonly<{ onNavigate: (id: string) => void }>) {
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
@@ -1311,12 +1502,18 @@ function ReferenceIndex({ onNavigate }: Readonly<{ onNavigate: (id: string) => v
   }
   return (
     <Stack gap="md">
-      <Title order={2} c="blue.4">A–Z Function Index</Title>
+      <Title order={1} fz={30}>A–Z Function Index</Title>
       <Text size="sm" c="dimmed">
-        Every documented function, procedure, block, and component — the canonical
+        Every documented function, block, keyword, and component — the canonical
         reference for each symbol. Click a name for its full page (syntax,
-        arguments, examples, errors).
+        arguments, examples, errors), or browse a category.
       </Text>
+      <Group gap={6}>
+        {[...REFERENCE_BY_CATEGORY.keys()].map((cat) => (
+          <Badge key={cat} variant="light" color="gray" tt="none" style={{ cursor: 'pointer' }}
+            onClick={() => onNavigate(REFCAT + cat)}>{cat}</Badge>
+        ))}
+      </Group>
       <TextInput
         placeholder="Filter by name, summary, or tag (e.g. enthalpy, bode, matrix)"
         value={query}
@@ -1327,11 +1524,10 @@ function ReferenceIndex({ onNavigate }: Readonly<{ onNavigate: (id: string) => v
       />
       {[...groups.entries()].map(([letter, list]) => (
         <Box key={letter}>
-          <Title order={3} c="blue.3" mb="xs">{letter}</Title>
+          <Title order={3} mb="xs">{letter}</Title>
           <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing={6}>
             {list.map((p) => (
-              <Anchor key={p.slug} size="sm" style={{ fontFamily: 'monospace' }}
-                onClick={() => onNavigate('refpage:' + p.slug)}>
+              <Anchor key={p.slug} size="sm" ff="monospace" c="teal.4" onClick={() => onNavigate(REFPAGE + p.slug)}>
                 {p.name}
               </Anchor>
             ))}
@@ -1343,17 +1539,29 @@ function ReferenceIndex({ onNavigate }: Readonly<{ onNavigate: (id: string) => v
   );
 }
 
-// A location.hash value that names a real portal page (guide topic, special
-// page, or refpage:slug). In-page heading anchors from the "On this page" TOC
-// are NOT topics — they must be ignored by the hash router, not navigated.
+// A location.hash value that names a real portal page (home, guide topic,
+// special page, refpage:slug or refcat:category). In-page heading anchors from
+// the "On this page" rail are NOT topics — the hash router must ignore them.
 function knownTopicId(id: string): boolean {
   if (!id) return false;
-  if (id.startsWith('refpage:')) return REFERENCE_BY_SLUG.has(id.slice('refpage:'.length));
+  if (id.startsWith(REFPAGE)) return REFERENCE_BY_SLUG.has(id.slice(REFPAGE.length));
+  if (id.startsWith(REFCAT)) return REFERENCE_BY_CATEGORY.has(id.slice(REFCAT.length));
   if (Object.hasOwn(DOCS_CATALOG, id)) return true;
-  return id === 'examples' || id === 'ref-index' || id === 'ref-units' || id === 'ref-fluids';
+  return id === HOME || id === 'examples' || id === 'ref-index' || id === 'ref-units' || id === 'ref-fluids';
 }
 
 const hashTopic = () => decodeURIComponent(globalThis.location.hash.slice(1));
+
+function NavGroup({ title, children }: Readonly<{ title: string; children: React.ReactNode }>) {
+  return (
+    <div>
+      <Text size="xs" fw={700} c="dimmed" px="xs" mb={6} style={{ letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+        {title}
+      </Text>
+      {children}
+    </div>
+  );
+}
 
 export default function HelpPage() {
   const [opened, { toggle }] = useDisclosure();
@@ -1361,9 +1569,12 @@ export default function HelpPage() {
   // active page mirrors location.hash so doc URLs are shareable and the app's
   // error/help links can target a specific page. Unknown hashes are left to
   // the browser (they are in-page heading anchors).
-  const [active, setActive] = useState(() => (knownTopicId(hashTopic()) ? hashTopic() : 'started'));
+  const [active, setActive] = useState(() => (knownTopicId(hashTopic()) ? hashTopic() : HOME));
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const reinitializeToc = useRef<() => void>(() => {});
+  useHotkeys([['/', () => searchRef.current?.focus()]]);
 
   useEffect(() => {
     const onHash = () => {
@@ -1373,6 +1584,8 @@ export default function HelpPage() {
     globalThis.addEventListener('hashchange', onHash);
     return () => globalThis.removeEventListener('hashchange', onHash);
   }, []);
+  // The rail re-reads the headings of each newly rendered page.
+  useEffect(() => reinitializeToc.current(), [active]);
   // Examples-gallery facets: free-text filter + a single active category chip.
   const [exampleFilter, setExampleFilter] = useState('');
   const [exampleCat, setExampleCat] = useState<string | null>(null);
@@ -1389,39 +1602,44 @@ export default function HelpPage() {
 
   // Search facet: restrict results to one kind of page (guide/reference/…).
   const [searchKind, setSearchKind] = useState<SearchKind | null>(null);
+  // On a reference page or category, search starts scoped to that category;
+  // dismissing the chip widens it to everything until the next navigation.
+  const [scopeDismissed, setScopeDismissed] = useState(false);
+  const refCategory = refCategoryOf(active);
+  const scope = scopeDismissed ? undefined : refCategory;
+  const scopeIds = useMemo(
+    () => (scope === undefined ? undefined : new Set((REFERENCE_BY_CATEGORY.get(scope) ?? []).map((p) => REFPAGE + p.slug))),
+    [scope]
+  );
 
   // Intelligent full-text search across all docs, catalogs, and examples.
   const searchResults = useMemo<SearchHit[]>(
-    () => (searchQuery.trim().length >= 2 ? searchDocs(searchQuery, 12, searchKind) : []),
-    [searchQuery, searchKind]
+    () => (searchQuery.trim().length >= 2 ? searchDocs(searchQuery, 12, searchKind, scopeIds) : []),
+    [searchQuery, searchKind, scopeIds]
   );
 
-  // When not searching, the nav shows all topics. When searching with no
-  // content hits, fall back to the old label/keyword filter so the nav still
-  // narrows. When content hits exist, the dropdown takes over and the nav
-  // shows the matching topic ids only. An active facet keeps the dropdown
-  // open even at zero hits, so the chips stay reachable.
-  const showResults = searchFocused && searchQuery.trim().length >= 2 && (searchResults.length > 0 || searchKind !== null);
+  // An active facet keeps the dropdown open even at zero hits, so the chips stay reachable.
+  const showResults = searchFocused && searchQuery.trim().length >= 2 && (searchResults.length > 0 || searchKind !== null || scope !== undefined);
 
-  const navCategories = useMemo(() => {
+  // While searching, the nav narrows to the hits (or, with no content hits, to
+  // a label/keyword match) across guides and reference pages alike.
+  const searchNav = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (q.length < 2) return ALL_CATEGORIES;
-    // If the content search found hits, restrict the nav to those topics.
+    if (q.length < 2) return null;
     if (searchResults.length > 0) {
       const hitIds = new Set(searchResults.map(h => h.id));
       return ALL_CATEGORIES.map(c => ({ ...c, items: c.items.filter(i => hitIds.has(i.id)) }))
         .filter(c => c.items.length > 0);
     }
-    // Fallback: label/keyword filter.
-    return ALL_CATEGORIES.map(category => {
-      const filteredItems = category.items.filter(item =>
+    return ALL_CATEGORIES.map(category => ({
+      ...category,
+      items: category.items.filter(item => (!scopeIds || scopeIds.has(item.id)) && (
         item.label.toLowerCase().includes(q) ||
         item.id.toLowerCase().includes(q) ||
         item.keywords.some(kw => kw.toLowerCase().includes(q))
-      );
-      return { ...category, items: filteredItems };
-    }).filter(category => category.items.length > 0);
-  }, [searchQuery, searchResults]);
+      )),
+    })).filter(category => category.items.length > 0);
+  }, [searchQuery, searchResults, scopeIds]);
 
   const navigateTo = (id: string) => {
     setActive(id);
@@ -1429,10 +1647,75 @@ export default function HelpPage() {
     if (hashTopic() !== id) globalThis.location.assign(`#${id}`);
     setSearchQuery('');
     setSearchFocused(false);
+    setScopeDismissed(false);
     if (opened) toggle();
+    globalThis.scrollTo?.({ top: 0 });
+  };
+
+  const navItem = (id: string, label: string, mono = false) => (
+    <NavLink
+      key={id}
+      label={label}
+      active={active === id}
+      onClick={() => navigateTo(id)}
+      variant="light"
+      color="teal"
+      styles={{
+        label: { fontSize: '13px', fontWeight: active === id ? 600 : 400, fontFamily: mono ? 'monospace' : undefined },
+        root: {
+          borderRadius: '0 6px 6px 0', paddingTop: 5, paddingBottom: 5, paddingLeft: '12px',
+          borderLeft: `2px solid ${active === id ? 'var(--mantine-color-teal-5)' : 'transparent'}`,
+        },
+      }}
+    />
+  );
+
+  // The left column is contextual: a reference page lists its category's
+  // siblings and the guides that use it; everything else lists the guides.
+  const renderNav = () => {
+    if (searchNav) {
+      return searchNav.length === 0
+        ? <Text size="sm" c="dimmed" ta="center" mt="md">No matching topics found.</Text>
+        : searchNav.map((category) => (
+          <NavGroup key={category.title} title={category.title}>
+            {category.items.map((item) => navItem(item.id, item.label, item.id.startsWith(REFPAGE)))}
+          </NavGroup>
+        ));
+    }
+    if (refCategory !== undefined) {
+      const page = active.startsWith(REFPAGE) ? REFERENCE_BY_SLUG.get(active.slice(REFPAGE.length)) : undefined;
+      const guides = (page?.guides ?? []).filter((g) => NAV_LABELS[g]);
+      return (
+        <>
+          <NavGroup title="Contents">
+            {navItem(HOME, 'Documentation Home')}
+            {navItem('ref-index', 'Function Index (A–Z)')}
+            {navItem(REFCAT + refCategory, refCategory)}
+            {(REFERENCE_BY_CATEGORY.get(refCategory) ?? []).map((p) => navItem(REFPAGE + p.slug, p.name, true))}
+          </NavGroup>
+          {guides.length > 0 && (
+            <NavGroup title="Related topics">
+              {guides.map((g) => navItem(g, NAV_LABELS[g]))}
+            </NavGroup>
+          )}
+        </>
+      );
+    }
+    return (
+      <>
+        {navItem(HOME, 'Documentation Home')}
+        {CATEGORIES.map((category) => (
+          <NavGroup key={category.title} title={category.title}>
+            {category.items.map((item) => navItem(item.id, item.label))}
+          </NavGroup>
+        ))}
+      </>
+    );
   };
 
   const renderContent = () => {
+    if (active === HOME) return <DocsHome onNavigate={navigateTo} />;
+
     if (active === 'examples') {
       const q = exampleFilter.trim().toLowerCase();
       const matches = (title: string, desc: string, code: string) =>
@@ -1448,7 +1731,7 @@ export default function HelpPage() {
       const nothing = wsCats.length === 0 && cycleCats.length === 0;
       return (
         <Stack gap="md">
-          <Title order={2} c="blue.4">Engineering Examples Library</Title>
+          <Title order={2} c="teal.4">Engineering Examples Library</Title>
           <Text>
             Verified, ready-to-run problems grouped by discipline. Each lists the
             result you should get, so you can confirm your solve. Use the{' '}
@@ -1469,7 +1752,7 @@ export default function HelpPage() {
                 <Badge
                   key={cat}
                   variant={exampleCat === cat ? 'filled' : 'light'}
-                  color="blue"
+                  color="teal"
                   style={{ cursor: 'pointer', textTransform: 'none' }}
                   onClick={() => setExampleCat(exampleCat === cat ? null : cat)}
                 >
@@ -1483,7 +1766,7 @@ export default function HelpPage() {
               <Text size="sm">Nothing matches this filter — clear the text or the category chip to see the full library.</Text>
             </Alert>
           )}
-          <Alert color="blue" variant="light" icon={<IconBook size={18} />}>
+          <Alert color="teal" variant="light" icon={<IconBook size={18} />}>
             <Text size="sm">
               Examples that solve an implicit or transcendental equation mention a{' '}
               <b>guess</b> (e.g. “set a guess <Code>yn ≈ 0.6</Code>”). Open{' '}
@@ -1495,19 +1778,19 @@ export default function HelpPage() {
           </Alert>
           {wsCats.length > 0 && (
             <Stack gap="xs">
-              <Title order={3} c="cyan.4" mt="sm">Quick Workspace Examples</Title>
+              <Title order={3} c="teal.4" mt="sm">Quick Workspace Examples</Title>
               <Text size="sm" c="dimmed">
                 Additional ready-to-run documents (the rest are in the File →
                 Open Example picker). Copy one into the editor and press Solve.
               </Text>
               {wsCats.map(([category, examples]) => (
                 <Stack gap="xs" key={`ws-${category}`}>
-                  <Title order={4} c="blue.3" mt="sm">{category}</Title>
+                  <Title order={4} c="teal.3" mt="sm">{category}</Title>
                   <MantineAccordion variant="separated">
                     {examples.map((ex) => (
                       <MantineAccordion.Item value={ex.id} key={ex.id}>
                         <MantineAccordion.Control>
-                          <Text fw={600} c="cyan.3">{ex.title}</Text>
+                          <Text fw={600} c="teal.3">{ex.title}</Text>
                         </MantineAccordion.Control>
                         <MantineAccordion.Panel>
                           <Text size="sm" mb="xs">{ex.description}</Text>
@@ -1522,12 +1805,12 @@ export default function HelpPage() {
           )}
           {cycleCats.map(([category, examples]) => (
             <Stack gap="xs" key={category}>
-              <Title order={4} c="blue.3" mt="sm">{category}</Title>
+              <Title order={4} c="teal.3" mt="sm">{category}</Title>
               <MantineAccordion variant="separated">
                 {examples.map((ex) => (
                   <MantineAccordion.Item value={ex.value} key={ex.value}>
                     <MantineAccordion.Control>
-                      <Text fw={600} c="cyan.3">{exampleShortTitle(ex.title)}</Text>
+                      <Text fw={600} c="teal.3">{exampleShortTitle(ex.title)}</Text>
                     </MantineAccordion.Control>
                     <MantineAccordion.Panel>
                       <Text size="sm" mb="xs">{ex.description}</Text>
@@ -1552,10 +1835,11 @@ export default function HelpPage() {
       );
     }
 
-    if (active.startsWith('refpage:')) {
-      const page = REFERENCE_BY_SLUG.get(active.slice('refpage:'.length));
-      if (page) return <ReferencePageView page={page} onNavigate={(slug) => navigateTo('refpage:' + slug)} onNavigateTopic={navigateTo} />;
+    if (active.startsWith(REFPAGE)) {
+      const page = REFERENCE_BY_SLUG.get(active.slice(REFPAGE.length));
+      if (page) return <ReferencePageView page={page} onNavigate={navigateTo} />;
     }
+    if (active.startsWith(REFCAT)) return <ReferenceCategory category={active.slice(REFCAT.length)} onNavigate={navigateTo} />;
 
     // Reference data pages (single source of truth; the old Quick-Reference
     // duplicate tables are gone — symbols live on their per-symbol pages).
@@ -1585,7 +1869,6 @@ export default function HelpPage() {
     if (docContent) {
       return (
         <>
-          <OnThisPage content={docContent} />
           <MarkdownRenderer content={docContent} onNavigate={navigateTo} />
           <PrevNext active={active} onNavigate={navigateTo} />
         </>
@@ -1595,160 +1878,185 @@ export default function HelpPage() {
     return null;
   };
 
+  const toc = tocMarkdown(active);
+  const showToc = toc !== undefined && headingCount(toc) >= 2;
+
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: 100 }}
       navbar={{
-        width: 320,
+        width: 280,
         breakpoint: 'sm',
         collapsed: { mobile: !opened },
       }}
-      padding="md"
-      styles={{
-        main: {
-          background: 'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))',
-          minHeight: 'calc(100vh - 60px)'
-        }
-      }}
+      padding={0}
+      styles={{ main: { background: 'var(--mantine-color-body)', minHeight: '100vh' } }}
     >
-      <AppShell.Header bg="var(--mantine-color-body)" style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}>
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
+      <AppShell.Header bg="var(--mantine-color-body)">
+        <Group h={58} px="md" justify="space-between" wrap="nowrap" gap="sm">
+          <Group gap="xs" wrap="nowrap">
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Title order={3} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Text span inherit variant="gradient" gradient={{ from: 'blue.4', to: 'cyan.3', deg: 90 }}>
-                frees
-              </Text>
-              <Text span inherit size="lg" c="dimmed" fw={500}>
-                Documentation Portal
-              </Text>
-            </Title>
-          </Group>
-          <Badge color="blue" variant="filled" size="lg">{VERSION_LABEL}</Badge>
-        </Group>
-      </AppShell.Header>
-
-      <AppShell.Navbar p="md" bg="var(--mantine-color-body)" style={{ borderRight: '1px solid var(--mantine-color-default-border)' }}>
-        <Box style={{ position: 'relative', marginBottom: 'md' }}>
-          <TextInput
-            placeholder="Search docs, functions, examples…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.currentTarget.value)}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setTimeout(() => setSearchFocused(false), 180)}
-            leftSection={<IconSearch size={16} />}
-            rightSection={
-              searchQuery ? (
-                <CloseButton onClick={() => setSearchQuery('')} size="sm" />
-              ) : null
-            }
-          />
-          {showResults && (
-            <Paper
-              shadow="md"
-              withBorder
-              p="xs"
-              style={{
-                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000,
-                maxHeight: '60vh', overflowY: 'auto',
-              }}
-            >
-              <Group gap="xs" px="xs" pb={4} justify="space-between">
-                <Text size="xs" c="dimmed" fw={700}>
-                  {searchResults.length} result{searchResults.length === 1 ? '' : 's'}
-                </Text>
-                <Group gap={4}>
-                  {SEARCH_FACETS.map(([kind, label]) => (
-                    <Badge
-                      key={kind}
-                      size="xs"
-                      variant={searchKind === kind ? 'filled' : 'light'}
-                      color="blue"
-                      style={{ cursor: 'pointer', textTransform: 'none' }}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => setSearchKind(searchKind === kind ? null : kind)}
-                    >
-                      {label}
-                    </Badge>
-                  ))}
-                </Group>
+            <UnstyledButton onClick={() => navigateTo(HOME)} aria-label="Documentation home">
+              <Group gap={8} wrap="nowrap">
+                <Text fw={700} fz={22}>frees</Text>
+                <Text c="dimmed" fz={22} fw={400} visibleFrom="xs">Documentation</Text>
               </Group>
-              <Divider mb={4} />
-              {searchResults.length === 0 && (
-                <Text size="xs" c="dimmed" px="xs" py={6}>
-                  No {SEARCH_FACETS.find(([k]) => k === searchKind)?.[1].toLowerCase()} results — click the chip again to search everything.
-                </Text>
-              )}
-              {searchResults.map((hit, idx) => (
-                <Box
-                  key={`${hit.id}-${idx}`}
-                  onClick={() => navigateTo(hit.id)}
-                  px="xs"
-                  py={6}
-                  style={{ cursor: 'pointer', borderRadius: '4px' }}
-                  onMouseDown={(e) => e.preventDefault()}
-                  className="search-result-row"
+            </UnstyledButton>
+          </Group>
+          <Group gap="sm" wrap="nowrap" style={{ flex: 1, justifyContent: 'flex-end', minWidth: 0 }}>
+            <Box style={{ position: 'relative', flex: 1, maxWidth: 420 }}>
+              <TextInput
+                ref={searchRef}
+                placeholder={scope === undefined ? 'Search functions, guides, examples…' : `Search ${scope}…`}
+                aria-label="Search documentation"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 180)}
+                leftSection={<IconSearch size={16} />}
+                rightSection={searchQuery
+                  ? <CloseButton onClick={() => setSearchQuery('')} size="sm" aria-label="Clear search" />
+                  : <Kbd size="xs">/</Kbd>}
+              />
+              {showResults && (
+                <Paper
+                  shadow="md"
+                  withBorder
+                  p="xs"
+                  style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000,
+                    maxHeight: '60vh', overflowY: 'auto',
+                  }}
                 >
-                  <Group gap="xs" justify="space-between" wrap="nowrap">
-                    <Text size="sm" fw={600} style={{ flexGrow: 1 }}>
-                      <Highlight highlight={searchQuery.trim()} component="span">
-                        {hit.label}
-                      </Highlight>
-                    </Text>
-                    <Badge size="xs" variant="light" color="gray">{hit.section}</Badge>
+                  <Group gap="xs" px="xs" pb={4} justify="space-between">
+                    <Group gap={6} wrap="nowrap">
+                      <Text size="xs" c="dimmed" fw={700}>
+                        {searchResults.length} result{searchResults.length === 1 ? '' : 's'}
+                      </Text>
+                      {scope !== undefined && (
+                        <Badge
+                          size="xs" variant="outline" color="teal" tt="none"
+                          rightSection={<CloseButton size={12} aria-label="Search everything" onMouseDown={(e) => e.preventDefault()} onClick={() => setScopeDismissed(true)} />}
+                        >
+                          Scoped to {scope}
+                        </Badge>
+                      )}
+                    </Group>
+                    <Group gap={4}>
+                      {SEARCH_FACETS.map(([kind, label]) => (
+                        <Badge
+                          key={kind}
+                          size="xs"
+                          variant={searchKind === kind ? 'filled' : 'light'}
+                          color="teal"
+                          style={{ cursor: 'pointer', textTransform: 'none' }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => setSearchKind(searchKind === kind ? null : kind)}
+                        >
+                          {label}
+                        </Badge>
+                      ))}
+                    </Group>
                   </Group>
-                  {hit.snippet && (
-                    <Text size="xs" c="dimmed" lineClamp={2} mt={2}>
-                      <Highlight highlight={searchQuery.trim().split(/\s+/)} component="span">
-                        {hit.snippet}
-                      </Highlight>
+                  <Divider mb={4} />
+                  {searchResults.length === 0 && (
+                    <Text size="xs" c="dimmed" px="xs" py={6}>
+                      {scope === undefined
+                        ? `No ${SEARCH_FACETS.find(([k]) => k === searchKind)?.[1].toLowerCase()} results — click the chip again to search everything.`
+                        : `Nothing in ${scope} — clear the scope to search everything.`}
                     </Text>
                   )}
-                </Box>
-              ))}
-            </Paper>
-          )}
-        </Box>
+                  {searchResults.map((hit, idx) => (
+                    <Box
+                      key={`${hit.id}-${idx}`}
+                      onClick={() => navigateTo(hit.id)}
+                      px="xs"
+                      py={6}
+                      style={{ cursor: 'pointer', borderRadius: '4px' }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      className="search-result-row"
+                    >
+                      <Group gap="xs" justify="space-between" wrap="nowrap">
+                        <Text size="sm" fw={600} style={{ flexGrow: 1 }}>
+                          <Highlight highlight={searchQuery.trim()} component="span">
+                            {hit.label}
+                          </Highlight>
+                        </Text>
+                        <Badge size="xs" variant="light" color="gray">{hit.section}</Badge>
+                      </Group>
+                      {hit.snippet && (
+                        <Text size="xs" c="dimmed" lineClamp={2} mt={2}>
+                          <Highlight highlight={searchQuery.trim().split(/\s+/)} component="span">
+                            {hit.snippet}
+                          </Highlight>
+                        </Text>
+                      )}
+                    </Box>
+                  ))}
+                </Paper>
+              )}
+            </Box>
+            <Badge variant="filled" color="teal" tt="none" visibleFrom="sm">{VERSION_LABEL}</Badge>
+            <Button component="a" href={import.meta.env.BASE_URL} variant="outline" size="xs" visibleFrom="sm">
+              Open app
+            </Button>
+          </Group>
+        </Group>
+        <Tabs value={scopeOf(active)} onChange={(v) => {
+          const tab = SCOPE_TABS.find((t) => t.value === v);
+          if (tab) navigateTo(tab.target);
+        }}>
+          <Tabs.List px="md" style={{ flexWrap: 'nowrap', overflowX: 'auto' }}>
+            {SCOPE_TABS.map((t) => <Tabs.Tab key={t.value} value={t.value}>{t.label}</Tabs.Tab>)}
+          </Tabs.List>
+        </Tabs>
+      </AppShell.Header>
 
+      <AppShell.Navbar p="sm" bg="var(--mantine-color-body)">
         <AppShell.Section grow component={ScrollArea} offsetScrollbars>
-          <Stack gap="md">
-            {navCategories.map((category) => (
-              <div key={category.title}>
-                <Group gap="xs" px="xs" mb="xs">
-                  {category.icon}
-                  <Text size="xs" fw={700} c="dimmed" style={{ letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                    {category.title}
-                  </Text>
-                </Group>
-                {category.items.map((item) => (
-                  <NavLink
-                    key={item.id}
-                    label={item.label}
-                    active={active === item.id}
-                    onClick={() => navigateTo(item.id)}
-                    variant="filled"
-                    color="blue"
-                    styles={{
-                      label: { fontSize: '13px', fontWeight: active === item.id ? 600 : 400 },
-                      root: { borderRadius: '6px', marginBottom: '2px', paddingLeft: '12px' }
-                    }}
-                  />
-                ))}
-              </div>
-            ))}
-            {navCategories.length === 0 && (
-              <Text size="sm" c="dimmed" ta="center" mt="md">
-                No matching topics found.
-              </Text>
-            )}
+          <Stack gap="md" py="xs">
+            {renderNav()}
           </Stack>
         </AppShell.Section>
       </AppShell.Navbar>
 
       <AppShell.Main>
-        <Container size="md" pt="md" pb="xl">
-          {renderContent()}
-        </Container>
+        <Box px={{ base: 'md', md: 'xl' }} py="lg" style={{ display: 'flex', gap: 40, justifyContent: 'center' }}>
+          <Box id="help-article" style={{ flex: 1, minWidth: 0, maxWidth: 880, overflowX: 'clip' }}>
+            <Breadcrumbs trail={trailOf(active)} onNavigate={navigateTo} />
+            {renderContent()}
+          </Box>
+          {showToc && (
+            <Box visibleFrom="lg" w={220} style={{ flexShrink: 0 }}>
+              <Box style={{ position: 'sticky', top: 124 }}>
+                <Text size="xs" fw={700} c="dimmed" mb={6} style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  On this page
+                </Text>
+                <TableOfContents
+                  key={active}
+                  variant="none"
+                  size="sm"
+                  color="teal"
+                  reinitializeRef={reinitializeToc}
+                  scrollSpyOptions={{
+                    selector: '#help-article h3[id], #help-article h4[id]',
+                    getDepth: (el) => (el.tagName === 'H4' ? 2 : 1),
+                    offset: 120,
+                  }}
+                  getControlProps={({ active: current, data }) => ({
+                    children: data.value,
+                    onClick: () => data.getNode().scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                    style: {
+                      color: current ? 'var(--mantine-color-teal-4)' : 'var(--mantine-color-dimmed)',
+                      borderLeft: `2px solid ${current ? 'var(--mantine-color-teal-5)' : 'transparent'}`,
+                      paddingLeft: 10 + (data.depth - 1) * 14,
+                    },
+                  })}
+                />
+              </Box>
+            </Box>
+          )}
+        </Box>
       </AppShell.Main>
     </AppShell>
   );

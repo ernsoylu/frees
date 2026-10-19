@@ -97,6 +97,7 @@ function parseMarkdown(md: string): { headings: string[]; text: string } {
   }
   // strip common markdown markers for the text index
   const text = cleaned.join('\n')
+    .replace(/<!--[\s\S]*?-->/g, ' ') // authoring markers are not prose
     .replaceAll('```', ' ')
     .replace(/`([^`]*)`/g, '$1')   // inline code -> plain text
     .replace(/\$\$?([^$]*)\$\$?/g, '$1') // latex -> plain text
@@ -271,7 +272,8 @@ function snippet(terms: string[], text: string): string {
  * by the sum of per-term scores. Short queries (1-2 chars) use prefix-only
  * matching against labels/keywords to stay snappy and relevant.
  */
-export function searchDocs(query: string, limit = 12, kind: SearchKind | null = null): SearchHit[] {
+/** `within`, when given, limits hits to those page ids (a scoped search). */
+export function searchDocs(query: string, limit = 12, kind: SearchKind | null = null, within?: ReadonlySet<string>): SearchHit[] {
   const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
   const idx = getIndex();
@@ -280,6 +282,7 @@ export function searchDocs(query: string, limit = 12, kind: SearchKind | null = 
   const hits: SearchHit[] = [];
   for (const entry of idx) {
     if (kind && entry.kind !== kind) continue;
+    if (within && !within.has(entry.id)) continue;
     let total = 0;
     let matchedAll = true;
     for (const term of terms) {

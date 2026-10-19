@@ -1,19 +1,22 @@
 ---
 name: ReversingValve
 category: Component (twophase)
-summary: Acausal twophase-domain component ReversingValve with ports d, s, i, o.
+summary: Four-way reversing valve (heat pump mode switch).
 related: []
 examples: []
 tags: [reversingvalve, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # ReversingValve
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Four-way reversing valve (heat pump mode switch).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Ports: compressor discharge d, compressor suction s, indoor coil i, outdoor coil o. mode = 0 (cooling): d→o and i→s.  mode = 1 (heating): d→i and o→s. Each tie is a mode-blend of the two routings, so the equation COUNT is constant across modes (intermediate mode values model transfer leakage).
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

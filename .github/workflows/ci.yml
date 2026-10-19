@@ -148,11 +148,19 @@ env:
   # `served_fluids` too, after measuring a full 400-point dome on all six
   # diagram kinds for each (R410A: 399, the pseudo-pure glide).
   #
-  # NOT linked, and not for budget reasons: `mixture-data`. The ten `.mix`
-  # blends the alias table names stay unbacked because rustprop's `props_si`
-  # facade does not route predefined mixtures at all — `R454B.mix` and
-  # `R454B` both come back "key not found in JSONFluidLibrary". Enabling the
-  # feature links bytes nothing can reach. That gap needs upstream support.
+  # 2026-10-19: the ten low-GWP blends. The entry that stood here said
+  # rustprop's `props_si` did not route predefined mixtures; it does, behind
+  # its `heos-mixtures` feature, which this build had never enabled — every
+  # blend answered CoolProp 8.0.0 to the last digit once it was. Enabled with
+  # the two missing components (r125, r227ea): 4333.3 KiB raw / 1949.8 KiB
+  # gzipped against 4092.0 / 1834.8 for the same tree without them, i.e.
+  # +241.3 KiB raw / +115.1 KiB gzipped for `mixture-data` (154 predefined
+  # blends plus the binary-pair and departure tables) and the two fluids.
+  # 84.6% of the ceiling, 786.7 KiB of headroom.
+  # Same day, rustprop pinned to the v0.2.0 tag, which adds the mixture
+  # critical-point tracer (`Tcrit`/`pcrit`/`rhocrit` for blends) and the 33
+  # mixture keyed outputs: 4366.5 KiB raw / 1964.2 KiB gzipped, +33.2 KiB
+  # raw. 85.3% of the ceiling, 753.5 KiB of headroom.
   WASM_BUDGET_KB: 5120
   WASM_LAZY_CHUNK_TRIGGER_KB: 200
 

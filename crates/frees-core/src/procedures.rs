@@ -177,6 +177,7 @@ pub(crate) fn call_function_in(
     if def.output.is_some() {
         reject_ignored_equations(&def.body, &def.name)?;
         validate_structural_control_flow(&def.body, &def.name, false)?;
+        reject_redefinitions(&def.body, &def.name)?;
         if !has_relational_output(&def.body, def.output.as_deref().unwrap_or(&def.name)) {
             let mut assigned: HashSet<String> = def.params.iter().cloned().collect();
             validate_definite_assignment(&def.body, &mut assigned)?;
@@ -265,6 +266,55 @@ fn solve_relational_output(
     let residual = eval_proc_expr(&equation.lhs, locals, defs).ok()?
         - eval_proc_expr(&equation.rhs, locals, defs).ok()?;
     (residual.abs() <= 1e-8).then_some(value)
+}
+
+/// An equation `y = …` in a body *defines* `y`; it is not an update. A
+/// variable an equation defines may not also be assigned with `:=` or defined
+/// by a second equation — before this check the later statement silently won,
+/// so `y := 2*x` followed by `y = 3*x` returned `3*x`.
+fn reject_redefinitions(body: &[ProcStatement], function: &str) -> Result<()> {
+    fn assigned(body: &[ProcStatement], out: &mut HashSet<String>) {
+        for statement in body {
+            match statement {
+                ProcStatement::Assign { var_name, .. } => {
+                    out.insert(var_name.clone());
+                }
+                ProcStatement::IfElse {
+                    then_branch,
+                    else_branch,
+                    ..
+                } => {
+                    assigned(then_branch, out);
+                    assigned(else_branch, out);
+                }
+                ProcStatement::RepeatUntil { body, .. }
+                | ProcStatement::For { body, .. }
+                | ProcStatement::While { body, .. } => assigned(body, out),
+                _ => {}
+            }
+        }
+    }
+    let mut by_assignment = HashSet::new();
+    assigned(body, &mut by_assignment);
+    let mut by_equation = HashSet::new();
+    for statement in body {
+        let ProcStatement::Eq(equation) = statement else {
+            continue;
+        };
+        let defined = match (&equation.lhs, &equation.rhs) {
+            (Expr::Var(name), _) | (_, Expr::Var(name)) => name,
+            _ => continue,
+        };
+        if by_assignment.contains(defined) || !by_equation.insert(defined.clone()) {
+            return Err(FreesError::evaluation(format!(
+                "FUNCTION {function} defines '{defined}' with the equation `{}` and also \
+                 assigns it elsewhere; an equation is a definition, not an update — use `:=` \
+                 for every assignment to '{defined}'",
+                equation.source_text.trim()
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn validate_structural_control_flow(
@@ -836,6 +886,12 @@ const EXPANDED_CALL_TARGETS: &[&str] = &[
     // decodes.
     "eigenvalues",
     "eigen",
+    // The array-language spellings: `eig` is `Eigenvalues`, `eigvec` the
+    // eigenvector half of `Eigen`; and `EulerRotate`, which expands to nine
+    // closed-form equations (2026-10-19).
+    "eig",
+    "eigvec",
+    "eulerrotate",
     // Phase 9: the control-systems suite. `expand::flatten_call_proc` hands
     // these to `control::flatten`, which emits the `ss2tf$`/`step$`/`lqr$`/…
     // synthetics `control::eval` decodes. The membership test below pins this
@@ -890,7 +946,7 @@ const EXPANDED_CALL_TARGETS: &[&str] = &[
 /// port does not. Naming them keeps the refusal honest — "not yet supported",
 /// not "unknown". (The eigen pair left for `EXPANDED_CALL_TARGETS` when
 /// ledger item 34 closed.)
-const INTRINSIC_CALL_TARGETS: &[&str] = &["eulerdecompose", "eulerrotate"];
+const INTRINSIC_CALL_TARGETS: &[&str] = &["eulerdecompose"];
 
 /// Per-flatten module instance counter — the Java engine uses a shared
 /// `AtomicInteger` in the flatten context; a per-call counter is deterministic
@@ -1057,7 +1113,7 @@ fn flatten_call(
     if defs.function(name).is_some() || defs.table(name).is_some() {
         // FunctionTableDef falls into the same `default` arm in the Java switch.
         return Err(FreesError::parse(format!(
-            "'{name}' is a FUNCTION, not callable with CALL (use it directly in \
+            "'{name}' is a FUNCTION, not a multi-output call (use it directly in \
              an expression)"
         )));
     }
@@ -1816,7 +1872,7 @@ mod tests {
         let err = flatten_calls(doc.statements, &doc.defs).unwrap_err();
         assert!(
             err.to_string()
-                .contains("'f' is a FUNCTION, not callable with CALL"),
+                .contains("'f' is a FUNCTION, not a multi-output call"),
             "{err}"
         );
 
@@ -1838,15 +1894,13 @@ mod tests {
 
     #[test]
     fn an_unported_intrinsic_call_keeps_the_refusal_message() {
-        for name in ["eulerdecompose", "eulerrotate"] {
-            let doc = parse_document(&format!("[a, b] = {name}(m, n)")).unwrap();
-            let err = flatten_calls(doc.statements, &doc.defs).unwrap_err();
-            assert!(
-                err.to_string()
-                    .contains(&format!("CALL `{name}` is not yet supported")),
-                "{err}"
-            );
-        }
+        let doc = parse_document("[a, b] = eulerdecompose(m, n)").unwrap();
+        let err = flatten_calls(doc.statements, &doc.defs).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("CALL `eulerdecompose` is not yet supported"),
+            "{err}"
+        );
     }
 
     /// The dense linear-algebra / signal / statistics CALLs are flattened in

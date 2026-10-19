@@ -1,19 +1,20 @@
 ---
 name: VacuumEjector
 category: Component (pneumatic)
-summary: Acausal pneumatic-domain component VacuumEjector with ports sup_in, suc_in, exh_out.
+summary: "Vacuum ejector: motive ISO 6358 flow entrains ER times its mass flow from the suction port; mass and energy mix exactly at the exhaust."
 related: []
 examples: []
 tags: [vacuumejector, component, pneumatic, acausal]
 references: []
-generated: true
 ---
 
 # VacuumEjector
 
-Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Vacuum ejector: motive ISO 6358 flow entrains ER times its mass flow from the suction port; mass and energy mix exactly at the exhaust.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/pneumatic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -41,7 +42,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \begin{aligned}
-t_{s} &= \text{Temperature}\left(\mathrm{fluid}, =sup_{in.p}, p=sup_{in.h}\right) \\
+t_{s} &= \text{Temperature}\left(\mathrm{fluid\$}, p=sup_{in.p}, h=sup_{in.h}\right) \\
 sup_{in.mdot} &= \text{iso6358}\left(c, b, sup_{in.p}, t_{s}, exh_{out.p}\right) \\
 suc_{in.mdot} &= er\cdot sup_{in.mdot} \\
 exh_{out.mdot} &= sup_{in.mdot} + suc_{in.mdot} \\

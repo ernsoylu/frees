@@ -1,17 +1,20 @@
 ---
 name: RadiantPanel
 category: Component (moistair)
-summary: Acausal moistair-domain component RadiantPanel with ports zone, wall.
+summary: Radiant panel or chilled ceiling.
 related: []
 examples: []
 tags: [radiantpanel, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # RadiantPanel
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Radiant panel or chilled ceiling.
+
+It conditions a space without moving any air at all, so it has no airstream: it couples the zone node to the water node and nothing else. That is precisely why it appears on a psychrometric design as a LOAD SHIFT rather than as a process vector — sensible load it removes is load the air system no longer has to carry, which is what lets the supply airflow drop to the ventilation minimum.  Capacity follows the ASHRAE panel characteristic q = C*dT*|dT|^(n-1) W/m^2 (Handbook—Systems Ch. 6, Eq. 18), signed so the same panel heats and cools through one equation, and regularised at dT = 0 the way `Infiltration` regularises its own odd power law. n = 1.1 for ceiling cooling and floor heating, n = 1.0 for ceiling heating and floor cooling.  SENSIBLE ONLY, with no drain anywhere: `margin_dp` against the design room state is not a diagnostic here but the sizing constraint. A chilled ceiling below the room dew point rains on the occupants.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

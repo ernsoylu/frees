@@ -17,7 +17,6 @@ Returns the **transient performance metrics** of a step response sampled as
 
 ```
 [Tr, Tp, Ts, OS] = stepinfo(t, y)
-[Tr, Tp, Ts, OS] = stepinfo(t, y)
 ```
 
 ## Mathematical Formulation

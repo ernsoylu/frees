@@ -1,17 +1,20 @@
 ---
 name: FaceAndBypassCoil
 category: Component (moistair)
-summary: Acausal moistair-domain component FaceAndBypassCoil with ports in, out, wall.
+summary: "Face-and-bypass coil: the airstream splits at a damper, the face fraction passes over the coil and the rest bypasses it untouched, and the two remix adiabatically downstream."
 related: []
 examples: []
 tags: [faceandbypasscoil, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # FaceAndBypassCoil
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Face-and-bypass coil: the airstream splits at a damper, the face fraction passes over the coil and the rest bypasses it untouched, and the two remix adiabatically downstream.
+
+Capacity is modulated by the DAMPER rather than by water flow, which is the classic way to hold a leaving condition with a coil that would otherwise freeze or overshoot at part load.  The consequence worth seeing on the chart: here the bypass factor is a CONTROL variable, `BF = 1 - u_face`, not a fixed coil characteristic. At 40% face the leaving air sits far from saturation on the mixing line between the coil condition and the entering state — a leaving state no single-path coil model produces.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

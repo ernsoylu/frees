@@ -18,7 +18,6 @@ signals non-minimum-phase behavior.
 
 ```
 [zr, zi] = zero(num, den)
-[zr, zi] = zero(num, den)
 ```
 
 ## Description

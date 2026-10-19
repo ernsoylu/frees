@@ -23,19 +23,14 @@
 //! |---|---|---|
 //! | `None` / `"brent"` with one decision | `BrentOptimizer(1e-10, 1e-12)` | [`brent_optimize`] — a full port |
 //! | anything else (`"simplex"`, `"nelder-mead"`, …) | `SimplexOptimizer(1e-10, 1e-12)` + `NelderMeadSimplex(n)` | [`nelder_mead`] — a full port |
-//! | `"bobyqa"` | `BOBYQAOptimizer(2n+1)` | **not ported** — see below |
+//! | `"bobyqa"`, two or more decisions | `BOBYQAOptimizer(2n+1)` | [`super::bobyqa`] — a full port |
 //!
-//! ## The BOBYQA gap
+//! ## One-variable BOBYQA
 //!
-//! Powell's BOBYQA is ~1,300 lines of trust-region quadratic-model code in
-//! Commons Math and is *not* ported. `"bobyqa"` runs the Nelder–Mead search
-//! instead, with the Java's BOBYQA branch semantics preserved where they are
-//! observable from outside: bounds are enforced by projection rather than by the
-//! smooth out-of-box penalty ("BOBYQA enforces bounds natively and skips this"),
-//! and the answer is clamped into the box before the final solve. Expect the
-//! same optimum on smooth problems and a **different** `evaluations` count and
-//! different trailing digits. This is the one deliberate divergence in this
-//! module.
+//! Commons' BOBYQA refuses fewer than two variables. A one-decision `"bobyqa"`
+//! request therefore runs the Nelder–Mead search with the box enforced by
+//! projection (no smooth out-of-box penalty, the answer clamped before the final
+//! solve) instead of failing.
 //!
 //! # Exactness notes
 //!
@@ -65,6 +60,7 @@
 
 use std::cmp::Ordering;
 
+use super::bobyqa;
 use crate::diag::{FreesError, Result};
 use crate::engine::{variable_override_spec, PreparedDocument, Solution, VariableOverride};
 use crate::solver::SolverSettings;
@@ -693,9 +689,10 @@ fn multivariate_optimize(
     ctx.bounds_penalty = !problem.is_bobyqa();
     ctx.lower_bounds = lower_bounds.clone();
     ctx.upper_bounds = upper_bounds.clone();
-    // See the module docs: the unported BOBYQA branch still respects its box,
-    // by projection instead of by penalty.
-    ctx.project_out_of_box = problem.is_bobyqa();
+    // BOBYQA needs two or more variables; a one-variable `"bobyqa"` request
+    // runs the simplex with the box enforced by projection (module docs).
+    let real_bobyqa = problem.is_bobyqa() && n >= bobyqa::MINIMUM_PROBLEM_DIMENSION;
+    ctx.project_out_of_box = problem.is_bobyqa() && !real_bobyqa;
 
     // Track the best point seen so far: when the evaluation budget runs out
     // Commons Math throws `TooManyEvaluationsException` without returning its
@@ -709,13 +706,42 @@ fn multivariate_optimize(
 
     // Java: `catch (TooManyEvaluationsException e) { return trackedPoint.clone(); }`
     // — and *only* that exception; a `SolverException` propagates.
-    let mut best_points = match nelder_mead(&mut ctx, &guess, !problem.maximize) {
+    let searched = if real_bobyqa {
+        // `new BOBYQAOptimizer(2n + 1)` with Commons' default radii.
+        let spec = bobyqa::BobyqaProblem {
+            start: &guess,
+            lower: &lower_bounds,
+            upper: &upper_bounds,
+            minimize: !problem.maximize,
+            interpolation_points: 2 * n + 1,
+            initial_radius: bobyqa::DEFAULT_INITIAL_RADIUS,
+            stopping_radius: bobyqa::DEFAULT_STOPPING_RADIUS,
+        };
+        match bobyqa::bobyqa(&spec, |x| ctx.budgeted(x)) {
+            Ok(outcome) => Ok(outcome.point),
+            Err(bobyqa::BobyqaError::Objective(abort)) => Err(abort),
+            Err(bobyqa::BobyqaError::TrustRegionStepFailed(vquad)) => {
+                return Err(FreesError::solver(format!(
+                    "BOBYQA: trust region step has failed to reduce Q ({vquad})."
+                )))
+            }
+            Err(other) => {
+                return Err(FreesError::solver(format!(
+                    "BOBYQA setup failed: {other:?}"
+                )))
+            }
+        }
+    } else {
+        nelder_mead(&mut ctx, &guess, !problem.maximize)
+    };
+    let mut best_points = match searched {
         Ok(point) => point,
         Err(EvalAbort::Budget) => ctx.tracked_point.clone(),
         Err(EvalAbort::Fatal(error)) => return Err(error),
     };
     // The simplex is unaware of bounds and the tracked point may stem from an
-    // out-of-bounds probe: clamp before the final solve.
+    // out-of-bounds probe: clamp before the final solve (a no-op for BOBYQA,
+    // which never leaves the box).
     for i in 0..n {
         best_points[i] = jmax(lower_bounds[i], jmin(upper_bounds[i], best_points[i]));
     }
@@ -1883,9 +1909,9 @@ mod tests {
     }
 
     #[test]
-    fn bobyqa_falls_back_to_the_projected_simplex() {
-        // Documented divergence: BOBYQA itself is not ported, but the request
-        // must still produce the in-box optimum rather than an error.
+    fn bobyqa_matches_the_java_oracle() {
+        // The Java oracle (Commons Math BOBYQA) answers x=[1.0, 1.0] obj=8.0 in
+        // 25 evaluations; the port must reproduce the whole sequence.
         let mut p = problem(
             "z = (a - 3)^2 + (b - 3)^2",
             "z",
@@ -1895,17 +1921,21 @@ mod tests {
         );
         p.method = Some("BOBYQA".to_string());
         let result = optimize(&p).unwrap();
-        for value in &result.decision_values {
-            assert!(*value <= 1.0 + 1e-12 && *value >= -1e-12, "{value}");
-        }
-        // The Java oracle (real BOBYQA) answers x=[1.0, 1.0] obj=8.0 in 25
-        // evaluations. The *answer* is reproduced; the evaluation count is not,
-        // and cannot be without porting BOBYQA itself.
         assert_eq!(result.decision_values, vec![1.0, 1.0]);
         assert_eq!(result.objective_value, 8.0);
-        assert_ne!(
-            result.evaluations, 25,
-            "if this ever matches, BOBYQA was ported and the doc note is stale"
+        assert_eq!(result.evaluations, 25);
+    }
+
+    #[test]
+    fn one_variable_bobyqa_runs_the_projected_simplex() {
+        // BOBYQA needs two variables; the 1-D request still answers in-box.
+        let mut p = problem("z = (a - 3)^2", "z", &["a"], &[0.0], &[1.0]);
+        p.method = Some("bobyqa".to_string());
+        let result = optimize(&p).unwrap();
+        assert!(
+            (result.decision_values[0] - 1.0).abs() < 1e-6,
+            "{:?}",
+            result.decision_values
         );
     }
 

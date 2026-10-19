@@ -30,7 +30,7 @@ Diode inst(Gon, eps)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `Gon` | Number | On-state conductance [S]. |
-| `eps` | Number | Effectiveness / roughness. |
+| `eps` | Number | Conduction smoothing voltage [V] — the tanh transition width around zero bias. |
 
 ## Constitutive Equations
 

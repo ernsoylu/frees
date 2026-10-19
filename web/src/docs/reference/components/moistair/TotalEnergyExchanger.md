@@ -1,17 +1,20 @@
 ---
 name: TotalEnergyExchanger
 category: Component (moistair)
-summary: Acausal moistair-domain component TotalEnergyExchanger with ports sup_in, sup_out, exh_in, exh_out.
+summary: "Total-energy exchanger in the ASHRAE Standard 84 form: separate sensible and latent effectivenesses plus the EATR and OACF leakage terms."
 related: []
 examples: []
 tags: [totalenergyexchanger, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # TotalEnergyExchanger
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Total-energy exchanger in the ASHRAE Standard 84 form: separate sensible and latent effectivenesses plus the EATR and OACF leakage terms.
+
+Total-energy exchanger stated the way ASHRAE Standard 84 defines it: SENSIBLE effectiveness on TEMPERATURE and LATENT effectiveness on HUMIDITY RATIO, as two independently rated numbers, plus the two leakage terms — EATR and OACF — that a recovery device cannot honestly be specified without.  This is the Std 84 form. `EnthalpyWheel` is the TOTAL-effectiveness form, exchanging enthalpy under a single eff_h. Both are legitimate and they are not the same model: a device whose sensible and latent effectivenesses differ cannot be described by one enthalpy effectiveness, and a membrane core is exactly such a device.  One component covers the two total-energy devices that are not wheels (Std 84 / Handbook—Systems Ch. 25, Table 3):  membrane plate  eps_s 50-75%  eps_L 50-73%  eatr 0-5%  oacf 0.97-1.06 twin towers     eps_s 40-60%  eps_L 40-60%  eatr 0     oacf 1.0  Twin towers circulate a sorbent solution between two physically separate contactor towers, so there is no shared surface and no carryover at all: eatr = 0 and oacf = 1 are structural there, not ratings.  eatr is the fraction of the SUPPLY leaving stream that is really exhaust air, so the leaving humidity is a mix of the conditioned outdoor air and that carryover. oacf is supply inlet flow over supply outlet flow — the leakage that makes a rated exchanger deliver less outdoor air than it is fed, and therefore the factor the supply fan has to be oversized by. Both are required rather than defaulted: leaving them implicit is the omission this component exists to prevent.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

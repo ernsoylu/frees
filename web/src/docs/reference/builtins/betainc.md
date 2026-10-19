@@ -1,29 +1,39 @@
 ---
 name: betainc
-category: Built-in Functions
-summary: Reference page for betainc.
-related: []
+category: Special Functions
+summary: Regularized incomplete beta function I_x(a, b).
+related: [beta, fcdf, tcdf]
 examples: []
-tags: [betainc]
+tags: [betainc, special, beta]
 ---
 
 # betainc
 
-`betainc` is available in the frees built-in functions surface.
+Regularized incomplete beta function I_x(a, b).
 
 ## Syntax
 
 ```
-betainc(...)
+y = betainc(x, a, b)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`betainc(x, a, b)` returns I_x(a, b) = B(x; a, b)/B(a, b), which is P(X ≤ x) for X ~ Beta(a, b). Note the argument order: x first.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Upper limit in [0, 1]. |
+| `a` | Number | Yes | Shape parameter (> 0). |
+| `b` | Number | Yes | Shape parameter (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Value in [0, 1]. |
 
 ## Examples
 

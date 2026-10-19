@@ -1,29 +1,37 @@
 ---
 name: mad
-category: Built-in Functions
-summary: Reference page for mad.
-related: []
+category: Stats
+summary: Median absolute deviation: median(|xᵢ − median(x)|).
+related: [trimmedmean, skewness]
 examples: []
-tags: [mad]
+tags: [mad, stats, robust, spread]
 ---
 
 # mad
 
-`mad` is available in the frees built-in functions surface.
+Median absolute deviation: median(|xᵢ − median(x)|).
 
 ## Syntax
 
 ```
-mad(...)
+d = mad(x1, x2, ...)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`mad(x1, x2, ...)` returns the unscaled median absolute deviation, a robust spread measure. Multiply by 1.4826 to estimate σ for normal data.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x1, x2, ...` | Number | Yes | One or more values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `d` | Number | MAD, in the units of the values. |
 
 ## Examples
 

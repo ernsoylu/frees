@@ -1,19 +1,20 @@
 ---
 name: PneumaticThermalVolume
 category: Component (pneumatic)
-summary: Acausal pneumatic-domain component PneumaticThermalVolume with ports in, out, wall.
+summary: "Thermal gas volume: mass AND temperature states with a heat port — the non-isothermal receiver (charge heating, blow-down cooling); pressure from the ideal-gas law."
 related: []
 examples: []
 tags: [pneumaticthermalvolume, component, pneumatic, acausal]
 references: []
-generated: true
 ---
 
 # PneumaticThermalVolume
 
-Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Thermal gas volume: mass AND temperature states with a heat port — the non-isothermal receiver (charge heating, blow-down cooling); pressure from the ideal-gas law.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/pneumatic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -46,12 +47,12 @@ $$
 \begin{aligned}
 \text{der}\left(m\right) &= in.mdot - out.mdot \\
 \text{init}\left(m\right) &= m0 \\
-t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 \text{der}\left(t\right) &= \frac{in.mdot\cdot cp\cdot \left(t_{in} - t\right) + wall.qdot}{m\cdot cv} \\
 \text{init}\left(t\right) &= t0 \\
 in.p &= \frac{m\cdot r\cdot t}{v} \\
 out.p &= in.p \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid}, =out.p, p=t\right) \\
+out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=t\right) \\
 wall.t &= t
 \end{aligned}
 $$

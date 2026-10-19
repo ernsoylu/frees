@@ -36,6 +36,7 @@ for (const p of manifest.propertyFunctions) symbols.add(p.name.toLowerCase());
 for (const c of manifest.components) symbols.add(c.name.toLowerCase());
 for (const f of manifest.materials.functions) symbols.add(f.toLowerCase());
 for (const r of manifest.replCasOps) symbols.add(r.toLowerCase());
+for (const k of manifest.keywords || []) symbols.add(k);
 
 // Complete callable surface for the guide-prose linter: the manifest families
 // above, plus the function aliases and dispatch-only arms the manifest records.
@@ -125,6 +126,8 @@ const walk = (dir) => {
       // Cookbook/guide pages document a task, not a backend symbol — exempt from
       // the symbol-existence check (their example bindings are still validated).
       const guide = /^guide:\s*true\s*$/m.test(fm[1]);
+      const cvFm = fm[1].match(/^covers:\s*\[([^\]]*)\]/m);
+      const covers = cvFm ? cvFm[1].split(',').map((s) => s.trim()).filter(Boolean) : [];
 
       // Substance tier (non-guide pages). The Syntax block is always a fenced
       // code sample, so it is not a signal; a *worked* example is one in the
@@ -139,7 +142,7 @@ const walk = (dir) => {
         : (refsNonEmpty || bodyLen >= 500) ? 'reference'
         : 'stub';
 
-      pages.push({ file: path.relative(SRC, p), name, generated, guide, related, tier, examples: [...new Set([...exFrontmatter, ...exInline])] });
+      pages.push({ file: path.relative(SRC, p), name, covers, generated, guide, related, tier, examples: [...new Set([...exFrontmatter, ...exInline])] });
     }
   }
 };
@@ -156,6 +159,9 @@ for (const id of duplicateIds) {
 for (const pg of pages) {
   if (!pg.guide && !symbols.has(pg.name.toLowerCase())) {
     errors.push(`${pg.file}: documents "${pg.name}" which is not a known backend symbol`);
+  }
+  for (const c of pg.covers) {
+    if (!symbols.has(c.toLowerCase())) errors.push(`${pg.file}: covers "${c}" which is not a known backend symbol`);
   }
   for (const id of pg.examples) {
     if (!exampleIds.has(id)) errors.push(`${pg.file}: binds example "${id}" which is not in examples.ts`);
@@ -196,8 +202,9 @@ const reference = symbolPages.filter((p) => p.tier === 'reference').length;
 const stubs = symbolPages.filter((p) => p.tier === 'stub');
 
 const total = manifest.coverage.documentableSurfaceTotal;
+const covered = new Set(symbolPages.flatMap((p) => [p.name, ...p.covers].map((n) => n.toLowerCase())));
 console.log(
-  `doc-coverage: ${symbolPages.length}/${total} symbols have a page (${(100 * symbolPages.length / total).toFixed(1)}%) — `
+  `doc-coverage: ${covered.size}/${total} symbols have a page (${(100 * covered.size / total).toFixed(1)}%) — `
   + `${rich} rich (worked example), ${reference} reference, ${stubs.length} stub (signature-only); ${guides} cookbook guide(s).`,
 );
 if (stubs.length) {

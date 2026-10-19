@@ -1,15 +1,15 @@
 ---
 name: polyfit
 category: Stats
-summary: Reference page for polyfit.
-related: []
+summary: Least-squares polynomial fit; coefficients in ascending powers.
+related: [linfit, slope, intercept, r2]
 examples: []
 tags: [polyfit]
 ---
 
 # polyfit
 
-Fits a polynomial by least squares and returns coefficients in ascending powers.
+Least-squares polynomial fit; coefficients in ascending powers.
 
 ## Syntax
 
@@ -19,11 +19,7 @@ Fits a polynomial by least squares and returns coefficients in ascending powers.
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+`[c] = polyfit(x, y, degree)` fits a polynomial of the given degree to the points `(x, y)` by least squares and returns its coefficients in **ascending** powers: `y ≈ c[1] + c[2]·x + … + c[degree+1]·x^degree`. Note the order — it is the reverse of MATLAB's `polyfit`.
 
 ## Examples
 
@@ -52,3 +48,17 @@ c[3] = 1
 ```
 
 <!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | Sample abscissae. |
+| `y` | Vector | Yes | Sample ordinates (same length as `x`). |
+| `degree` | Number | Yes | Polynomial degree (≥ 0, less than the number of points). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `c` | Vector | `degree + 1` coefficients, constant term first. |

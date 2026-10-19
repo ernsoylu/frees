@@ -42,9 +42,9 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \begin{aligned}
 out.p &= in.p - dp \\
-tevap &= \text{T\_sat}\left(\mathrm{fluid}, =in.p\right) \\
+tevap &= \text{T\_sat}\left(\mathrm{fluid\$}, p=in.p\right) \\
 q &= frac\cdot ua\cdot \left(wall.t - tevap\right) \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid}, =out.p, p=tevap + sh\right) \\
+out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=tevap + sh\right) \\
 in.mdot &= \frac{q}{out.h - in.h} \\
 out.mdot &= in.mdot \\
 wall.qdot &= q

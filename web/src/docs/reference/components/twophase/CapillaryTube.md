@@ -1,19 +1,20 @@
 ---
 name: CapillaryTube
 category: Component (twophase)
-summary: Acausal twophase-domain component CapillaryTube with ports in, out.
+summary: "Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure)."
 related: []
 examples: []
 tags: [capillarytube, component, twophase, acausal]
 references: []
-generated: true
 ---
 
 # CapillaryTube
 
-Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/twophase.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -42,8 +43,8 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.h &= in.h \\
-t_{in} &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
-pf &= \text{P\_sat}\left(\mathrm{fluid}, =t_{in}\right) \\
+t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+pf &= \text{P\_sat}\left(\mathrm{fluid\$}, t=t_{in}\right) \\
 dp_{eff} &= in.p - \text{max}\left(out.p, pf\right) \\
 in.mdot &= c\cdot dp_{eff}^{n}
 \end{aligned}

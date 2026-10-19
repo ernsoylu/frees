@@ -276,10 +276,20 @@ pub fn auto_size<S: Shapes + ?Sized>(
     }
     match name {
         "ss2ss" => {
+            // An is n×n, Bn n×m, Cn p×n, Dn p×m — with m read from B and p
+            // from C, as `flatten_ss2ss` reads them. The Java sized Bn and Cn as
+            // SISO vectors, which the flattener's matrix reads then refused.
             let n = in_mat_rows(shapes, inputs, 0)?;
+            let m = in_mat_cols(shapes, inputs, 1)?;
+            let p = if is_vector_slice(input_at(inputs, 2)?) {
+                1
+            } else {
+                in_mat_rows(shapes, inputs, 2)?
+            };
             set_mat(outputs, 0, n, n);
-            set_vec(outputs, 1, n);
-            set_vec(outputs, 2, n);
+            set_mat(outputs, 1, n, m);
+            set_mat(outputs, 2, p, n);
+            set_mat(outputs, 3, p, m);
         }
         "ss2tf" | "ss2tfij" => {
             let n = in_mat_rows(shapes, inputs, 0)?;
@@ -298,9 +308,13 @@ pub fn auto_size<S: Shapes + ?Sized>(
             set_vec(outputs, 1, np + 1);
         }
         "tf2zp" => {
-            // pr/pi follow the denominator degree; zr/zi (the finite-zero
-            // count) stay explicit.
+            // pr/pi follow the denominator degree, zr/zi the numerator's.
+            // A numerator with leading zeros has fewer finite zeros than
+            // slots; the kernel reads the surplus slots as 0.
+            let nz = in_vec_len(shapes, inputs, 0)?.saturating_sub(1);
             let np = in_vec_len(shapes, inputs, 1)?.saturating_sub(1);
+            set_vec(outputs, 0, nz);
+            set_vec(outputs, 1, nz);
             set_vec(outputs, 2, np);
             set_vec(outputs, 3, np);
         }
@@ -441,7 +455,7 @@ pub fn expected_output_count(name: &str, inputs: &[Expr]) -> Option<usize> {
         "tf2ss" | "margin" | "stepinfo" => Some(4),
         "tf2zp" => Some(5),
         "series" | "parallel" | "feedback" => Some(if inputs.len() >= 8 { 4 } else { 2 }),
-        "ss2ss" => Some(3),
+        "ss2ss" => Some(4),
         "rlocus" | "errorconst" | "pidtune" | "balreal" => Some(3),
         _ => None,
     }
@@ -604,6 +618,11 @@ fn in_scalar_int<S: Shapes + ?Sized>(shapes: &S, inputs: &[Expr], idx: usize) ->
     shapes.const_index(input_at(inputs, idx)?)
 }
 
+/// A one-index slice `v[1:n]`: a vector, whose orientation the caller decides.
+fn is_vector_slice(e: &Expr) -> bool {
+    matches!(e, Expr::ArrayAccess { indices, .. } if indices.len() == 1)
+}
+
 fn input_at(inputs: &[Expr], idx: usize) -> Result<&Expr> {
     inputs
         .get(idx)
@@ -738,7 +757,7 @@ fn flatten_rank<H: Host + ?Sized>(
 ) -> Result<()> {
     if inputs.len() != 1 || outputs.len() != 1 {
         return Err(parse_err(
-            "rank expects 1 input (M) and 1 output (r), e.g. CALL rank(M[1:3,1:3] : r)",
+            "rank expects 1 input (M) and 1 output (r), e.g. [r] = rank(M)",
         ));
     }
     let m = host.matrix_info(&inputs[0])?;
@@ -764,7 +783,7 @@ fn flatten_ss2ss<H: Host + ?Sized>(
     if inputs.len() != 5 || outputs.len() != 4 {
         return Err(parse_err(
             "ss2ss expects 5 inputs (A, B, C, D, P) and 4 outputs (An, Bn, Cn, Dn), \
-             e.g. CALL ss2ss(A, B, C, D, P : An, Bn, Cn, Dn)",
+             e.g. [An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)",
         ));
     }
     let a = host.matrix_info(&inputs[0])?;
@@ -772,9 +791,27 @@ fn flatten_ss2ss<H: Host + ?Sized>(
     if a.cols != n {
         return Err(parse_err("ss2ss: A must be square"));
     }
-    let b = host.matrix_info(&inputs[1])?;
-    let c = host.matrix_info(&inputs[2])?;
-    let d = host.matrix_info(&inputs[3])?;
+    // A 1-D B is the single input column and a 1-D C the single output row,
+    // so the SISO form `B = [0; 1]`, `C = [1, 0]`, `D = [0]` reads as written.
+    let b = matrix_data(host, &inputs[1])?;
+    let mut c = matrix_data(host, &inputs[2])?;
+    if is_vector_slice(&inputs[2]) {
+        c = MatrixRef {
+            rows: 1,
+            cols: c.rows,
+            elements: vec![c.elements.into_iter().flatten().collect()],
+            ..c
+        };
+    }
+    let d = matrix_data(host, &inputs[3])?;
+    let (m, p) = (b.cols, c.rows);
+    if b.rows != n || c.cols != n || d.rows * d.cols != p * m {
+        return Err(parse_err(format!(
+            "ss2ss: with {n} states, B must be {n}x{m}, C {p}x{n} and D {p}x{m} \
+             (got B {}x{}, C {}x{}, D {}x{})",
+            b.rows, b.cols, c.rows, c.cols, d.rows, d.cols
+        )));
+    }
     let transform = host.matrix_info(&inputs[4])?;
     if transform.rows != n || transform.cols != n {
         return Err(parse_err(format!(
@@ -789,9 +826,6 @@ fn flatten_ss2ss<H: Host + ?Sized>(
     let bn = host.matrix_info(&outputs[1])?;
     let cn = host.matrix_info(&outputs[2])?;
     let dn = host.matrix_info(&outputs[3])?;
-
-    let m = d.cols;
-    let p = d.rows;
 
     host.register_shape(&an.name, n, n);
     host.register_shape(&bn.name, n, m);
@@ -871,7 +905,7 @@ fn flatten_ss2tf<H: Host + ?Sized>(
     if inputs.len() != 4 || outputs.len() != 2 {
         return Err(parse_err(
             "ss2tf expects 4 inputs (A, B, C, D) and 2 outputs (num, den), \
-             e.g. CALL ss2tf(A[1:2,1:2], B[1:2], C[1:2], D : num[1:3], den[1:3])",
+             e.g. [num, den] = ss2tf(A, B, C, D)",
         ));
     }
     let a = host.matrix_info(&inputs[0])?;
@@ -911,8 +945,7 @@ fn flatten_ss2tf_mimo<H: Host + ?Sized>(
     if inputs.len() != 6 || outputs.len() != 2 {
         return Err(parse_err(
             "ss2tfij expects 6 inputs (A, B, C, D, i, j) and 2 outputs (num, den), \
-             e.g. CALL ss2tfij(A[1:2,1:2], B[1:2,1:2], C[1:2,1:2], D[1:2,1:2], 1, 1 : \
-             num[1:3], den[1:3])",
+             e.g. [num, den] = ss2tfij(A, B, C, D, 1, 1)",
         ));
     }
     let a = host.matrix_info(&inputs[0])?;
@@ -1055,7 +1088,7 @@ fn flatten_tf2ss<H: Host + ?Sized>(
     if inputs.len() != 2 || outputs.len() != 4 {
         return Err(parse_err(
             "tf2ss expects 2 inputs (num, den) and 4 outputs (A, B, C, D), \
-             e.g. CALL tf2ss(num[1:3], den[1:3] : A[1:2,1:2], B[1:2], C[1:2], D)",
+             e.g. [A, B, C, D] = tf2ss(num, den)",
         ));
     }
     let num = host.vector_info(&inputs[0])?;
@@ -1127,7 +1160,7 @@ fn flatten_zp2tf<H: Host + ?Sized>(
     if inputs.len() != 5 || outputs.len() != 2 {
         return Err(parse_err(
             "zp2tf expects 5 inputs (z_r, z_i, p_r, p_i, k) and 2 outputs (num, den), \
-             e.g. CALL zp2tf(z_r[1:2], z_i[1:2], p_r[1:2], p_i[1:2], k : num[1:3], den[1:3])",
+             e.g. [num, den] = zp2tf(z_r, z_i, p_r, p_i, k)",
         ));
     }
     let zr = host.vector_info(&inputs[0])?;
@@ -1194,7 +1227,7 @@ fn flatten_tf2zp<H: Host + ?Sized>(
     if inputs.len() != 2 || outputs.len() != 5 {
         return Err(parse_err(
             "tf2zp expects 2 inputs (num, den) and 5 outputs (z_r, z_i, p_r, p_i, k), \
-             e.g. CALL tf2zp(num[1:3], den[1:3] : z_r[1:2], z_i[1:2], p_r[1:2], p_i[1:2], k)",
+             e.g. [z_r, z_i, p_r, p_i, k] = tf2zp(num, den)",
         ));
     }
     let num = host.vector_info(&inputs[0])?;
@@ -1229,7 +1262,9 @@ fn flatten_tf2zp<H: Host + ?Sized>(
     register_slice_shape(host, &outputs[2], np, 1);
     register_slice_shape(host, &outputs[3], np, 1);
 
-    let mut entries = num.elements;
+    // The kernel reads `num` at the denominator's length, like every other
+    // transfer-function synthetic.
+    let mut entries = pad_numerator("tf2zp", &num, &den)?;
     entries.extend(den.elements);
 
     host.reserve(2 * nz + 2 * np + 1)?;
@@ -1297,7 +1332,7 @@ fn flatten_tf_combine<H: Host + ?Sized>(
     if inputs.len() != 4 || outputs.len() != 2 {
         return Err(parse_err(format!(
             "{op} expects 4 inputs (num1, den1, num2, den2) and 2 outputs (num, den), \
-             e.g. CALL {op}(num1[1:2], den1[1:2], num2[1:2], den2[1:2] : num[1:3], den[1:3])"
+             e.g. [num, den] = {op}(num1, den1, num2, den2)"
         )));
     }
     let (entries, expected_len, l1, l2) = tf_combine_entries(host, op, inputs, None)?;
@@ -1316,8 +1351,7 @@ fn flatten_feedback<H: Host + ?Sized>(
     if (inputs.len() != 4 && inputs.len() != 5) || outputs.len() != 2 {
         return Err(parse_err(
             "feedback expects 4 or 5 inputs (num1, den1, num2, den2, [sign]) and 2 outputs \
-             (num, den), e.g. CALL feedback(num1[1:2], den1[1:2], num2[1:2], den2[1:2] : \
-             num[1:3], den[1:3])",
+             (num, den), e.g. [num, den] = feedback(num1, den1, num2, den2)",
         ));
     }
     let sign = if inputs.len() == 5 {
@@ -1618,7 +1652,7 @@ fn flatten_pole<H: Host + ?Sized>(
     if (inputs.len() != 1 && inputs.len() != 2) || outputs.len() != 2 {
         return Err(parse_err(
             "pole expects 1 input (A) or 2 inputs (num, den) and 2 outputs (pr, pi), \
-             e.g. CALL pole(num, den : pr[1:3], pi[1:3])",
+             e.g. [pr, pi] = pole(num, den)",
         ));
     }
     let num_inputs = inputs.len();
@@ -1681,7 +1715,7 @@ fn flatten_zero<H: Host + ?Sized>(
     if (inputs.len() != 2 && inputs.len() != 4) || outputs.len() != 2 {
         return Err(parse_err(
             "zero expects 2 inputs (num, den) or 4 inputs (A, B, C, D) and 2 outputs (zr, zi), \
-             e.g. CALL zero(num, den : zr[1:2], zi[1:2])",
+             e.g. [zr, zi] = zero(num, den)",
         ));
     }
     let zr = host.vector_info(&outputs[0])?;
@@ -1741,8 +1775,7 @@ fn flatten_freq_response<H: Host + ?Sized>(
     if (inputs.len() != 3 && inputs.len() != 5) || outputs.len() != 2 {
         return Err(parse_err(format!(
             "{op} expects 3 inputs (num, den, omega) or 5 inputs (A, B, C, D, omega) and \
-             2 outputs ({tag0}, {tag1}), e.g. CALL {op}(num, den, omega : {tag0}[1:50], \
-             {tag1}[1:50])"
+             2 outputs ({tag0}, {tag1}), e.g. [{tag0}, {tag1}] = {op}(num, den, omega)"
         )));
     }
     let num_inputs = inputs.len();
@@ -1800,7 +1833,7 @@ fn flatten_margin<H: Host + ?Sized>(
     if (inputs.len() != 2 && inputs.len() != 4) || outputs.len() != 4 {
         return Err(parse_err(
             "margin expects 2 inputs (num, den) or 4 inputs (A, B, C, D) and 4 scalar outputs \
-             (gm, pm, w_cg, w_cp), e.g. CALL margin(num, den : gm, pm, w_cg, w_cp)",
+             (gm, pm, w_cg, w_cp), e.g. [gm, pm, w_cg, w_cp] = margin(num, den)",
         ));
     }
     let num_inputs = inputs.len();
@@ -1834,7 +1867,7 @@ fn flatten_routh<H: Host + ?Sized>(
     if inputs.len() != 1 || outputs.len() != 2 {
         return Err(parse_err(
             "routh expects 1 input (den) and 2 scalar outputs (nRHP, stable), \
-             e.g. CALL routh(den[1:4] : nRHP, stable)",
+             e.g. [nRHP, stable] = routh(den)",
         ));
     }
     let den = host.vector_info(&inputs[0])?;
@@ -1867,7 +1900,7 @@ fn flatten_residue<H: Host + ?Sized>(
         return Err(parse_err(
             "residue expects 2 inputs (num, den) and 5 outputs (r_r, r_i, p_r, p_i, k) \
              or 6 outputs (r_r, r_i, p_r, p_i, ord, k) for repeated poles, \
-             e.g. CALL residue(num[1:1], den[1:3] : r_r[1:2], r_i[1:2], p_r[1:2], p_i[1:2], k)",
+             e.g. [r_r, r_i, p_r, p_i, k] = residue(num, den)",
         ));
     }
     let num = host.vector_info(&inputs[0])?;
@@ -1956,7 +1989,7 @@ fn flatten_error_const<H: Host + ?Sized>(
     if inputs.len() != 2 || outputs.len() != 3 {
         return Err(parse_err(
             "errorconst expects 2 inputs (num, den) and 3 scalar outputs (Kp, Kv, Ka), \
-             e.g. CALL errorconst(num[1:2], den[1:3] : Kp, Kv, Ka)",
+             e.g. [Kp, Kv, Ka] = errorconst(num, den)",
         ));
     }
     let num = host.vector_info(&inputs[0])?;
@@ -1989,7 +2022,7 @@ fn flatten_mason<H: Host + ?Sized>(
     if inputs.len() != 3 || outputs.len() != 1 {
         return Err(parse_err(
             "mason expects 3 inputs (G, source, sink) and 1 output (T), \
-             e.g. CALL mason(G[1:4,1:4], 1, 4 : T)",
+             e.g. [T] = mason(G, 1, 4)",
         ));
     }
     let g = host.matrix_info(&inputs[0])?;
@@ -2027,8 +2060,7 @@ fn flatten_discretize<H: Host + ?Sized>(
     if (inputs.len() != 3 && inputs.len() != 4) || outputs.len() != 2 {
         return Err(parse_err(format!(
             "{name} expects 3 inputs (num, den, Ts) or 4 inputs (num, den, Ts, method$) \
-             and 2 outputs (numz, denz), e.g. CALL {name}(num[1:2], den[1:2], Ts, 'tustin' : \
-             numz[1:2], denz[1:2])"
+             and 2 outputs (numz, denz), e.g. [numz, denz] = {name}(num, den, Ts, 'tustin')"
         )));
     }
     let mut method = "tustin".to_string();
@@ -2126,7 +2158,7 @@ fn flatten_time_response<H: Host + ?Sized>(
         return Err(parse_err(format!(
             "{name} expects (num, den) or (A, B, C, D), optionally followed by a time vector t, \
              and 1 output y (or [y, t] to capture the auto-generated time grid), \
-             e.g. CALL {name}(num, den : y[1:{DEFAULT_TIME_POINTS}])"
+             e.g. [y] = {name}(num, den)"
         )));
     }
 
@@ -2195,7 +2227,7 @@ fn flatten_lsim<H: Host + ?Sized>(
     if (inputs.len() != 4 && inputs.len() != 6) || outputs.len() != 1 {
         return Err(parse_err(
             "lsim expects 4 inputs (num, den, u, t) or 6 inputs (A, B, C, D, u, t) and \
-             1 output (y), e.g. CALL lsim(num, den, u, t : y[1:50])",
+             1 output (y), e.g. [y] = lsim(num, den, u, t)",
         ));
     }
     let num_inputs = inputs.len();
@@ -2247,7 +2279,7 @@ fn flatten_stepinfo<H: Host + ?Sized>(
     if inputs.len() != 2 || outputs.len() != 4 {
         return Err(parse_err(
             "stepinfo expects 2 inputs (t, y) and 4 scalar outputs (Tr, Tp, Ts, OS), \
-             e.g. CALL stepinfo(t[1:50], y[1:50] : Tr, Tp, Ts, OS)",
+             e.g. [Tr, Tp, Ts, OS] = stepinfo(t, y)",
         ));
     }
     let t = host.vector_info(&inputs[0])?;
@@ -2286,7 +2318,7 @@ fn flatten_pade<H: Host + ?Sized>(
     if inputs.len() != 2 || outputs.len() != 2 {
         return Err(parse_err(
             "pade expects 2 inputs (Td, order) and 2 vector outputs (num_delay, den_delay), \
-             e.g. CALL pade(Td, order : num_delay[1:3], den_delay[1:3])",
+             e.g. [num_delay, den_delay] = pade(Td, order)",
         ));
     }
     let order = host.const_index(&inputs[1])?;
@@ -2339,8 +2371,7 @@ fn flatten_rlocus<H: Host + ?Sized>(
     if inputs.len() != 2 || outputs.len() != 3 {
         return Err(parse_err(
             "rlocus expects 2 inputs (num, den) and 3 outputs (K[1:M], cpr[1:M, 1:N], \
-             cpi[1:M, 1:N]), e.g. CALL rlocus(num, den : K[1:100], cpr[1:100, 1:4], \
-             cpi[1:100, 1:4])",
+             cpi[1:M, 1:N]), e.g. [K, cpr, cpi] = rlocus(num, den)",
         ));
     }
     let num = host.vector_info(&inputs[0])?;
@@ -2595,7 +2626,7 @@ fn flatten_place<H: Host + ?Sized>(
     if inputs.len() != 4 || outputs.len() != 1 {
         return Err(parse_err(
             "place expects 4 inputs (A, B, pr, pi) and 1 output (K), \
-             e.g. CALL place(A[1:2,1:2], B[1:2], pr[1:2], pi[1:2] : K[1:2])",
+             e.g. [K] = place(A, B, pr, pi)",
         ));
     }
     let a = matrix_data(host, &inputs[0])?;
@@ -2657,7 +2688,7 @@ fn flatten_lqe<H: Host + ?Sized>(
     if inputs.len() != 5 || outputs.len() != 1 {
         return Err(parse_err(
             "lqe expects 5 inputs (A, G, C, Q, R) and 1 output (L), \
-             e.g. CALL lqe(A[1:2,1:2], G[1:2,1:2], C[1:1,1:2], Q[1:2,1:2], R : L[1:2,1:1])",
+             e.g. [L] = lqe(A, G, C, Q, R)",
         ));
     }
     let a = matrix_data(host, &inputs[0])?;
@@ -2724,7 +2755,7 @@ fn flatten_gram<H: Host + ?Sized>(
     if inputs.len() != 3 || outputs.len() != 1 {
         return Err(parse_err(
             "gram expects 3 inputs (A, M, type$) and 1 output (W), \
-             e.g. CALL gram(A[1:2,1:2], B[1:2,1:1], 'c' : Wc[1:2,1:2])",
+             e.g. [Wc] = gram(A, B, 'c')",
         ));
     }
     let Expr::Str(type_raw) = &inputs[2] else {
@@ -2789,8 +2820,7 @@ fn flatten_balreal<H: Host + ?Sized>(
     if inputs.len() != 3 || outputs.len() != 3 {
         return Err(parse_err(
             "balreal expects 3 inputs (A, B, C) and 3 outputs (Ab, Bb, Cb), \
-             e.g. CALL balreal(A[1:2,1:2], B[1:2,1:1], C[1:1,1:2] : Ab[1:2,1:2], \
-             Bb[1:2,1:1], Cb[1:1,1:2])",
+             e.g. [Ab, Bb, Cb] = balreal(A, B, C)",
         ));
     }
     let a = matrix_data(host, &inputs[0])?;
@@ -2853,7 +2883,7 @@ fn flatten_pidtune<H: Host + ?Sized>(
     if inputs.len() != 4 || outputs.len() != 3 {
         return Err(parse_err(
             "pidtune expects 4 inputs (num, den, type$, wc) and 3 outputs (Kp, Ki, Kd), \
-             e.g. CALL pidtune(num, den, 'PID', wc : Kp, Ki, Kd)",
+             e.g. [Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)",
         ));
     }
     let Expr::Str(type_raw) = &inputs[2] else {

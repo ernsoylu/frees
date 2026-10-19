@@ -17,7 +17,6 @@ bandwidth, resonance, roll-off, and the stability margins.
 
 ```
 [mag, phase] = bode(num, den, omega)
-[mag, phase] = bode(num, den, omega)
 ```
 
 ## Description

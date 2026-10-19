@@ -1,29 +1,40 @@
 ---
 name: ci_mean_lo
-category: Built-in Functions
-summary: Reference page for ci_mean_lo.
-related: []
+category: Stats
+summary: Lower bound of the t-based confidence interval for the mean.
+related: [ci_mean_hi, bootstrap_ci_lo]
 examples: []
-tags: [ci_mean_lo]
+tags: [ci_mean_lo, stats, confidence interval]
 ---
 
 # ci_mean_lo
 
-`ci_mean_lo` is available in the frees built-in functions surface.
+Lower bound of the t-based confidence interval for the mean.
 
 ## Syntax
 
 ```
-ci_mean_lo(...)
+b = ci_mean_lo(confidence, data)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`ci_mean_lo(confidence, data)` returns the **lower bound** of the Student-t confidence interval for the population mean of `data`, at confidence level `confidence` (e.g. 0.95).
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `confidence` | Number | Yes | Confidence level in (0, 1), e.g. 0.95. |
+| `data` | Vector | Yes | Sample values (n ≥ 2). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `b` | Number | Lower bound, in the units of `data`. |
 
 ## Examples
 

@@ -1,19 +1,22 @@
 ---
 name: HybridPowerSplit
 category: Component (powertrain)
-summary: Acausal powertrain-domain component HybridPowerSplit with ports eng, out, sun, p, n, u1, u2, heat.
+summary: "Power-split e-CVT: planetary with the engine on the carrier, MG1 on the sun (speeder) and MG2 on the ring/output (torquer), both motors on one DC bus."
 related: []
 examples: []
 tags: [hybridpowersplit, component, powertrain, acausal]
 references: []
-generated: true
 ---
 
 # HybridPowerSplit
 
-Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Power-split e-CVT: planetary with the engine on the carrier, MG1 on the sun (speeder) and MG2 on the ring/output (torquer), both motors on one DC bus.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+u1/u2 command the motor torques; heat collects both machines' losses.
+
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/powertrain.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

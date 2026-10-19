@@ -1,29 +1,39 @@
 ---
 name: fpdf
-category: Built-in Functions
-summary: Reference page for fpdf.
-related: []
+category: Stats
+summary: F distribution — probability density.
+related: [fcdf, finv]
 examples: []
-tags: [fpdf]
+tags: [fpdf, stats, distribution, f distribution]
 ---
 
 # fpdf
 
-`fpdf` is available in the frees built-in functions surface.
+F distribution — probability density.
 
 ## Syntax
 
 ```
-fpdf(...)
+y = fpdf(x, d1, d2)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`fpdf(x, d1, d2)` returns the probability density of the F distribution with `d1` numerator and `d2` denominator degrees of freedom.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Evaluation point (≥ 0). |
+| `d1` | Number | Yes | Numerator degrees of freedom (> 0). |
+| `d2` | Number | Yes | Denominator degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Density value. |
 
 ## Examples
 

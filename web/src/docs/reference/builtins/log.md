@@ -1,29 +1,37 @@
 ---
 name: log
-category: Built-in Functions
-summary: Reference page for log.
-related: []
+category: Math
+summary: Base-10 logarithm (same as log10).
+related: [log10, ln, exp]
 examples: []
-tags: [log]
+tags: [log, math, logarithm]
 ---
 
 # log
 
-`log` is available in the frees built-in functions surface.
+Base-10 logarithm (same as log10).
 
 ## Syntax
 
 ```
-log(...)
+y = log(x)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`log(x)` returns the **base-10** logarithm of x > 0. Use `ln` for the natural logarithm.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Positive, dimensionless value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | log₁₀(x). |
 
 ## Examples
 

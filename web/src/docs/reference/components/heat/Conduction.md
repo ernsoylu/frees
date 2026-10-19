@@ -76,6 +76,6 @@ sh.port.qdot = -25000
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: heat-conduction]

@@ -1,19 +1,20 @@
 ---
 name: MoistAirFan
 category: Component (moistair)
-summary: Acausal moistair-domain component MoistAirFan with ports in, out.
+summary: "Blower: fixed pressure rise dP with motor+aero inefficiency heating the stream (shaft power = V̇·ΔP/η, all of it ends up in the air)."
 related: []
 examples: []
 tags: [moistairfan, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # MoistAirFan
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Blower: fixed pressure rise dP with motor+aero inefficiency heating the stream (shaft power = V̇·ΔP/η, all of it ends up in the air).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/moistair.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

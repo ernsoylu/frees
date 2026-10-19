@@ -1,19 +1,20 @@
 ---
 name: PCMMass
 category: Component (heat)
-summary: Acausal heat-domain component PCMMass with ports port.
+summary: "Phase-change-material mass: latent heat L released over a Gaussian mushy zone of width dTm around the melt point (∫cp_eff dT = cp·ΔT + L exactly)."
 related: []
 examples: []
 tags: [pcmmass, component, heat, acausal]
 references: []
-generated: true
 ---
 
 # PCMMass
 
-Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Phase-change-material mass: latent heat L released over a Gaussian mushy zone of width dTm around the melt point (∫cp_eff dT = cp·ΔT + L exactly).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/heat.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

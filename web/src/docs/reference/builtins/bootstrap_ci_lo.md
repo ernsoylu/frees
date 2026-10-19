@@ -1,29 +1,42 @@
 ---
 name: bootstrap_ci_lo
-category: Built-in Functions
-summary: Reference page for bootstrap_ci_lo.
-related: []
+category: Stats
+summary: Lower bound of a seeded bootstrap confidence interval for the mean.
+related: [bootstrap_ci_hi, ci_mean_lo]
 examples: []
-tags: [bootstrap_ci_lo]
+tags: [bootstrap_ci_lo, stats, bootstrap, confidence interval]
 ---
 
 # bootstrap_ci_lo
 
-`bootstrap_ci_lo` is available in the frees built-in functions surface.
+Lower bound of a seeded bootstrap confidence interval for the mean.
 
 ## Syntax
 
 ```
-bootstrap_ci_lo(...)
+b = bootstrap_ci_lo(confidence, n_resamples, seed, data)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`bootstrap_ci_lo(confidence, n_resamples, seed, data)` draws `n_resamples` bootstrap samples (with replacement) from `data` and returns the **lower percentile bound** of the resampled means. The same seed always gives the same interval.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `confidence` | Number | Yes | Confidence level in (0, 1). |
+| `n_resamples` | Number | Yes | Number of bootstrap resamples. |
+| `seed` | Number | Yes | Random seed (integer). |
+| `data` | Vector | Yes | Sample values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `b` | Number | Lower bound, in the units of `data`. |
 
 ## Examples
 

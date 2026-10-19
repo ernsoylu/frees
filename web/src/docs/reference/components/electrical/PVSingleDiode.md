@@ -1,19 +1,22 @@
 ---
 name: PVSingleDiode
 category: Component (electrical)
-summary: Acausal electrical-domain component PVSingleDiode with ports p, n, G.
+summary: "Single-diode PV module: I = Iph − I0·(exp(Vd/(n·Vt)) − 1) − Vd/Rsh with the series-resistance diode voltage Vd = V + I·Rs — the physics rung above SolarArray's clamp model."
 related: []
 examples: []
 tags: [pvsinglediode, component, electrical, acausal]
 references: []
-generated: true
 ---
 
 # PVSingleDiode
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Single-diode PV module: I = Iph − I0·(exp(Vd/(n·Vt)) − 1) − Vd/Rsh with the series-resistance diode voltage Vd = V + I·Rs — the physics rung above SolarArray's clamp model.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Current is signed out of p (sourcing).
+
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/electrical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

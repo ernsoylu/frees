@@ -2884,6 +2884,9 @@ export default function App() {
         <Suspense fallback={lazyTabFallback}>
           <Workspace
             variables={workspaceVariables}
+            onSolve={() => { void checkThenSolve() }}
+            solveBusy={solving || checking || solvingTableId !== null || checkingTableId !== null}
+            onOpenExamples={() => setShowExamples(true)}
             replNames={replNames}
             components={result?.components}
             diagnostics={result}
@@ -3036,7 +3039,7 @@ export default function App() {
           onUnitIdsChange={handleStateUnitIdsChange}
           onFillMissing={() => {
             setFillMissingFor(s.name)
-            onSolve(true)
+            void onSolve(true)
           }}
           solving={solving && fillMissingFor === s.name}
           solvable={solvable}
@@ -3120,10 +3123,11 @@ export default function App() {
             solving={solving}
             onCheck={checkWithFallback}
             onSolve={checkThenSolve}
+            onStop={onStop}
             checkingTableId={checkingTableId}
             solvingTableId={solvingTableId}
             onCheckTable={onCheckTable}
-            onSolveTable={onSolveTable}
+            onSolveTable={checkThenSolveTable}
             onSaveProject={handleSaveProject}
             onSaveProjectAs={handleSaveProjectAs}
             onNewProject={handleNewProject}

@@ -1,29 +1,40 @@
 ---
 name: ttest2_stat
-category: Built-in Functions
-summary: Reference page for ttest2_stat.
-related: []
+category: Stats
+summary: t statistic of Welch's two-sample t-test.
+related: [ttest2_pval, ttest2_df]
 examples: []
-tags: [ttest2_stat]
+tags: [ttest2_stat, stats, hypothesis test, t-test]
 ---
 
 # ttest2_stat
 
-`ttest2_stat` is available in the frees built-in functions surface.
+t statistic of Welch's two-sample t-test.
 
 ## Syntax
 
 ```
-ttest2_stat(...)
+t = ttest2_stat(x, y)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`ttest2_stat(x, y)` tests whether two independent samples have the same mean without assuming equal variances (two-sided p-value, Welch–Satterthwaite degrees of freedom) and returns the **t statistic**. The sibling accessors return the other results of the same test.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | First independent sample. |
+| `y` | Vector | Yes | Second independent sample. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `t` | Number | T statistic. |
 
 ## Examples
 

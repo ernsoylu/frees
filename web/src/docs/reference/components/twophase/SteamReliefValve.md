@@ -35,7 +35,7 @@ SteamReliefValve inst(fluid$, A, Pset, Cd, kgas, Rgas, eps, domain$)
 | `Cd` | Number | Discharge coefficient. |
 | `kgas` | Number | Gas specific-heat ratio. |
 | `Rgas` | Number | Specific gas constant [J/kg·K]. |
-| `eps` | Number | Effectiveness / roughness. |
+| `eps` | Number | Opening smoothing width [Pa] — the tanh transition around `Pset`. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
@@ -47,7 +47,7 @@ $$
 out.mdot &= in.mdot \\
 out.h &= in.h \\
 opening &= 0.5\,\left(1 + \tanh\left(\frac{in.p - pset}{eps}\right)\right) \\
-t0v &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=1\right) \\
+t0v &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 prc &= \left(\frac{2}{kgas + 1}\right)^{\frac{kgas}{kgas - 1}} \\
 mdot_{ch} &= cd\cdot a\cdot in.p\cdot \sqrt{\frac{kgas}{rgas\cdot t0v}}\cdot \left(\frac{2}{kgas + 1}\right)^{\frac{kgas + 1}{2\,\left(kgas - 1\right)}} \\
 ratio &= \frac{\text{min}\left(\text{max}\left(\frac{out.p}{in.p}, prc\right), 1\right) - prc}{1 - prc} \\

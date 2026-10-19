@@ -221,2368 +221,6 @@ T0 = 288.15 [K]
 1. U.S. Standard Atmosphere, 1976 (NOAA/NASA/USAF).`,
   },
   {
-    name: `anova1_df_between`,
-    slug: `anova1_df_between`,
-    category: `Built-in Functions`,
-    summary: `Reference page for anova1_df_between.`,
-    related: [],
-    examples: [],
-    tags: [`anova1_df_between`],
-    references: [],
-    guides: [],
-    body: `\`anova1_df_between\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-anova1_df_between(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare readings from three sensor batches
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = anova1_df_between([9, 10, 11], [11, 12, 13], [13, 14, 15])
-
-{ CHECK result 2 0.000002 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 2
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `anova1_df_within`,
-    slug: `anova1_df_within`,
-    category: `Built-in Functions`,
-    summary: `Reference page for anova1_df_within.`,
-    related: [],
-    examples: [],
-    tags: [`anova1_df_within`],
-    references: [],
-    guides: [],
-    body: `\`anova1_df_within\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-anova1_df_within(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare readings from three sensor batches
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = anova1_df_within([9, 10, 11], [11, 12, 13], [13, 14, 15])
-
-{ CHECK result 6 0.000006 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 6
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `anova1_f`,
-    slug: `anova1_f`,
-    category: `Built-in Functions`,
-    summary: `Reference page for anova1_f.`,
-    related: [],
-    examples: [],
-    tags: [`anova1_f`],
-    references: [],
-    guides: [],
-    body: `\`anova1_f\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-anova1_f(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare readings from three sensor batches
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = anova1_f([9, 10, 11], [11, 12, 13], [13, 14, 15])
-
-{ CHECK result 12 0.000012 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 12
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `anova1_pval`,
-    slug: `anova1_pval`,
-    category: `Built-in Functions`,
-    summary: `Reference page for anova1_pval.`,
-    related: [],
-    examples: [],
-    tags: [`anova1_pval`],
-    references: [],
-    guides: [],
-    body: `\`anova1_pval\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-anova1_pval(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare readings from three sensor batches
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = anova1_pval([9, 10, 11], [11, 12, 13], [13, 14, 15])
-
-{ CHECK result 0.008 1e-8 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.008
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `betainc`,
-    slug: `betainc`,
-    category: `Built-in Functions`,
-    summary: `Reference page for betainc.`,
-    related: [],
-    examples: [],
-    tags: [`betainc`],
-    references: [],
-    guides: [],
-    body: `\`betainc\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-betainc(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate an incomplete beta function
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = betainc(0.5, 2, 3)
-
-{ CHECK result 0.6875 6.874999999999999e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.6875
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `bootstrap_ci_hi`,
-    slug: `bootstrap_ci_hi`,
-    category: `Built-in Functions`,
-    summary: `Reference page for bootstrap_ci_hi.`,
-    related: [],
-    examples: [],
-    tags: [`bootstrap_ci_hi`],
-    references: [],
-    guides: [],
-    body: `\`bootstrap_ci_hi\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-bootstrap_ci_hi(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Bootstrap a mean with a reproducible seed
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = bootstrap_ci_hi(0.95, 200, 42, [19, 20, 21, 22, 20])
-
-{ CHECK result 21.4 0.0000214 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 21.4
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `bootstrap_ci_lo`,
-    slug: `bootstrap_ci_lo`,
-    category: `Built-in Functions`,
-    summary: `Reference page for bootstrap_ci_lo.`,
-    related: [],
-    examples: [],
-    tags: [`bootstrap_ci_lo`],
-    references: [],
-    guides: [],
-    body: `\`bootstrap_ci_lo\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-bootstrap_ci_lo(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Bootstrap a mean with a reproducible seed
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = bootstrap_ci_lo(0.95, 200, 42, [19, 20, 21, 22, 20])
-
-{ CHECK result 19.6 0.000019600000000000002 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 19.6
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `chi2gof_df`,
-    slug: `chi2gof_df`,
-    category: `Built-in Functions`,
-    summary: `Reference page for chi2gof_df.`,
-    related: [],
-    examples: [],
-    tags: [`chi2gof_df`],
-    references: [],
-    guides: [],
-    body: `\`chi2gof_df\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-chi2gof_df(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare observed and expected category counts
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = chi2gof_df([18, 22, 20], [20, 20, 20])
-
-{ CHECK result 2 0.000002 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 2
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `chi2gof_pval`,
-    slug: `chi2gof_pval`,
-    category: `Built-in Functions`,
-    summary: `Reference page for chi2gof_pval.`,
-    related: [],
-    examples: [],
-    tags: [`chi2gof_pval`],
-    references: [],
-    guides: [],
-    body: `\`chi2gof_pval\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-chi2gof_pval(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare observed and expected category counts
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = chi2gof_pval([18, 22, 20], [20, 20, 20])
-
-{ CHECK result 0.8187307531 8.187307530779818e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.8187307531
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `chi2gof_stat`,
-    slug: `chi2gof_stat`,
-    category: `Built-in Functions`,
-    summary: `Reference page for chi2gof_stat.`,
-    related: [],
-    examples: [],
-    tags: [`chi2gof_stat`],
-    references: [],
-    guides: [],
-    body: `\`chi2gof_stat\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-chi2gof_stat(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare observed and expected category counts
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = chi2gof_stat([18, 22, 20], [20, 20, 20])
-
-{ CHECK result 0.4 4e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.4
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ci_mean_hi`,
-    slug: `ci_mean_hi`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ci_mean_hi.`,
-    related: [],
-    examples: [],
-    tags: [`ci_mean_hi`],
-    references: [],
-    guides: [],
-    body: `\`ci_mean_hi\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ci_mean_hi(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Bound a mean temperature at 95 percent confidence
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ci_mean_hi(0.95, [19, 20, 21, 22, 20])
-
-{ CHECK result 21.81571478 0.00002181571477698227 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 21.81571478
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ci_mean_lo`,
-    slug: `ci_mean_lo`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ci_mean_lo.`,
-    related: [],
-    examples: [],
-    tags: [`ci_mean_lo`],
-    references: [],
-    guides: [],
-    body: `\`ci_mean_lo\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ci_mean_lo(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Bound a mean temperature at 95 percent confidence
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ci_mean_lo(0.95, [19, 20, 21, 22, 20])
-
-{ CHECK result 18.98428522 0.000018984285223017727 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 18.98428522
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `corrcoef`,
-    slug: `corrcoef`,
-    category: `Built-in Functions`,
-    summary: `Reference page for corrcoef.`,
-    related: [],
-    examples: [],
-    tags: [`corrcoef`],
-    references: [],
-    guides: [],
-    body: `\`corrcoef\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-corrcoef(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Measure linear correlation
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = corrcoef([1, 2, 3, 4], [3, 4, 6, 7])
-
-{ CHECK result 0.9899494937 9.899494936611665e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.9899494937
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `cov`,
-    slug: `cov`,
-    category: `Built-in Functions`,
-    summary: `Reference page for cov.`,
-    related: [],
-    examples: [],
-    tags: [`cov`],
-    references: [],
-    guides: [],
-    body: `\`cov\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-cov(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Measure covariance of paired readings
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = cov([1, 2, 3, 4], [3, 4, 6, 7])
-
-{ CHECK result 2.333333333 0.0000023333333333333336 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 2.333333333
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `cube`,
-    slug: `cube`,
-    category: `Built-in Functions`,
-    summary: `Reference page for cube.`,
-    related: [],
-    examples: [],
-    tags: [`cube`],
-    references: [],
-    guides: [],
-    body: `\`cube\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-cube(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Calculate a cube volume
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = cube(3)
-
-{ CHECK result 27 0.000027 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 27
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `fcdf`,
-    slug: `fcdf`,
-    category: `Built-in Functions`,
-    summary: `Reference page for fcdf.`,
-    related: [],
-    examples: [],
-    tags: [`fcdf`],
-    references: [],
-    guides: [],
-    body: `\`fcdf\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-fcdf(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a variance-ratio probability
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = fcdf(2, 4, 10)
-
-{ CHECK result 0.8294730742 8.294730741512228e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.8294730742
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `finv`,
-    slug: `finv`,
-    category: `Built-in Functions`,
-    summary: `Reference page for finv.`,
-    related: [],
-    examples: [],
-    tags: [`finv`],
-    references: [],
-    guides: [],
-    body: `\`finv\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-finv(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Find a variance-ratio critical value
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = finv(0.95, 4, 10)
-
-{ CHECK result 3.478049691 0.0000034780496907652303 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 3.478049691
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `fpdf`,
-    slug: `fpdf`,
-    category: `Built-in Functions`,
-    summary: `Reference page for fpdf.`,
-    related: [],
-    examples: [],
-    tags: [`fpdf`],
-    references: [],
-    guides: [],
-    body: `\`fpdf\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-fpdf(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a variance-ratio density
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = fpdf(1, 4, 10)
-
-{ CHECK result 0.4553496296 4.5534962958825516e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.4553496296
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `hypot`,
-    slug: `hypot`,
-    category: `Built-in Functions`,
-    summary: `Euclidean length of two real components.`,
-    related: [`sqrt`, `abs`, `magnitude`],
-    examples: [],
-    tags: [`hypot`],
-    references: [],
-    guides: [],
-    body: `Computes the Euclidean length of two real scalar components.
-
-## Syntax
-
-\`\`\`
-r = hypot(x, y)
-\`\`\`
-
-## Description
-
-\`r = hypot(x, y)\` evaluates the square root of \`x^2 + y^2\` using the
-backend's \`libm::hypot\` routine. Exactly two scalar arguments are required.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Find the resultant of perpendicular components
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = hypot(3, 4)
-
-{ CHECK result 5 0.0000049999999999999996 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 5
-\`\`\`
-
-<!-- verified-reference-example:end -->
-
-\`\`\`frees
-r = hypot(3, 4)
-{ CHECK r 5 0 }
-\`\`\`
-
-Expected result:
-
-\`\`\`text
-r = 5
-\`\`\`
-
-## Input Arguments
-
-### x — First component
-
-Real scalar. Use the same units for both components.
-
-**Example:** \`hypot(3, 4)\`
-
-**Data Types:** \`number\`
-
-### y — Second component
-
-Real scalar, which may be positive, negative, or zero.
-
-**Example:** \`hypot(3, -4)\`
-
-**Data Types:** \`number\`
-
-## Output Arguments
-
-### r — Euclidean length
-
-Nonnegative real scalar.
-
-**Example:** \`r = 5\`
-
-**Data Types:** \`number\`
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.`,
-  },
-  {
-    name: `int`,
-    slug: `int`,
-    category: `Built-in Functions`,
-    summary: `Reference page for int.`,
-    related: [],
-    examples: [],
-    tags: [`int`],
-    references: [],
-    guides: [],
-    body: `\`int\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-int(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a scalar engineering calculation
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = int(3.9)
-
-{ CHECK result 3 0.000003 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 3
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `interp2`,
-    slug: `interp2`,
-    category: `Built-in Functions`,
-    summary: `Reference page for interp2.`,
-    related: [],
-    examples: [],
-    tags: [`interp2`],
-    references: [],
-    guides: [],
-    body: `\`interp2\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-interp2(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Interpolate a calibration grid
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-x = [0, 1]
-y = [0, 1]
-z = [0, 1; 2, 3]
-[result] = interp2(x, y, z, 0.5, 0.5)
-
-{ CHECK result 1.5 0.0000015 }
-{ CHECK x[1] 0 1e-8 }
-{ CHECK x[2] 1 0.000001 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 1.5
-x[1] = 0
-x[2] = 1
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `kurtosis`,
-    slug: `kurtosis`,
-    category: `Built-in Functions`,
-    summary: `Reference page for kurtosis.`,
-    related: [],
-    examples: [],
-    tags: [`kurtosis`],
-    references: [],
-    guides: [],
-    body: `\`kurtosis\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-kurtosis(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a scalar engineering calculation
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = kurtosis(1, 2, 2, 3, 7)
-
-{ CHECK result 3.32231405 0.000003322314049586774 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 3.32231405
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `log`,
-    slug: `log`,
-    category: `Built-in Functions`,
-    summary: `Reference page for log.`,
-    related: [],
-    examples: [],
-    tags: [`log`],
-    references: [],
-    guides: [],
-    body: `\`log\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-log(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a scalar engineering calculation
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = log(1000)
-
-{ CHECK result 3 0.000003 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 3
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `mad`,
-    slug: `mad`,
-    category: `Built-in Functions`,
-    summary: `Reference page for mad.`,
-    related: [],
-    examples: [],
-    tags: [`mad`],
-    references: [],
-    guides: [],
-    body: `\`mad\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-mad(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a scalar engineering calculation
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = mad(9, 10, 10, 11, 30)
-
-{ CHECK result 1 0.000001 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 1
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `pearson`,
-    slug: `pearson`,
-    category: `Built-in Functions`,
-    summary: `Reference page for pearson.`,
-    related: [],
-    examples: [],
-    tags: [`pearson`],
-    references: [],
-    guides: [],
-    body: `\`pearson\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-pearson(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Measure linear correlation
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = pearson([1, 2, 3, 4], [3, 4, 6, 7])
-
-{ CHECK result 0.9899494937 9.899494936611665e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.9899494937
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `permtest_pval`,
-    slug: `permtest_pval`,
-    category: `Built-in Functions`,
-    summary: `Reference page for permtest_pval.`,
-    related: [],
-    examples: [],
-    tags: [`permtest_pval`],
-    references: [],
-    guides: [],
-    body: `\`permtest_pval\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-permtest_pval(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare two batches with a seeded permutation test
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = permtest_pval(200, 42, [9, 10, 11], [12, 13, 14])
-
-{ CHECK result 0.1144278607 1.1442786069651741e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.1144278607
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `permtest_stat`,
-    slug: `permtest_stat`,
-    category: `Built-in Functions`,
-    summary: `Reference page for permtest_stat.`,
-    related: [],
-    examples: [],
-    tags: [`permtest_stat`],
-    references: [],
-    guides: [],
-    body: `\`permtest_stat\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-permtest_stat(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare two batches with a seeded permutation test
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = permtest_stat(200, 42, [9, 10, 11], [12, 13, 14])
-
-{ CHECK result 3 0.000003 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 3
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `pi`,
-    slug: `pi`,
-    category: `Built-in Functions`,
-    summary: `Reference page for pi.`,
-    related: [],
-    examples: [],
-    tags: [`pi`],
-    references: [],
-    guides: [],
-    body: `\`pi\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-pi(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Calculate a circular duct cross-section
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-diameter = 0.2 [m]
-area = pi# * diameter^2 / 4
-
-{ CHECK area 0.03141592654 3.141592653589793e-8 }
-{ CHECK diameter 0.2 2e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-area = 0.03141592654 [m^2]
-diameter = 0.2 [m]
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ramp`,
-    slug: `ramp`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ramp.`,
-    related: [],
-    examples: [],
-    tags: [`ramp`],
-    references: [],
-    guides: [],
-    body: `\`ramp\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ramp(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Solve a complete model
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-// frees-language: 2
-DYNAMIC ramp (t = 0 .. 10, points = 101)
-  der(y) = 1
-  y(0) = 0
-END
-t7 = TimeAt('y', 7)
-y3 = ODEValue('y', 3)
-
-{ CHECK t7 7 0.000006999999999999998 }
-{ CHECK y3 3 0.0000030000000000000005 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-t7 = 7
-y3 = 3
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `rem`,
-    slug: `rem`,
-    category: `Built-in Functions`,
-    summary: `Reference page for rem.`,
-    related: [],
-    examples: [],
-    tags: [`rem`],
-    references: [],
-    guides: [],
-    body: `\`rem\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-rem(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Calculate a division remainder
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = rem(17, 5)
-
-{ CHECK result 2 0.000002 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 2
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `skewness`,
-    slug: `skewness`,
-    category: `Built-in Functions`,
-    summary: `Reference page for skewness.`,
-    related: [],
-    examples: [],
-    tags: [`skewness`],
-    references: [],
-    guides: [],
-    body: `\`skewness\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-skewness(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a scalar engineering calculation
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = skewness(1, 2, 2, 3, 7)
-
-{ CHECK result 1.744369497 0.0000017443694974549943 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 1.744369497
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `spearman`,
-    slug: `spearman`,
-    category: `Built-in Functions`,
-    summary: `Reference page for spearman.`,
-    related: [],
-    examples: [],
-    tags: [`spearman`],
-    references: [],
-    guides: [],
-    body: `\`spearman\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-spearman(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare ranks of paired readings
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = spearman([1, 2, 3, 4], [3, 4, 6, 7])
-
-{ CHECK result 1 0.000001 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 1
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `sqr`,
-    slug: `sqr`,
-    category: `Built-in Functions`,
-    summary: `Reference page for sqr.`,
-    related: [],
-    examples: [],
-    tags: [`sqr`],
-    references: [],
-    guides: [],
-    body: `\`sqr\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-sqr(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a scalar engineering calculation
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = sqr(3)
-
-{ CHECK result 9 0.000009 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 9
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `tcdf`,
-    slug: `tcdf`,
-    category: `Built-in Functions`,
-    summary: `Reference page for tcdf.`,
-    related: [],
-    examples: [],
-    tags: [`tcdf`],
-    references: [],
-    guides: [],
-    body: `\`tcdf\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-tcdf(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a Student-t tail threshold
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = tcdf(2, 9)
-
-{ CHECK result 0.9617235881 9.617235881146496e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.9617235881
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `tinv`,
-    slug: `tinv`,
-    category: `Built-in Functions`,
-    summary: `Reference page for tinv.`,
-    related: [],
-    examples: [],
-    tags: [`tinv`],
-    references: [],
-    guides: [],
-    body: `\`tinv\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-tinv(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Find a two-sided 95 percent t threshold
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = tinv(0.975, 9)
-
-{ CHECK result 2.262157163 0.0000022621571627982053 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 2.262157163
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `tpdf`,
-    slug: `tpdf`,
-    category: `Built-in Functions`,
-    summary: `Reference page for tpdf.`,
-    related: [],
-    examples: [],
-    tags: [`tpdf`],
-    references: [],
-    guides: [],
-    body: `\`tpdf\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-tpdf(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Evaluate a Student-t density
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = tpdf(0, 9)
-
-{ CHECK result 0.3880349089 3.880349088716686e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.3880349089
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `trimmedmean`,
-    slug: `trimmedmean`,
-    category: `Built-in Functions`,
-    summary: `Reference page for trimmedmean.`,
-    related: [],
-    examples: [],
-    tags: [`trimmedmean`],
-    references: [],
-    guides: [],
-    body: `\`trimmedmean\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-trimmedmean(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Suppress extremes in sensor readings
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = trimmedmean(0.2, [1, 10, 11, 12, 100])
-
-{ CHECK result 11 0.000011 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 11
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ttest_paired_df`,
-    slug: `ttest_paired_df`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ttest_paired_df.`,
-    related: [],
-    examples: [],
-    tags: [`ttest_paired_df`],
-    references: [],
-    guides: [],
-    body: `\`ttest_paired_df\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ttest_paired_df(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare measurements before and after calibration
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ttest_paired_df([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
-
-{ CHECK result 4 0.000004 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 4
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ttest_paired_pval`,
-    slug: `ttest_paired_pval`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ttest_paired_pval.`,
-    related: [],
-    examples: [],
-    tags: [`ttest_paired_pval`],
-    references: [],
-    guides: [],
-    body: `\`ttest_paired_pval\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ttest_paired_pval(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare measurements before and after calibration
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ttest_paired_pval([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
-
-{ CHECK result 0.05160595781 5.1605957811174716e-8 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.05160595781
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ttest_paired_stat`,
-    slug: `ttest_paired_stat`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ttest_paired_stat.`,
-    related: [],
-    examples: [],
-    tags: [`ttest_paired_stat`],
-    references: [],
-    guides: [],
-    body: `\`ttest_paired_stat\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ttest_paired_stat(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare measurements before and after calibration
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ttest_paired_stat([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
-
-{ CHECK result -2.745625892 0.000002745625891934576 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = -2.745625892
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ttest1_df`,
-    slug: `ttest1_df`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ttest1_df.`,
-    related: [],
-    examples: [],
-    tags: [`ttest1_df`],
-    references: [],
-    guides: [],
-    body: `\`ttest1_df\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ttest1_df(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare sensor readings with a nominal value
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ttest1_df(10, [9, 10, 11, 12, 10])
-
-{ CHECK result 4 0.000004 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 4
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ttest1_pval`,
-    slug: `ttest1_pval`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ttest1_pval.`,
-    related: [],
-    examples: [],
-    tags: [`ttest1_pval`],
-    references: [],
-    guides: [],
-    body: `\`ttest1_pval\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ttest1_pval(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare sensor readings with a nominal value
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ttest1_pval(10, [9, 10, 11, 12, 10])
-
-{ CHECK result 0.4766206673 4.7662066727284056e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.4766206673
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ttest1_stat`,
-    slug: `ttest1_stat`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ttest1_stat.`,
-    related: [],
-    examples: [],
-    tags: [`ttest1_stat`],
-    references: [],
-    guides: [],
-    body: `\`ttest1_stat\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ttest1_stat(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare sensor readings with a nominal value
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ttest1_stat(10, [9, 10, 11, 12, 10])
-
-{ CHECK result 0.7844645406 7.844645405527369e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.7844645406
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ttest2_df`,
-    slug: `ttest2_df`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ttest2_df.`,
-    related: [],
-    examples: [],
-    tags: [`ttest2_df`],
-    references: [],
-    guides: [],
-    body: `\`ttest2_df\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ttest2_df(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare measurements before and after calibration
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ttest2_df([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
-
-{ CHECK result 6.789606035 0.0000067896060352053624 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 6.789606035
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ttest2_pval`,
-    slug: `ttest2_pval`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ttest2_pval.`,
-    related: [],
-    examples: [],
-    tags: [`ttest2_pval`],
-    references: [],
-    guides: [],
-    body: `\`ttest2_pval\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ttest2_pval(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare measurements before and after calibration
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ttest2_pval([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
-
-{ CHECK result 0.1848228852 1.848228851621454e-7 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 0.1848228852
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ttest2_stat`,
-    slug: `ttest2_stat`,
-    category: `Built-in Functions`,
-    summary: `Reference page for ttest2_stat.`,
-    related: [],
-    examples: [],
-    tags: [`ttest2_stat`],
-    references: [],
-    guides: [],
-    body: `\`ttest2_stat\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-ttest2_stat(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Compare measurements before and after calibration
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = ttest2_stat([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
-
-{ CHECK result -1.475729575 0.000001475729574745244 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = -1.475729575
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `wmean`,
-    slug: `wmean`,
-    category: `Built-in Functions`,
-    summary: `Reference page for wmean.`,
-    related: [],
-    examples: [],
-    tags: [`wmean`],
-    references: [],
-    guides: [],
-    body: `\`wmean\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-wmean(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Average weighted temperature readings
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = wmean([1, 2, 1], [18, 20, 22])
-
-{ CHECK result 20 0.000019999999999999998 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 20
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `wvar`,
-    slug: `wvar`,
-    category: `Built-in Functions`,
-    summary: `Reference page for wvar.`,
-    related: [],
-    examples: [],
-    tags: [`wvar`],
-    references: [],
-    guides: [],
-    body: `\`wvar\` is available in the frees built-in functions surface.
-
-## Syntax
-
-\`\`\`
-wvar(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Estimate weighted measurement variance
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-result = wvar([1, 2, 1], [18, 20, 22])
-
-{ CHECK result 3.2 0.0000032 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-result = 3.2
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
     name: `differentiate`,
     slug: `differentiate`,
     category: `Calculus`,
@@ -5171,7 +2809,7 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
-rho_{in} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot\\cdot \\left|in.mdot\\right| &= \\left(u\\cdot cda_{max}\\right)^{2}\\cdot 2\\cdot rho_{in}\\cdot \\left(in.p - out.p\\right)
 \\end{aligned}
 $$
@@ -5211,15 +2849,17 @@ hi.out.p = 900000
     name: `EXVCmd`,
     slug: `exvcmd`,
     category: `Component (ac)`,
-    summary: `Acausal ac-domain component EXVCmd with ports in, out, u.`,
+    summary: `Signal-commanded EXV: identical orifice physics to EXV, but the opening fraction arrives on a signal port \`u\` (u.sig ∈ [0,1]) so a controller (SigPID, SigTable schedule, …) can drive it in closed loop.`,
     related: [],
     examples: [],
     tags: [`exvcmd`, `component`, `ac`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **ac-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Signal-commanded EXV: identical orifice physics to EXV, but the opening fraction arrives on a signal port \`u\` (u.sig ∈ [0,1]) so a controller (SigPID, SigTable schedule, …) can drive it in closed loop.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **ac-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/ac.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -5247,7 +2887,7 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
-rho_{in} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot\\cdot \\left|in.mdot\\right| &= \\left(u.sig\\cdot cda_{max}\\right)^{2}\\cdot 2\\cdot rho_{in}\\cdot \\left(in.p - out.p\\right)
 \\end{aligned}
 $$
@@ -5299,15 +2939,19 @@ c1.p = 1000000
     name: `HeaterCore`,
     slug: `heatercore`,
     category: `Component (ac)`,
-    summary: `Acausal ac-domain component HeaterCore with ports cool_in, cool_out, air_in, air_out.`,
+    summary: `Heater core: the cabin-heating radiator — hot coolant warms the ventilation air stream through the shared wall node.`,
     related: [],
     examples: [],
     tags: [`heatercore`, `component`, `ac`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **ac-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Heater core: the cabin-heating radiator — hot coolant warms the ventilation air stream through the shared wall node.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Same structure as Radiator, named for the application (HVAC schematic clarity).
+
+Reusable acausal **ac-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/ac.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -5384,15 +3028,19 @@ air.out.p = 101325
     name: `Radiator`,
     slug: `radiator`,
     category: `Component (ac)`,
-    summary: `Acausal ac-domain component Radiator with ports cool_in, cool_out, air_in, air_out.`,
+    summary: `Radiator: coolant rejects heat to ambient moist air through a shared wall node (hierarchical single-domain halves, per the §2.4 rule).`,
     related: [],
     examples: [],
     tags: [`radiator`, `component`, `ac`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **ac-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Radiator: coolant rejects heat to ambient moist air through a shared wall node (hierarchical single-domain halves, per the §2.4 rule).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Sized by the coolant-side UA and an air-side effectiveness; UA from the hx correlation functions for a geometry-resolved rating.
+
+Reusable acausal **ac-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/ac.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -5513,14 +3161,14 @@ $$
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
 bulb.qdot &= 0 \\\\
-tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid}, =out.p\\right) \\\\
+tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=out.p\\right) \\\\
 sh_{sensed} &= bulb.t - tsat \\\\
 \\text{der}\\left(sh_{b}\\right) &= \\frac{sh_{sensed} - sh_{b}}{tau_{bulb}} \\\\
 \\text{init}\\left(sh_{b}\\right) &= sh_{set} \\\\
 cda_{t} &= cda0 + kv\\cdot \\left(sh_{b} - sh_{set}\\right) \\\\
 \\text{der}\\left(cda\\right) &= \\frac{cda_{t} - cda}{tau_{valve}} \\\\
 \\text{init}\\left(cda\\right) &= cda0 \\\\
-rho_{in} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot\\cdot \\left|in.mdot\\right| &= cda^{2}\\cdot 2\\cdot rho_{in}\\cdot \\left(in.p - out.p\\right)
 \\end{aligned}
 $$
@@ -5535,32 +3183,34 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-function [out] = PSource(P, h0)
-port(out)
-  out.P = P
-  out.h = h0
-end
-function [in] = PSink(P)
-port(in)
-  in.P = P
-end
-PSource       SRC(P=1200000, h0=250000)
-ExpansionValve TXV(CdA=1e-6, rho_in=1200)
-PSink         SNK(P=300000)
-connect(SRC.out, TXV.in)
-connect(TXV.out, SNK.in)
+{ R134a thermostatic expansion valve: 12 bar liquid line to a 3 bar evaporator,
+  bulb held 8 K above evaporator saturation (3 K above the 5 K set point),
+  so the valve opens over its time constants. }
+TwoPhasePressureSource SRC(fluid$=R134a, P=1200000, x=0)
+TXV                    V1(fluid$=R134a, Kv=2e-8, SH_set=5, CdA0=1e-6, tau_valve=2, tau_bulb=10)
+TwoPhasePressureSink   SNK(P=300000)
+ThermalSource          BULB(T=T_sat(R134a, P=300000) + 8)
+connect(SRC.out, V1.in)
+connect(V1.out, SNK.in)
+connect(BULB.port, V1.bulb)
 
-{ CHECK snk.in.h 250000 0.25 }
-{ CHECK snk.in.mdot 0.04647580015 4.6475800154489004e-8 }
-{ CHECK snk.in.p 300000 0.3 }
+DYNAMIC opening (method = ida, time = 0 .. 60, points = 61)
+END
+CdA_end  = FinalValue('V1.CdA')     { valve opening after 60 s, m^2 }
+SH_b_end = FinalValue('V1.SH_b')    { bulb-filtered superheat, K }
+mdot_end = FinalValue('V1.in.mdot') { refrigerant flow after 60 s, kg/s }
+
+{ CHECK CdA_end 1.059813929e-6 1.06e-12 }
+{ CHECK SH_b_end 7.992557183 0.000007992557183 }
+{ CHECK mdot_end 0.04756816851 4.756816851e-8 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-snk.in.h = 250000
-snk.in.mdot = 0.04647580015
-snk.in.p = 300000
+CdA_end = 1.059813929e-6
+SH_b_end = 7.992557183
+mdot_end = 0.04756816851
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -5808,15 +3458,19 @@ b.p.i = -9.6
     name: `BatteryCellMap`,
     slug: `batterycellmap`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component BatteryCellMap with ports p, n, heat.`,
+    summary: `Map-based battery cell — the real ECM rung: open-circuit voltage from an OCV(SOC) TABLE, ohmic resistance with an Arrhenius temperature law, and the Bernardi heat Q = I²R − I·T·(dU/dT)(SOC) (entropic term from a dU/dT map).`,
     related: [],
     examples: [],
     tags: [`batterycellmap`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Map-based battery cell — the real ECM rung: open-circuit voltage from an OCV(SOC) TABLE, ohmic resistance with an Arrhenius temperature law, and the Bernardi heat Q = I²R − I·T·(dU/dT)(SOC) (entropic term from a dU/dT map).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+SOC and cell temperature are states; the \`aging\` variant adds Ah-throughput capacity fade (Qcap = Q0·(1 − k_age·Ah)). Discharge current is positive (I = −p.I, matching the Battery sign convention).
+
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -5937,15 +3591,19 @@ final_state = 0.7988888889
     name: `BatteryPack`,
     slug: `batterypack`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component BatteryPack with ports p, n, heat.`,
+    summary: `Battery pack: Ns series × Np parallel of the map cell, lumped (uniform SOC and temperature — the standard pack-level rung).`,
     related: [],
     examples: [],
     tags: [`batterypack`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Battery pack: Ns series × Np parallel of the map cell, lumped (uniform SOC and temperature — the standard pack-level rung).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+C_th is the PACK thermal mass; heat generation scales with the cell count.
+
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -6377,15 +4035,17 @@ V_final = 9.93262053
     name: `ChargerCCCV`,
     slug: `chargercccv`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component ChargerCCCV with ports p, n.`,
+    summary: `CC-CV charger: sources Imax until the terminal voltage approaches Vmax, then tapers (tanh, width epsV) — the constant-current / constant-voltage profile with no mode switch.`,
     related: [],
     examples: [],
     tags: [`chargercccv`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `CC-CV charger: sources Imax until the terminal voltage approaches Vmax, then tapers (tanh, width epsV) — the constant-current / constant-voltage profile with no mode switch.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -6577,15 +4237,17 @@ cs.p.i = -2
     name: `DCDCConverter`,
     slug: `dcdcconverter`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component DCDCConverter with ports in_p, in_n, out_p, out_n.`,
+    summary: `Ideal-transformer DC/DC converter with a fixed voltage ratio and a four-quadrant efficiency (forward power / eta, reverse power · eta).`,
     related: [],
     examples: [],
     tags: [`dcdcconverter`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Ideal-transformer DC/DC converter with a fixed voltage ratio and a four-quadrant efficiency (forward power / eta, reverse power · eta).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -6829,7 +4491,7 @@ Diode inst(Gon, eps)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`Gon\` | Number | On-state conductance [S]. |
-| \`eps\` | Number | Effectiveness / roughness. |
+| \`eps\` | Number | Conduction smoothing voltage [V] — the tanh transition width around zero bias. |
 
 ## Constitutive Equations
 
@@ -6880,15 +4542,17 @@ d.p.i = 4.545454545
     name: `Electrolyzer`,
     slug: `electrolyzer`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component Electrolyzer with ports p, n, heat.`,
+    summary: `PEM electrolyzer stack (reverse fuel cell): reversible potential + activation (ln(i/i0 + 1), regular at zero current) + ohmic overpotentials; hydrogen production from Faraday's law; heat above the thermoneutral voltage Eth.`,
     related: [],
     examples: [],
     tags: [`electrolyzer`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `PEM electrolyzer stack (reverse fuel cell): reversible potential + activation (ln(i/i0 + 1), regular at zero current) + ohmic overpotentials; hydrogen production from Faraday's law; heat above the thermoneutral voltage Eth.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7016,15 +4680,17 @@ bt.p.i = 10
     name: `ElectrolyzerThermal`,
     slug: `electrolyzerthermal`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component ElectrolyzerThermal with ports p, n, cool_in, cool_out.`,
+    summary: `Electrolyzer with a coolant jacket (same pattern as the cooled stack).`,
     related: [],
     examples: [],
     tags: [`electrolyzerthermal`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Electrolyzer with a coolant jacket (same pattern as the cooled stack).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7207,15 +4873,17 @@ fc.heat.qdot = -360.8040755
     name: `FuelCellStackCooled`,
     slug: `fuelcellstackcooled`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component FuelCellStackCooled with ports p, n, cool_in, cool_out.`,
+    summary: `PEM stack with a coolant jacket: the electrochemical stack's waste heat crosses into a liquid loop through a UA wall (drop-in for FuelCellStack when the thermal loop matters).`,
     related: [],
     examples: [],
     tags: [`fuelcellstackcooled`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `PEM stack with a coolant jacket: the electrochemical stack's waste heat crosses into a liquid loop through a UA wall (drop-in for FuelCellStack when the thermal loop matters).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7374,15 +5042,17 @@ Instantiated in the verified example below:
     name: `HarnessResistance`,
     slug: `harnessresistance`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component HarnessResistance with ports a, b, heat.`,
+    summary: `Harness/busbar resistance with the copper temperature coefficient, sensing its temperature on the heat port and dissipating I²R there.`,
     related: [],
     examples: [],
     tags: [`harnessresistance`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Harness/busbar resistance with the copper temperature coefficient, sensing its temperature on the heat port and dissipating I²R there.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7668,15 +5338,17 @@ il = 2 [A]
     name: `InverterLoss`,
     slug: `inverterloss`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component InverterLoss with ports in_p, out_p, heat.`,
+    summary: `Series inverter loss element: conduction (device drop V0 + r·I) plus switching loss folded into an equivalent drop Vsw = Esw·fsw·Vnom/(Iref·Vref) — energy-consistent (Q = ΔV·I exactly), tanh-smooth through zero current.`,
     related: [],
     examples: [],
     tags: [`inverterloss`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Series inverter loss element: conduction (device drop V0 + r·I) plus switching loss folded into an equivalent drop Vsw = Esw·fsw·Vnom/(Iref·Vref) — energy-consistent (Q = ΔV·I exactly), tanh-smooth through zero current.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7815,15 +5487,19 @@ bus.p.i = -13.88888889
     name: `MotorMap`,
     slug: `motormap`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component MotorMap with ports p, n, shaft, heat, u.`,
+    summary: `Map-efficiency e-machine: torque command on the signal port u [N·m], losses from a 2-D efficiency map eff$(ω, τ).`,
     related: [],
     examples: [],
     tags: [`motormap`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Map-efficiency e-machine: torque command on the signal port u [N·m], losses from a 2-D efficiency map eff$(ω, τ).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Four-quadrant: motoring draws P_mech/η from the DC bus, generating returns P_mech·η, blended smoothly through zero mechanical power (width epsP [W]). Loss heat exits \`heat\`.
+
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -7959,15 +5635,17 @@ bus.p.i = -13.88888889
     name: `MPPTBlock`,
     slug: `mpptblock`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component MPPTBlock with ports G, out.`,
+    summary: `Map-referenced maximum-power-point command: Vmp from an irradiance map (perturb-free analytic tracking; pair with PVSingleDiode + a DC-DC stage).`,
     related: [],
     examples: [],
     tags: [`mpptblock`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Map-referenced maximum-power-point command: Vmp from an irradiance map (perturb-free analytic tracking; pair with PVSingleDiode + a DC-DC stage).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8129,15 +5807,19 @@ load.a.tau = 3.74025974
     name: `PVSingleDiode`,
     slug: `pvsinglediode`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component PVSingleDiode with ports p, n, G.`,
+    summary: `Single-diode PV module: I = Iph − I0·(exp(Vd/(n·Vt)) − 1) − Vd/Rsh with the series-resistance diode voltage Vd = V + I·Rs — the physics rung above SolarArray's clamp model.`,
     related: [],
     examples: [],
     tags: [`pvsinglediode`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Single-diode PV module: I = Iph − I0·(exp(Vd/(n·Vt)) − 1) − Vd/Rsh with the series-resistance diode voltage Vd = V + I·Rs — the physics rung above SolarArray's clamp model.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Current is signed out of p (sourcing).
+
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8302,15 +5984,17 @@ b.p.i = -5.714285714
     name: `SolarArray`,
     slug: `solararray`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component SolarArray with ports p, n, G.`,
+    summary: `Solar array: photocurrent proportional to the irradiance signal G [W/m²], with a smooth open-circuit clamp at Voc — the constant-current PV rung.`,
     related: [],
     examples: [],
     tags: [`solararray`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Solar array: photocurrent proportional to the irradiance signal G [W/m²], with a smooth open-circuit clamp at Voc — the constant-current PV rung.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8430,15 +6114,17 @@ bt.p.i = 10
     name: `Supercapacitor`,
     slug: `supercapacitor`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component Supercapacitor with ports p, n.`,
+    summary: `Supercapacitor: ideal capacitance with an equivalent series resistance.`,
     related: [],
     examples: [],
     tags: [`supercapacitor`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Supercapacitor: ideal capacitance with an equivalent series resistance.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8511,15 +6197,17 @@ i = 0 [A]
     name: `ThermalFuse`,
     slug: `thermalfuse`,
     category: `Component (electrical)`,
-    summary: `Acausal electrical-domain component ThermalFuse with ports p, n.`,
+    summary: `Thermal fuse: the element resistance multiplies by (1 + kR) once |I| exceeds the blow rating (tanh, width epsI) — a continuous overcurrent trip.`,
     related: [],
     examples: [],
     tags: [`thermalfuse`, `component`, `electrical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Thermal fuse: the element resistance multiplies by (1 + kR) once |I| exceeds the blow rating (tanh, width epsI) — a continuous overcurrent trip.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/electrical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8799,15 +6487,17 @@ a2.p = 300000
     name: `AtmosphereSource`,
     slug: `atmospheresource`,
     category: `Component (fluid)`,
-    summary: `Acausal fluid-domain component AtmosphereSource with ports out.`,
+    summary: `ISA atmosphere boundary: the 1976 standard atmosphere state at altitude, as a flow source (use with ram/propulsion models).`,
     related: [],
     examples: [],
     tags: [`atmospheresource`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `ISA atmosphere boundary: the 1976 standard atmosphere state at altitude, as a flow source (use with ram/propulsion models).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **fluid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/fluid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -8947,15 +6637,17 @@ b.in.p = 8000000
     name: `Combustor`,
     slug: `combustor`,
     category: `Component (fluid)`,
-    summary: `Acausal fluid-domain component Combustor with ports in, out.`,
+    summary: `Combustor: fuel mass addition with combustion efficiency on the lower heating value and a rated pressure loss.`,
     related: [],
     examples: [],
     tags: [`combustor`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Combustor: fuel mass addition with combustion efficiency on the lower heating value and a rated pressure loss.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **fluid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/fluid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -9028,15 +6720,19 @@ g2.p = 580000
     name: `CombustorSpecies`,
     slug: `combustorspecies`,
     category: `Component (fluid)`,
-    summary: `Acausal fluid-domain component CombustorSpecies with ports in, out.`,
+    summary: `Combustor emitting product composition: complete combustion of a CxHy fuel stream into the E3 species riders — CO2/H2O produced and O2 consumed by stoichiometry per kg of fuel; N2 passes as the balance.`,
     related: [],
     examples: [],
     tags: [`combustorspecies`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Combustor emitting product composition: complete combustion of a CxHy fuel stream into the E3 species riders — CO2/H2O produced and O2 consumed by stoichiometry per kg of fuel; N2 passes as the balance.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Energy as in Combustor (eta_b * LHV heat release).
+
+Reusable acausal **fluid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/fluid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -9179,8 +6875,8 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-s_{in} &= \\text{Entropy}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-h_{s} &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =out.p, p=s_{in}\\right) \\\\
+s_{in} &= \\text{Entropy}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+h_{s} &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, s=s_{in}\\right) \\\\
 out.mdot &= in.mdot \\\\
 out.h &= in.h + \\frac{h_{s} - in.h}{eta} \\\\
 w &= in.mdot\\cdot \\left(out.h - in.h\\right)
@@ -9199,7 +6895,7 @@ _No additional equations (uses the shared body)._
 
 $$
 \\begin{aligned}
-rho_{in} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot &= eta_{v}\\cdot disp\\cdot \\frac{rpm}{60}\\cdot rho_{in}
 \\end{aligned}
 $$
@@ -9235,7 +6931,7 @@ k.w = 2312.063806
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: ev-thermal-management]`,
   },
@@ -9278,8 +6974,8 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-s_{in} &= \\text{Entropy}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-h_{s} &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =out.p, p=s_{in}\\right) \\\\
+s_{in} &= \\text{Entropy}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+h_{s} &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, s=s_{in}\\right) \\\\
 pr &= \\frac{out.p}{in.p} \\\\
 eta &= \\text{map\\_eta\\$}\\left(pr\\right) \\\\
 out.mdot &= in.mdot \\\\
@@ -9637,7 +7333,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-rho &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 q &= \\frac{in.mdot}{rho} \\\\
 dp &= dp0\\cdot \\left(1 - \\left(\\frac{q}{q0}\\right)^{2}\\right) \\\\
 out.mdot &= in.mdot \\\\
@@ -9732,28 +7428,22 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TABLE fanCurve(Q [m^3/s]) [Pa]
-  0.00   250
-  0.05   180
-  0.10    60
-END
-FanMap F1(rho=1.2, map$=fanCurve)
-F1.in.mdot = 0.06
+{ Quadratic fan curve: 250 Pa shut-off rise, zero rise at 0.12 m^3/s. }
+FanCurve F1(rho=1.2, dP0=250, Q0=0.12)
+F1.in.mdot = 0.06          { 0.05 m^3/s of air }
 F1.in.P    = 101325
 F1.in.h    = 300000
 F1.out.h   = 300000
 
-{ CHECK f1.dp 180 0.00017999999999999998 }
-{ CHECK f1.out.mdot 0.06 6e-8 }
-{ CHECK f1.out.p 101505 0.101505 }
+dP_fan = F1.out.P - F1.in.P
+
+{ CHECK dP_fan 206.5972222 0.0002065972222 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-f1.dp = 180
-f1.out.mdot = 0.06
-f1.out.p = 101505
+dP_fan = 206.5972222
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -9920,15 +7610,17 @@ fs.in.p = 100000
     name: `HeatedDuct`,
     slug: `heatedduct`,
     category: `Component (fluid)`,
-    summary: `Acausal fluid-domain component HeatedDuct with ports in, out, wall.`,
+    summary: `Heated duct: single-stream ε-NTU heat pickup from a wall node (ε = 1 − e^(−UA/ṁcp)), the exact single-stream limit.`,
     related: [],
     examples: [],
     tags: [`heatedduct`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Heated duct: single-stream ε-NTU heat pickup from a wall node (ε = 1 − e^(−UA/ṁcp)), the exact single-stream limit.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **fluid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/fluid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -9955,8 +7647,8 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-cp_{d} &= \\text{Cp}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+cp_{d} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 epsd &= 1 - e^{\\frac{-ua}{in.mdot\\cdot cp_{d}}} \\\\
 q &= epsd\\cdot in.mdot\\cdot cp_{d}\\cdot \\left(wall.t - t_{in}\\right) \\\\
 out.h &= in.h + \\frac{q}{in.mdot} \\\\
@@ -10045,10 +7737,10 @@ hot_{out.mdot} &= hot_{in.mdot} \\\\
 hot_{out.p} &= hot_{in.p} \\\\
 cold_{out.mdot} &= cold_{in.mdot} \\\\
 cold_{out.p} &= cold_{in.p} \\\\
-th &= \\text{Temperature}\\left(\\mathrm{hot}, =hot_{in.p}, p=hot_{in.h}\\right) \\\\
-tc &= \\text{Temperature}\\left(\\mathrm{cold}, =cold_{in.p}, p=cold_{in.h}\\right) \\\\
-c_{h} &= hot_{in.mdot}\\cdot \\text{Cp}\\left(\\mathrm{hot}, =hot_{in.p}, p=hot_{in.h}\\right) \\\\
-c_{c} &= cold_{in.mdot}\\cdot \\text{Cp}\\left(\\mathrm{cold}, =cold_{in.p}, p=cold_{in.h}\\right) \\\\
+th &= \\text{Temperature}\\left(\\mathrm{hot\\$}, p=hot_{in.p}, h=hot_{in.h}\\right) \\\\
+tc &= \\text{Temperature}\\left(\\mathrm{cold\\$}, p=cold_{in.p}, h=cold_{in.h}\\right) \\\\
+c_{h} &= hot_{in.mdot}\\cdot \\text{Cp}\\left(\\mathrm{hot\\$}, p=hot_{in.p}, h=hot_{in.h}\\right) \\\\
+c_{c} &= cold_{in.mdot}\\cdot \\text{Cp}\\left(\\mathrm{cold\\$}, p=cold_{in.p}, h=cold_{in.h}\\right) \\\\
 cmin &= \\text{min}\\left(c_{h}, c_{c}\\right) \\\\
 cmax &= \\text{max}\\left(c_{h}, c_{c}\\right) \\\\
 eps &= \\text{hx\\_effectiveness}\\left(arr\\$, \\frac{ua}{cmin}, \\frac{cmin}{cmax}\\right) \\\\
@@ -10240,7 +7932,7 @@ n.thrust = 2786.981066
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: cd-nozzle-shock]`,
   },
@@ -10287,8 +7979,8 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
-rho &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-mu &= \\text{Viscosity}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+mu &= \\text{Viscosity}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 a &= \\frac{3.141592653589793}{4}\\cdot d^{2} \\\\
 v &= \\frac{in.mdot}{rho\\cdot a} \\\\
 re_{d} &= \\text{reynolds}\\left(rho, v, d, mu\\right) \\\\
@@ -10330,15 +8022,17 @@ line.mu = 0.0008930444195
     name: `Propeller`,
     slug: `propeller`,
     category: `Component (fluid)`,
-    summary: `Acausal fluid-domain component Propeller with ports shaft, veh.`,
+    summary: `Propeller (actuator-line map form): thrust Ct(J)·ρn²D⁴ and shaft power Cp(J)·ρn³D⁵ from advance-ratio maps J = v/(nD) — bridges the shaft to the vehicle's translational port.`,
     related: [],
     examples: [],
     tags: [`propeller`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Propeller (actuator-line map form): thrust Ct(J)·ρn²D⁴ and shaft power Cp(J)·ρn³D⁵ from advance-ratio maps J = v/(nD) — bridges the shaft to the vehicle's translational port.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **fluid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/fluid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -10456,7 +8150,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-v &= \\text{Volume}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+v &= \\text{Volume}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 out.mdot &= in.mdot \\\\
 out.h &= in.h + \\frac{v\\cdot \\left(out.p - in.p\\right)}{eta} \\\\
 w &= in.mdot\\cdot \\left(out.h - in.h\\right)
@@ -10473,26 +8167,31 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-function [in, out] = pump()
-port(in)
-port(out)
-  out.P = in.P * 2
-end
+{ Raise 2 kg/s of 20 C water from 1 bar to 6 bar with a 75 %-efficient pump. }
+Source SRC(fluid$=Water, mdot=2, P=100000, T=293.15)
+Pump   P1(eta=0.75, fluid$=Water)
+Sink   SNK()
+connect(SRC.out, P1.in)
+connect(P1.out, SNK.in)
+P1.out.P = 600000
 
-P_in = 1 [bar]
+W_shaft = P1.W      { shaft power absorbed, W }
+dh = P1.out.h - P1.in.h
 
-{ CHECK P_in 100000 0.09999999999999999 }
+{ CHECK W_shaft 1335.728905 0.001335728905 }
+{ CHECK dh 667.8644525 0.0006678644525 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-P_in = 100000 [Pa]
+W_shaft = 1335.728905
+dh = 667.8644525
 \`\`\`
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: pump-sizing]`,
   },
@@ -10585,15 +8284,17 @@ pm.head = 20
     name: `Regenerator`,
     slug: `regenerator`,
     category: `Component (fluid)`,
-    summary: `Acausal fluid-domain component Regenerator with ports hot_in, hot_out, cold_in, cold_out.`,
+    summary: `Effectiveness-rated regenerator/recuperator: Q = ε·Cmin·(Th − Tc) with ε given directly (rate it from the ε-NTU functions for a geometry design).`,
     related: [],
     examples: [],
     tags: [`regenerator`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **fluid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Effectiveness-rated regenerator/recuperator: Q = ε·Cmin·(Th − Tc) with ε given directly (rate it from the ε-NTU functions for a geometry design).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **fluid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/fluid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -10623,10 +8324,10 @@ hot_{out.mdot} &= hot_{in.mdot} \\\\
 hot_{out.p} &= hot_{in.p} \\\\
 cold_{out.mdot} &= cold_{in.mdot} \\\\
 cold_{out.p} &= cold_{in.p} \\\\
-th &= \\text{Temperature}\\left(\\mathrm{hot}, =hot_{in.p}, p=hot_{in.h}\\right) \\\\
-tc &= \\text{Temperature}\\left(\\mathrm{cold}, =cold_{in.p}, p=cold_{in.h}\\right) \\\\
-c_{h} &= hot_{in.mdot}\\cdot \\text{Cp}\\left(\\mathrm{hot}, =hot_{in.p}, p=hot_{in.h}\\right) \\\\
-c_{c} &= cold_{in.mdot}\\cdot \\text{Cp}\\left(\\mathrm{cold}, =cold_{in.p}, p=cold_{in.h}\\right) \\\\
+th &= \\text{Temperature}\\left(\\mathrm{hot\\$}, p=hot_{in.p}, h=hot_{in.h}\\right) \\\\
+tc &= \\text{Temperature}\\left(\\mathrm{cold\\$}, p=cold_{in.p}, h=cold_{in.h}\\right) \\\\
+c_{h} &= hot_{in.mdot}\\cdot \\text{Cp}\\left(\\mathrm{hot\\$}, p=hot_{in.p}, h=hot_{in.h}\\right) \\\\
+c_{c} &= cold_{in.mdot}\\cdot \\text{Cp}\\left(\\mathrm{cold\\$}, p=cold_{in.p}, h=cold_{in.h}\\right) \\\\
 q &= eps\\cdot \\text{min}\\left(c_{h}, c_{c}\\right)\\cdot \\left(th - tc\\right) \\\\
 hot_{out.h} &= hot_{in.h} - \\frac{q}{hot_{in.mdot}} \\\\
 cold_{out.h} &= cold_{in.h} + \\frac{q}{cold_{in.mdot}}
@@ -10784,7 +8485,7 @@ $$
 \\begin{aligned}
 out.mdot &= mdot \\\\
 out.p &= p \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =p, p=t\\right)
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=p, t=t\\right)
 \\end{aligned}
 $$
 
@@ -11012,8 +8713,8 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-s_{in} &= \\text{Entropy}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-h_{s} &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =out.p, p=s_{in}\\right) \\\\
+s_{in} &= \\text{Entropy}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+h_{s} &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, s=s_{in}\\right) \\\\
 out.mdot &= in.mdot \\\\
 out.h &= in.h - eta\\cdot \\left(in.h - h_{s}\\right) \\\\
 w &= in.mdot\\cdot \\left(in.h - out.h\\right)
@@ -11324,15 +9025,19 @@ snk.in.p = 100000
     name: `CellToPackThermal`,
     slug: `celltopackthermal`,
     category: `Component (heat)`,
-    summary: `Acausal heat-domain component CellToPackThermal with ports cell, plate.`,
+    summary: `Cell-to-plate thermal path: contact/interface resistance into the cold-plate mass — the network that makes pack gradients (cell hot spot vs plate) real.`,
     related: [],
     examples: [],
     tags: [`celltopackthermal`, `component`, `heat`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Cell-to-plate thermal path: contact/interface resistance into the cold-plate mass — the network that makes pack gradients (cell hot spot vs plate) real.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+(Direct equations: the plate node carries this component's own state.)
+
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/heat.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -11482,7 +9187,7 @@ sh.port.qdot = -25000
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: heat-conduction]`,
   },
@@ -11648,15 +9353,17 @@ Instantiated in the verified example below:
     name: `HeatPipe`,
     slug: `heatpipe`,
     category: `Component (heat)`,
-    summary: `Acausal heat-domain component HeatPipe with ports a, b.`,
+    summary: `Heat pipe: a very high effective conductance saturating smoothly at the transport limit Qmax (capillary/sonic), so overload degrades instead of diverging.`,
     related: [],
     examples: [],
     tags: [`heatpipe`, `component`, `heat`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Heat pipe: a very high effective conductance saturating smoothly at the transport limit Qmax (capillary/sonic), so overload degrades instead of diverging.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/heat.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -11970,15 +9677,19 @@ Instantiated in the verified example below:
     name: `MultiZoneWall`,
     slug: `multizonewall`,
     category: `Component (heat)`,
-    summary: `Acausal heat-domain component MultiZoneWall with ports a, b.`,
+    summary: `Two-zone partition wall: surface films (h_a, h_b) into two face masses with U·A conduction between them.`,
     related: [],
     examples: [],
     tags: [`multizonewall`, `component`, `heat`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Two-zone partition wall: surface films (h_a, h_b) into two face masses with U·A conduction between them.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The ports are resistive — they READ the zone temperatures — so the wall composes directly with any temperature-setting zone (CabinZone, MassGen) without C-C adjacency.
+
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/heat.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12063,15 +9774,17 @@ t_face2 = 286.0346154 [K]
     name: `PCMMass`,
     slug: `pcmmass`,
     category: `Component (heat)`,
-    summary: `Acausal heat-domain component PCMMass with ports port.`,
+    summary: `Phase-change-material mass: latent heat L released over a Gaussian mushy zone of width dTm around the melt point (∫cp_eff dT = cp·ΔT + L exactly).`,
     related: [],
     examples: [],
     tags: [`pcmmass`, `component`, `heat`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Phase-change-material mass: latent heat L released over a Gaussian mushy zone of width dTm around the melt point (∫cp_eff dT = cp·ΔT + L exactly).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/heat.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12142,15 +9855,19 @@ T_end = 436.8458677
     name: `PeltierTEC`,
     slug: `peltiertec`,
     category: `Component (heat)`,
-    summary: `Acausal heat-domain component PeltierTEC with ports p, n, hot, cold.`,
+    summary: `Peltier thermoelectric module: Seebeck voltage + ohmic drop electrically; Peltier pumping ± half-Joule and back-conduction thermally.`,
     related: [],
     examples: [],
     tags: [`peltiertec`, `component`, `heat`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Peltier thermoelectric module: Seebeck voltage + ohmic drop electrically; Peltier pumping ± half-Joule and back-conduction thermally.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Energy-exact: Q_hot − Q_cold = I·V.
+
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/heat.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12341,7 +10058,7 @@ cv.a.qdot = 1000
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: radiation-view-factors]`,
   },
@@ -12349,15 +10066,17 @@ Instantiated in the verified example below:
     name: `RadiationTwoSurface`,
     slug: `radiationtwosurface`,
     category: `Component (heat)`,
-    summary: `Acausal heat-domain component RadiationTwoSurface with ports a, b.`,
+    summary: `Two-surface radiation enclosure: surface resistances (1−ε)/(εA) in series with the view-factor space resistance 1/(A1·F12), on the σ(T⁴−T⁴) potential.`,
     related: [],
     examples: [],
     tags: [`radiationtwosurface`, `component`, `heat`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Two-surface radiation enclosure: surface resistances (1−ε)/(εA) in series with the view-factor space resistance 1/(A1·F12), on the σ(T⁴−T⁴) potential.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/heat.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12691,15 +10410,17 @@ Instantiated in the verified example below:
     name: `ThermalSwitch`,
     slug: `thermalswitch`,
     category: `Component (heat)`,
-    summary: `Acausal heat-domain component ThermalSwitch with ports a, b.`,
+    summary: `Thermal switch / bimetal thermostat: a conductance that engages smoothly above the trip temperature (sensed on side a).`,
     related: [],
     examples: [],
     tags: [`thermalswitch`, `component`, `heat`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Thermal switch / bimetal thermostat: a conductance that engages smoothly above the trip temperature (sensed on side a).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/heat.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12811,15 +10532,17 @@ a2.port.qdot = -50
     name: `WallRC`,
     slug: `wallrc`,
     category: `Component (heat)`,
-    summary: `Acausal heat-domain component WallRC with ports a, b.`,
+    summary: `Two-node transient wall: capacitance–conduction–capacitance, the classic RC warm-up wall between two heat ports.`,
     related: [],
     examples: [],
     tags: [`wallrc`, `component`, `heat`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **heat-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Two-node transient wall: capacitance–conduction–capacitance, the classic RC warm-up wall between two heat ports.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **heat-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/heat.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12902,15 +10625,17 @@ cva.a.qdot = 723.75
     name: `CounterbalanceValve`,
     slug: `counterbalancevalve`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component CounterbalanceValve with ports in, out, pilot.`,
+    summary: `Counterbalance (overcenter) valve: opens on the spring-referenced blend of load pressure and pilot assist (ratio R_p), then meters with the square law — controlled load lowering.`,
     related: [],
     examples: [],
     tags: [`counterbalancevalve`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Counterbalance (overcenter) valve: opens on the spring-referenced blend of load pressure and pilot assist (ratio R_p), then meters with the square law — controlled load lowering.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -12988,15 +10713,17 @@ c2.h = 0
     name: `HydraulicAccumulator`,
     slug: `hydraulicaccumulator`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicAccumulator with ports port.`,
+    summary: `Gas-charged accumulator: precharge P0 filling gas volume V0; the oil drives the gas polytropically (P·V^γ = P0·V0^γ) with the gas volume as the state.`,
     related: [],
     examples: [],
     tags: [`hydraulicaccumulator`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Gas-charged accumulator: precharge P0 filling gas volume V0; the oil drives the gas polytropically (P·V^γ = P0·V0^γ) with the gas volume as the state.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13069,15 +10796,17 @@ acc.port.p = 15000000
     name: `HydraulicCheckValve`,
     slug: `hydrauliccheckvalve`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicCheckValve with ports in, out.`,
+    summary: `Check valve: square-law orifice gated smoothly to forward ΔP (width eps).`,
     related: [],
     examples: [],
     tags: [`hydrauliccheckvalve`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Check valve: square-law orifice gated smoothly to forward ΔP (width eps).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13299,15 +11028,19 @@ cyl.in.p = 10000000
     name: `HydraulicDoubleActingCylinder`,
     slug: `hydraulicdoubleactingcylinder`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicDoubleActingCylinder with ports a, b, rod.`,
+    summary: `Double-acting cylinder: two bulk-modulus chambers (piston/rod areas Aa, Ab) and the rod force balance.`,
     related: [],
     examples: [],
     tags: [`hydraulicdoubleactingcylinder`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Double-acting cylinder: two bulk-modulus chambers (piston/rod areas Aa, Ab) and the rod force balance.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Chamber volumes are taken at mid-stroke (Va0, Vb0) — the standard lumped rung.
+
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13393,15 +11126,17 @@ cyl.a.p = 8000000
     name: `HydraulicFlowControl`,
     slug: `hydraulicflowcontrol`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicFlowControl with ports in, out.`,
+    summary: `Ideal pressure-compensated flow control: holds the set volumetric flow regardless of ΔP (within authority — rate it against the circuit).`,
     related: [],
     examples: [],
     tags: [`hydraulicflowcontrol`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Ideal pressure-compensated flow control: holds the set volumetric flow regardless of ΔP (within authority — rate it against the circuit).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13537,15 +11272,17 @@ cvf.in.h = 0
     name: `HydraulicFlowDivider`,
     slug: `hydraulicflowdivider`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicFlowDivider with ports in, outa, outb.`,
+    summary: `Ideal spool flow divider: forces the flow split frac/(1-frac) regardless of the branch loads; the inlet pressure is the power-conserving mix.`,
     related: [],
     examples: [],
     tags: [`hydraulicflowdivider`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Ideal spool flow divider: forces the flow split frac/(1-frac) regardless of the branch loads; the inlet pressure is the power-conserving mix.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13682,15 +11419,17 @@ cvf.in.h = 0
     name: `HydraulicMotor`,
     slug: `hydraulicmotor`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicMotor with ports in, out, shaft.`,
+    summary: `Fixed-displacement motor: the exact dual of HydraulicPump (volumetric slip divides the flow, mechanical efficiency multiplies the torque).`,
     related: [],
     examples: [],
     tags: [`hydraulicmotor`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Fixed-displacement motor: the exact dual of HydraulicPump (volumetric slip divides the flow, mechanical efficiency multiplies the torque).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13848,15 +11587,19 @@ ori.in.p = 10000000
     name: `HydraulicPilotCheckValve`,
     slug: `hydraulicpilotcheckvalve`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicPilotCheckValve with ports in, out, pilot.`,
+    summary: `Pilot-operated check valve: a pilot pressure (ratio rp) can hold the poppet open against reverse ΔP — the load-holding valve.`,
     related: [],
     examples: [],
     tags: [`hydraulicpilotcheckvalve`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Pilot-operated check valve: a pilot pressure (ratio rp) can hold the poppet open against reverse ΔP — the load-holding valve.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The pilot port draws no flow.
+
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -13935,15 +11678,17 @@ o2.mdot = -0.1021763182
     name: `HydraulicPipe`,
     slug: `hydraulicpipe`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicPipe with ports in, out.`,
+    summary: `Hydraulic line with Darcy friction on the oil kinematic viscosity (laminar-turbulent via the Colebrook friction factor, sign-safe).`,
     related: [],
     examples: [],
     tags: [`hydraulicpipe`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Hydraulic line with Darcy friction on the oil kinematic viscosity (laminar-turbulent via the Colebrook friction factor, sign-safe).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14173,15 +11918,17 @@ dis.port.p = 0
     name: `HydraulicResistance`,
     slug: `hydraulicresistance`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicResistance with ports in, out.`,
+    summary: `Generic K-factor resistance (bend, tee, sudden expansion — set K from the standard flow-network loss correlations).`,
     related: [],
     examples: [],
     tags: [`hydraulicresistance`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Generic K-factor resistance (bend, tee, sudden expansion — set K from the standard flow-network loss correlations).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14320,15 +12067,17 @@ cvf.in.h = 0
     name: `HydraulicSequenceValve`,
     slug: `hydraulicsequencevalve`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicSequenceValve with ports in, out.`,
+    summary: `Sequence valve: passes flow to the secondary circuit only above the primary pressure setpoint (tanh gate).`,
     related: [],
     examples: [],
     tags: [`hydraulicsequencevalve`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Sequence valve: passes flow to the secondary circuit only above the primary pressure setpoint (tanh gate).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14616,15 +12365,19 @@ ori.in.p = 10000000
     name: `HydraulicThermalVolume`,
     slug: `hydraulicthermalvolume`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicThermalVolume with ports in, out, wall.`,
+    summary: `Oil volume with pressure AND temperature states plus a heat port — the thermal-hydraulic node for warm-up and cooling-loop studies.`,
     related: [],
     examples: [],
     tags: [`hydraulicthermalvolume`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Oil volume with pressure AND temperature states plus a heat port — the thermal-hydraulic node for warm-up and cooling-loop studies.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The cav variant collapses the effective bulk modulus as pressure approaches vapor (aeration/cavitation clamp).
+
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14818,15 +12571,17 @@ c.out.mdot = 0.1955760722
     name: `HydraulicValveCmd`,
     slug: `hydraulicvalvecmd`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicValveCmd with ports in, out, u.`,
+    summary: `Signal-commanded proportional valve: spool command u.sig ∈ [0,1] scales the orifice CdA — the closed-loop counterpart of HydraulicValve.`,
     related: [],
     examples: [],
     tags: [`hydraulicvalvecmd`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Signal-commanded proportional valve: spool command u.sig ∈ [0,1] scales the orifice CdA — the closed-loop counterpart of HydraulicValve.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14899,15 +12654,17 @@ sup.out.h = 0
     name: `HydraulicVolume`,
     slug: `hydraulicvolume`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component HydraulicVolume with ports in, out.`,
+    summary: `Standalone bulk-modulus volume (the hydraulic C-node): der(P) from the net flow against the oil stiffness beta.`,
     related: [],
     examples: [],
     tags: [`hydraulicvolume`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Standalone bulk-modulus volume (the hydraulic C-node): der(P) from the net flow against the oil stiffness beta.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -14986,15 +12743,17 @@ odn.in.p = 5100000
     name: `LoadSensingPump`,
     slug: `loadsensingpump`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component LoadSensingPump with ports in, out, ls.`,
+    summary: `Load-sensing pump: the displacement fraction integrates the compensator error (LS pressure + margin vs outlet), soft-clamped to 0..1 by a logistic; delivery is the effective displacement at the drive speed.`,
     related: [],
     examples: [],
     tags: [`loadsensingpump`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Load-sensing pump: the displacement fraction integrates the compensator error (LS pressure + margin vs outlet), soft-clamped to 0..1 by a logistic; delivery is the effective displacement at the drive speed.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15104,7 +12863,7 @@ ReliefValve inst(Pcrack, K, eps, domain$)
 | --- | --- | --- |
 | \`Pcrack\` | Number | Cracking (relief) pressure [Pa]. |
 | \`K\` | Number | Gain / coefficient. |
-| \`eps\` | Number | Effectiveness / roughness. |
+| \`eps\` | Number | Opening smoothing width [Pa] — the tanh transition around \`Pcrack\`. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -15155,15 +12914,17 @@ rv.in.p = 4000000
     name: `ServoValveDynamic`,
     slug: `servovalvedynamic`,
     category: `Component (hydraulic)`,
-    summary: `Acausal hydraulic-domain component ServoValveDynamic with ports in, out, u.`,
+    summary: `Servo valve with 2nd-order spool dynamics: the spool position tracks the command through (wn, zeta) and gates the odd-symmetric square-law flow — the dynamic rung above HydraulicValveCmd.`,
     related: [],
     examples: [],
     tags: [`servovalvedynamic`, `component`, `hydraulic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Servo valve with 2nd-order spool dynamics: the spool position tracks the command through (wn, zeta) and gates the odd-symmetric square-law flow — the dynamic rung above HydraulicValveCmd.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/hydraulic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15244,15 +13005,17 @@ sup.out.h = 0
     name: `CoolingTower`,
     slug: `coolingtower`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component CoolingTower with ports in, out, wb.`,
+    summary: `Cooling tower (Merkel-lite): heat rejection on the enthalpy potential between saturated air at the water inlet temperature and ambient air at its wet-bulb (signal port), with a tower effectiveness and design air flow.`,
     related: [],
     examples: [],
     tags: [`coolingtower`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Cooling tower (Merkel-lite): heat rejection on the enthalpy potential between saturated air at the water inlet temperature and ambient air at its wet-bulb (signal port), with a tower effectiveness and design air flow.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15280,7 +13043,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \\begin{aligned}
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 h_{s_in} &= \\text{Enthalpy}\\left(\\mathrm{airh2o}, t=t_{in}, p=patm, r=1\\right) \\\\
 h_{wb} &= \\text{Enthalpy}\\left(\\mathrm{airh2o}, t=wb.sig, p=patm, r=1\\right) \\\\
 q &= eps_{t}\\cdot mdot_{a}\\cdot \\left(h_{s_in} - h_{wb}\\right) \\\\
@@ -15330,15 +13093,17 @@ ct.q = 62481.82234
     name: `GravityDrain`,
     slug: `gravitydrain`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component GravityDrain with ports in, out.`,
+    summary: `Gravity drain (Torricelli): the C1 odd-symmetric flow law mdot|mdot| = (Cd*A)^2 * 2*rho*dP — smooth through zero head, reversible.`,
     related: [],
     examples: [],
     tags: [`gravitydrain`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Gravity drain (Torricelli): the C1 odd-symmetric flow law mdot|mdot| = (Cd*A)^2 * 2*rho*dP — smooth through zero head, reversible.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15411,15 +13176,17 @@ g2.mdot = 0.378531707
     name: `HydroTurbine`,
     slug: `hydroturbine`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component HydroTurbine with ports in, out, shaft.`,
+    summary: `Hydro turbine: shaft power eta·(V̇·ΔP) from the head across it, efficiency from a flow map; the extracted work leaves the stream enthalpy.`,
     related: [],
     examples: [],
     tags: [`hydroturbine`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Hydro turbine: shaft power eta·(V̇·ΔP) from the head across it, efficiency from a flow map; the extracted work leaves the stream enthalpy.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15508,15 +13275,17 @@ hg.port.w = 0
     name: `IceStorageBrine`,
     slug: `icestoragebrine`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component IceStorageBrine with ports in, out.`,
+    summary: `Ice/PCM storage on a brine loop: the latent mass sits behind a UA wall in the brine stream — charge below the melt band, discharge above it.`,
     related: [],
     examples: [],
     tags: [`icestoragebrine`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Ice/PCM storage on a brine loop: the latent mass sits behind a UA wall in the brine stream — charge below the melt band, discharge above it.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15593,15 +13362,17 @@ b1.p = 200000
     name: `LiquidCheckValve`,
     slug: `liquidcheckvalve`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component LiquidCheckValve with ports in, out.`,
+    summary: `Check valve: the square-law orifice gated smoothly to forward ΔP only (tanh gate of width eps [Pa]); reverse flow decays to zero, no branch switch.`,
     related: [],
     examples: [],
     tags: [`liquidcheckvalve`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Check valve: the square-law orifice gated smoothly to forward ΔP only (tanh gate of width eps [Pa]); reverse flow decays to zero, no branch switch.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -15807,15 +13578,17 @@ cp.in.p = 200000
     name: `LiquidExpansionTank`,
     slug: `liquidexpansiontank`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component LiquidExpansionTank with ports port.`,
+    summary: `Expansion tank / degas bottle: pins the loop pressure datum — the one pressure reference every CLOSED coolant loop needs.`,
     related: [],
     examples: [],
     tags: [`liquidexpansiontank`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Expansion tank / degas bottle: pins the loop pressure datum — the one pressure reference every CLOSED coolant loop needs.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -16134,8 +13907,8 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
-rho &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-mu &= \\text{Viscosity}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+mu &= \\text{Viscosity}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 a &= \\frac{3.141592653589793}{4}\\cdot d^{2} \\\\
 v &= \\frac{in.mdot}{rho\\cdot a} \\\\
 re_{d} &= \\text{reynolds}\\left(rho, v, d, mu\\right) \\\\
@@ -16219,7 +13992,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-v &= \\text{Volume}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+v &= \\text{Volume}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 out.mdot &= in.mdot \\\\
 out.h &= in.h + \\frac{v\\cdot \\left(out.p - in.p\\right)}{eta} \\\\
 w &= in.mdot\\cdot \\left(out.h - in.h\\right)
@@ -16266,15 +14039,17 @@ Instantiated in the verified example below:
     name: `LiquidPumpMap`,
     slug: `liquidpumpmap`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component LiquidPumpMap with ports in, out.`,
+    summary: `Head-curve pump: rise from a tabulated head map [m] vs volumetric flow, with the hydraulic inefficiency heating the coolant (out.h mirrors LiquidPump).`,
     related: [`LiquidPump`, `PumpMap`],
     examples: [],
     tags: [`pump`, `liquid-pump-family`, `liquidpumpmap`, `map`, `data:rho-map`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `map-driven`, `liquid`, `component`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Head-curve pump: rise from a tabulated head map [m] vs volumetric flow, with the hydraulic inefficiency heating the coolant (out.h mirrors LiquidPump).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -16524,7 +14299,7 @@ $$
 \\begin{aligned}
 out.mdot &= mdot \\\\
 out.p &= p \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =p, p=t\\right)
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=p, t=t\\right)
 \\end{aligned}
 $$
 
@@ -16567,15 +14342,19 @@ Instantiated in the verified example below:
     name: `LiquidTank`,
     slug: `liquidtank`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component LiquidTank with ports in, out, wall.`,
+    summary: `Thermal-mass tank (m kg of coolant, perfectly mixed): the outlet leaves at the tank temperature state Tt; a wall heat port exchanges UA·(T_wall − Tt).`,
     related: [],
     examples: [],
     tags: [`liquidtank`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Thermal-mass tank (m kg of coolant, perfectly mixed): the outlet leaves at the tank temperature state Tt; a wall heat port exchanges UA·(T_wall − Tt).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The loop warm-up element.
+
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -16605,8 +14384,8 @@ $$
 \\begin{aligned}
 out.p &= in.p \\\\
 out.mdot &= in.mdot \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=tt\\right) \\\\
-cp_{t} &= \\text{Cp}\\left(\\mathrm{fluid}, =in.p, p=tt\\right) \\\\
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=tt\\right) \\\\
+cp_{t} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, t=tt\\right) \\\\
 q &= ua\\cdot \\left(wall.t - tt\\right) \\\\
 \\text{der}\\left(tt\\right) &= \\frac{in.mdot\\cdot \\left(in.h - out.h\\right) + q}{m\\cdot cp_{t}} \\\\
 \\text{init}\\left(tt\\right) &= t0 \\\\
@@ -16654,15 +14433,17 @@ l1.mdot = 0.3
     name: `LiquidThermostat`,
     slug: `liquidthermostat`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component LiquidThermostat with ports in, out.`,
+    summary: `Wax thermostat: the element opens smoothly over a temperature band (Topen ± Tband) sensed on the inlet coolant — the engine warm-up bypass switch, no discrete event.`,
     related: [],
     examples: [],
     tags: [`liquidthermostat`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Wax thermostat: the element opens smoothly over a temperature band (Topen ± Tband) sensed on the inlet coolant — the engine warm-up bypass switch, no discrete event.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -16693,7 +14474,7 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 u &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{t_{in} - topen}{tband}\\right)\\right) \\\\
 in.mdot\\cdot \\left|in.mdot\\right| &= \\left(u\\cdot cda\\right)^{2}\\cdot 2\\cdot rho\\cdot \\left(in.p - out.p\\right)
 \\end{aligned}
@@ -16794,15 +14575,17 @@ ck1.in.p = 100000
     name: `LiquidThreeWayValve`,
     slug: `liquidthreewayvalve`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component LiquidThreeWayValve with ports in, outa, outb.`,
+    summary: `Diverting three-way valve: routes fraction u of the inlet to outa, the rest to outb, both at the inlet pressure — the TMS loop-splitting staple.`,
     related: [],
     examples: [],
     tags: [`liquidthreewayvalve`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Diverting three-way valve: routes fraction u of the inlet to outa, the rest to outb, both at the inlet pressure — the TMS loop-splitting staple.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17004,7 +14787,7 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 q &= ua\\cdot \\left(t_{in} - wall.t\\right) \\\\
 out.h &= in.h - \\frac{q}{in.mdot} \\\\
 wall.qdot &= -q
@@ -17057,15 +14840,19 @@ Instantiated in the verified example below:
     name: `OpenTank`,
     slug: `opentank`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component OpenTank with ports in, out.`,
+    summary: `Open (vented) tank: level state from the flow imbalance; the inlet sees the free surface (P0), the outlet the gravity head at the base.`,
     related: [],
     examples: [],
     tags: [`opentank`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Open (vented) tank: level state from the flow imbalance; the inlet sees the free surface (P0), the outlet the gravity head at the base.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Well-mixed and adiabatic in enthalpy.
+
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17142,15 +14929,19 @@ o1.p = 101325
     name: `ThermalStorageTank`,
     slug: `thermalstoragetank`,
     category: `Component (liquid)`,
-    summary: `Acausal liquid-domain component ThermalStorageTank with ports in, out.`,
+    summary: `Stratified thermal-storage tank: three plug-flow nodes top→bottom with inter-node mixing conductance and shell losses; charge enters the top node, draw leaves the bottom at its temperature.`,
     related: [],
     examples: [],
     tags: [`thermalstoragetank`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Stratified thermal-storage tank: three plug-flow nodes top→bottom with inter-node mixing conductance and shell losses; charge enters the top node, draw leaves the bottom at its temperature.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+One-directional flow (in→out) by construction — reverse the connections for the discharge circuit.
+
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/liquid.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17185,14 +14976,14 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 \\text{der}\\left(t1\\right) &= \\frac{in.mdot\\cdot cp_{f}\\cdot \\left(t_{in} - t1\\right) + kmix\\cdot \\left(t2 - t1\\right) - ua_{loss}\\cdot \\left(t1 - t_{amb}\\right)}{m_{node}\\cdot cp_{f}} \\\\
 \\text{init}\\left(t1\\right) &= t10 \\\\
 \\text{der}\\left(t2\\right) &= \\frac{in.mdot\\cdot cp_{f}\\cdot \\left(t1 - t2\\right) + kmix\\cdot \\left(t1 - t2\\right) + kmix\\cdot \\left(t3 - t2\\right) - ua_{loss}\\cdot \\left(t2 - t_{amb}\\right)}{m_{node}\\cdot cp_{f}} \\\\
 \\text{init}\\left(t2\\right) &= t20 \\\\
 \\text{der}\\left(t3\\right) &= \\frac{in.mdot\\cdot cp_{f}\\cdot \\left(t2 - t3\\right) + kmix\\cdot \\left(t2 - t3\\right) - ua_{loss}\\cdot \\left(t3 - t_{amb}\\right)}{m_{node}\\cdot cp_{f}} \\\\
 \\text{init}\\left(t3\\right) &= t30 \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =out.p, p=t3\\right)
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=t3\\right)
 \\end{aligned}
 $$
 
@@ -17237,15 +15028,17 @@ l1.mdot = 0.2
     name: `BeltDrive`,
     slug: `beltdrive`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component BeltDrive with ports a, b.`,
+    summary: `Belt/chain drive: speed ratio with a torque-transfer efficiency (Transmission's translational-free cousin, named for the application).`,
     related: [],
     examples: [],
     tags: [`beltdrive`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Belt/chain drive: speed ratio with a torque-transfer efficiency (Transmission's translational-free cousin, named for the application).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17374,15 +15167,19 @@ bd.b.tau = -25
     name: `Brake`,
     slug: `brake`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component Brake with ports a, b, u.`,
+    summary: `Commanded friction brake: clamp fraction from the signal port u scales the capacity, tanh-smooth through zero slip.`,
     related: [],
     examples: [],
     tags: [`brake`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Commanded friction brake: clamp fraction from the signal port u scales the capacity, tanh-smooth through zero slip.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Ground b for a chassis brake.
+
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17512,15 +15309,19 @@ bd.b.tau = -25
     name: `Cam`,
     slug: `cam`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component Cam with ports shaft, rod.`,
+    summary: `Cam: rotational-to-translational profile drive.`,
     related: [],
     examples: [],
     tags: [`cam`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Cam: rotational-to-translational profile drive.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The lift slope dl/dtheta comes analytically from the profile table (dtable), so follower velocity is exact and the reaction torque conserves power (tau*w = f*v virtual work).
+
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17601,15 +15402,17 @@ final_state = 10
     name: `CamFollower`,
     slug: `camfollower`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component CamFollower with ports rod.`,
+    summary: `Spring-loaded cam follower: mass held on the profile by a preloaded return spring to ground — pair with Cam for valvetrain/profile-driven kinematics.`,
     related: [],
     examples: [],
     tags: [`camfollower`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Spring-loaded cam follower: mass held on the profile by a preloaded return spring to ground — pair with Cam for valvetrain/profile-driven kinematics.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17709,7 +15512,7 @@ Clutch inst(Tmax, eng, eps)
 | --- | --- | --- |
 | \`Tmax\` | Number | Maximum temperature [K]. |
 | \`eng\` | Number | Engagement fraction (0–1). |
-| \`eps\` | Number | Effectiveness / roughness. |
+| \`eps\` | Number | Slip smoothing speed [rad/s] — regularizes the sign of the slip speed. |
 
 ## Constitutive Equations
 
@@ -17762,15 +15565,17 @@ cl.b.tau = -30
     name: `ClutchCmd`,
     slug: `clutchcmd`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component ClutchCmd with ports a, b, u.`,
+    summary: `Signal-commanded clutch: engagement fraction from a signal port \`u\` (u.sig ∈ [0,1]) instead of a fixed \`eng\` parameter — launch/shift schedules.`,
     related: [],
     examples: [],
     tags: [`clutchcmd`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Signal-commanded clutch: engagement fraction from a signal port \`u\` (u.sig ∈ [0,1]) instead of a fixed \`eng\` parameter — launch/shift schedules.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -17844,15 +15649,17 @@ cl.b.tau = -40
     name: `EndStop`,
     slug: `endstop`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component EndStop with ports port.`,
+    summary: `Translational end stop at x = gap: spring-damper contact engaged smoothly beyond the gap (penetration hinge + tanh-gated damping).`,
     related: [],
     examples: [],
     tags: [`endstop`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Translational end stop at x = gap: spring-damper contact engaged smoothly beyond the gap (penetration hinge + tanh-gated damping).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -18007,15 +15814,17 @@ d1.b.f = 25
     name: `Freewheel`,
     slug: `freewheel`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component Freewheel with ports a, b.`,
+    summary: `One-way clutch (freewheel/overrunning sprag): transmits a stiff viscous torque only while the driver overruns the driven side (dw > 0) — the C1 smooth-max hinge of width eps; free in the reverse direction.`,
     related: [],
     examples: [],
     tags: [`freewheel`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `One-way clutch (freewheel/overrunning sprag): transmits a stiff viscous torque only while the driver overruns the driven side (dw > 0) — the C1 smooth-max hinge of width eps; free in the reverse direction.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -18129,7 +15938,7 @@ Friction inst(Fc, Fs, vs, bv, eps)
 | \`Fs\` | Number | Static friction force [N]. |
 | \`vs\` | Number | Reference / slip velocity [m/s]. |
 | \`bv\` | Number | Viscous-friction coefficient. |
-| \`eps\` | Number | Effectiveness / roughness. |
+| \`eps\` | Number | Stick–slip smoothing speed [rad/s] — regularizes the sign of the slip speed. |
 
 ## Constitutive Equations
 
@@ -18332,15 +16141,17 @@ d.b.tau = -12
     name: `Lever`,
     slug: `lever`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component Lever with ports a, b.`,
+    summary: `Ideal lever (translational ratio).`,
     related: [],
     examples: [],
     tags: [`lever`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Ideal lever (translational ratio).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -18616,15 +16427,17 @@ gr.port.tau = -20
     name: `RackPinion`,
     slug: `rackpinion`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component RackPinion with ports shaft, rod.`,
+    summary: `Ideal rack and pinion of pitch radius r.`,
     related: [],
     examples: [],
     tags: [`rackpinion`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Ideal rack and pinion of pitch radius r.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -18909,15 +16722,17 @@ g2.port.tau = 12
     name: `ScrewDrive`,
     slug: `screwdrive`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component ScrewDrive with ports shaft, rod.`,
+    summary: `Ideal power-conserving screw drive: lead [m/rev] couples rotation to translation (τ·ω + F·v = 0).`,
     related: [],
     examples: [],
     tags: [`screwdrive`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Ideal power-conserving screw drive: lead [m/rev] couples rotation to translation (τ·ω + F·v = 0).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19193,15 +17008,17 @@ d.b.tau = -10
     name: `TorsionalBacklash`,
     slug: `torsionalbacklash`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component TorsionalBacklash with ports a, b.`,
+    summary: `Torsional backlash: a torsional spring dead over ±half of relative wind-up (the C¹ two-hinge deadband, width eps) — gear lash, spline play.`,
     related: [],
     examples: [],
     tags: [`torsionalbacklash`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Torsional backlash: a torsional spring dead over ±half of relative wind-up (the C¹ two-hinge deadband, width eps) — gear lash, spline play.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19503,15 +17320,17 @@ v_start = 0
     name: `TransSpring`,
     slug: `transspring`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component TransSpring with ports a, b.`,
+    summary: `Translational spring (the missing twin of TransDamper/TransMass).`,
     related: [],
     examples: [`pneumatic-spring-actuator`, `hydraulic-spring-actuator`, `damped-actuator-motion`],
     tags: [`transspring`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Translational spring (the missing twin of TransDamper/TransMass).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19584,15 +17403,17 @@ fs.b.f = 50
     name: `WheelBrakeThermal`,
     slug: `wheelbrakethermal`,
     category: `Component (mechanical)`,
-    summary: `Acausal mechanical-domain component WheelBrakeThermal with ports a, b, u.`,
+    summary: `Commanded friction brake with rotor thermal state and temperature fade: friction power heats the rotor mass (convecting hA to ambient) and the available torque derates through a C1 sigmoid above T_fade (fade studies).`,
     related: [],
     examples: [],
     tags: [`wheelbrakethermal`, `component`, `mechanical`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **mechanical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Commanded friction brake with rotor thermal state and temperature fade: friction power heats the rotor mass (convecting hA to ambient) and the available torque derates through a C1 sigmoid above T_fade (fade studies).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **mechanical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/mechanical.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19681,15 +17502,17 @@ g2.port.tau = 90
     name: `AHU`,
     slug: `ahu`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component AHU with ports ret_in, oa_in, sup_out.`,
+    summary: `Air-handling unit: mixing box + filter + cooling coil + reheat coil + supply fan in one block (all stateless stages, replaceable by editing the source).`,
     related: [],
     examples: [],
     tags: [`ahu`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [`tut-coil`],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Air-handling unit: mixing box + filter + cooling coil + reheat coil + supply fan in one block (all stateless stages, replaceable by editing the source).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19776,15 +17599,17 @@ oa.out.mdot = 1
     name: `AirFilter`,
     slug: `airfilter`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component AirFilter with ports in, out.`,
+    summary: `Air filter: quadratic loss with a fouling multiplier (foul = 1 clean; scale it up as the filter loads — fan-energy studies).`,
     related: [],
     examples: [],
     tags: [`airfilter`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Air filter: quadratic loss with a fouling multiplier (foul = 1 clean; scale it up as the filter loads — fan-energy studies).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -19856,13 +17681,17 @@ a1.p = 101325
     name: `ApparatusDewPointCoil`,
     slug: `apparatusdewpointcoil`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component ApparatusDewPointCoil with ports in, out.`,
+    summary: `Cooling coil stated the way a designer actually sizes one: by its APPARATUS DEW POINT and its BYPASS FACTOR, not by an imposed leaving temperature.`,
     related: [],
     examples: [],
     tags: [`apparatusdewpointcoil`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Cooling coil stated the way a designer actually sizes one: by its APPARATUS DEW POINT and its BYPASS FACTOR, not by an imposed leaving temperature.
+
+The leaving state lies on the straight line from the entering state to the ADP — the saturated state the coil surface would drive the air to if none of it slipped past unconditioned. BF is the fraction that does slip past, so the leaving state sits BF of the way back from the ADP toward the entering state. Because the construction is one linear interpolation on the (W, h) pair, all three textbook forms of the bypass factor hold identically:  BF = (t_lvg - t_adp)/(t_ent - t_adp) = (W_lvg - W_adp)/(W_ent - W_adp) = (h_lvg - h_adp)/(h_ent - h_adp)  which is worth checking rather than assuming: it is what makes a coil result reproducible against any textbook. Typical BF is 0.05-0.25. BF = 0 recovers the saturated-leaving-air idealisation that \`CoolingCoil\` imposes, which is a perfect coil — real leaving air sits at 85-95% RH, not on the saturation line.  The condensate leaves the airstream carrying its own enthalpy, so the coil load is NOT simply the air-side enthalpy drop. \`h_f\` is the ASHRAE condensate term, 4.186*t at the leaving temperature. It is under 1% of the total at ordinary conditions, which is exactly why it gets dropped silently — and why \`Q_air\` (the air-side drop) and \`Q\` (the load the plant actually sees) are both written out here instead of quietly conflated.  The construction only applies to a coil that GETS WET. Run it on a surface above the entering dew point and it interpolates toward an apparatus dew point that does not exist, handing back air wetter than it entered — a cooling coil that humidifies. The \`dry\` rung is the coil in that regime, and \`margin_adp\` (entering dew point less T_adp) is the number that says which rung a design belongs on rather than leaving it to judgement.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -19964,15 +17793,19 @@ c.in.h = 60848.84667
     name: `CabinZone`,
     slug: `cabinzone`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component CabinZone with ports in, out, wall.`,
+    summary: `Cabin zone: a perfectly-mixed air volume Vz with temperature and humidity STATES, occupant sensible/moisture loads, a solar/auxiliary heat input, and a wall heat port (couple it to ThermalMass walls or an evaporator AirCoil).`,
     related: [],
     examples: [],
     tags: [`cabinzone`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Cabin zone: a perfectly-mixed air volume Vz with temperature and humidity STATES, occupant sensible/moisture loads, a solar/auxiliary heat input, and a wall heat port (couple it to ThermalMass walls or an evaporator AirCoil).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Ventilation air flows through (in → out at the zone state).
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -20070,13 +17903,17 @@ w_end = 0.007298792069
     name: `ChilledBeam`,
     slug: `chilledbeam`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component ChilledBeam with ports in, out, wall.`,
+    summary: `Chilled beam, active or passive.`,
     related: [],
     examples: [],
     tags: [`chilledbeam`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Chilled beam, active or passive.
+
+SENSIBLE ONLY: it has no drain, so it must never be given latent capacity. \`T_dp_in\` and \`margin_dp\` are exported so a design can be checked rather than assumed — if the entering dew point reaches the water temperature the beam condenses onto the room, which is the failure mode that makes a DOAS (drying the ventilation air upstream) a requirement rather than a preference. margin_dp < 0 means the design is condensing.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -20231,13 +18068,17 @@ cc.in.p = 101325
     name: `DesiccantWheel`,
     slug: `desiccantwheel`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component DesiccantWheel with ports proc_in, proc_out, reg_in, reg_out.`,
+    summary: `Solid desiccant wheel: the process air leaves warmer and drier at near-constant enthalpy, with latent effectiveness against the sorbent equilibrium humidity ratio.`,
     related: [],
     examples: [],
     tags: [`desiccantwheel`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Solid desiccant wheel: the process air leaves warmer and drier at near-constant enthalpy, with latent effectiveness against the sorbent equilibrium humidity ratio.
+
+Solid desiccant wheel. The process side runs DOWN AND TO THE RIGHT on the psychrometric chart: the latent heat released as vapour is sorbed reappears as sensible heat, so the air leaves WARMER and DRIER at near-constant enthalpy. That is the mirror image of adiabatic evaporative cooling, and it is the one process direction a cooling-only component set cannot express at all.  eff_L is latent effectiveness against the desiccant's equilibrium humidity ratio W_eq, which is set by sorbent type and regeneration temperature. f_carry is the extra enthalpy carried over from the hot regeneration sector — real wheels are not perfectly adiabatic, and 80–90% of the process temperature rise is heat of sorption with the balance carried over, so f_carry is small. (\`LiquidDesiccantContactor\` names its equivalent \`f_excess\` and defines it on the temperature GAIN rather than on an enthalpy gap, because a liquid contactor has no regeneration port to take the gap against.) Moisture and energy leave on the regeneration stream; both balances close on the dry-air basis.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -20315,15 +18156,17 @@ c.proc_out.mdot = 1
     name: `Diffuser`,
     slug: `diffuser`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component Diffuser with ports in, out.`,
+    summary: `Diffuser/recovery section: converts velocity head to static pressure with a recovery efficiency between inlet area A1 and outlet area A2.`,
     related: [],
     examples: [],
     tags: [`diffuser`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Diffuser/recovery section: converts velocity head to static pressure with a recovery efficiency between inlet area A1 and outlet area A2.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -20398,13 +18241,17 @@ dif.in.p = 101325
     name: `DOAS`,
     slug: `doas`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component DOAS with ports oa_in, sup_out, exh_in, exh_out.`,
+    summary: `Dedicated outdoor air system: recovery wheel, cooling coil sized by apparatus dew point, and reheat, conditioning the VENTILATION air on its own.`,
     related: [],
     examples: [],
     tags: [`doas`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Dedicated outdoor air system: recovery wheel, cooling coil sized by apparatus dew point, and reheat, conditioning the VENTILATION air on its own.
+
+The point of a DOAS is that it SEPARATES the sensible and latent loads. The coil is driven to a dew point low enough to absorb the whole building's latent gain, the reheat brings the dry bulb back to something neutral, and the space sensible load is then left to terminals that have no latent capacity at all — chilled beams, radiant panels, fan coils run dry, VRF. A tool that assumes one coil serves both loads cannot represent this at all, and neither can a terminal-unit model without a dew-point margin to check against.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -20482,13 +18329,17 @@ c.exh_out.mdot = 1
     name: `Economizer`,
     slug: `economizer`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component Economizer with ports oa_in, ret_in, mix_out.`,
+    summary: `Airside economizer: a mixing box whose outdoor-air fraction is decided by a dry-bulb or enthalpy changeover against the return air and a high limit.`,
     related: [],
     examples: [],
     tags: [`economizer`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Airside economizer: a mixing box whose outdoor-air fraction is decided by a dry-bulb or enthalpy changeover against the return air and a high limit.
+
+Airside economizer. It is a mixing box whose outdoor-air fraction is DECIDED rather than given: when outdoor air is the cheaper source of cooling the dampers open toward 100%, and otherwise they fall back to the minimum ventilation fraction f_min.  Two changeover strategies, as the codes define them. \`drybulb\` compares dry- bulb temperatures; \`enthalpy\` compares total enthalpy and so counts the latent penalty of humid outdoor air, which dry-bulb changeover cannot see. Each is gated twice — the differential test against the return air AND a fixed high limit \`lim\` above which the economizer locks out regardless. \`band\` is the changeover width in the units of whichever variable the variant compares (K for drybulb, J/kg for enthalpy); it keeps the decision differentiable instead of stepping, which is what lets a solver cross it.  f_oa is exported because the operating-hours question — how much of the year the economizer actually runs against real weather — is the reason to model one at all.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -20589,15 +18440,19 @@ c.g_lim = 0.9999999979
     name: `EnthalpyWheel`,
     slug: `enthalpywheel`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component EnthalpyWheel with ports sup_in, sup_out, exh_in, exh_out.`,
+    summary: `Rotary enthalpy wheel: effectiveness recovery of both enthalpy and moisture between exhaust and supply, with exact water and energy balances on the dry-air basis.`,
     related: [],
     examples: [],
     tags: [`enthalpywheel`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Rotary enthalpy wheel: effectiveness recovery of both enthalpy and moisture between exhaust and supply, with exact water and energy balances on the dry-air basis.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Rotary enthalpy wheel: paired effectiveness recovery of BOTH enthalpy and moisture between exhaust and supply streams; water and energy balances close exactly on the dry-air basis (same exchange math as the membrane humidifier, wheel-rated effectivenesses).
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -20680,15 +18535,17 @@ ex.out.p = 101325
     name: `EvaporativeCooler`,
     slug: `evaporativecooler`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component EvaporativeCooler with ports in, out.`,
+    summary: `Adiabatic evaporative cooler: constant-enthalpy humidification toward saturation with effectiveness eff (eff=1 reaches the adiabatic-saturation state, W directly from the (h, P, R=1) property call — no implicit outlet temperature to iterate).`,
     related: [],
     examples: [],
     tags: [`evaporativecooler`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Adiabatic evaporative cooler: constant-enthalpy humidification toward saturation with effectiveness eff (eff=1 reaches the adiabatic-saturation state, W directly from the (h, P, R=1) property call — no implicit outlet temperature to iterate).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -20762,13 +18619,17 @@ ec.in.mdot = 1
     name: `FaceAndBypassCoil`,
     slug: `faceandbypasscoil`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component FaceAndBypassCoil with ports in, out, wall.`,
+    summary: `Face-and-bypass coil: the airstream splits at a damper, the face fraction passes over the coil and the rest bypasses it untouched, and the two remix adiabatically downstream.`,
     related: [],
     examples: [],
     tags: [`faceandbypasscoil`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Face-and-bypass coil: the airstream splits at a damper, the face fraction passes over the coil and the rest bypasses it untouched, and the two remix adiabatically downstream.
+
+Capacity is modulated by the DAMPER rather than by water flow, which is the classic way to hold a leaving condition with a coil that would otherwise freeze or overshoot at part load.  The consequence worth seeing on the chart: here the bypass factor is a CONTROL variable, \`BF = 1 - u_face\`, not a fixed coil characteristic. At 40% face the leaving air sits far from saturation on the mixing line between the coil condition and the entering state — a leaving state no single-path coil model produces.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -20846,13 +18707,17 @@ c.in.h = 60848.84667
     name: `FanCoilUnit`,
     slug: `fancoilunit`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component FanCoilUnit with ports in, out, wall.`,
+    summary: `Fan coil unit: a room terminal that recirculates air through a filter and a wet coil with a blow-through fan, so the fan heat adds to the coil load.`,
     related: [],
     examples: [],
     tags: [`fancoilunit`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Fan coil unit: a room terminal that recirculates air through a filter and a wet coil with a blow-through fan, so the fan heat adds to the coil load.
+
+Fan coil unit: a room terminal that recirculates space air through a filter and a wet coil, with the fan BLOW-THROUGH — upstream of the coil, pushing air across it, which is the normal fan-coil arrangement (central station AHUs are the ones usually drawn through).  That ordering is not cosmetic. Blow-through puts the fan heat INTO the air the coil then has to cool, so the fan power appears in the coil load; draw it through instead and the same fan heat lands downstream of the coil, where it reheats the supply air the coil just conditioned. The two arrangements put the same watts in opposite places.  Unlike a chilled beam or an induction unit, a fan coil is built WITH a drain pan, so its coil may run wet and carry latent duty. That is the reason a fan coil can serve a space with no upstream dew-point control and a beam cannot.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -20926,13 +18791,17 @@ c.out.mdot = 1
     name: `FanPoweredBox`,
     slug: `fanpoweredbox`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component FanPoweredBox with ports pri_in, ind_in, out.`,
+    summary: `Fan-powered terminal box.`,
     related: [],
     examples: [],
     tags: [`fanpoweredbox`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Fan-powered terminal box.
+
+Primary supply air mixes with air induced from the ceiling plenum, then takes the terminal fan's heat and any reheat. Series and parallel boxes differ in whether the fan sees the mixed stream or only the induced stream; both reduce to this mix-then-heat form for a psychrometric design calculation.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -21087,13 +18956,17 @@ hc.in.p = 101325
     name: `HeatPipeWrapAround`,
     slug: `heatpipewraparound`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component HeatPipeWrapAround with ports pre_in, pre_out, re_in, re_out.`,
+    summary: `Heat-pipe wrap-around, and the pumped run-around recuperative loop that is the same idea with a glycol circuit: a PASSIVE loop that takes sensible heat out of the air entering the cooling coil and puts exactly that heat back into the air leaving it.`,
     related: [],
     examples: [],
     tags: [`heatpipewraparound`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Heat-pipe wrap-around, and the pumped run-around recuperative loop that is the same idea with a glycol circuit: a PASSIVE loop that takes sensible heat out of the air entering the cooling coil and puts exactly that heat back into the air leaving it.
+
+Three vectors in sequence on the chart — sensible precool at constant W, then the coil's cooling-with-dehumidification, then sensible reheat at constant W — with no new energy anywhere.  That is why it displaces the reheat energy codes restrict: the reheat IS the precool, moved downstream. It also raises latent capacity, because the coil now sees air already cooled toward its dew point.  The defining property is Q_pre = Q_re EXACTLY, so the reheat leg is closed on the enthalpy the precool leg gave up rather than on a second effectiveness — a temperature-effectiveness pair would leave a small residual loop energy that is precisely what a passive device cannot have.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -21252,13 +19125,17 @@ hum.in.p = 101325
     name: `IndirectDirectEvaporativeCooler`,
     slug: `indirectdirectevaporativecooler`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component IndirectDirectEvaporativeCooler with ports pri_in, pri_out, sec_in, sec_out.`,
+    summary: `Indirect/direct two-stage evaporative cooler.`,
     related: [],
     examples: [],
     tags: [`indirectdirectevaporativecooler`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Indirect/direct two-stage evaporative cooler.
+
+The indirect stage cools the primary air SENSIBLY, which lowers its wet bulb; the direct stage that follows then runs up that LOWER wet-bulb line and so reaches a dry bulb no single direct stage could. That is the whole point of staging — a direct cooler can never go below the entering wet bulb, so the way to go lower is to move the wet bulb first.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -21332,13 +19209,17 @@ c.pri_out.mdot = 1
     name: `IndirectEvaporativeCooler`,
     slug: `indirectevaporativecooler`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component IndirectEvaporativeCooler with ports pri_in, pri_out, sec_in, sec_out.`,
+    summary: `Indirect evaporative cooler.`,
     related: [],
     examples: [],
     tags: [`indirectevaporativecooler`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Indirect evaporative cooler.
+
+The primary (supply) stream is cooled SENSIBLY at constant humidity ratio — no moisture crosses the wall, which is the whole point of "indirect" — while the secondary (scavenger) stream is evaporatively cooled and carries the heat away. Performance is quoted as wet-bulb depression efficiency, typically 60–80%: the primary approaches the secondary's ENTERING WET BULB, not its dry bulb, which is why indirect cooling still works in climates where the dry-bulb approach would be useless.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -21420,13 +19301,17 @@ c.pri_out.mdot = 1
     name: `InductionUnit`,
     slug: `inductionunit`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component InductionUnit with ports pri_in, ind_in, out, wall.`,
+    summary: `Induction unit — and the ACTIVE chilled beam, which is the same machine under a newer name.`,
     related: [],
     examples: [],
     tags: [`inductionunit`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Induction unit — and the ACTIVE chilled beam, which is the same machine under a newer name.
+
+Medium-to-high-velocity primary air through nozzles entrains room air across a secondary coil; the primary air does the pumping work, so there is no fan and no fan heat. \`ratio\` is the induction ratio, induced over primary, typically 2 to 5 (24 L/s of primary inducing 48 L/s of room air is the textbook 2:1 case).  The secondary coil MUST run dry. Induction terminals are built without a piped drain — ASHRAE is blunt that raising chilled-water temperature on the central coil can leave a terminal working as a dehumidifier and damage it — so the induced stream's humidity ratio is carried through untouched and the design is checked instead: \`margin_dp\` is the water temperature less the induced air's dew point, and a negative value means the terminal is condensing into the occupied space. Keeping it positive is what the primary air is for, which is why induction terminals and a DOAS go together.  The passive counterpart is \`ChilledBeam\`: no primary air, no induction, room air moved by buoyancy alone.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -21507,15 +19392,17 @@ c.ind_in.mdot = 2
     name: `Infiltration`,
     slug: `infiltration`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component Infiltration with ports in, out.`,
+    summary: `Infiltration: pressure-driven leakage path (power-law crack flow, C1-smooth odd law) between two humid-air nodes — zone to ambient, zone to zone.`,
     related: [],
     examples: [],
     tags: [`infiltration`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Infiltration: pressure-driven leakage path (power-law crack flow, C1-smooth odd law) between two humid-air nodes — zone to ambient, zone to zone.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -21590,13 +19477,17 @@ w_leak = 0.004
     name: `LiquidDesiccantContactor`,
     slug: `liquiddesiccantcontactor`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component LiquidDesiccantContactor with ports in, out, wall.`,
+    summary: `Liquid-desiccant contactor: air contacts a sorbent solution (lithium chloride, lithium bromide, glycol) whose surface water-vapour pressure is set by its CONCENTRATION and TEMPERATURE, not by a wheel position.`,
     related: [],
     examples: [],
     tags: [`liquiddesiccantcontactor`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Liquid-desiccant contactor: air contacts a sorbent solution (lithium chloride, lithium bromide, glycol) whose surface water-vapour pressure is set by its CONCENTRATION and TEMPERATURE, not by a wheel position.
+
+The air is driven toward the equilibrium humidity ratio W_eq of that solution — lower the solution temperature or raise its concentration and W_eq falls.  The two rungs are genuinely different processes, and this is the component where that shows:  adiabatic — the heat of absorption stays in the air, which leaves WARMER and drier, down and to the right near a constant wet-bulb line. Gatley notes the real dry-bulb rise runs 20-30% ABOVE a pure latent-to-sensible conversion, from solution heat carried over from the regenerator and the heat of wetting; f_excess is that fraction. It is NOT \`DesiccantWheel\`'s \`f_carry\`, which is a fraction of the ENTHALPY GAP to a regeneration stream the wheel actually has a port for. Same phenomenon, two different quantities, so two different names.  cooled — an internally cooled contactor (bare-pipe coils in the contact bed with the solution sprayed over them) removes the heat of absorption as it is released, so the air leaves COOLER and drier. Run at eps_T such that the leaving dry bulb equals the entering one, this is the only device in the library that draws the DEHUMIDIFICATION-ONLY vector — straight down a constant-dry-bulb line — which Gatley uses as the textbook example of that process. It is one process, not chemical drying followed by cooling: there is no intermediate state to point at.  The absorbed water leaves with the solution carrying its own liquid enthalpy, so that term is taken out of the air rather than left in the balance.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -21700,15 +19591,17 @@ c.mdot_w = 0.0042
     name: `MembraneHumidifier`,
     slug: `membranehumidifier`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component MembraneHumidifier with ports dry_in, dry_out, wet_in, wet_out.`,
+    summary: `Membrane humidifier: effectiveness exchange of BOTH enthalpy and moisture between a wet (cathode exhaust) and a dry (supply) stream; water and energy balances close exactly on the dry-air basis.`,
     related: [],
     examples: [],
     tags: [`membranehumidifier`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Membrane humidifier: effectiveness exchange of BOTH enthalpy and moisture between a wet (cathode exhaust) and a dry (supply) stream; water and energy balances close exactly on the dry-air basis.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -21874,15 +19767,17 @@ a.out.h = 60000
     name: `MoistAirDamper`,
     slug: `moistairdamper`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component MoistAirDamper with ports in, outa, outb.`,
+    summary: `Diverting damper: routes fraction u of the air to outa, the rest to outb (both riders carried).`,
     related: [],
     examples: [],
     tags: [`moistairdamper`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Diverting damper: routes fraction u of the air to outa, the rest to outb (both riders carried).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -21958,15 +19853,17 @@ a1.p = 101325
     name: `MoistAirDuct`,
     slug: `moistairduct`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component MoistAirDuct with ports in, out.`,
+    summary: `Humid-air duct: Darcy friction pressure drop on the total (moist) mass flow; composition and enthalpy pass through.`,
     related: [],
     examples: [],
     tags: [`moistairduct`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Humid-air duct: Darcy friction pressure drop on the total (moist) mass flow; composition and enthalpy pass through.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -22046,15 +19943,17 @@ dct.in.h = 40414.42776
     name: `MoistAirFan`,
     slug: `moistairfan`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component MoistAirFan with ports in, out.`,
+    summary: `Blower: fixed pressure rise dP with motor+aero inefficiency heating the stream (shaft power = V̇·ΔP/η, all of it ends up in the air).`,
     related: [],
     examples: [],
     tags: [`moistairfan`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Blower: fixed pressure rise dP with motor+aero inefficiency heating the stream (shaft power = V̇·ΔP/η, all of it ends up in the air).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -22313,7 +20212,7 @@ MoistAirWallHX inst(eps, domain$)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`eps\` | Number | Effectiveness / roughness. |
+| \`eps\` | Number | Heat-exchanger effectiveness (0–1), used by the \`eps_t\` variant. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -22380,13 +20279,17 @@ coil.in.p = 101325
     name: `RadiantPanel`,
     slug: `radiantpanel`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component RadiantPanel with ports zone, wall.`,
+    summary: `Radiant panel or chilled ceiling.`,
     related: [],
     examples: [],
     tags: [`radiantpanel`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Radiant panel or chilled ceiling.
+
+It conditions a space without moving any air at all, so it has no airstream: it couples the zone node to the water node and nothing else. That is precisely why it appears on a psychrometric design as a LOAD SHIFT rather than as a process vector — sensible load it removes is load the air system no longer has to carry, which is what lets the supply airflow drop to the ventilation minimum.  Capacity follows the ASHRAE panel characteristic q = C*dT*|dT|^(n-1) W/m^2 (Handbook—Systems Ch. 6, Eq. 18), signed so the same panel heats and cools through one equation, and regularised at dT = 0 the way \`Infiltration\` regularises its own odd power law. n = 1.1 for ceiling cooling and floor heating, n = 1.0 for ceiling heating and floor cooling.  SENSIBLE ONLY, with no drain anywhere: \`margin_dp\` against the design room state is not a diagnostic here but the sizing constraint. A chilled ceiling below the room dew point rains on the occupants.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -22459,13 +20362,17 @@ c.q = 896.9318128
     name: `SensibleAirToAirHX`,
     slug: `sensibleairtoairhx`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component SensibleAirToAirHX with ports sup_in, sup_out, exh_in, exh_out.`,
+    summary: `Sensible air-to-air exchanger: the shared physics of every sensible-only recovery device.`,
     related: [],
     examples: [],
     tags: [`sensibleairtoairhx`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Sensible air-to-air exchanger: the shared physics of every sensible-only recovery device.
+
+All five move heat and no moisture between the streams, and differ in the numbers they are rated at rather than in form (Std 84 / Handbook—Systems Ch. 25, Table 3):  fixed plate     eff 50-80%  eatr 0-5%    oacf 0.97-1.06 heat wheel      eff 50-85%  eatr 0.5-10% oacf 1.0-1.2 heat pipe       eff 45-65%  eatr 0-1%    oacf 0.99-1.01 run-around loop eff 55-65%  eatr 0       oacf 1.0 thermosiphon    eff 40-60%  eatr 0       oacf 1.0  eff follows Standard 84: actual transfer over the maximum possible, so the C_min stream is the one that would reach the other's inlet temperature at eff = 1. Sensible-only means the exchange is driven by TEMPERATURE, not by enthalpy — enthalpy carries the latent term, and using it here would move moisture that none of these devices can move.  A "sensible-only" device still moves some moisture, and that is what eatr is. A rotary matrix drags exhaust air round with it; a plate core leaks it through the seals. Either way a fraction of the supply leaving stream is really exhaust air, 0 to 10% of it, cut by a purge sector but never eliminated. It is a required parameter because cross-contamination is often the design question rather than an afterthought — a wheel serving an isolation room, say — and defaulting it to zero would answer that question wrongly and silently.  oacf is supply inlet flow over supply outlet flow: the leakage that makes an exchanger deliver less outdoor air than it is fed, and so the factor the supply fan must be oversized by. What leaks out of the supply side joins the exhaust, so the moisture and energy balances close over the whole device rather than per stream.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -22550,13 +20457,17 @@ c.exh_in.h = 40414.42776
     name: `SteamHumidifier`,
     slug: `steamhumidifier`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component SteamHumidifier with ports in, out.`,
+    summary: `Steam (isothermal) humidifier.`,
     related: [],
     examples: [],
     tags: [`steamhumidifier`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Steam (isothermal) humidifier.
+
+The latent heat was already supplied in the boiler or the electrode cylinder, so injecting saturated steam is closer to mixing two gases than to heating air: the dry-bulb temperature barely moves. The process slope is dh/dW = h_g of the injected steam, which is what makes the line near-vertical on the chart — as opposed to the adiabatic humidifier, which runs up a constant wet-bulb line.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -22626,13 +20537,17 @@ c.out.h = 68876.84667
     name: `TotalEnergyExchanger`,
     slug: `totalenergyexchanger`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component TotalEnergyExchanger with ports sup_in, sup_out, exh_in, exh_out.`,
+    summary: `Total-energy exchanger in the ASHRAE Standard 84 form: separate sensible and latent effectivenesses plus the EATR and OACF leakage terms.`,
     related: [],
     examples: [],
     tags: [`totalenergyexchanger`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Total-energy exchanger in the ASHRAE Standard 84 form: separate sensible and latent effectivenesses plus the EATR and OACF leakage terms.
+
+Total-energy exchanger stated the way ASHRAE Standard 84 defines it: SENSIBLE effectiveness on TEMPERATURE and LATENT effectiveness on HUMIDITY RATIO, as two independently rated numbers, plus the two leakage terms — EATR and OACF — that a recovery device cannot honestly be specified without.  This is the Std 84 form. \`EnthalpyWheel\` is the TOTAL-effectiveness form, exchanging enthalpy under a single eff_h. Both are legitimate and they are not the same model: a device whose sensible and latent effectivenesses differ cannot be described by one enthalpy effectiveness, and a membrane core is exactly such a device.  One component covers the two total-energy devices that are not wheels (Std 84 / Handbook—Systems Ch. 25, Table 3):  membrane plate  eps_s 50-75%  eps_L 50-73%  eatr 0-5%  oacf 0.97-1.06 twin towers     eps_s 40-60%  eps_L 40-60%  eatr 0     oacf 1.0  Twin towers circulate a sorbent solution between two physically separate contactor towers, so there is no shared surface and no carryover at all: eatr = 0 and oacf = 1 are structural there, not ratings.  eatr is the fraction of the SUPPLY leaving stream that is really exhaust air, so the leaving humidity is a mix of the conditioned outdoor air and that carryover. oacf is supply inlet flow over supply outlet flow — the leakage that makes a rated exchanger deliver less outdoor air than it is fed, and therefore the factor the supply fan has to be oversized by. Both are required rather than defaulted: leaving them implicit is the omission this component exists to prevent.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (\`crates/frees-core/src/components/library-data/\`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 
@@ -22715,15 +20630,19 @@ c.exh_out.mdot = 1
     name: `VAVBox`,
     slug: `vavbox`,
     category: `Component (moistair)`,
-    summary: `Acausal moistair-domain component VAVBox with ports in, out, u, ur.`,
+    summary: `VAV terminal box: a flow-determining (R) element — the damper command sets the supply flow directly (u in 0..1 of mdot_max) and the reheat command adds coil heat.`,
     related: [],
     examples: [],
     tags: [`vavbox`, `component`, `moistair`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `VAV terminal box: a flow-determining (R) element — the damper command sets the supply flow directly (u in 0..1 of mdot_max) and the reheat command adds coil heat.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Like a speed source, it imposes flow and leaves the pressures to the neighbouring plenum/zone volumes.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/moistair.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -22798,15 +20717,17 @@ z1.h = 37350.97869
     name: `AnodeRecirc`,
     slug: `anoderecirc`,
     category: `Component (pneumatic)`,
-    summary: `Acausal pneumatic-domain component AnodeRecirc with ports sup_in, ret_in, out.`,
+    summary: `Anode recirculation: the supply ejector entrains stack return (H2 loop) — the VacuumEjector law as a named balance-of-plant stage (direct equations).`,
     related: [],
     examples: [],
     tags: [`anoderecirc`, `component`, `pneumatic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Anode recirculation: the supply ejector entrains stack return (H2 loop) — the VacuumEjector law as a named balance-of-plant stage (direct equations).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/pneumatic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -22834,7 +20755,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \\begin{aligned}
-t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid}, =sup_{in.p}, p=sup_{in.h}\\right) \\\\
+t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=sup_{in.p}, h=sup_{in.h}\\right) \\\\
 sup_{in.mdot} &= \\text{iso6358}\\left(c, b, sup_{in.p}, t_{s}, out.p\\right) \\\\
 ret_{in.mdot} &= er\\cdot sup_{in.mdot} \\\\
 out.mdot &= sup_{in.mdot} + ret_{in.mdot} \\\\
@@ -22958,15 +20879,17 @@ a.p = 100000
     name: `GasMixerN`,
     slug: `gasmixern`,
     category: `Component (pneumatic)`,
-    summary: `Acausal pneumatic-domain component GasMixerN with ports in1, in2, out.`,
+    summary: `Species-conserving mixer: merges two gas branches, flow-weighting enthalpy and every named species fraction exactly (the junction rule for the E3 multi-species rider).`,
     related: [],
     examples: [],
     tags: [`gasmixern`, `component`, `pneumatic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Species-conserving mixer: merges two gas branches, flow-weighting enthalpy and every named species fraction exactly (the junction rule for the E3 multi-species rider).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/pneumatic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23239,7 +21162,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-rho &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 rod.f &= -\\left(in.p - patm\\right)\\cdot area \\\\
 in.mdot &= rho\\cdot area\\cdot rod.vel
 \\end{aligned}
@@ -23364,15 +21287,17 @@ atm.port.p = 50000
     name: `PneumaticCheckValve`,
     slug: `pneumaticcheckvalve`,
     category: `Component (pneumatic)`,
-    summary: `Acausal pneumatic-domain component PneumaticCheckValve with ports in, out.`,
+    summary: `Pneumatic check valve: ISO 6358 flow gated to forward ΔP.`,
     related: [],
     examples: [],
     tags: [`pneumaticcheckvalve`, `component`, `pneumatic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Pneumatic check valve: ISO 6358 flow gated to forward ΔP.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/pneumatic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23403,7 +21328,7 @@ $$
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
 g &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{in.p - out.p}{eps}\\right)\\right) \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot &= g\\cdot \\text{iso6358}\\left(c, b, in.p, t_{in}, out.p\\right)
 \\end{aligned}
 $$
@@ -23448,15 +21373,17 @@ atm.port.p = 100000
     name: `PneumaticDoubleActingCylinder`,
     slug: `pneumaticdoubleactingcylinder`,
     category: `Component (pneumatic)`,
-    summary: `Acausal pneumatic-domain component PneumaticDoubleActingCylinder with ports a, b, rod.`,
+    summary: `Double-acting pneumatic cylinder: two isothermal ideal-gas chambers at mid-stroke volumes and the rod force balance.`,
     related: [],
     examples: [],
     tags: [`pneumaticdoubleactingcylinder`, `component`, `pneumatic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Double-acting pneumatic cylinder: two isothermal ideal-gas chambers at mid-stroke volumes and the rod force balance.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/pneumatic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23580,7 +21507,7 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \\begin{aligned}
 out.h &= in.h \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot &= \\text{iso6358}\\left(c, b, in.p, t_{in}, out.p\\right) \\\\
 out.mdot &= in.mdot
 \\end{aligned}
@@ -23664,7 +21591,7 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \\begin{aligned}
 out.h &= in.h \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot &= \\text{iso6358}\\left(u\\cdot cmax, b, in.p, t_{in}, out.p\\right) \\\\
 out.mdot &= in.mdot
 \\end{aligned}
@@ -23709,15 +21636,17 @@ atm.port.p = 100000
     name: `PneumaticServoValveCmd`,
     slug: `pneumaticservovalvecmd`,
     category: `Component (pneumatic)`,
-    summary: `Acausal pneumatic-domain component PneumaticServoValveCmd with ports in, out, u.`,
+    summary: `Signal-commanded servo valve: ISO 6358 flow with the sonic conductance scaled by the spool command u.sig ∈ [0,1] — the closed-loop counterpart of PneumaticServoValve.`,
     related: [],
     examples: [],
     tags: [`pneumaticservovalvecmd`, `component`, `pneumatic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Signal-commanded servo valve: ISO 6358 flow with the sonic conductance scaled by the spool command u.sig ∈ [0,1] — the closed-loop counterpart of PneumaticServoValve.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/pneumatic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23745,7 +21674,7 @@ The acausal equations this component expands into (over its port members and par
 $$
 \\begin{aligned}
 out.h &= in.h \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot &= \\text{iso6358}\\left(u.sig\\cdot cmax, b, in.p, t_{in}, out.p\\right) \\\\
 out.mdot &= in.mdot
 \\end{aligned}
@@ -23830,7 +21759,7 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \\begin{aligned}
 out.p &= p \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =p, p=t\\right)
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=p, t=t\\right)
 \\end{aligned}
 $$
 
@@ -23873,15 +21802,17 @@ atm.port.p = 50000
     name: `PneumaticThermalVolume`,
     slug: `pneumaticthermalvolume`,
     category: `Component (pneumatic)`,
-    summary: `Acausal pneumatic-domain component PneumaticThermalVolume with ports in, out, wall.`,
+    summary: `Thermal gas volume: mass AND temperature states with a heat port — the non-isothermal receiver (charge heating, blow-down cooling); pressure from the ideal-gas law.`,
     related: [],
     examples: [],
     tags: [`pneumaticthermalvolume`, `component`, `pneumatic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Thermal gas volume: mass AND temperature states with a heat port — the non-isothermal receiver (charge heating, blow-down cooling); pressure from the ideal-gas law.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/pneumatic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -23914,12 +21845,12 @@ $$
 \\begin{aligned}
 \\text{der}\\left(m\\right) &= in.mdot - out.mdot \\\\
 \\text{init}\\left(m\\right) &= m0 \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 \\text{der}\\left(t\\right) &= \\frac{in.mdot\\cdot cp\\cdot \\left(t_{in} - t\\right) + wall.qdot}{m\\cdot cv} \\\\
 \\text{init}\\left(t\\right) &= t0 \\\\
 in.p &= \\frac{m\\cdot r\\cdot t}{v} \\\\
 out.p &= in.p \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =out.p, p=t\\right) \\\\
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=t\\right) \\\\
 wall.t &= t
 \\end{aligned}
 $$
@@ -23975,15 +21906,17 @@ t_end = 315.5042778
     name: `PneumaticValve32`,
     slug: `pneumaticvalve32`,
     category: `Component (pneumatic)`,
-    summary: `Acausal pneumatic-domain component PneumaticValve32 with ports sup_in, work, exh_out, u.`,
+    summary: `3/2 directional valve: the spool command u blends supply->work (u·C) against work->exhaust ((1-u)·C), both ISO 6358 paths — u=1 pressurizes, u=0 vents.`,
     related: [],
     examples: [],
     tags: [`pneumaticvalve32`, `component`, `pneumatic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `3/2 directional valve: the spool command u blends supply->work (u·C) against work->exhaust ((1-u)·C), both ISO 6358 paths — u=1 pressurizes, u=0 vents.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/pneumatic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24010,8 +21943,8 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \\begin{aligned}
-t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid}, =sup_{in.p}, p=sup_{in.h}\\right) \\\\
-t_{w} &= \\text{Temperature}\\left(\\mathrm{fluid}, =work.p, p=work.h\\right) \\\\
+t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=sup_{in.p}, h=sup_{in.h}\\right) \\\\
+t_{w} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=work.p, h=work.h\\right) \\\\
 m_{in} &= \\text{iso6358}\\left(u.sig\\cdot c, b, sup_{in.p}, t_{s}, work.p\\right) \\\\
 m_{out} &= \\text{iso6358}\\left(\\left(1 - u.sig\\right)\\cdot c, b, work.p, t_{w}, exh_{out.p}\\right) \\\\
 sup_{in.mdot} &= m_{in} \\\\
@@ -24067,15 +22000,17 @@ atm.port.p = 100000
     name: `PneumaticValve52`,
     slug: `pneumaticvalve52`,
     category: `Component (pneumatic)`,
-    summary: `Acausal pneumatic-domain component PneumaticValve52 with ports sup_in, wa, wb, ea_out, eb_out, u.`,
+    summary: `5/2 directional valve: u=1 routes supply->A and B->exhaust; u=0 routes supply->B and A->exhaust (four ISO 6358 paths, complementary commands).`,
     related: [],
     examples: [],
     tags: [`pneumaticvalve52`, `component`, `pneumatic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `5/2 directional valve: u=1 routes supply->A and B->exhaust; u=0 routes supply->B and A->exhaust (four ISO 6358 paths, complementary commands).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/pneumatic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24102,9 +22037,9 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \\begin{aligned}
-t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid}, =sup_{in.p}, p=sup_{in.h}\\right) \\\\
-t_{a} &= \\text{Temperature}\\left(\\mathrm{fluid}, =wa.p, p=wa.h\\right) \\\\
-t_{b} &= \\text{Temperature}\\left(\\mathrm{fluid}, =wb.p, p=wb.h\\right) \\\\
+t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=sup_{in.p}, h=sup_{in.h}\\right) \\\\
+t_{a} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=wa.p, h=wa.h\\right) \\\\
+t_{b} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=wb.p, h=wb.h\\right) \\\\
 m_{sa} &= \\text{iso6358}\\left(u.sig\\cdot c, b, sup_{in.p}, t_{s}, wa.p\\right) \\\\
 m_{be} &= \\text{iso6358}\\left(u.sig\\cdot c, b, wb.p, t_{b}, eb_{out.p}\\right) \\\\
 m_{sb} &= \\text{iso6358}\\left(\\left(1 - u.sig\\right)\\cdot c, b, sup_{in.p}, t_{s}, wb.p\\right) \\\\
@@ -24260,15 +22195,17 @@ Pf = 700001.2966
     name: `VacuumEjector`,
     slug: `vacuumejector`,
     category: `Component (pneumatic)`,
-    summary: `Acausal pneumatic-domain component VacuumEjector with ports sup_in, suc_in, exh_out.`,
+    summary: `Vacuum ejector: motive ISO 6358 flow entrains ER times its mass flow from the suction port; mass and energy mix exactly at the exhaust.`,
     related: [],
     examples: [],
     tags: [`vacuumejector`, `component`, `pneumatic`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Vacuum ejector: motive ISO 6358 flow entrains ER times its mass flow from the suction port; mass and energy mix exactly at the exhaust.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/pneumatic.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24296,7 +22233,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \\begin{aligned}
-t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid}, =sup_{in.p}, p=sup_{in.h}\\right) \\\\
+t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=sup_{in.p}, h=sup_{in.h}\\right) \\\\
 sup_{in.mdot} &= \\text{iso6358}\\left(c, b, sup_{in.p}, t_{s}, exh_{out.p}\\right) \\\\
 suc_{in.mdot} &= er\\cdot sup_{in.mdot} \\\\
 exh_{out.mdot} &= sup_{in.mdot} + suc_{in.mdot} \\\\
@@ -24347,15 +22284,17 @@ atm.port.p = 100000
     name: `AutomaticTransmission`,
     slug: `automatictransmission`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component AutomaticTransmission with ports in, out, gear, lock.`,
+    summary: `Automatic transmission: torque converter + scheduled gearbox + a commanded lockup clutch bridging pump and turbine (lock = 0 open, 1 locked).`,
     related: [],
     examples: [],
     tags: [`automatictransmission`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Automatic transmission: torque converter + scheduled gearbox + a commanded lockup clutch bridging pump and turbine (lock = 0 open, 1 locked).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24453,15 +22392,17 @@ at.in.w = 250
     name: `CatalystLightOff`,
     slug: `catalystlightoff`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component CatalystLightOff with ports in, out.`,
+    summary: `Catalyst light-off: brick thermal mass heated by the exhaust stream (effectiveness-free UA link) plus the exotherm of converted feed once the brick passes light-off; conversion is a C1 sigmoid in brick temperature.`,
     related: [],
     examples: [],
     tags: [`catalystlightoff`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Catalyst light-off: brick thermal mass heated by the exhaust stream (effectiveness-free UA link) plus the exotherm of converted feed once the brick passes light-off; conversion is a C1 sigmoid in brick temperature.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24491,7 +22432,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \\begin{aligned}
-t_{g} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{g} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 eta &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{tb - t50}{k}\\right)\\right) \\\\
 q &= ua\\cdot \\left(t_{g} - tb\\right) \\\\
 qexo &= eta\\cdot in.mdot\\cdot q_{exo} \\\\
@@ -24552,15 +22493,17 @@ cat.in.mdot = 0.05
     name: `Differential`,
     slug: `differential`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component Differential with ports in, left, right.`,
+    summary: `Open differential: splits torque evenly, averages speeds through the final ratio (power-conserving).`,
     related: [],
     examples: [],
     tags: [`differential`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Open differential: splits torque evenly, averages speeds through the final ratio (power-conserving).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24660,15 +22603,17 @@ df.left.tau = -66.66666667
     name: `DriveCycleSource`,
     slug: `drivecyclesource`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component DriveCycleSource with ports port.`,
+    summary: `Drive-cycle source: imposes a tabulated speed trace v = map$(t) on a translational port (WLTP, NEDC, any TABLE over time).`,
     related: [],
     examples: [],
     tags: [`drivecyclesource`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Drive-cycle source: imposes a tabulated speed trace v = map$(t) on a translational port (WLTP, NEDC, any TABLE over time).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24832,7 +22777,7 @@ rl.shaft.tau = 91
 
 <!-- verified-reference-example:end -->
 
-Instantiated in the verified example below:
+Related gallery example:
 
 [Run: engine-map-2d]`,
   },
@@ -24840,15 +22785,19 @@ Instantiated in the verified example below:
     name: `ExhaustPipeThermal`,
     slug: `exhaustpipethermal`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component ExhaustPipeThermal with ports in, out, amb.`,
+    summary: `Exhaust pipe with thermal wall: gas duct exchanging with a two-node RC wall whose outer face convects (hA) to the ambient heat port (underhood soak studies).`,
     related: [],
     examples: [],
     tags: [`exhaustpipethermal`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Exhaust pipe with thermal wall: gas duct exchanging with a two-node RC wall whose outer face convects (hA) to the ambient heat port (underhood soak studies).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The convective link is what lets the ambient side be a plain temperature source — the wall faces are states and must never be T-pinned.
+
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -24937,15 +22886,17 @@ exh.out.h = 893764.5365
     name: `GearboxScheduled`,
     slug: `gearboxscheduled`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component GearboxScheduled with ports in, out, u.`,
+    summary: `Scheduled gearbox: the ratio arrives on a signal port (a shift schedule via SigMap on speed, or any command source); torque transfer with efficiency.`,
     related: [],
     examples: [],
     tags: [`gearboxscheduled`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Scheduled gearbox: the ratio arrives on a signal port (a shift schedule via SigMap on speed, or any command source); torque transfer with efficiency.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25055,15 +23006,17 @@ e1.shaft.w = 100
     name: `GradeProfile`,
     slug: `gradeprofile`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component GradeProfile with ports port.`,
+    summary: `Road grade vs distance: the travelled distance integrates from the vehicle speed and the grade (rad) is looked up from a profile TABLE over distance — hilly-route load without scripting time profiles.`,
     related: [],
     examples: [],
     tags: [`gradeprofile`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Road grade vs distance: the travelled distance integrates from the vehicle speed and the grade (rad) is looked up from a profile TABLE over distance — hilly-route load without scripting time profiles.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25222,15 +23175,19 @@ road.shaft.tau = 2585.443476
     name: `HybridPowerSplit`,
     slug: `hybridpowersplit`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component HybridPowerSplit with ports eng, out, sun, p, n, u1, u2, heat.`,
+    summary: `Power-split e-CVT: planetary with the engine on the carrier, MG1 on the sun (speeder) and MG2 on the ring/output (torquer), both motors on one DC bus.`,
     related: [],
     examples: [],
     tags: [`hybridpowersplit`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Power-split e-CVT: planetary with the engine on the carrier, MG1 on the sun (speeder) and MG2 on the ring/output (torquer), both motors on one DC bus.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+u1/u2 command the motor torques; heat collects both machines' losses.
+
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25420,15 +23377,17 @@ eng.t_fric = 9
     name: `QuarterCar`,
     slug: `quartercar`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component QuarterCar with ports road.`,
+    summary: `Quarter-car suspension: sprung/unsprung masses, suspension spring+damper, tire stiffness — a composite of the translational primitives; excite \`road\` with a speed source or drive-cycle profile.`,
     related: [],
     examples: [],
     tags: [`quartercar`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Quarter-car suspension: sprung/unsprung masses, suspension spring+damper, tire stiffness — a composite of the translational primitives; excite \`road\` with a speed source or drive-cycle profile.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25580,15 +23539,19 @@ rl.shaft.tau = 91
     name: `TireLongitudinal`,
     slug: `tirelongitudinal`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component TireLongitudinal with ports wheel, veh.`,
+    summary: `Longitudinal tire (Pacejka-lite magic formula on longitudinal slip): bridges the wheel (rotational) to the vehicle (translational).`,
     related: [],
     examples: [],
     tags: [`tirelongitudinal`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Longitudinal tire (Pacejka-lite magic formula on longitudinal slip): bridges the wheel (rotational) to the vehicle (translational).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Fx = Fz·D·sin(C·atan(B·s)), s = (rω − v)/(|v| + epsv). Drive torque reaction r·Fx loads the wheel.
+
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25692,15 +23655,17 @@ tl.fx = 3985.916842
     name: `TirePacejka`,
     slug: `tirepacejka`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component TirePacejka with ports wheel, veh.`,
+    summary: `Full Pacejka magic formula on longitudinal slip (B stiffness, C shape, D peak, E curvature) — the fidelity rung above TireLongitudinal, which is recovered exactly at E = 0.`,
     related: [],
     examples: [],
     tags: [`tirepacejka`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Full Pacejka magic formula on longitudinal slip (B stiffness, C shape, D peak, E curvature) — the fidelity rung above TireLongitudinal, which is recovered exactly at E = 0.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25806,15 +23771,17 @@ tl.fx = 3985.916842
     name: `TorqueConverter`,
     slug: `torqueconverter`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component TorqueConverter with ports pump, turb.`,
+    summary: `Torque converter (K-factor form): pump torque (ω_p/K(SR))², torque ratio TR(SR), SR = ω_turbine/ω_pump — both from 1-D TABLEs of the converter sheet.`,
     related: [],
     examples: [],
     tags: [`torqueconverter`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Torque converter (K-factor form): pump torque (ω_p/K(SR))², torque ratio TR(SR), SR = ω_turbine/ω_pump — both from 1-D TABLEs of the converter sheet.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -25995,15 +23962,17 @@ g2.port.tau = 40
     name: `VehicleBody`,
     slug: `vehiclebody`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component VehicleBody with ports port.`,
+    summary: `Longitudinal vehicle body: mass with aero drag, rolling resistance (tanh-signed) and grade load; velocity is the state.`,
     related: [],
     examples: [],
     tags: [`vehiclebody`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Longitudinal vehicle body: mass with aero drag, rolling resistance (tanh-signed) and grade load; velocity is the state.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26081,15 +24050,17 @@ f_check = 556.6797 [J/kg]
     name: `WindRotor`,
     slug: `windrotor`,
     category: `Component (powertrain)`,
-    summary: `Acausal powertrain-domain component WindRotor with ports shaft, wind, pitch.`,
+    summary: `Wind rotor: Cp(λ, pitch) from a 2-D map turns the swept-area wind power into shaft torque; tip-speed ratio and torque are eps-regularized at rest.`,
     related: [],
     examples: [],
     tags: [`windrotor`, `component`, `powertrain`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Wind rotor: Cp(λ, pitch) from a 2-D map turns the swept-area wind power into shaft torque; tip-speed ratio and torque are eps-regularized at rest.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/powertrain.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26173,15 +24144,17 @@ wg.port.tau = 1197021.601
     name: `SigAbs`,
     slug: `sigabs`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigAbs with ports in, out.`,
+    summary: `Absolute value of the input signal, |in|.`,
     related: [],
     examples: [],
     tags: [`sigabs`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Absolute value of the input signal, |in|.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26244,15 +24217,17 @@ a1.out.sig = 2.5
     name: `SigBias`,
     slug: `sigbias`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigBias with ports in, out.`,
+    summary: `Adds a constant offset b to the input signal.`,
     related: [],
     examples: [],
     tags: [`sigbias`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Adds a constant offset b to the input signal.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26341,15 +24316,17 @@ ab.out.sig = 4
     name: `SigConstant`,
     slug: `sigconstant`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigConstant with ports out.`,
+    summary: `Constant signal source of value k.`,
     related: [],
     examples: [],
     tags: [`sigconstant`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Constant signal source of value k.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26413,15 +24390,17 @@ ll.x = 2
     name: `SigDeadband`,
     slug: `sigdeadband`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigDeadband with ports in, out.`,
+    summary: `Symmetric deadband of half-width w: zero inside ±w, unity-slope outside — the C¹ smooth composition of a positive and a negative hinge (width eps).`,
     related: [],
     examples: [],
     tags: [`sigdeadband`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Symmetric deadband of half-width w: zero inside ±w, unity-slope outside — the C¹ smooth composition of a positive and a negative hinge (width eps).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26513,15 +24492,19 @@ ab.out.sig = 4
     name: `SigDerivative`,
     slug: `sigderivative`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigDerivative with ports in, out.`,
+    summary: `Filtered derivative s/(1+τs): exact derivative in the limit τ→0, realizable (proper) for τ>0.`,
     related: [],
     examples: [],
     tags: [`sigderivative`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Filtered derivative s/(1+τs): exact derivative in the limit τ→0, realizable (proper) for τ>0.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The state tracks the input; the output is the residual.
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26589,15 +24572,17 @@ dv.y = 4
     name: `SigDiff`,
     slug: `sigdiff`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigDiff with ports in1, in2, out.`,
+    summary: `Difference in1 − in2 (the feedback comparator: connect the setpoint to in1, the measurement to in2).`,
     related: [],
     examples: [],
     tags: [`sigdiff`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Difference in1 − in2 (the feedback comparator: connect the setpoint to in1, the measurement to in2).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26676,15 +24661,17 @@ err.out.sig = 0.1111111111
     name: `SigDivide`,
     slug: `sigdivide`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigDivide with ports in1, in2, out.`,
+    summary: `Quotient of two signals, in1 / in2.`,
     related: [],
     examples: [],
     tags: [`sigdivide`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Quotient of two signals, in1 / in2.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26767,15 +24754,17 @@ ab.out.sig = 4
     name: `SigFirstOrder`,
     slug: `sigfirstorder`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigFirstOrder with ports in, out.`,
+    summary: `First-order lag 1/(1+τs).`,
     related: [],
     examples: [],
     tags: [`sigfirstorder`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `First-order lag 1/(1+τs).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26842,15 +24831,17 @@ f1.y = 3
     name: `SigGain`,
     slug: `siggain`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigGain with ports in, out.`,
+    summary: `Multiplies the input signal by a constant gain k.`,
     related: [],
     examples: [],
     tags: [`siggain`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Multiplies the input signal by a constant gain k.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -26927,15 +24918,17 @@ b.in.sig = 2
     name: `SigIntegrator`,
     slug: `sigintegrator`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigIntegrator with ports in, out.`,
+    summary: `Integrates the input signal over time from the initial value y0.`,
     related: [],
     examples: [],
     tags: [`sigintegrator`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Integrates the input signal over time from the initial value y0.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27001,15 +24994,17 @@ final_state = 5
     name: `SigLeadLag`,
     slug: `sigleadlag`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigLeadLag with ports in, out.`,
+    summary: `Lead-lag (1+T1·s)/(1+T2·s), the classical compensator.`,
     related: [],
     examples: [],
     tags: [`sigleadlag`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Lead-lag (1+T1·s)/(1+T2·s), the classical compensator.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27077,15 +25072,19 @@ ll.x = 2
     name: `SigMap`,
     slug: `sigmap`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigMap with ports in, out.`,
+    summary: `1-D lookup: sig = map$(in).`,
     related: [],
     examples: [],
     tags: [`sigmap`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `1-D lookup: sig = map$(in).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+\`map$\` names a document TABLE/FUNCTION — a sensor calibration, a nonlinear gain, an efficiency curve.
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27161,15 +25160,17 @@ m2.in1.sig = 5
     name: `SigMap2`,
     slug: `sigmap2`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigMap2 with ports in1, in2, out.`,
+    summary: `2-D lookup: sig = map$(in1, in2) on a curve-family TABLE (\`TABLE name(x : y = y1, y2, …)\`) — a torque map, a compressor map slice.`,
     related: [],
     examples: [],
     tags: [`sigmap2`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `2-D lookup: sig = map$(in1, in2) on a curve-family TABLE (\`TABLE name(x : y = y1, y2, …)\`) — a torque map, a compressor map slice.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27245,15 +25246,17 @@ m2.in1.sig = 5
     name: `SigMax`,
     slug: `sigmax`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigMax with ports in1, in2, out.`,
+    summary: `Larger of two signals, max(in1, in2).`,
     related: [],
     examples: [],
     tags: [`sigmax`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Larger of two signals, max(in1, in2).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27336,15 +25339,17 @@ ab.out.sig = 4
     name: `SigMin`,
     slug: `sigmin`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigMin with ports in1, in2, out.`,
+    summary: `Smaller of two signals, min(in1, in2).`,
     related: [],
     examples: [],
     tags: [`sigmin`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Smaller of two signals, min(in1, in2).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27407,15 +25412,19 @@ s3.sig = 7
     name: `SigPID`,
     slug: `sigpid`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigPID with ports sp, pv, out.`,
+    summary: `PID controller on the (sp − pv) error with an integrator state and a realizable filtered derivative (filter τ).`,
     related: [],
     examples: [],
     tags: [`sigpid`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `PID controller on the (sp − pv) error with an integrator state and a realizable filtered derivative (filter τ).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The \`clamped\` variant saturates the output to [umin, umax] and back-calculates the integrator (anti-windup reset time Taw) so the integral unwinds while the output is pinned.
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27508,15 +25517,17 @@ c.sp.sig = 1
     name: `SigProduct`,
     slug: `sigproduct`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigProduct with ports in1, in2, out.`,
+    summary: `Product of two signals, in1 · in2.`,
     related: [],
     examples: [],
     tags: [`sigproduct`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Product of two signals, in1 · in2.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27579,15 +25590,17 @@ s3.sig = 7
     name: `SigPulse`,
     slug: `sigpulse`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigPulse with ports out.`,
+    summary: `Single rectangular pulse from t0 for \`width\` seconds, level \`low\`→\`high\`, with tanh edges of width eps.`,
     related: [],
     examples: [],
     tags: [`sigpulse`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Single rectangular pulse from t0 for \`width\` seconds, level \`low\`→\`high\`, with tanh edges of width eps.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27655,15 +25668,17 @@ time = 2
     name: `SigRamp`,
     slug: `sigramp`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigRamp with ports out.`,
+    summary: `Ramp of the given slope starting at t0 (C¹ smooth-max hinge of width eps).`,
     related: [],
     examples: [],
     tags: [`sigramp`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Ramp of the given slope starting at t0 (C¹ smooth-max hinge of width eps).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27730,15 +25745,17 @@ y = 4.00000025
     name: `SigRateLimiter`,
     slug: `sigratelimiter`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigRateLimiter with ports in, out.`,
+    summary: `Rate limiter: tracks the input with slope bounded to ±rate (tanh-smooth; tau [s] is the tracking time constant inside the linear zone).`,
     related: [],
     examples: [],
     tags: [`sigratelimiter`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Rate limiter: tracks the input with slope bounded to ±rate (tanh-smooth; tau [s] is the tracking time constant inside the linear zone).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27807,15 +25824,19 @@ rl.y = 3
     name: `SigRelay`,
     slug: `sigrelay`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigRelay with ports in, out.`,
+    summary: `Smooth relay/comparator: \`low\` below the threshold, \`high\` above it, with a tanh transition of width eps.`,
     related: [],
     examples: [],
     tags: [`sigrelay`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Smooth relay/comparator: \`low\` below the threshold, \`high\` above it, with a tanh transition of width eps.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+(True hysteresis needs discrete memory — deliberately out of the frees band; schedule the threshold instead.)
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27897,15 +25918,17 @@ highin.out.sig = 3
     name: `SigSaturation`,
     slug: `sigsaturation`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigSaturation with ports in, out.`,
+    summary: `Clamps the input signal to the range [lo, hi].`,
     related: [],
     examples: [],
     tags: [`sigsaturation`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Clamps the input signal to the range [lo, hi].
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -27975,15 +25998,17 @@ s3.sig = 7
     name: `SigSecondOrder`,
     slug: `sigsecondorder`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigSecondOrder with ports in, out.`,
+    summary: `Second-order tracking filter ωn²/(s² + 2ζωn·s + ωn²).`,
     related: [],
     examples: [],
     tags: [`sigsecondorder`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Second-order tracking filter ωn²/(s² + 2ζωn·s + ωn²).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28055,15 +26080,19 @@ so.v = 0
     name: `SigSine`,
     slug: `sigsine`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigSine with ports out.`,
+    summary: `Sine: bias + amp·sin(2π·freq·t + phase).`,
     related: [],
     examples: [],
     tags: [`sigsine`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Sine: bias + amp·sin(2π·freq·t + phase).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+freq [Hz], phase [rad].
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28130,15 +26159,17 @@ time = 0.125
     name: `SigSpeedProbe`,
     slug: `sigspeedprobe`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigSpeedProbe with ports shaft, out.`,
+    summary: `Shaft-speed probe (torque-free).`,
     related: [],
     examples: [],
     tags: [`sigspeedprobe`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Shaft-speed probe (torque-free).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28199,15 +26230,19 @@ pr.out.sig = 7
     name: `SigStep`,
     slug: `sigstep`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigStep with ports out.`,
+    summary: `Smooth step from \`before\` to \`after\` at t0.`,
     related: [],
     examples: [],
     tags: [`sigstep`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Smooth step from \`before\` to \`after\` at t0.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+eps [s] is the C∞ tanh edge width — pick it small against the plant's fastest time constant.
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28274,15 +26309,17 @@ time = 1
     name: `SigSum`,
     slug: `sigsum`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigSum with ports in1, in2, out.`,
+    summary: `Sum of two signals, in1 + in2.`,
     related: [],
     examples: [],
     tags: [`sigsum`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Sum of two signals, in1 + in2.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28314,37 +26351,22 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-function [out] = SigConst(k)
-port(out)
-  out.sig = k
-end
-function [in, out] = SigGain(k)
-port(in)
-port(out)
-  out.sig = k * in.sig
-end
-function [in1, in2, out] = SigSum()
-port(in1)
-port(in2)
-port(out)
-  out.sig = in1.sig + in2.sig
-end
-SigConst SRC(k=2)
-SigGain  A(k=3)
-SigGain  B(k=5)
-connect(SRC.out, A.in, B.in)
+{ Add two constant signals: y = 2 + 3. }
+SigConstant A(k=2)
+SigConstant B(k=3)
+SigSum      S()
+connect(A.out, S.in1)
+connect(B.out, S.in2)
 
-{ CHECK a.in.sig 2 0.000002 }
-{ CHECK a.out.sig 6 0.000006 }
-{ CHECK b.in.sig 2 0.000002 }
+y = S.out.sig
+
+{ CHECK y 5 0.000005 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-a.in.sig = 2
-a.out.sig = 6
-b.in.sig = 2
+y = 5
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -28353,15 +26375,17 @@ b.in.sig = 2
     name: `SigSwitch`,
     slug: `sigswitch`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigSwitch with ports in1, in2, ctrl, out.`,
+    summary: `Smooth 2-way switch: routes in1 when ctrl > thresh, in2 below, blended over a tanh width eps.`,
     related: [],
     examples: [],
     tags: [`sigswitch`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Smooth 2-way switch: routes in1 when ctrl > thresh, in2 below, blended over a tanh width eps.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28442,15 +26466,19 @@ highin.out.sig = 3
     name: `SigTable`,
     slug: `sigtable`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigTable with ports out.`,
+    summary: `Tabulated source: sig = map$(time).`,
     related: [],
     examples: [],
     tags: [`sigtable`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Tabulated source: sig = map$(time).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+\`map$\` names a TABLE/FUNCTION declared in the document — THE drive-cycle primitive (WLTP speed trace, scheduled load, setpoint program).
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28519,15 +26547,17 @@ time = 1.5
     name: `SigThermalProbe`,
     slug: `sigthermalprobe`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigThermalProbe with ports port, out.`,
+    summary: `Temperature probe: reads the heat-node temperature onto a signal wire, drawing no heat.`,
     related: [],
     examples: [],
     tags: [`sigthermalprobe`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Temperature probe: reads the heat-node temperature onto a signal wire, drawing no heat.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28581,15 +26611,17 @@ c.port.t = 300
     name: `SigTime`,
     slug: `sigtime`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigTime with ports out.`,
+    summary: `The clock: emits the simulation time itself.`,
     related: [],
     examples: [],
     tags: [`sigtime`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `The clock: emits the simulation time itself.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28647,15 +26679,17 @@ time = 2.5
     name: `SigVelProbe`,
     slug: `sigvelprobe`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SigVelProbe with ports port, out.`,
+    summary: `Translational velocity probe (force-free).`,
     related: [],
     examples: [],
     tags: [`sigvelprobe`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Translational velocity probe (force-free).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28720,15 +26754,19 @@ fs.b.f = 10
     name: `SupervisoryECMS`,
     slug: `supervisoryecms`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component SupervisoryECMS with ports soc, dem, eng, mot.`,
+    summary: `ECMS-lite torque-split supervisor: a C1 blend between engine-lean and motor-lean operation driven by battery SOC around its reference — an honest smooth surrogate for the argmin equivalence-cost rule (documented as such).`,
     related: [],
     examples: [],
     tags: [`supervisoryecms`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `ECMS-lite torque-split supervisor: a C1 blend between engine-lean and motor-lean operation driven by battery SOC around its reference — an honest smooth surrogate for the argmin equivalence-cost rule (documented as such).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+dem is the total demand; mot + eng always reconstruct it exactly.
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -28830,15 +26868,19 @@ bus.p.i = 0
     name: `ZoneCO2`,
     slug: `zoneco2`,
     category: `Component (signal)`,
-    summary: `Acausal signal-domain component ZoneCO2 with ports vent, occ, out.`,
+    summary: `Zone CO2 / IAQ balance (well-mixed): ventilation dilutes toward the ambient concentration while occupants generate.`,
     related: [],
     examples: [],
     tags: [`zoneco2`, `component`, `signal`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Zone CO2 / IAQ balance (well-mixed): ventilation dilutes toward the ambient concentration while occupants generate.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Signal-level block: vent carries the volumetric airflow [m3/s], occ the occupant count; concentration in the same unit family as c_amb/gen_occ (ppm with gen in ppm.m3/s, or kg/m3).
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/signal.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29027,11 +27069,11 @@ out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
 out.h &= in.h \\\\
 out.z &= in.z \\\\
-hf &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-hg &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+hf &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+hg &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 x &= \\frac{in.h - hf}{hg - hf} \\\\
-bubble &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-dew &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+bubble &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+dew &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 glide &= dew - bubble
 \\end{aligned}
 $$
@@ -29186,10 +27228,10 @@ $$
 \\begin{aligned}
 out.mdot &= mdot \\\\
 out.p &= p \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =p, p=x\\right) \\\\
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=p, x=x\\right) \\\\
 out.z &= z \\\\
-bubble &= \\text{Temperature}\\left(\\mathrm{fluid}, =p, p=0\\right) \\\\
-dew &= \\text{Temperature}\\left(\\mathrm{fluid}, =p, p=1\\right) \\\\
+bubble &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=p, x=0\\right) \\\\
+dew &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=p, x=1\\right) \\\\
 glide &= dew - bubble
 \\end{aligned}
 $$
@@ -29268,13 +27310,13 @@ $$
 \\text{der}\\left(mass\\right) &= -vent.mdot \\\\
 \\text{init}\\left(mass\\right) &= m0 \\\\
 \\text{der}\\left(utot\\right) &= wall.qdot - vent.mdot\\cdot vent.h \\\\
-\\text{init}\\left(utot\\right) &= m0\\cdot \\text{Intenergy}\\left(\\mathrm{fluid}, =t0, t=0\\right) \\\\
+\\text{init}\\left(utot\\right) &= m0\\cdot \\text{Intenergy}\\left(\\mathrm{fluid\\$}, t=t0, x=0\\right) \\\\
 rho_{cv} &= \\frac{mass}{v} \\\\
 u_{cv} &= \\frac{utot}{mass} \\\\
-vent.p &= \\text{Pressure}\\left(\\mathrm{fluid}, =rho_{cv}, d=u_{cv}\\right) \\\\
-t_{cv} &= \\text{Temperature}\\left(\\mathrm{fluid}, =rho_{cv}, d=u_{cv}\\right) \\\\
-x_{cv} &= \\text{Quality}\\left(\\mathrm{fluid}, =rho_{cv}, d=u_{cv}\\right) \\\\
-vent.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =vent.p, p=1\\right) \\\\
+vent.p &= \\text{Pressure}\\left(\\mathrm{fluid\\$}, d=rho_{cv}, u=u_{cv}\\right) \\\\
+t_{cv} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, d=rho_{cv}, u=u_{cv}\\right) \\\\
+x_{cv} &= \\text{Quality}\\left(\\mathrm{fluid\\$}, d=rho_{cv}, u=u_{cv}\\right) \\\\
+vent.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=vent.p, x=1\\right) \\\\
 wall.t &= t_{cv}
 \\end{aligned}
 $$
@@ -29319,15 +27361,17 @@ Instantiated in the verified example below:
     name: `CapillaryTube`,
     slug: `capillarytube`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component CapillaryTube with ports in, out.`,
+    summary: `Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure).`,
     related: [],
     examples: [],
     tags: [`capillarytube`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29356,8 +27400,8 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-pf &= \\text{P\\_sat}\\left(\\mathrm{fluid}, =t_{in}\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+pf &= \\text{P\\_sat}\\left(\\mathrm{fluid\\$}, t=t_{in}\\right) \\\\
 dp_{eff} &= in.p - \\text{max}\\left(out.p, pf\\right) \\\\
 in.mdot &= c\\cdot dp_{eff}^{n}
 \\end{aligned}
@@ -29410,15 +27454,19 @@ ct.in.mdot = 0.00004465060012
     name: `EjectorMomentum`,
     slug: `ejectormomentum`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component EjectorMomentum with ports mot_in, suc_in, out.`,
+    summary: `Momentum-based two-phase ejector: the motive stream expands (nozzle efficiency) to the suction pressure, momentum-mixes with the entrained stream at constant area, and the mixed velocity head recovers as the diffuser lift.`,
     related: [],
     examples: [],
     tags: [`ejectormomentum`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Momentum-based two-phase ejector: the motive stream expands (nozzle efficiency) to the suction pressure, momentum-mixes with the entrained stream at constant area, and the mixed velocity head recovers as the diffuser lift.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Total enthalpy is conserved exactly.
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29445,14 +27493,14 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \\begin{aligned}
-s_{m} &= \\text{Entropy}\\left(\\mathrm{fluid}, =mot_{in.p}, p=mot_{in.h}\\right) \\\\
-h_{mi} &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =suc_{in.p}, p=s_{m}\\right) \\\\
+s_{m} &= \\text{Entropy}\\left(\\mathrm{fluid\\$}, p=mot_{in.p}, h=mot_{in.h}\\right) \\\\
+h_{mi} &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=suc_{in.p}, s=s_{m}\\right) \\\\
 v_{m} &= \\sqrt{2\\,eta_{n}\\cdot \\left(mot_{in.h} - h_{mi}\\right)} \\\\
 out.mdot &= mot_{in.mdot} + suc_{in.mdot} \\\\
 v_{mix} &= \\frac{eta_{m}\\cdot mot_{in.mdot}\\cdot v_{m}}{out.mdot} \\\\
 out.mdot\\cdot out.h &= mot_{in.mdot}\\cdot mot_{in.h} + suc_{in.mdot}\\cdot suc_{in.h} \\\\
 h_{mix} &= out.h - \\frac{v_{mix}^{2}}{2} \\\\
-rho_{mix} &= \\text{Density}\\left(\\mathrm{fluid}, =suc_{in.p}, p=h_{mix}\\right) \\\\
+rho_{mix} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=suc_{in.p}, h=h_{mix}\\right) \\\\
 out.p &= suc_{in.p} + \\frac{rho_{mix}\\cdot v_{mix}^{2}}{2}
 \\end{aligned}
 $$
@@ -29499,15 +27547,17 @@ ej.mot_in.h = 430000
     name: `FewCellCondenser`,
     slug: `fewcellcondenser`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component FewCellCondenser with ports in, out, w1, w2, w3.`,
+    summary: `Packaged 3-cell condenser: the same private-state C-R chain (heat leaves through the walls when they run colder than the refrigerant).`,
     related: [],
     examples: [],
     tags: [`fewcellcondenser`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Packaged 3-cell condenser: the same private-state C-R chain (heat leaves through the walls when they run colder than the refrigerant).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29548,18 +27598,18 @@ out.mdot &= kv\\cdot \\left(p3 - out.p\\right) \\\\
 \\text{init}\\left(p2\\right) &= p0 \\\\
 \\text{der}\\left(p3\\right) &= \\frac{m3 - out.mdot}{cc} \\\\
 \\text{init}\\left(p3\\right) &= p0 \\\\
-t1 &= \\text{Temperature}\\left(\\mathrm{fluid}, =p1, p=h1\\right) \\\\
-t2 &= \\text{Temperature}\\left(\\mathrm{fluid}, =p2, p=h2\\right) \\\\
-t3 &= \\text{Temperature}\\left(\\mathrm{fluid}, =p3, p=h3\\right) \\\\
+t1 &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=p1, h=h1\\right) \\\\
+t2 &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=p2, h=h2\\right) \\\\
+t3 &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=p3, h=h3\\right) \\\\
 q1 &= ua\\cdot \\left(w1.t - t1\\right) \\\\
 q2 &= ua\\cdot \\left(w2.t - t2\\right) \\\\
 q3 &= ua\\cdot \\left(w3.t - t3\\right) \\\\
 w1.qdot &= q1 \\\\
 w2.qdot &= q2 \\\\
 w3.qdot &= q3 \\\\
-rho1 &= \\text{Density}\\left(\\mathrm{fluid}, =p1, p=h1\\right) \\\\
-rho2 &= \\text{Density}\\left(\\mathrm{fluid}, =p2, p=h2\\right) \\\\
-rho3 &= \\text{Density}\\left(\\mathrm{fluid}, =p3, p=h3\\right) \\\\
+rho1 &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=p1, h=h1\\right) \\\\
+rho2 &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=p2, h=h2\\right) \\\\
+rho3 &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=p3, h=h3\\right) \\\\
 \\text{der}\\left(h1\\right) &= \\frac{in.mdot\\cdot \\left(in.h - h1\\right) + q1}{rho1\\cdot v} \\\\
 \\text{init}\\left(h1\\right) &= h0 \\\\
 \\text{der}\\left(h2\\right) &= \\frac{m2\\cdot \\left(h1 - h2\\right) + q2}{rho2\\cdot v} \\\\
@@ -29617,15 +27667,19 @@ final_state = 1215000
     name: `FewCellEvaporator`,
     slug: `fewcellevaporator`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component FewCellEvaporator with ports in, out, w1, w2, w3.`,
+    summary: `Packaged 3-cell evaporator: three well-mixed cells with their own pressure and enthalpy states, inter-cell conductances and a wall port per cell.`,
     related: [],
     examples: [],
     tags: [`fewcellevaporator`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Packaged 3-cell evaporator: three well-mixed cells with their own pressure and enthalpy states, inter-cell conductances and a wall port per cell.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Packaged 3-cell evaporator: three well-mixed cells with PRIVATE pressure and enthalpy states, linear inter-cell conductances (Kv), resistive at both boundaries, and a wall port per cell — the distributed rung between moving-boundary and full finite-volume models. (States live on component locals, never on port members: the composable pattern.)
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29666,18 +27720,18 @@ out.mdot &= kv\\cdot \\left(p3 - out.p\\right) \\\\
 \\text{init}\\left(p2\\right) &= p0 \\\\
 \\text{der}\\left(p3\\right) &= \\frac{m3 - out.mdot}{cc} \\\\
 \\text{init}\\left(p3\\right) &= p0 \\\\
-t1 &= \\text{Temperature}\\left(\\mathrm{fluid}, =p1, p=h1\\right) \\\\
-t2 &= \\text{Temperature}\\left(\\mathrm{fluid}, =p2, p=h2\\right) \\\\
-t3 &= \\text{Temperature}\\left(\\mathrm{fluid}, =p3, p=h3\\right) \\\\
+t1 &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=p1, h=h1\\right) \\\\
+t2 &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=p2, h=h2\\right) \\\\
+t3 &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=p3, h=h3\\right) \\\\
 q1 &= ua\\cdot \\left(w1.t - t1\\right) \\\\
 q2 &= ua\\cdot \\left(w2.t - t2\\right) \\\\
 q3 &= ua\\cdot \\left(w3.t - t3\\right) \\\\
 w1.qdot &= q1 \\\\
 w2.qdot &= q2 \\\\
 w3.qdot &= q3 \\\\
-rho1 &= \\text{Density}\\left(\\mathrm{fluid}, =p1, p=h1\\right) \\\\
-rho2 &= \\text{Density}\\left(\\mathrm{fluid}, =p2, p=h2\\right) \\\\
-rho3 &= \\text{Density}\\left(\\mathrm{fluid}, =p3, p=h3\\right) \\\\
+rho1 &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=p1, h=h1\\right) \\\\
+rho2 &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=p2, h=h2\\right) \\\\
+rho3 &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=p3, h=h3\\right) \\\\
 \\text{der}\\left(h1\\right) &= \\frac{in.mdot\\cdot \\left(in.h - h1\\right) + q1}{rho1\\cdot v} \\\\
 \\text{init}\\left(h1\\right) &= h0 \\\\
 \\text{der}\\left(h2\\right) &= \\frac{m2\\cdot \\left(h1 - h2\\right) + q2}{rho2\\cdot v} \\\\
@@ -29735,15 +27789,17 @@ ev.h3 = 364323.7355
     name: `FlashTank`,
     slug: `flashtank`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component FlashTank with ports in, liq, vap.`,
+    summary: `Flash tank / economizer separator: splits a two-phase inlet into saturated liquid and saturated vapor streams at the tank pressure, conserving mass and energy (the split ratio IS the inlet quality).`,
     related: [],
     examples: [],
     tags: [`flashtank`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Flash tank / economizer separator: splits a two-phase inlet into saturated liquid and saturated vapor streams at the tank pressure, conserving mass and energy (the split ratio IS the inlet quality).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29770,8 +27826,8 @@ $$
 \\begin{aligned}
 liq.p &= in.p \\\\
 vap.p &= in.p \\\\
-liq.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-vap.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+liq.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+vap.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 in.mdot &= liq.mdot + vap.mdot \\\\
 in.mdot\\cdot in.h &= liq.mdot\\cdot liq.h + vap.mdot\\cdot vap.h
 \\end{aligned}
@@ -29820,15 +27876,17 @@ ft.in.h = 288754.43
     name: `GasCooler`,
     slug: `gascooler`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component GasCooler with ports in, out, wall.`,
+    summary: `Transcritical gas cooler: supercritical single-phase cooling against a wall (no saturation clamp — the R744 high side has none); effectiveness on the local cp, LiquidWallHX sign conventions.`,
     related: [],
     examples: [],
     tags: [`gascooler`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Transcritical gas cooler: supercritical single-phase cooling against a wall (no saturation clamp — the R744 high side has none); effectiveness on the local cp, LiquidWallHX sign conventions.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -29857,8 +27915,8 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p - dp \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-cp_{g} &= \\text{Cp}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+cp_{g} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 epsg &= 1 - e^{\\frac{-ua}{in.mdot\\cdot cp_{g}}} \\\\
 q &= epsg\\cdot in.mdot\\cdot cp_{g}\\cdot \\left(t_{in} - wall.t\\right) \\\\
 out.h &= in.h - \\frac{q}{in.mdot} \\\\
@@ -29951,14 +28009,14 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
-tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid}, =in.p\\right) \\\\
-hf &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
+tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
+hf &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
 l_{need} &= \\frac{in.mdot\\cdot \\left(in.h - hf\\right)}{u_{cond}\\cdot 3.141592653589793\\cdot d\\cdot \\left(tsat - wall.t\\right)} \\\\
 l_{cond} &= 0.5\\,\\left(l_{need} + l - \\sqrt{\\left(l_{need} - l\\right)^{2} + eps_{zone}^{2}}\\right) \\\\
 q_{cond} &= u_{cond}\\cdot 3.141592653589793\\cdot d\\cdot l_{cond}\\cdot \\left(tsat - wall.t\\right) \\\\
 l_{sc} &= l - l_{cond} \\\\
 r_{sc} &= \\text{zone\\_ramp}\\left(l_{sc}, eps_{zone}\\right) \\\\
-t_{out} &= \\text{Temperature}\\left(\\mathrm{fluid}, =out.p, p=out.h\\right) \\\\
+t_{out} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right) \\\\
 q_{sc} &= u_{sc}\\cdot 3.141592653589793\\cdot d\\cdot l_{sc}\\cdot \\left(0.5\\,\\left(tsat + t_{out}\\right) - wall.t\\right)\\cdot r_{sc} \\\\
 out.h &= in.h - \\frac{q_{cond} + q_{sc}}{in.mdot} \\\\
 q &= q_{cond} + q_{sc} \\\\
@@ -30046,14 +28104,14 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
-tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid}, =in.p\\right) \\\\
-hg &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
+hg &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 l_{need} &= \\frac{in.mdot\\cdot \\left(hg - in.h\\right)}{u_{tp}\\cdot 3.141592653589793\\cdot d\\cdot \\left(wall.t - tsat\\right)} \\\\
 l_{tp} &= 0.5\\,\\left(l_{need} + l - \\sqrt{\\left(l_{need} - l\\right)^{2} + eps_{zone}^{2}}\\right) \\\\
 q_{tp} &= u_{tp}\\cdot 3.141592653589793\\cdot d\\cdot l_{tp}\\cdot \\left(wall.t - tsat\\right) \\\\
 l_{sh} &= l - l_{tp} \\\\
 r_{sh} &= \\text{zone\\_ramp}\\left(l_{sh}, eps_{zone}\\right) \\\\
-t_{out} &= \\text{Temperature}\\left(\\mathrm{fluid}, =out.p, p=out.h\\right) \\\\
+t_{out} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right) \\\\
 q_{sh} &= u_{sh}\\cdot 3.141592653589793\\cdot d\\cdot l_{sh}\\cdot \\left(wall.t - 0.5\\,\\left(tsat + t_{out}\\right)\\right)\\cdot r_{sh} \\\\
 out.h &= in.h + \\frac{q_{tp} + q_{sh}}{in.mdot} \\\\
 q &= q_{tp} + q_{sh} \\\\
@@ -30099,15 +28157,17 @@ ev.in.mdot = 0.02
     name: `OilSeparator`,
     slug: `oilseparator`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component OilSeparator with ports in, out, bleed.`,
+    summary: `Oil separator: bleeds a mass fraction f off the discharge line as saturated liquid (the oil-rich film) back toward the compressor sump; the main stream's enthalpy follows from the exact energy balance.`,
     related: [],
     examples: [],
     tags: [`oilseparator`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Oil separator: bleeds a mass fraction f off the discharge line as saturated liquid (the oil-rich film) back toward the compressor sump; the main stream's enthalpy follows from the exact energy balance.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -30137,7 +28197,7 @@ bleed.mdot &= f\\cdot in.mdot \\\\
 out.mdot &= \\left(1 - f\\right)\\cdot in.mdot \\\\
 out.p &= in.p \\\\
 bleed.p &= in.p \\\\
-bleed.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
+bleed.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
 out.mdot\\cdot out.h &= in.mdot\\cdot in.h - bleed.mdot\\cdot bleed.h
 \\end{aligned}
 $$
@@ -30225,8 +28285,8 @@ ProportionalReliefValve inst(fluid$, Pcrack, grad, eps, domain$)
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
 | \`Pcrack\` | Number | Cracking (relief) pressure [Pa]. |
-| \`grad\` | Number | Road grade (rise/run). |
-| \`eps\` | Number | Effectiveness / roughness. |
+| \`grad\` | Number | Flow gain above the set pressure [kg/s per Pa]: ṁ ≈ grad · (P − Pcrack). |
+| \`eps\` | Number | Smoothing width [Pa] of the max(0, P − Pcrack) regularization. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -30320,15 +28380,19 @@ Instantiated in the verified example below:
     name: `ReversingValve`,
     slug: `reversingvalve`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component ReversingValve with ports d, s, i, o.`,
+    summary: `Four-way reversing valve (heat pump mode switch).`,
     related: [],
     examples: [],
     tags: [`reversingvalve`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Four-way reversing valve (heat pump mode switch).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Ports: compressor discharge d, compressor suction s, indoor coil i, outdoor coil o. mode = 0 (cooling): d→o and i→s.  mode = 1 (heating): d→i and o→s. Each tie is a mode-blend of the two routings, so the equation COUNT is constant across modes (intermediate mode values model transfer leakage).
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -30453,7 +28517,7 @@ SteamReliefValve inst(fluid$, A, Pset, Cd, kgas, Rgas, eps, domain$)
 | \`Cd\` | Number | Discharge coefficient. |
 | \`kgas\` | Number | Gas specific-heat ratio. |
 | \`Rgas\` | Number | Specific gas constant [J/kg·K]. |
-| \`eps\` | Number | Effectiveness / roughness. |
+| \`eps\` | Number | Opening smoothing width [Pa] — the tanh transition around \`Pset\`. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -30465,7 +28529,7 @@ $$
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
 opening &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{in.p - pset}{eps}\\right)\\right) \\\\
-t0v &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+t0v &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 prc &= \\left(\\frac{2}{kgas + 1}\\right)^{\\frac{kgas}{kgas - 1}} \\\\
 mdot_{ch} &= cd\\cdot a\\cdot in.p\\cdot \\sqrt{\\frac{kgas}{rgas\\cdot t0v}}\\cdot \\left(\\frac{2}{kgas + 1}\\right)^{\\frac{kgas + 1}{2\\,\\left(kgas - 1\\right)}} \\\\
 ratio &= \\frac{\\text{min}\\left(\\text{max}\\left(\\frac{out.p}{in.p}, prc\\right), 1\\right) - prc}{1 - prc} \\\\
@@ -30510,15 +28574,19 @@ cook.wall.qdot = 3000
     name: `SuctionAccumulator`,
     slug: `suctionaccumulator`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component SuctionAccumulator with ports in, out.`,
+    summary: `Suction accumulator: traps liquid carryover and delivers SATURATED VAPOR to the compressor.`,
     related: [],
     examples: [],
     tags: [`suctionaccumulator`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Suction accumulator: traps liquid carryover and delivers SATURATED VAPOR to the compressor.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The liquid inventory m is a state; its energy balance (liquid stored at h_f) closes the outlet flow. In steady state der(m)=0 forces h_in = h_g — a dry steady inlet, exactly the physical statement.
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -30545,8 +28613,8 @@ The acausal equations this component expands into (over its port members and par
 $$
 \\begin{aligned}
 out.p &= in.p \\\\
-hf &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-hg &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+hf &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+hg &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 out.h &= hg \\\\
 \\text{der}\\left(m\\right) &= in.mdot - out.mdot \\\\
 \\text{init}\\left(m\\right) &= m0 \\\\
@@ -30691,15 +28759,17 @@ cold.out.p = 300000
     name: `TranscriticalBackPressureValve`,
     slug: `transcriticalbackpressurevalve`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component TranscriticalBackPressureValve with ports in, out, u.`,
+    summary: `Transcritical back-pressure valve: signal-commanded high-side pressure control (CO2 cycles) — commanded-area odd-symmetric square law.`,
     related: [],
     examples: [],
     tags: [`transcriticalbackpressurevalve`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Transcritical back-pressure valve: signal-commanded high-side pressure control (CO2 cycles) — commanded-area odd-symmetric square law.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -30725,7 +28795,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \\begin{aligned}
-rho &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
 in.mdot\\cdot \\left|in.mdot\\right| &= \\left(u.sig\\cdot cda_{max}\\right)^{2}\\cdot 2\\cdot rho\\cdot \\left(in.p - out.p\\right)
@@ -30890,13 +28960,13 @@ $$
 \\begin{aligned}
 \\text{der}\\left(in.p\\right) &= \\frac{in.mdot - out.mdot}{c} \\\\
 \\text{init}\\left(in.p\\right) &= p0 \\\\
-rho &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=hcv\\right) \\\\
+rho &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=hcv\\right) \\\\
 q &= ua\\cdot \\left(wall.t - tcv\\right) \\\\
 \\text{der}\\left(hcv\\right) &= \\frac{in.mdot\\cdot \\left(in.h - hcv\\right) + q}{rho\\cdot v} \\\\
 \\text{init}\\left(hcv\\right) &= h0 \\\\
 out.p &= in.p \\\\
 out.h &= hcv \\\\
-tcv &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=hcv\\right) \\\\
+tcv &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=hcv\\right) \\\\
 wall.qdot &= q \\\\
 m &= rho\\cdot v
 \\end{aligned}
@@ -30982,8 +29052,8 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-s_{in} &= \\text{Entropy}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-h_{s} &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =out.p, p=s_{in}\\right) \\\\
+s_{in} &= \\text{Entropy}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+h_{s} &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, s=s_{in}\\right) \\\\
 out.mdot &= in.mdot \\\\
 out.h &= in.h + \\frac{h_{s} - in.h}{eta} \\\\
 w &= in.mdot\\cdot \\left(out.h - in.h\\right)
@@ -31002,7 +29072,7 @@ _No additional equations (uses the shared body)._
 
 $$
 \\begin{aligned}
-rho_{in} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot &= eta_{v}\\cdot disp\\cdot \\frac{rpm}{60}\\cdot rho_{in}
 \\end{aligned}
 $$
@@ -31086,8 +29156,8 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p - dp \\\\
-tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid}, =out.p\\right) \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =out.p, p=tsat - sc_{set}\\right) \\\\
+tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=out.p\\right) \\\\
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=tsat - sc_{set}\\right) \\\\
 q &= in.mdot\\cdot \\left(in.h - out.h\\right)
 \\end{aligned}
 $$
@@ -31170,8 +29240,8 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
-tcond &= \\text{T\\_sat}\\left(\\mathrm{fluid}, =in.p\\right) \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
+tcond &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
 q &= in.mdot\\cdot \\left(in.h - out.h\\right) \\\\
 q &= ua\\cdot \\left(tcond - t_{amb}\\right)
 \\end{aligned}
@@ -31295,13 +29365,13 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
-tcond &= \\text{T\\_sat}\\left(\\mathrm{fluid}, =in.p\\right) \\\\
+tcond &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
 q &= ua\\cdot \\left(tcond - t_{amb}\\right) \\\\
 q &= in.mdot\\cdot \\left(in.h - out.h\\right) \\\\
-rho_{in} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-rho_{out} &= \\text{Density}\\left(\\mathrm{fluid}, =out.p, p=out.h\\right) \\\\
+rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+rho_{out} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right) \\\\
 m &= v\\cdot 0.5\\cdot \\left(rho_{in} + rho_{out}\\right) \\\\
-sc &= tcond - \\text{Temperature}\\left(\\mathrm{fluid}, =out.p, p=out.h\\right)
+sc &= tcond - \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right)
 \\end{aligned}
 $$
 
@@ -31341,15 +29411,17 @@ cond.in.p = 1040885.197
     name: `TwoPhaseEjector`,
     slug: `twophaseejector`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component TwoPhaseEjector with ports m, s, out.`,
+    summary: `Two-phase ejector, lumped: motive m entrains suction s; mass and energy mix exactly, and the diffuser recovers a pressure lift parameterized as the pressure-lift ratio PLR = P_out / P_suction (rate it from CFD/test data).`,
     related: [],
     examples: [],
     tags: [`twophaseejector`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Two-phase ejector, lumped: motive m entrains suction s; mass and energy mix exactly, and the diffuser recovers a pressure lift parameterized as the pressure-lift ratio PLR = P_out / P_suction (rate it from CFD/test data).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -31551,8 +29623,8 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p - dp \\\\
-tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid}, =out.p\\right) \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =out.p, p=tsat + sh_{set}\\right) \\\\
+tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=out.p\\right) \\\\
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=tsat + sh_{set}\\right) \\\\
 q &= in.mdot\\cdot \\left(out.h - in.h\\right)
 \\end{aligned}
 $$
@@ -31635,9 +29707,9 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \\begin{aligned}
 out.p &= in.p - dp \\\\
-tevap &= \\text{T\\_sat}\\left(\\mathrm{fluid}, =in.p\\right) \\\\
+tevap &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
 q &= frac\\cdot ua\\cdot \\left(wall.t - tevap\\right) \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =out.p, p=tevap + sh\\right) \\\\
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=tevap + sh\\right) \\\\
 in.mdot &= \\frac{q}{out.h - in.h} \\\\
 out.mdot &= in.mdot \\\\
 wall.qdot &= q
@@ -31760,7 +29832,7 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
-rho_{in} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
+rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 in.mdot\\cdot \\left|in.mdot\\right| &= cv^{2}\\cdot 2\\cdot rho_{in}\\cdot \\left(in.p - out.p\\right)
 \\end{aligned}
 $$
@@ -31846,14 +29918,14 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
-hf &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-hg &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+hf &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+hg &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 x &= \\frac{in.h - hf}{hg - hf} \\\\
-rho_{l} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-rho_{g} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
-mu_{l} &= \\text{Viscosity}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-mu_{g} &= \\text{Viscosity}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
-sigma &= \\text{Surfacetension}\\left(\\mathrm{fluid}, =in.p\\right) \\\\
+rho_{l} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+rho_{g} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
+mu_{l} &= \\text{Viscosity}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+mu_{g} &= \\text{Viscosity}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
+sigma &= \\text{Surfacetension}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
 a &= \\frac{3.141592653589793}{4}\\cdot d^{2} \\\\
 g &= \\frac{in.mdot}{a} \\\\
 v_{lo} &= \\frac{g}{rho_{l}} \\\\
@@ -31902,15 +29974,19 @@ line.f_lo = 0.02801750717
     name: `TwoPhaseInternalHX`,
     slug: `twophaseinternalhx`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component TwoPhaseInternalHX with ports liq_in, liq_out, vap_in, vap_out.`,
+    summary: `Internal (suction-line) heat exchanger: subcools the liquid line against the suction vapor at an effectiveness on the vapor side (the usual Cmin side).`,
     related: [],
     examples: [],
     tags: [`twophaseinternalhx`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Internal (suction-line) heat exchanger: subcools the liquid line against the suction vapor at an effectiveness on the vapor side (the usual Cmin side).
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Isobaric on both sides; energy is conserved exactly.
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -31940,9 +30016,9 @@ liq_{out.mdot} &= liq_{in.mdot} \\\\
 vap_{out.mdot} &= vap_{in.mdot} \\\\
 liq_{out.p} &= liq_{in.p} \\\\
 vap_{out.p} &= vap_{in.p} \\\\
-t_{liq} &= \\text{Temperature}\\left(\\mathrm{fluid}, =liq_{in.p}, p=liq_{in.h}\\right) \\\\
-t_{vap} &= \\text{Temperature}\\left(\\mathrm{fluid}, =vap_{in.p}, p=vap_{in.h}\\right) \\\\
-cp_{v} &= \\text{Cp}\\left(\\mathrm{fluid}, =vap_{in.p}, p=vap_{in.h}\\right) \\\\
+t_{liq} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=liq_{in.p}, h=liq_{in.h}\\right) \\\\
+t_{vap} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=vap_{in.p}, h=vap_{in.h}\\right) \\\\
+cp_{v} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=vap_{in.p}, h=vap_{in.h}\\right) \\\\
 q &= eps\\cdot vap_{in.mdot}\\cdot cp_{v}\\cdot \\left(t_{liq} - t_{vap}\\right) \\\\
 vap_{out.h} &= vap_{in.h} + \\frac{q}{vap_{in.mdot}} \\\\
 liq_{out.h} &= liq_{in.h} - \\frac{q}{liq_{in.mdot}}
@@ -32032,11 +30108,11 @@ $$
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
 out.h &= in.h \\\\
-hf &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-hg &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+hf &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+hg &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 x &= \\frac{in.h - hf}{hg - hf} \\\\
-rho_{l} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-rho_{g} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+rho_{l} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+rho_{g} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 alpha &= \\text{void\\_zivi}\\left(x, rho_{l}, rho_{g}\\right) \\\\
 rho_{mix} &= alpha\\cdot rho_{g} + \\left(1 - alpha\\right)\\cdot rho_{l} \\\\
 m &= v\\cdot rho_{mix}
@@ -32196,15 +30272,17 @@ Instantiated in the verified example below:
     name: `TwoPhaseOilRider`,
     slug: `twophaseoilrider`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component TwoPhaseOilRider with ports in, out.`,
+    summary: `Oil-circulation-rate rider: declares the oil mass fraction on the stream (it rides every downstream pass-through node like W/z) and exposes the documented HTC degradation factor f_deg = 1 - k_deg*OCR to inject into downstream UA parameters.`,
     related: [],
     examples: [],
     tags: [`twophaseoilrider`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Oil-circulation-rate rider: declares the oil mass fraction on the stream (it rides every downstream pass-through node like W/z) and exposes the documented HTC degradation factor f_deg = 1 - k_deg*OCR to inject into downstream UA parameters.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -32487,7 +30565,7 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \\begin{aligned}
 out.p &= p \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =p, p=x\\right)
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=p, x=x\\right)
 \\end{aligned}
 $$
 
@@ -32568,9 +30646,9 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-rho_{l} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-rho_{g} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+rho_{l} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+rho_{g} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 m &= v\\cdot \\left(ll\\cdot rho_{l} + \\left(1 - ll\\right)\\cdot rho_{g}\\right)
 \\end{aligned}
 $$
@@ -32649,14 +30727,14 @@ $$
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
 out.h &= in.h \\\\
-hf &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-hg &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+hf &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+hg &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 x &= \\frac{in.h - hf}{hg - hf} \\\\
-t &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid}, =in.p\\right) \\\\
+t &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
 sh &= t - tsat \\\\
-rho_{l} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-rho_{g} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+rho_{l} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+rho_{g} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 alpha &= \\text{void\\_zivi}\\left(x, rho_{l}, rho_{g}\\right)
 \\end{aligned}
 $$
@@ -32698,15 +30776,19 @@ line.f_lo = 0.02801750717
     name: `TwoPhaseShortTube`,
     slug: `twophaseshorttube`,
     category: `Component (twophase)`,
-    summary: `Acausal twophase-domain component TwoPhaseShortTube with ports in, out.`,
+    summary: `Short-tube (fixed) orifice that chokes on flashing: below the upstream saturation pressure the flow depends on P_up − P_sat(T_up), not on the evaporator pressure.`,
     related: [],
     examples: [],
     tags: [`twophaseshorttube`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Reusable acausal **twophase-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+    body: `Short-tube (fixed) orifice that chokes on flashing: below the upstream saturation pressure the flow depends on P_up − P_sat(T_up), not on the evaporator pressure.
 
-> **Auto-generated** from the component library (\`backend/core/src/main/resources/components/\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Short-tube (fixed) orifice: square-law on the upstream liquid density, CHOKED ON FLASHING — once the downstream pressure falls below the upstream liquid's saturation pressure the throat flashes and the flow rides on (P_up − P_sat(T_up)) instead of the full ΔP, so it becomes insensitive to the evaporator pressure (the defining short-tube behaviour; more upstream subcooling ⇒ lower Psat(T_up) ⇒ more flow).
+
+Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (\`crates/frees-core/src/components/library-data/twophase.frees\`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -32734,9 +30816,9 @@ $$
 \\begin{aligned}
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
-rho_{in} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid}, =in.p, p=in.h\\right) \\\\
-pf &= \\text{P\\_sat}\\left(\\mathrm{fluid}, =t_{in}\\right) \\\\
+rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+pf &= \\text{P\\_sat}\\left(\\mathrm{fluid\\$}, t=t_{in}\\right) \\\\
 dp_{eff} &= in.p - \\text{max}\\left(out.p, pf\\right) \\\\
 in.mdot\\cdot \\left|in.mdot\\right| &= cda^{2}\\cdot 2\\cdot rho_{in}\\cdot dp_{eff}
 \\end{aligned}
@@ -32919,7 +31001,7 @@ $$
 \\begin{aligned}
 out.mdot &= mdot \\\\
 out.p &= p \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =p, p=x\\right)
+out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=p, x=x\\right)
 \\end{aligned}
 $$
 
@@ -33080,11 +31162,11 @@ out.p &= in.p \\\\
 out.h &= in.h \\\\
 \\text{der}\\left(in.p\\right) &= \\frac{in.mdot - out.mdot}{c} \\\\
 \\text{init}\\left(in.p\\right) &= p0 \\\\
-hf &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-hg &= \\text{Enthalpy}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+hf &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+hg &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 x &= \\frac{in.h - hf}{hg - hf} \\\\
-rho_{l} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=0\\right) \\\\
-rho_{g} &= \\text{Density}\\left(\\mathrm{fluid}, =in.p, p=1\\right) \\\\
+rho_{l} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
+rho_{g} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 alpha &= \\text{void\\_zivi}\\left(x, rho_{l}, rho_{g}\\right) \\\\
 rho_{mix} &= alpha\\cdot rho_{g} + \\left(1 - alpha\\right)\\cdot rho_{l} \\\\
 m &= v\\cdot rho_{mix}
@@ -33171,7 +31253,7 @@ $$
 out.mdot &= in.mdot \\\\
 out.h &= in.h \\\\
 bulb.qdot &= 0 \\\\
-t_{sat} &= \\text{Temperature}\\left(\\mathrm{fluid}, =out.p, p=1\\right) \\\\
+t_{sat} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, x=1\\right) \\\\
 sh &= bulb.t - t_{sat} \\\\
 in.mdot &= kv\\cdot \\left(sh - sh_{set}\\right)
 \\end{aligned}
@@ -35607,7 +33689,6 @@ Hankel values can then be truncated for model reduction.
 
 \`\`\`
 [Ab, Bb, Cb] = balreal(A, B, C)
-[Ab, Bb, Cb] = balreal(A, B, C)
 \`\`\`
 
 ## Description
@@ -35710,7 +33791,6 @@ bandwidth, resonance, roll-off, and the stability margins.
 ## Syntax
 
 \`\`\`
-[mag, phase] = bode(num, den, omega)
 [mag, phase] = bode(num, den, omega)
 \`\`\`
 
@@ -36367,7 +34447,6 @@ inputs.
 
 \`\`\`
 [Kp, Kv, Ka] = errorconst(num, den)
-[Kp, Kv, Ka] = errorconst(num, den)
 \`\`\`
 
 ## Mathematical Formulation
@@ -36450,7 +34529,6 @@ den[3] = 2
 ## Syntax
 
 \`\`\`
-[num, den] = feedback(num1, den1, num2, den2)
 [num, den] = feedback(num1, den1, num2, den2)
 \`\`\`
 
@@ -37143,7 +35221,6 @@ the classical frequency-domain measures of relative stability for the closed loo
 
 \`\`\`
 [gm, pm, w_cg, w_cp] = margin(num, den)
-[gm, pm, w_cg, w_cp] = margin(num, den)
 \`\`\`
 
 ## Description
@@ -37335,7 +35412,6 @@ Nichols chart, it reads off closed-loop gain and stability margins in one view.
 
 \`\`\`
 [mag, phase] = nichols(num, den, omega)
-[mag, phase] = nichols(num, den, omega)
 \`\`\`
 
 ## Description
@@ -37438,7 +35514,6 @@ Plotting \`im\` against \`re\` and applying the Nyquist criterion (encirclements
 ## Syntax
 
 \`\`\`
-[re, im] = nyquist(num, den, omega)
 [re, im] = nyquist(num, den, omega)
 \`\`\`
 
@@ -37626,7 +35701,6 @@ transfer function so the loop can be analyzed and designed with standard tools.
 
 \`\`\`
 [num, den] = pade(Td, order)
-[num, den] = pade(Td, order)
 \`\`\`
 
 ## Mathematical Formulation
@@ -37707,7 +35781,6 @@ same input whose outputs are summed.
 
 \`\`\`
 [num, den] = parallel(num1, den1, num2, den2)
-[num, den] = parallel(num1, den1, num2, den2)
 \`\`\`
 
 ## Mathematical Formulation
@@ -37782,7 +35855,6 @@ for a quick, systematic classical controller without manual loop shaping.
 ## Syntax
 
 \`\`\`
-[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
 [Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
 \`\`\`
 
@@ -37990,7 +36062,6 @@ has a negative real part.
 
 \`\`\`
 [pr, pi] = pole(num, den)
-[pr, pi] = pole(num, den)
 \`\`\`
 
 ## Description
@@ -38086,7 +36157,6 @@ maps to a time-domain mode.
 ## Syntax
 
 \`\`\`
-[rr, ri, pr, pi, k] = residue(num, den)
 [rr, ri, pr, pi, k] = residue(num, den)
 \`\`\`
 
@@ -38185,7 +36255,6 @@ gain that places the dominant poles for a target damping or settling time.
 
 \`\`\`
 [K, cpr, cpi] = rlocus(num, den)
-[K, cpr, cpi] = rlocus(num, den)
 \`\`\`
 
 ## Description
@@ -38283,7 +36352,6 @@ It decides stability without computing the roots — useful for symbolic gain ra
 
 \`\`\`
 [nRHP, stable] = routh(den)
-[nRHP, stable] = routh(den)
 \`\`\`
 
 ## Description
@@ -38377,7 +36445,6 @@ den[3] = 2
 ## Syntax
 
 \`\`\`
-[num, den] = series(num1, den1, num2, den2)
 [num, den] = series(num1, den1, num2, den2)
 \`\`\`
 
@@ -38475,6 +36542,9 @@ observer, LQR/LQE) design operates.
 sys = ss(A, B, C, D)
 \`\`\`
 
+
+> **Not callable in the current engine:** \`ss\` is registered but has no implementation, so a call reports *not yet supported: ss*. frees has no state-space object; pass \`A, B, C, D\` directly to \`ss2tf\`, \`bode\`, \`lsim\`, … — see the example.
+
 ## Mathematical Formulation
 
 $$ \\dot{\\mathbf{x}} = A\\mathbf{x} + B\\mathbf{u}, \\qquad \\mathbf{y} = C\\mathbf{x} + D\\mathbf{u} $$
@@ -38487,29 +36557,48 @@ with transfer function \`G(s) = C(sI − A)⁻¹B + D\` (see \`ss2tf\`).
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Solve a complete model
+### Verified example — A two-state plant
 
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
+
+\`\`\`frees error="not yet supported: ss"
+A = [-1, 0; 0, -2]
+B = [1; 1]
+C = [1, 0]
+D = [0]
+sys = ss(A, B, C, D)
+\`\`\`
+
+Expected diagnostic:
+
+\`\`\`text
+not yet supported: ss
+\`\`\`
+
+Working alternative — paste this complete document into the editor and solve:
 
 \`\`\`frees
-// frees-language: 2
-GradeRoadLoad ROAD(Crr=50, Caero=2, m=1500, g=9.81, grade=0.05)
-SpeedSource   SS(w=30)
-MechGround    G()
-connect(SS.a, ROAD.shaft)
-connect(SS.b, G.port)
+{ Pass the (A, B, C, D) matrices straight to the function that needs
+  them — here the transfer function G(s) = (s + 2)/(s^2 + 3s + 2). }
+A = [-1, 0; 0, -2]
+B = [1; 1]
+C = [1, 0]
+D = [0]
+[num, den] = ss2tf(A, B, C, D)
 
-{ CHECK g.port.tau -2585.443476 0.0025854434758180314 }
-{ CHECK g.port.w 0 1e-8 }
-{ CHECK road.shaft.tau 2585.443476 0.0025854434758180314 }
+{ CHECK num[2] 1 0.000001 }
+{ CHECK num[3] 2 0.000002 }
+{ CHECK den[2] 3 0.000003 }
+{ CHECK den[3] 2 0.000002 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-g.port.tau = -2585.443476
-g.port.w = 0
-road.shaft.tau = 2585.443476
+num[2] = 1
+num[3] = 2
+den[2] = 3
+den[3] = 2
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -38543,11 +36632,7 @@ road.shaft.tau = 2585.443476
     tags: [`control`, `similarity transform`, `state space`, `coordinate change`],
     references: [],
     guides: [`symbolic-cas`],
-    body: `**Current limitation:** automatic output-shape inference rejects the invocation
-shown below. Use the explicit matrix products in the verified example. The
-formulation describes the intended similarity transform.
-
-Applies a **similarity (coordinate) transform** \`x = P·z\` to a state-space model,
+    body: `Applies a **similarity (coordinate) transform** \`x = P·z\` to a state-space model,
 returning the equivalent realization \`(An, Bn, Cn, Dn)\`. The input-output behavior
 is unchanged; only the state coordinates differ — used to reach canonical or
 balanced forms.
@@ -38572,56 +36657,35 @@ The transfer function $C(sI-A)^{-1}B + D$ is invariant under the transform.
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Rescale a two-state model
+### Verified example — Change coordinates of a two-state plant
 
-**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
-
-\`\`\`frees error="Matrix must have exactly 2 dimensions: bn"
-A = [-1, 0; 0, -2]
-B = [1, 0; 0, 1]
-C = [1, 0; 0, 1]
-D = [0, 0; 0, 0]
-P = [2, 0; 0, 1]
-[An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
-\`\`\`
-
-Expected diagnostic:
-
-\`\`\`text
-Syntax error: Matrix must have exactly 2 dimensions: bn
-\`\`\`
-
-Working alternative — paste this complete document into the editor and solve:
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation. A single-input, single-output model can give \`B\` as a column and \`C\` as a row.
 
 \`\`\`frees
-A = [-1, 0; 0, -2]
-B = [1, 0; 0, 1]
-C = [1, 0; 0, 1]
-D = [0, 0; 0, 0]
-P = [2, 0; 0, 1]
-An = inverse(P)*A*P
-Bn = inverse(P)*B
-Cn = C*P
-Dn = copy(D)
+A = [0, 1; -2, -3]
+B = [0; 1]
+C = [1, 0]
+D = [0]
+P = [1, 1; 0, 1]
+[An, Bn, Cn, Dn] = ss2ss(A, B, C, D, P)
 
-{ CHECK An[1,1] -1 0.000001 }
-{ CHECK An[1,2] 0 1e-8 }
-{ CHECK An[2,1] 0 1e-8 }
+{ CHECK An[1,1] 2 0.000002 }
+{ CHECK An[1,2] 6 0.000006 }
+{ CHECK An[2,1] -2 0.000002 }
+{ CHECK An[2,2] -5 0.000005 }
+{ CHECK Bn[1,1] -1 0.000001 }
+{ CHECK Cn[1,2] 1 0.000001 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-An[1,1] = -1
-An[1,2] = 0
-An[2,1] = 0
+An = [2, 6; -2, -5]
+Bn = [-1; 1]
+Cn = [1, 1]
 \`\`\`
 
 <!-- verified-reference-example:end -->
-
-\`\`\`
-{ [An,Bn,Cn,Dn] = ss2ss(A,B,C,D,P) }
-\`\`\`
 
 ## Input Arguments
 
@@ -38659,7 +36723,6 @@ state model to the frequency-domain form needed for classical loop design.
 ## Syntax
 
 \`\`\`
-[num, den] = ss2tf(A, B, C, D)
 [num, den] = ss2tf(A, B, C, D)
 \`\`\`
 
@@ -38744,13 +36807,13 @@ velocity-from-force plant.
     name: `ss2tfij`,
     slug: `ss2tfij`,
     category: `Control Systems`,
-    summary: `Reference page for ss2tfij.`,
-    related: [],
+    summary: `Transfer function from input j to output i of a state-space model.`,
+    related: [`ss2tf`, `tf2ss`, `bode`],
     examples: [],
     tags: [`ss2tfij`],
     references: [],
     guides: [],
-    body: `Converts one input/output channel of a state-space model to transfer-function coefficients.
+    body: `Transfer function from input j to output i of a state-space model.
 
 ## Syntax
 
@@ -38760,11 +36823,7 @@ velocity-from-force plant.
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+\`[num, den] = ss2tfij(A, B, C, D, i, j)\` returns the SISO transfer function \`G_ij(s) = C_i (sI − A)⁻¹ B_j + D_ij\` from input \`j\` to output \`i\`, using row \`i\` of \`C\`, column \`j\` of \`B\` and \`D[i, j]\`. Coefficients are in descending powers of \`s\`.
 
 ## Examples
 
@@ -38795,7 +36854,25 @@ den[2] = 3
 den[3] = 2
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`A\` | Matrix | Yes | n × n state matrix. |
+| \`B\` | Matrix | Yes | n × m input matrix. |
+| \`C\` | Matrix | Yes | p × n output matrix. |
+| \`D\` | Matrix | Yes | p × m feed-through matrix. |
+| \`i\` | Number | Yes | Output index (1-based). |
+| \`j\` | Number | Yes | Input index (1-based). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`num\` | Vector | Numerator coefficients. |
+| \`den\` | Vector | Denominator coefficients (length n + 1). |`,
   },
   {
     name: `step`,
@@ -38908,7 +36985,6 @@ steady-state value within a few seconds.
 ## Syntax
 
 \`\`\`
-[Tr, Tp, Ts, OS] = stepinfo(t, y)
 [Tr, Tp, Ts, OS] = stepinfo(t, y)
 \`\`\`
 
@@ -39170,11 +37246,7 @@ den[3] = 2
     tags: [`control`, `zero pole gain`, `zpk`, `transfer function`, `factorization`],
     references: [],
     guides: [`symbolic-cas`],
-    body: `**Current limitation:** the current parser cannot infer the value-dependent
-output shapes for the invocation below. Use the first-order working alternative
-in the verified example; the formulation describes the intended conversion.
-
-Converts a transfer function \`G(s) = num/den\` to **zero-pole-gain** form: the zeros
+    body: `Converts a transfer function \`G(s) = num/den\` to **zero-pole-gain** form: the zeros
 (\`zr\`/\`zi\`), poles (\`pr\`/\`pi\`), and scalar gain \`k\`. It is the factored view of the
 rational system, the inverse of \`zp2tf\`.
 
@@ -39197,49 +37269,33 @@ leading-coefficient ratio.
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Find the poles and zeros of a first-order model
+### Verified example — Zeros, poles and gain of a third-order model
 
-**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
-
-\`\`\`frees error="Expected vector array access"
-num = [1, 3]
-den = [1, 2]
-[zr, zi, pr, pi, k] = tf2zp(num, den)
-\`\`\`
-
-Expected diagnostic:
-
-\`\`\`text
-Syntax error: Expected vector array access: e.g. v[1:3]
-\`\`\`
-
-Working alternative — paste this complete document into the editor and solve:
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation. \`num\` may be shorter than \`den\`; it is read with leading zeros.
 
 \`\`\`frees
-num = [1, 3]
-den = [1, 2]
-[pr, pi] = pole(num, den)
-zero_real = -3
-gain = 1
+num = [1, 3, 2]
+den = [1, 2, 5, 4]
+[zr, zi, pr, pi, k] = tf2zp(num, den)
 
-{ CHECK den[1] 1 0.000001 }
-{ CHECK den[2] 2 0.000002 }
-{ CHECK num[1] 1 0.000001 }
+{ CHECK zr[1] -2 0.000002 }
+{ CHECK zr[2] -1 0.000001 }
+{ CHECK pr[1] -0.5 0.0000005 }
+{ CHECK pi[1] 1.936491673 0.000001936491673 }
+{ CHECK pr[3] -1 0.000001 }
+{ CHECK k 1 0.000001 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-den[1] = 1
-den[2] = 2
-num[1] = 1
+zr = [-2, -1]
+pr = [-0.5, -0.5, -1]
+pi = [1.936491673, -1.936491673, 0]
+k = 1
 \`\`\`
 
 <!-- verified-reference-example:end -->
-
-\`\`\`
-{ [zr,zi,pr,pi,k] = tf2zp(num, den) }
-\`\`\`
 
 ## Input Arguments
 
@@ -39252,7 +37308,7 @@ num[1] = 1
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| \`zr\`, \`zi\` | Vector | Real / imaginary parts of the zeros. |
+| \`zr\`, \`zi\` | Vector | Real / imaginary parts of the zeros, one slot per numerator degree. A numerator with leading zeros has fewer finite zeros; the surplus slots read 0. |
 | \`pr\`, \`pi\` | Vector | Real / imaginary parts of the poles. |
 | \`k\` | Number | Scalar gain. |`,
   },
@@ -39274,7 +37330,6 @@ signals non-minimum-phase behavior.
 ## Syntax
 
 \`\`\`
-[zr, zi] = zero(num, den)
 [zr, zi] = zero(num, den)
 \`\`\`
 
@@ -39364,7 +37419,6 @@ and gain \`k\` — into a transfer function \`num/den\`. It is the inverse of
 ## Syntax
 
 \`\`\`
-[num, den] = zp2tf(zr, zi, pr, pi, k)
 [num, den] = zp2tf(zr, zi, pr, pi, k)
 \`\`\`
 
@@ -40700,25 +38754,57 @@ dP_rev = 1010.475 [Pa]
     name: `compressibility`,
     slug: `compressibility`,
     category: `Fluid Properties`,
-    summary: `Fluid property: compressibility from the real-fluid property backend.`,
+    summary: `Compressibility factor Z = P/(ρRT) [–] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [`thermo-compliance`],
-    tags: [`compressibility`, `property`, `fluid`, `coolprop`],
+    tags: [`compressibility`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [],
-    body: `Returns the **compressibility** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Compressibility factor Z = P/(ρRT) [–] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-compressibility(Fluid, P=, T=)
+Z = Compressibility(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Compressibility(Fluid, X1=…, X2=…)\` returns the compressibility factor Z = P/(ρRT) [–] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Same quantity as \`CompressibilityFactor\`; 1 for an ideal gas.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` only |
+| Incompressibles and glycols (\`EG50\`, …) | — | — |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -40772,31 +38858,88 @@ cp_h2 = 14321.41329 [J/kg-K]
 cp_n2 = 1062.921679 [J/kg-K]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`Z\` | Number | Compressibility factor Z = P/(ρRT) [–]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Compressibility requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Compressibility(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`Compressibility\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `compressibilityfactor`,
     slug: `compressibilityfactor`,
     category: `Fluid Properties`,
-    summary: `Fluid property: compressibilityfactor from the real-fluid property backend.`,
+    summary: `Compressibility factor Z = P/(ρRT) [–] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [`thermo-compliance`],
-    tags: [`compressibilityfactor`, `property`, `fluid`, `coolprop`],
+    tags: [`compressibilityfactor`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **compressibilityfactor** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Compressibility factor Z = P/(ρRT) [–] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-compressibilityfactor(Fluid, P=, T=)
+Z = CompressibilityFactor(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`CompressibilityFactor(Fluid, X1=…, X2=…)\` returns the compressibility factor Z = P/(ρRT) [–] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Same quantity as \`Compressibility\`; 1 for an ideal gas.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` only |
+| Incompressibles and glycols (\`EG50\`, …) | — | — |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -40851,31 +38994,88 @@ P_crit_r134a = 4059276.374 [Pa]
 T0_air = 319.9004975 [K]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`Z\` | Number | Compressibility factor Z = P/(ρRT) [–]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`CompressibilityFactor requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in CompressibilityFactor(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`CompressibilityFactor\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `conductivity`,
     slug: `conductivity`,
     category: `Fluid Properties`,
-    summary: `Fluid property: conductivity from the real-fluid property backend.`,
+    summary: `Thermal conductivity [W/m-K] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`conductivity`, `property`, `fluid`, `coolprop`],
+    tags: [`conductivity`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **conductivity** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Thermal conductivity [W/m-K] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-conductivity(Fluid, P=, T=)
+k = Conductivity(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Conductivity(Fluid, X1=…, X2=…)\` returns the thermal conductivity [W/m-K] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Inside the two-phase dome frees returns exactly what CoolProp 8 returns: the single-phase correlation evaluated at the mixture's average density. That number is not a physical property of the mixture and jumps with quality (Water at 373.15 K: \`Cp\` = 64 518 J/(kg·K) at \`x=0.25\`, 2 654 at \`x=0.5\`). Evaluate it on a single-phase state, or at \`x=0\` / \`x=1\` for the saturated liquid / vapour.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | — | Use the full fluid name for the real-fluid value |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -40942,31 +39142,92 @@ cp3 = 5696.451047 [J/kg-K]
 d1 = 71.1847863 [kg/m^3]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`k\` | Number | Thermal conductivity [W/m-K]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Conductivity requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Conductivity(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Function 'conductivity' is not available for the ideal gas N2. Use the full fluid name for real-fluid properties.\` | Spelled formula selects the ideal-gas model | Use \`Nitrogen\`, \`CarbonDioxide\`, … for the real fluid. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`Conductivity\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `cp`,
     slug: `cp`,
     category: `Fluid Properties`,
-    summary: `Fluid property: cp from the real-fluid property backend.`,
+    summary: `Isobaric specific heat capacity [J/kg-K] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`cp`, `property`, `fluid`, `coolprop`],
+    tags: [`cp`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **cp** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Isobaric specific heat capacity [J/kg-K] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-cp(Fluid, P=, T=)
+cp = Cp(Fluid, X1=…, X2=…)
+cp = Cp(AirH2O, T=…, P=…, R=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Cp(Fluid, X1=…, X2=…)\` returns the isobaric specific heat capacity [J/kg-K] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Same quantity as \`SpecHeat\`.
+
+Inside the two-phase dome frees returns exactly what CoolProp 8 returns: the single-phase correlation evaluated at the mixture's average density. That number is not a physical property of the mixture and jumps with quality (Water at 373.15 K: \`Cp\` = 64 518 J/(kg·K) at \`x=0.25\`, 2 654 at \`x=0.5\`). Evaluate it on a single-phase state, or at \`x=0\` / \`x=1\` for the saturated liquid / vapour.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` only |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | ✓ | Three inputs, one of them \`P\`; per kg of dry air |
 
 ## Examples
 
@@ -40992,89 +39253,196 @@ cp = 3312.041904 [J/kg-K]
 rho = 1064.928663 [kg/m^3]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`cp\` | Number | Isobaric specific heat capacity [J/kg-K]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Cp requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Cp(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Cp(N2, ...) is an ideal-gas function of temperature only, e.g. Cp(N2, T=300)\` | Ideal gas called with a pressure | Pass only \`T\` for an ideal gas. |`,
   },
   {
     name: `cv`,
     slug: `cv`,
     category: `Fluid Properties`,
-    summary: `Fluid property: cv from the real-fluid property backend.`,
+    summary: `Isochoric specific heat capacity [J/kg-K] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`cv`, `property`, `fluid`, `coolprop`],
+    tags: [`cv`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **cv** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Isochoric specific heat capacity [J/kg-K] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-cv(Fluid, P=, T=)
+cv = Cv(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Cv(Fluid, X1=…, X2=…)\` returns the isochoric specific heat capacity [J/kg-K] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Inside the two-phase dome frees returns exactly what CoolProp 8 returns: the single-phase correlation evaluated at the mixture's average density. That number is not a physical property of the mixture and jumps with quality (Water at 373.15 K: \`Cp\` = 64 518 J/(kg·K) at \`x=0.25\`, 2 654 at \`x=0.5\`). Evaluate it on a single-phase state, or at \`x=0\` / \`x=1\` for the saturated liquid / vapour.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` only |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Solve a complete model
+### Verified example — Isochoric specific heat of water and air
 
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-// frees-language: 2
-ThermalSource SURF(T=350)
-Convection CV(htc=10, area=2)
-Radiation  RD(emis=0.9, area=2)
-ThermalSource AIR(T=300)
-ThermalSource SUR(T=300)
-connect(SURF.port, CV.a, RD.a)
-connect(CV.b, AIR.port)
-connect(RD.b, SUR.port)
+cv_water = Cv(Water, T=300 [K], P=101325 [Pa])
+cv_air   = Cv(Air,   T=300 [K], P=101325 [Pa])
+gamma_air = Cp(Air, T=300 [K], P=101325 [Pa]) / cv_air
 
-{ CHECK air.port.qdot 1000 0.001 }
-{ CHECK air.port.t 300 0.0003 }
-{ CHECK cv.a.qdot 1000 0.001 }
+{ CHECK cv_water 4130.174245 0.004130174245 }
+{ CHECK cv_air 717.9715595 0.0007179715595 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-air.port.qdot = 1000
-air.port.t = 300
-cv.a.qdot = 1000
+cv_water = 4130.174245
+cv_air = 717.9715595
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`cv\` | Number | Isochoric specific heat capacity [J/kg-K]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Cv requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Cv(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Cv(N2, ...) is an ideal-gas function of temperature only, e.g. Cv(N2, T=300)\` | Ideal gas called with a pressure | Pass only \`T\` for an ideal gas. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`Cv\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `density`,
     slug: `density`,
     category: `Fluid Properties`,
-    summary: `Fluid property: density from the real-fluid property backend.`,
+    summary: `Mass density [kg/m^3] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`density`, `property`, `fluid`, `coolprop`],
+    tags: [`density`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **density** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Mass density [kg/m^3] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-density(Fluid, P=, T=)
+rho = Density(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Density(Fluid, X1=…, X2=…)\` returns the mass density [kg/m^3] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Equal to \`1/Volume(...)\`.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` and \`P\` |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -41100,31 +39468,76 @@ cp = 3312.041904 [J/kg-K]
 rho = 1064.928663 [kg/m^3]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`rho\` | Number | Mass density [kg/m^3]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Density requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Density(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`Density\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `dewpoint`,
     slug: `dewpoint`,
     category: `Fluid Properties`,
-    summary: `Humid-air property: dewpoint from the real-fluid property backend.`,
+    summary: `Dew-point temperature [K] of humid air (AirH2O) from three named inputs.`,
     related: [],
     examples: [],
-    tags: [`dewpoint`, `property`, `humid-air`, `coolprop`],
+    tags: [`dewpoint`, `property`, `humid-air`, `rustprop`],
     references: [],
     guides: [`humidair`, `tut-coil`],
-    body: `Returns the **dewpoint** of a humid-air (AirH2O) from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Dew-point temperature [K] of humid air (AirH2O) from three named inputs.
 
 ## Syntax
 
 \`\`\`
-dewpoint(AirH2O, T=, P=, R=)
+T_dp = DewPoint(AirH2O, T=…, P=…, R=…)
+T_dp = DewPoint(AirH2O, X1=…, X2=…, P=…)
 \`\`\`
 
 ## Description
 
-A humid-air property; supply the dry-bulb T, total pressure P, and one humidity coordinate (R, W, B, or D). Property names are case-insensitive.
+\`DewPoint(AirH2O, T=…, P=…, R=…)\` returns the dew-point temperature [K] of moist air. Humid-air properties need three named inputs, one of which must be the pressure \`P\`; the order does not matter and names are case-insensitive.
+
+## Valid inputs
+
+Humid air takes **three** named inputs, one of which must be \`P\`. Combinations verified through the engine:
+
+| Inputs | Meaning |
+| --- | --- |
+| \`T\`, \`P\`, \`R\` | dry-bulb temperature, pressure, relative humidity (0–1) |
+| \`T\`, \`P\`, \`w\` | … humidity ratio |
+| \`T\`, \`P\`, \`B\` | … wet-bulb temperature (alias \`Twb\`) |
+| \`T\`, \`P\`, \`D\` | … dew-point temperature (alias \`Tdp\`) |
+| \`h\`, \`P\`, \`R\` | enthalpy per kg dry air, pressure, relative humidity |
+
+Indicators: \`T\`, \`P\`, \`h\`, \`s\`, \`v\`, \`w\`, \`R\` (\`RH\`), \`B\` (\`Twb\`), \`D\` (\`Tdp\`).
+
+## Fluid support
+
+| Fluid class | Supported |
+| --- | --- |
+| Humid air (\`AirH2O\`) | ✓ — three inputs, one of them \`P\` |
+| Real, pseudo-pure, ideal-gas and incompressible fluids | — (humid-air function only) |
 
 ## Examples
 
@@ -41150,31 +39563,83 @@ T_dp = 287.0168866 [K]
 T_wb = 291.0334868 [K]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`AirH2O\` | Name | Yes | The humid-air pseudo-fluid. |
+| three of \`T\`, \`P\`, \`h\`, \`s\`, \`v\`, \`w\`, \`R\`, \`B\`, \`D\` | Number | Yes | Named inputs; one must be \`P\` [Pa]. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`T_dp\` | Number | Dew-point temperature [K]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Pressure must be one of the inputs to HAPropsSI\` | The three inputs do not include \`P\` | Add \`P=…\` as one of the three inputs. |
+| \`The input for key (Rh) with value (1.5) is outside the range of validity: (0) to (1)\` | Relative humidity given in percent | Pass \`R\` as a fraction, e.g. \`R=0.5\`. |
+| \`DewPoint requires …\` | Fewer than three inputs | Humid air needs three inputs, e.g. \`T\`, \`P\`, \`R\`. |`,
   },
   {
     name: `enthalpy`,
     slug: `enthalpy`,
     category: `Fluid Properties`,
-    summary: `Fluid property: enthalpy from the real-fluid property backend.`,
+    summary: `Specific enthalpy [J/kg] of a fluid at a state fixed by named inputs.`,
     related: [],
-    examples: [`rankine-cycle`, `state-tables-multifluid`, `rankine-cycle`, `refrigeration-vcr`],
-    tags: [`enthalpy`, `property`, `fluid`, `coolprop`],
+    examples: [`rankine-cycle`, `state-tables-multifluid`, `refrigeration-vcr`],
+    tags: [`enthalpy`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`debugging`, `errors`, `thermo`, `humidair`, `gs-repl`, `repl`],
-    body: `Returns the **enthalpy** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Specific enthalpy [J/kg] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-enthalpy(Fluid, P=, T=)
+h = Enthalpy(Fluid, X1=…, X2=…)
+h = Enthalpy(AirH2O, T=…, P=…, R=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Enthalpy(Fluid, X1=…, X2=…)\` returns the specific enthalpy [J/kg] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` only |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | ✓ | Three inputs, one of them \`P\`; per kg of dry air |
 
 ## Examples
 
@@ -41200,31 +39665,87 @@ h = 50423.45039 [J/kg]
 v = 0.8577882434 [m^3/kg]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`h\` | Number | Specific enthalpy [J/kg]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Enthalpy requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Enthalpy(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Enthalpy(N2, ...) is an ideal-gas function of temperature only, e.g. Enthalpy(N2, T=300)\` | Ideal gas called with a pressure | Pass only \`T\` for an ideal gas. |`,
   },
   {
     name: `entropy`,
     slug: `entropy`,
     category: `Fluid Properties`,
-    summary: `Fluid property: entropy from the real-fluid property backend.`,
+    summary: `Specific entropy [J/kg-K] of a fluid at a state fixed by named inputs.`,
     related: [],
-    examples: [`rankine-cycle`, `rankine-cycle`, `refrigeration-vcr`],
-    tags: [`entropy`, `property`, `fluid`, `coolprop`],
+    examples: [`rankine-cycle`, `refrigeration-vcr`],
+    tags: [`entropy`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`, `tut-vccycle`],
-    body: `Returns the **entropy** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Specific entropy [J/kg-K] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-entropy(Fluid, P=, T=)
+s = Entropy(Fluid, X1=…, X2=…)
+s = Entropy(AirH2O, T=…, P=…, R=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Entropy(Fluid, X1=…, X2=…)\` returns the specific entropy [J/kg-K] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` and \`P\` |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | ✓ | Three inputs, one of them \`P\`; per kg of dry air |
 
 ## Examples
 
@@ -41254,31 +39775,85 @@ P1 = 702820.6472 [Pa]
 s1 = 1715.577416 [J/kg-K]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`s\` | Number | Specific entropy [J/kg-K]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Entropy requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Entropy(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |`,
   },
   {
     name: `gibbs`,
     slug: `gibbs`,
     category: `Fluid Properties`,
-    summary: `Fluid property: gibbs from the real-fluid property backend.`,
+    summary: `Specific Gibbs energy g = h − T·s [J/kg] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`gibbs`, `property`, `fluid`, `coolprop`],
+    tags: [`gibbs`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **gibbs** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Specific Gibbs energy g = h − T·s [J/kg] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-gibbs(Fluid, P=, T=)
+g = Gibbs(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Gibbs(Fluid, X1=…, X2=…)\` returns the specific Gibbs energy g = h − T·s [J/kg] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` and \`P\` |
+| Incompressibles and glycols (\`EG50\`, …) | — | — |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -41332,31 +39907,76 @@ cp_h2 = 14321.41329 [J/kg-K]
 cp_n2 = 1062.921679 [J/kg-K]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`g\` | Number | Specific Gibbs energy g = h − T·s [J/kg]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Gibbs requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Gibbs(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Unknown humid-air function: gibbs. Supported: cp, dewpoint, enthalpy, entropy, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`Gibbs\` called with \`AirH2O\` — CoolProp's \`HAPropsSI\` has no Gibbs output | Compute \`g = h - T*s\` from \`Enthalpy\` and \`Entropy\` of \`AirH2O\` (both per kg dry air). |`,
   },
   {
     name: `humrat`,
     slug: `humrat`,
     category: `Fluid Properties`,
-    summary: `Humid-air property: humrat from the real-fluid property backend.`,
+    summary: `Humidity ratio (kg water vapour per kg dry air) [kg/kg] of humid air (AirH2O) from three named inputs.`,
     related: [],
     examples: [],
-    tags: [`humrat`, `property`, `humid-air`, `coolprop`],
+    tags: [`humrat`, `property`, `humid-air`, `rustprop`],
     references: [],
     guides: [`humidair`, `tut-coil`],
-    body: `Returns the **humrat** of a humid-air (AirH2O) from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Humidity ratio (kg water vapour per kg dry air) [kg/kg] of humid air (AirH2O) from three named inputs.
 
 ## Syntax
 
 \`\`\`
-humrat(AirH2O, T=, P=, R=)
+w = HumRat(AirH2O, T=…, P=…, R=…)
+w = HumRat(AirH2O, X1=…, X2=…, P=…)
 \`\`\`
 
 ## Description
 
-A humid-air property; supply the dry-bulb T, total pressure P, and one humidity coordinate (R, W, B, or D). Property names are case-insensitive.
+\`HumRat(AirH2O, T=…, P=…, R=…)\` returns the humidity ratio (kg water vapour per kg dry air) [kg/kg] of moist air. Humid-air properties need three named inputs, one of which must be the pressure \`P\`; the order does not matter and names are case-insensitive.
+
+## Valid inputs
+
+Humid air takes **three** named inputs, one of which must be \`P\`. Combinations verified through the engine:
+
+| Inputs | Meaning |
+| --- | --- |
+| \`T\`, \`P\`, \`R\` | dry-bulb temperature, pressure, relative humidity (0–1) |
+| \`T\`, \`P\`, \`w\` | … humidity ratio |
+| \`T\`, \`P\`, \`B\` | … wet-bulb temperature (alias \`Twb\`) |
+| \`T\`, \`P\`, \`D\` | … dew-point temperature (alias \`Tdp\`) |
+| \`h\`, \`P\`, \`R\` | enthalpy per kg dry air, pressure, relative humidity |
+
+Indicators: \`T\`, \`P\`, \`h\`, \`s\`, \`v\`, \`w\`, \`R\` (\`RH\`), \`B\` (\`Twb\`), \`D\` (\`Tdp\`).
+
+## Fluid support
+
+| Fluid class | Supported |
+| --- | --- |
+| Humid air (\`AirH2O\`) | ✓ — three inputs, one of them \`P\` |
+| Real, pseudo-pure, ideal-gas and incompressible fluids | — (humid-air function only) |
 
 ## Examples
 
@@ -41382,31 +40002,82 @@ rh = 0.5
 w = 0.009925739296
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`AirH2O\` | Name | Yes | The humid-air pseudo-fluid. |
+| three of \`T\`, \`P\`, \`h\`, \`s\`, \`v\`, \`w\`, \`R\`, \`B\`, \`D\` | Number | Yes | Named inputs; one must be \`P\` [Pa]. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`w\` | Number | Humidity ratio (kg water vapour per kg dry air) [kg/kg]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Pressure must be one of the inputs to HAPropsSI\` | The three inputs do not include \`P\` | Add \`P=…\` as one of the three inputs. |
+| \`The input for key (Rh) with value (1.5) is outside the range of validity: (0) to (1)\` | Relative humidity given in percent | Pass \`R\` as a fraction, e.g. \`R=0.5\`. |
+| \`HumRat requires …\` | Fewer than three inputs | Humid air needs three inputs, e.g. \`T\`, \`P\`, \`R\`. |`,
   },
   {
     name: `intenergy`,
     slug: `intenergy`,
     category: `Fluid Properties`,
-    summary: `Fluid property: intenergy from the real-fluid property backend.`,
+    summary: `Specific internal energy [J/kg] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`intenergy`, `property`, `fluid`, `coolprop`],
+    tags: [`intenergy`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **intenergy** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Specific internal energy [J/kg] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-intenergy(Fluid, P=, T=)
+u = IntEnergy(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`IntEnergy(Fluid, X1=…, X2=…)\` returns the specific internal energy [J/kg] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` only |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -41437,31 +40108,89 @@ u_approx = 334963.5612 [J/kg]
 u_exact = 333821.269 [J/kg]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`u\` | Number | Specific internal energy [J/kg]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`IntEnergy requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in IntEnergy(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`IntEnergy(N2, ...) is an ideal-gas function of temperature only, e.g. IntEnergy(N2, T=300)\` | Ideal gas called with a pressure | Pass only \`T\` for an ideal gas. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`IntEnergy\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `prandtl`,
     slug: `prandtl`,
     category: `Fluid Properties`,
-    summary: `Fluid property: prandtl from the real-fluid property backend.`,
+    summary: `Prandtl number cp·μ/k [–] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`prandtl`, `property`, `fluid`, `coolprop`],
+    tags: [`prandtl`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [],
-    body: `Returns the **prandtl** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Prandtl number cp·μ/k [–] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-prandtl(Fluid, P=, T=)
+Pr = Prandtl(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Prandtl(Fluid, X1=…, X2=…)\` returns the Prandtl number cp·μ/k [–] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Inside the two-phase dome frees returns exactly what CoolProp 8 returns: the single-phase correlation evaluated at the mixture's average density. That number is not a physical property of the mixture and jumps with quality (Water at 373.15 K: \`Cp\` = 64 518 J/(kg·K) at \`x=0.25\`, 2 654 at \`x=0.5\`). Evaluate it on a single-phase state, or at \`x=0\` / \`x=1\` for the saturated liquid / vapour.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | — | Use the full fluid name for the real-fluid value |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -41483,31 +40212,89 @@ Expected output (selected solution values; numerical rounding may vary):
 result = 5.855926515
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`Pr\` | Number | Prandtl number cp·μ/k [–]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Prandtl requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Prandtl(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Function 'prandtl' is not available for the ideal gas N2. Use the full fluid name for real-fluid properties.\` | Spelled formula selects the ideal-gas model | Use \`Nitrogen\`, \`CarbonDioxide\`, … for the real fluid. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`Prandtl\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `pressure`,
     slug: `pressure`,
     category: `Fluid Properties`,
-    summary: `Fluid property: pressure from the real-fluid property backend.`,
+    summary: `Pressure [Pa] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [`uncertain-tank-inventory`],
-    tags: [`pressure`, `property`, `fluid`, `coolprop`],
+    tags: [`pressure`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **pressure** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Pressure [Pa] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-pressure(Fluid, P=, T=)
+P = Pressure(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Pressure(Fluid, X1=…, X2=…)\` returns the pressure [Pa] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Pass any supported pair that does not already contain P — for example the saturation pressure, \`Pressure(Water, T=373.15, x=0)\`.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | — | Use the full fluid name for the real-fluid value |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -41537,38 +40324,89 @@ P1 = 702820.6472 [Pa]
 s1 = 1715.577416 [J/kg-K]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`P\` | Number | Pressure [Pa]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Pressure requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Pressure(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Function 'pressure' is not available for the ideal gas N2. Use the full fluid name for real-fluid properties.\` | Spelled formula selects the ideal-gas model | Use \`Nitrogen\`, \`CarbonDioxide\`, … for the real fluid. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`Pressure\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `quality`,
     slug: `quality`,
     category: `Fluid Properties`,
-    summary: `Vapour mass fraction, or -1 for single-phase states.`,
+    summary: `Vapour quality (mass fraction of vapour) [–] of a fluid at a state fixed by named inputs.`,
     related: [`enthalpy`, `temperature`, `pressure`],
     examples: [],
-    tags: [`quality`, `property`, `fluid`, `coolprop`],
+    tags: [`quality`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [],
-    body: `Returns the vapour mass fraction of a real fluid, or \`-1\` outside the two-phase region.
+    body: `Vapour quality (mass fraction of vapour) [–] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-x = Quality(Fluid, P=p, h=h)
-\`\`\`
-
-\`\`\`
-x = Quality(Fluid, P=p, T=t)
+x = Quality(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply a real-fluid name and two independent state coordinates supported by the
-backend. Names are case-insensitive. In the two-phase region, quality is between
-0 (saturated liquid) and 1 (saturated vapour). At saturation, temperature and
-pressure alone do not determine quality; use pressure and enthalpy, for example.
-For a single-phase state, the default rustprop backend returns \`-1\`. Do not
-interpret this sentinel as a negative physical vapour fraction or clamp it to zero.
+\`Quality(Fluid, X1=…, X2=…)\` returns the vapour quality (mass fraction of vapour) [–] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Returns a value in [0, 1] inside the two-phase dome and **−1** for any single-phase state (subcooled liquid, superheated vapour or supercritical) — the CoolProp convention, so test \`x >= 0\` before using it as a fraction.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | — | Use the full fluid name for the real-fluid value |
+| Incompressibles and glycols (\`EG50\`, …) | — | — |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -41627,47 +40465,29 @@ x = -1
 
 ## Input Arguments
 
-### Fluid — Real-fluid name
-
-Name or alias recognized by the real-fluid backend.
-
-**Example:** \`Water\`
-
-**Data Types:** \`identifier\` | \`string\`
-
-### p — Absolute pressure
-
-Pressure coordinate in pascals; unit-annotated values convert to SI.
-
-**Example:** \`P=101325 [Pa]\`
-
-**Data Types:** \`number\`
-
-### h — Specific enthalpy
-
-Enthalpy coordinate in J/kg, used with pressure to identify a two-phase state.
-
-**Example:** \`h=1000000 [J/kg]\`
-
-**Data Types:** \`number\`
-
-### t — Absolute temperature
-
-Temperature coordinate in kelvin, used with pressure for a single-phase state.
-
-**Example:** \`T=400 [K]\`
-
-**Data Types:** \`number\`
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
 
 ## Output Arguments
 
-### x — Vapour mass fraction or sentinel
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`x\` | Number | Vapour quality (mass fraction of vapour) [–]. |
 
-Dimensionless scalar; \`-1\` denotes a single-phase state for the default backend.
+## Common Errors
 
-**Example:** \`x = -1\`
-
-**Data Types:** \`number\`
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Quality requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Quality(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Function 'quality' is not available for the ideal gas N2. Use the full fluid name for real-fluid properties.\` | Spelled formula selects the ideal-gas model | Use \`Nitrogen\`, \`CarbonDioxide\`, … for the real fluid. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`Quality\` called with \`AirH2O\` | Use one of the humid-air functions listed. |
 
 ## Version History
 
@@ -41678,25 +40498,45 @@ native builds also use rustprop by default and return \`-1\` for single-phase st
     name: `relhum`,
     slug: `relhum`,
     category: `Fluid Properties`,
-    summary: `Humid-air property: relhum from the real-fluid property backend.`,
+    summary: `Relative humidity (0–1) [–] of humid air (AirH2O) from three named inputs.`,
     related: [],
     examples: [],
-    tags: [`relhum`, `property`, `humid-air`, `coolprop`],
+    tags: [`relhum`, `property`, `humid-air`, `rustprop`],
     references: [],
     guides: [`humidair`],
-    body: `Returns the **relhum** of a humid-air (AirH2O) from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Relative humidity (0–1) [–] of humid air (AirH2O) from three named inputs.
 
 ## Syntax
 
 \`\`\`
-relhum(AirH2O, T=, P=, R=)
+phi = RelHum(AirH2O, T=…, P=…, R=…)
+phi = RelHum(AirH2O, X1=…, X2=…, P=…)
 \`\`\`
 
 ## Description
 
-A humid-air property; supply the dry-bulb T, total pressure P, and one humidity coordinate (R, W, B, or D). Property names are case-insensitive.
+\`RelHum(AirH2O, T=…, P=…, R=…)\` returns the relative humidity (0–1) [–] of moist air. Humid-air properties need three named inputs, one of which must be the pressure \`P\`; the order does not matter and names are case-insensitive.
+
+## Valid inputs
+
+Humid air takes **three** named inputs, one of which must be \`P\`. Combinations verified through the engine:
+
+| Inputs | Meaning |
+| --- | --- |
+| \`T\`, \`P\`, \`R\` | dry-bulb temperature, pressure, relative humidity (0–1) |
+| \`T\`, \`P\`, \`w\` | … humidity ratio |
+| \`T\`, \`P\`, \`B\` | … wet-bulb temperature (alias \`Twb\`) |
+| \`T\`, \`P\`, \`D\` | … dew-point temperature (alias \`Tdp\`) |
+| \`h\`, \`P\`, \`R\` | enthalpy per kg dry air, pressure, relative humidity |
+
+Indicators: \`T\`, \`P\`, \`h\`, \`s\`, \`v\`, \`w\`, \`R\` (\`RH\`), \`B\` (\`Twb\`), \`D\` (\`Tdp\`).
+
+## Fluid support
+
+| Fluid class | Supported |
+| --- | --- |
+| Humid air (\`AirH2O\`) | ✓ — three inputs, one of them \`P\` |
+| Real, pseudo-pure, ideal-gas and incompressible fluids | — (humid-air function only) |
 
 ## Examples
 
@@ -41722,31 +40562,84 @@ rh = 0.5
 w = 0.009925739296
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`AirH2O\` | Name | Yes | The humid-air pseudo-fluid. |
+| three of \`T\`, \`P\`, \`h\`, \`s\`, \`v\`, \`w\`, \`R\`, \`B\`, \`D\` | Number | Yes | Named inputs; one must be \`P\` [Pa]. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`phi\` | Number | Relative humidity (0–1) [–]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Pressure must be one of the inputs to HAPropsSI\` | The three inputs do not include \`P\` | Add \`P=…\` as one of the three inputs. |
+| \`The input for key (Rh) with value (1.5) is outside the range of validity: (0) to (1)\` | Relative humidity given in percent | Pass \`R\` as a fraction, e.g. \`R=0.5\`. |
+| \`RelHum requires …\` | Fewer than three inputs | Humid air needs three inputs, e.g. \`T\`, \`P\`, \`R\`. |`,
   },
   {
     name: `soundspeed`,
     slug: `soundspeed`,
     category: `Fluid Properties`,
-    summary: `Fluid property: soundspeed from the real-fluid property backend.`,
+    summary: `Speed of sound [m/s] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`soundspeed`, `property`, `fluid`, `coolprop`],
+    tags: [`soundspeed`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **soundspeed** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Speed of sound [m/s] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-soundspeed(Fluid, P=, T=)
+c = SoundSpeed(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`SoundSpeed(Fluid, X1=…, X2=…)\` returns the speed of sound [m/s] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Undefined inside the two-phase dome (the engine refuses it there).
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | — | Use the full fluid name for the real-fluid value |
+| Incompressibles and glycols (\`EG50\`, …) | — | — |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -41768,31 +40661,93 @@ Expected output (selected solution values; numerical rounding may vary):
 result = 1501.522647 [m/s]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`c\` | Number | Speed of sound [m/s]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`SoundSpeed requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in SoundSpeed(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Function 'soundspeed' is not available for the ideal gas N2. Use the full fluid name for real-fluid properties.\` | Spelled formula selects the ideal-gas model | Use \`Nitrogen\`, \`CarbonDioxide\`, … for the real fluid. |
+| \`Speed of sound is not defined for two-phase states because it depends on the distribution of phases.\` | State inside the dome | Evaluate at \`x=0\` or \`x=1\`. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`SoundSpeed\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `specheat`,
     slug: `specheat`,
     category: `Fluid Properties`,
-    summary: `Fluid property: specheat from the real-fluid property backend.`,
+    summary: `Isobaric specific heat capacity [J/kg-K] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`specheat`, `property`, `fluid`, `coolprop`],
+    tags: [`specheat`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [],
-    body: `Returns the **specheat** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Isobaric specific heat capacity [J/kg-K] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-specheat(Fluid, P=, T=)
+cp = SpecHeat(Fluid, X1=…, X2=…)
+cp = SpecHeat(AirH2O, T=…, P=…, R=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`SpecHeat(Fluid, X1=…, X2=…)\` returns the isobaric specific heat capacity [J/kg-K] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Same quantity as \`Cp\`.
+
+Inside the two-phase dome frees returns exactly what CoolProp 8 returns: the single-phase correlation evaluated at the mixture's average density. That number is not a physical property of the mixture and jumps with quality (Water at 373.15 K: \`Cp\` = 64 518 J/(kg·K) at \`x=0.25\`, 2 654 at \`x=0.5\`). Evaluate it on a single-phase state, or at \`x=0\` / \`x=1\` for the saturated liquid / vapour.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` only |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | ✓ | Three inputs, one of them \`P\`; per kg of dry air |
 
 ## Examples
 
@@ -41846,31 +40801,89 @@ cp_h2 = 14321.41329 [J/kg-K]
 cp_n2 = 1062.921679 [J/kg-K]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`cp\` | Number | Isobaric specific heat capacity [J/kg-K]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`SpecHeat requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in SpecHeat(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`SpecHeat(N2, ...) is an ideal-gas function of temperature only, e.g. SpecHeat(N2, T=300)\` | Ideal gas called with a pressure | Pass only \`T\` for an ideal gas. |`,
   },
   {
     name: `temperature`,
     slug: `temperature`,
     category: `Fluid Properties`,
-    summary: `Fluid property: temperature from the real-fluid property backend.`,
+    summary: `Temperature [K] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [`pressure-cooker`, `uncertain-tank-inventory`],
-    tags: [`temperature`, `property`, `fluid`, `coolprop`],
+    tags: [`temperature`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`debugging`, `errors`, `comp-authoring`, `thermo`],
-    body: `Returns the **temperature** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Temperature [K] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-temperature(Fluid, P=, T=)
+T = Temperature(Fluid, X1=…, X2=…)
+T = Temperature(AirH2O, T=…, P=…, R=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Temperature(Fluid, X1=…, X2=…)\` returns the temperature [K] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Pass any supported pair that does not already contain T — for example the state after a throttle, \`Temperature(R134a, P=P2, h=h1)\`.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`h\`, or \`s\` with \`P\` |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | ✓ | Three inputs, one of them \`P\`; per kg of dry air |
 
 ## Examples
 
@@ -41899,31 +40912,87 @@ h1 = 2890000
 P1 = 500000
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`T\` | Number | Temperature [K]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Temperature requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Temperature(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |`,
   },
   {
     name: `viscosity`,
     slug: `viscosity`,
     category: `Fluid Properties`,
-    summary: `Fluid property: viscosity from the real-fluid property backend.`,
+    summary: `Dynamic viscosity [Pa-s] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`viscosity`, `property`, `fluid`, `coolprop`],
+    tags: [`viscosity`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **viscosity** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Dynamic viscosity [Pa-s] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-viscosity(Fluid, P=, T=)
+mu = Viscosity(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Viscosity(Fluid, X1=…, X2=…)\` returns the dynamic viscosity [Pa-s] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Inside the two-phase dome frees returns exactly what CoolProp 8 returns: the single-phase correlation evaluated at the mixture's average density. That number is not a physical property of the mixture and jumps with quality (Water at 373.15 K: \`Cp\` = 64 518 J/(kg·K) at \`x=0.25\`, 2 654 at \`x=0.5\`). Evaluate it on a single-phase state, or at \`x=0\` / \`x=1\` for the saturated liquid / vapour.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | — | Use the full fluid name for the real-fluid value |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -41990,31 +41059,87 @@ cp3 = 5696.451047 [J/kg-K]
 d1 = 71.1847863 [kg/m^3]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`mu\` | Number | Dynamic viscosity [Pa-s]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Viscosity requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Viscosity(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Function 'viscosity' is not available for the ideal gas N2. Use the full fluid name for real-fluid properties.\` | Spelled formula selects the ideal-gas model | Use \`Nitrogen\`, \`CarbonDioxide\`, … for the real fluid. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`Viscosity\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `volexpcoef`,
     slug: `volexpcoef`,
     category: `Fluid Properties`,
-    summary: `Fluid property: volexpcoef from the real-fluid property backend.`,
+    summary: `Isobaric volume-expansion coefficient β = −(1/ρ)(∂ρ/∂T)_P [1/K] of a fluid at a state fixed by named inputs.`,
     related: [],
     examples: [],
-    tags: [`volexpcoef`, `property`, `fluid`, `coolprop`],
+    tags: [`volexpcoef`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [],
-    body: `Returns the **volexpcoef** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Isobaric volume-expansion coefficient β = −(1/ρ)(∂ρ/∂T)_P [1/K] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-volexpcoef(Fluid, P=, T=)
+beta = VolExpCoef(Fluid, X1=…, X2=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`VolExpCoef(Fluid, X1=…, X2=…)\` returns the isobaric volume-expansion coefficient β = −(1/ρ)(∂ρ/∂T)_P [1/K] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | — | Use the full fluid name for the real-fluid value |
+| Incompressibles and glycols (\`EG50\`, …) | — | — |
+| Humid air (\`AirH2O\`) | — | Not a humid-air output |
 
 ## Examples
 
@@ -42036,31 +41161,90 @@ Expected output (selected solution values; numerical rounding may vary):
 result = 0.0002748050321
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`beta\` | Number | Isobaric volume-expansion coefficient β = −(1/ρ)(∂ρ/∂T)_P [1/K]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`VolExpCoef requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in VolExpCoef(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |
+| \`Function 'volexpcoef' is not available for the ideal gas N2. Use the full fluid name for real-fluid properties.\` | Spelled formula selects the ideal-gas model | Use \`Nitrogen\`, \`CarbonDioxide\`, … for the real fluid. |
+| \`Unknown humid-air function: …. Supported: cp, dewpoint, enthalpy, entropy, gibbs, humrat, relhum, specheat, temperature, volume, wetbulb\` | \`VolExpCoef\` called with \`AirH2O\` | Use one of the humid-air functions listed. |`,
   },
   {
     name: `volume`,
     slug: `volume`,
     category: `Fluid Properties`,
-    summary: `Fluid property: volume from the real-fluid property backend.`,
+    summary: `Specific volume [m^3/kg] of a fluid at a state fixed by named inputs.`,
     related: [],
-    examples: [`rankine-cycle`, `thermo-compliance`, `rankine-cycle`, `engine-cycle-wiebe`, `uncertain-tank-inventory`],
-    tags: [`volume`, `property`, `fluid`, `coolprop`],
+    examples: [`rankine-cycle`, `thermo-compliance`, `engine-cycle-wiebe`, `uncertain-tank-inventory`],
+    tags: [`volume`, `property`, `fluid`, `rustprop`],
     references: [],
     guides: [`thermo`],
-    body: `Returns the **volume** of a real fluid from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Specific volume [m^3/kg] of a fluid at a state fixed by named inputs.
 
 ## Syntax
 
 \`\`\`
-volume(Fluid, P=, T=)
+v = Volume(Fluid, X1=…, X2=…)
+v = Volume(AirH2O, T=…, P=…, R=…)
 \`\`\`
 
 ## Description
 
-Supply the fluid name and any two independent state properties (T, P, h, s, x, …). Property names are case-insensitive.
+\`Volume(Fluid, X1=…, X2=…)\` returns the specific volume [m^3/kg] of \`Fluid\` at the state fixed by two named inputs (see *Valid input pairs*). \`Fluid\` is a fluid name or alias, bare (\`Water\`) or as a string variable (\`fluid$\`); names and indicators are case-insensitive. Results are in SI base units.
+
+Equal to \`1/Density(...)\`. For humid air it is per kilogram of dry air.
+
+## Valid input pairs
+
+A real-fluid state is fixed by **two** named inputs, in any order and any case. Indicators: \`T\` [K], \`P\` [Pa], \`h\` [J/kg], \`s\` [J/kg-K], \`u\` [J/kg], \`v\` [m^3/kg] (or \`d\`/\`rho\` [kg/m^3]), \`x\` (or \`q\`) [–]. Pairs verified through the engine for real fluids:
+
+| Pair | Single phase |
+| --- | --- |
+| \`T\`, \`P\` | ✓ |
+| \`T\`, \`h\` | ✓ |
+| \`T\`, \`s\` | ✓ |
+| \`T\`, \`u\` | ✓ |
+| \`T\`, \`v\` | ✓ |
+| \`P\`, \`h\` | ✓ |
+| \`P\`, \`s\` | ✓ |
+| \`P\`, \`u\` | ✓ |
+| \`P\`, \`v\` | ✓ |
+| \`h\`, \`s\` | ✓ |
+| \`h\`, \`v\` | ✓ |
+| \`s\`, \`v\` | ✓ |
+| \`u\`, \`v\` | ✓ |
+
+Inside the two-phase dome use quality with \`T\`, \`P\` or \`v\`: \`(T, x)\`, \`(P, x)\`, \`(v, x)\`. **Not supported:** \`(h, u)\`, \`(s, u)\`, and quality with \`h\`, \`s\` or \`u\` — the engine reports *Input pair variable is invalid*.
+
+## Fluid support
+
+| Fluid class | Supported | Inputs |
+| --- | --- | --- |
+| Real fluids (\`Water\`, \`R134a\`, \`CarbonDioxide\`, …) | ✓ | Every pair in the table above |
+| Pseudo-pure mixtures (\`Air\`) | ✓ | Pairs containing \`T\` or \`P\`; \`x\` only 0 or 1 |
+| Ideal gases (spelled formulas: \`N2\`, \`CO2\`, \`CH4\`, …) | ✓ | \`T\` and \`P\` |
+| Incompressibles and glycols (\`EG50\`, …) | ✓ | \`(T, P)\`, \`(P, h)\`, \`(P, s)\`; no quality |
+| Humid air (\`AirH2O\`) | ✓ | Three inputs, one of them \`P\`; per kg of dry air |
 
 ## Examples
 
@@ -42086,31 +41270,75 @@ h = 50423.45039 [J/kg]
 v = 0.8577882434 [m^3/kg]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`Fluid\` | Name or string | Yes | Fluid name or alias (\`Water\`, \`R134a\`, \`r744\`, …) or a string variable such as \`fluid$\`. See *Supported Fluids*. |
+| \`X1=…, X2=…\` | Number | Yes | Two named state inputs from *Valid input pairs*, in SI units. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`v\` | Number | Specific volume [m^3/kg]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Volume requires a fluid and exactly two property indicators, e.g. …\` | One indicator (or three) was given | Pass exactly two, e.g. \`T=…, P=…\`. |
+| \`Unknown property indicator 'z' in Volume(...). Supported: d, h, p, q, rho, s, t, u, v, x\` | Misspelled indicator | Use one of the listed indicators. |
+| \`Input pair variable is invalid and output(s) are non-trivial; cannot do state update\` | Unsupported pair, e.g. \`(h, u)\`, or the same indicator twice | Use a pair from *Valid input pairs*. The message appears inside “Newton iteration stalled after 0 iteration(s)”. |
+| \`Unknown fluid 'name' in …. Check the spelling against Help → Supported Fluids.\` | The fluid name is not one frees or CoolProp knows | Check the spelling against *Supported Fluids*. |
+| \`For now, we don't support T [200 K] below Tmelt(p) [273.15… K]\` | State below the melting line | Raise \`T\`, or check the unit annotation (\`[C]\` vs K). |
+| \`For pseudo-pure fluid, quality must be equal to 0 or 1.\` | Two-phase quality on a pseudo-pure mixture such as \`Air\` | Use \`x=0\` or \`x=1\`, or a single-phase pair. |`,
   },
   {
     name: `wetbulb`,
     slug: `wetbulb`,
     category: `Fluid Properties`,
-    summary: `Humid-air property: wetbulb from the real-fluid property backend.`,
+    summary: `Thermodynamic wet-bulb temperature [K] of humid air (AirH2O) from three named inputs.`,
     related: [],
     examples: [],
-    tags: [`wetbulb`, `property`, `humid-air`, `coolprop`],
+    tags: [`wetbulb`, `property`, `humid-air`, `rustprop`],
     references: [],
     guides: [`humidair`],
-    body: `Returns the **wetbulb** of a humid-air (AirH2O) from any valid pair of independent state properties (rustprop, a pure-Rust port of CoolProp 8.0.0).
-
-> Real-fluid/material/symbolic operation — see the inputs and references below.
+    body: `Thermodynamic wet-bulb temperature [K] of humid air (AirH2O) from three named inputs.
 
 ## Syntax
 
 \`\`\`
-wetbulb(AirH2O, T=, P=, R=)
+T_wb = WetBulb(AirH2O, T=…, P=…, R=…)
+T_wb = WetBulb(AirH2O, X1=…, X2=…, P=…)
 \`\`\`
 
 ## Description
 
-A humid-air property; supply the dry-bulb T, total pressure P, and one humidity coordinate (R, W, B, or D). Property names are case-insensitive.
+\`WetBulb(AirH2O, T=…, P=…, R=…)\` returns the thermodynamic wet-bulb temperature [K] of moist air. Humid-air properties need three named inputs, one of which must be the pressure \`P\`; the order does not matter and names are case-insensitive.
+
+## Valid inputs
+
+Humid air takes **three** named inputs, one of which must be \`P\`. Combinations verified through the engine:
+
+| Inputs | Meaning |
+| --- | --- |
+| \`T\`, \`P\`, \`R\` | dry-bulb temperature, pressure, relative humidity (0–1) |
+| \`T\`, \`P\`, \`w\` | … humidity ratio |
+| \`T\`, \`P\`, \`B\` | … wet-bulb temperature (alias \`Twb\`) |
+| \`T\`, \`P\`, \`D\` | … dew-point temperature (alias \`Tdp\`) |
+| \`h\`, \`P\`, \`R\` | enthalpy per kg dry air, pressure, relative humidity |
+
+Indicators: \`T\`, \`P\`, \`h\`, \`s\`, \`v\`, \`w\`, \`R\` (\`RH\`), \`B\` (\`Twb\`), \`D\` (\`Tdp\`).
+
+## Fluid support
+
+| Fluid class | Supported |
+| --- | --- |
+| Humid air (\`AirH2O\`) | ✓ — three inputs, one of them \`P\` |
+| Real, pseudo-pure, ideal-gas and incompressible fluids | — (humid-air function only) |
 
 ## Examples
 
@@ -42136,7 +41364,28 @@ T_dp = 287.0168866 [K]
 T_wb = 291.0334868 [K]
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`AirH2O\` | Name | Yes | The humid-air pseudo-fluid. |
+| three of \`T\`, \`P\`, \`h\`, \`s\`, \`v\`, \`w\`, \`R\`, \`B\`, \`D\` | Number | Yes | Named inputs; one must be \`P\` [Pa]. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`T_wb\` | Number | Thermodynamic wet-bulb temperature [K]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Pressure must be one of the inputs to HAPropsSI\` | The three inputs do not include \`P\` | Add \`P=…\` as one of the three inputs. |
+| \`The input for key (Rh) with value (1.5) is outside the range of validity: (0) to (1)\` | Relative humidity given in percent | Pass \`R\` as a fraction, e.g. \`R=0.5\`. |
+| \`WetBulb requires …\` | Fewer than three inputs | Humid air needs three inputs, e.g. \`T\`, \`P\`, \`R\`. |`,
   },
   {
     name: `dp_1phase`,
@@ -45232,10 +44481,12 @@ The effectiveness–NTU rating example forms \`NTU = UA/C_min\` directly; \`hx_N
 performs the reverse map \`ε → NTU\` for the same arrangement when sizing to a
 target effectiveness.
 
+Related gallery example:
+
 [Run: hx-effectiveness-ntu]
 
-**Expected:** for \`ε ≈ 0.711\`, \`Cr = 0.75\`, \`hx_NTU('counterflow', 0.711, 0.75) ≈ 1.91\`
-(recovering the example's \`NTU = UA/C_min\`).
+**Expected:** for \`ε ≈ 0.711\`, \`Cr = 0.75\`, \`hx_NTU('counterflow', 0.711, 0.75) ≈ 1.92\`
+— the example's \`NTU = UA/C_min ≈ 1.91\`, recovered to within the rounding of \`ε\`.
 
 ## Input Arguments
 
@@ -47759,6 +47010,75 @@ s = dtable1('quad', 1)    { = 2 — the natural spline through x² has the exact
 \`dtable\`, \`Interpolate1\`, \`Differentiate\``,
   },
   {
+    name: `interp2`,
+    slug: `interp2`,
+    category: `Interpolation`,
+    summary: `Regular-grid 2-D interpolation z = f(x, y).`,
+    related: [`interpolate`, `interpolate2d`],
+    examples: [],
+    tags: [`interp2`, `interpolation`, `2d`, `grid`],
+    references: [],
+    guides: [],
+    body: `Regular-grid 2-D interpolation z = f(x, y).
+
+## Syntax
+
+\`\`\`
+zq = interp2(x, y, Z, xq, yq)
+zq = interp2(xq, yq, x, y, Z)
+\`\`\`
+
+## Description
+
+\`interp2(x, y, Z, xq, yq)\` interpolates the grid \`Z\` (rows along \`x\`, columns along \`y\`) at the query point (xq, yq). The query-first order \`interp2(xq, yq, x, y, Z)\` is also accepted; the 2-D grid argument tells the two apart. Grids with at least 5 nodes per axis use a piecewise Akima bicubic spline; smaller grids are interpolated bilinearly. Queries outside the grid clamp to the boundary.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | Grid coordinates along the first axis (ascending). |
+| \`y\` | Vector | Yes | Grid coordinates along the second axis (ascending). |
+| \`Z\` | Matrix | Yes | Grid values, length(x) × length(y). |
+| \`xq, yq\` | Number | Yes | Query point. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`zq\` | Number | Interpolated value. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Interpolate a calibration grid
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+x = [0, 1]
+y = [0, 1]
+z = [0, 1; 2, 3]
+[result] = interp2(x, y, z, 0.5, 0.5)
+
+{ CHECK result 1.5 0.0000015 }
+{ CHECK x[1] 0 1e-8 }
+{ CHECK x[2] 1 0.000001 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 1.5
+x[1] = 0
+x[2] = 1
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `interpolate`,
     slug: `interpolate`,
     category: `Interpolation`,
@@ -48175,6 +47495,927 @@ r = 2.5
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | \`'t'\` | Number | Yes | Name of a TABLE block (string). |`,
+  },
+  {
+    name: `and`,
+    slug: `and`,
+    category: `Language Keywords`,
+    summary: `Logical operators for conditions inside function bodies and events.`,
+    related: [`FUNCTION`, `if`],
+    examples: [],
+    tags: [`keyword`, `logic`, `boolean`, `condition`, `and`, `or`, `not`],
+    references: [],
+    guides: [],
+    body: `Combine comparisons in \`IF\`, \`WHILE\` and \`UNTIL\` conditions. \`not\` has the highest precedence, then \`and\`, then \`or\`; use parentheses to make intent explicit.
+
+## Syntax
+
+\`\`\`
+IF a > 0 and b > 0 THEN … END
+IF x < lo or not (x <= hi) THEN … END
+\`\`\`
+
+## Description
+
+The operators are conditions, not values: a top-level equation such as \`x = 1 and 0\` is a syntax error. For a value that switches at the top level use \`If(a, b, lt, eq, gt)\` or a smooth surrogate.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Band checks
+
+\`\`\`frees
+function y = band(x, lo, hi)
+  if x >= lo and x <= hi then
+    y := 1
+  else
+    y := 0
+  end
+end
+function y = outside(x, lo, hi)
+  if x < lo or not (x <= hi) then
+    y := 1
+  else
+    y := 0
+  end
+end
+inside_ok  = band(25, 20, 30)
+outside_ok = outside(35, 20, 30)
+
+{ CHECK inside_ok 1 0.000001 }
+{ CHECK outside_ok 1 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+inside_ok = 1
+outside_ok = 1
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`\`expected end of statement, found \`AND\` \`\` | A logical operator in a top-level equation. | Move the logic into a function, or use \`If(…)\`. |`,
+  },
+  {
+    name: `CALL`,
+    slug: `call`,
+    category: `Language Keywords`,
+    summary: `Legacy CALL/PROCEDURE/MODULE/COMPONENT/PARAM syntax, rejected by the solver and converted by frees-cli migrate.`,
+    related: [`FUNCTION`, `connect`],
+    examples: [],
+    tags: [`keyword`, `legacy`, `migration`, `procedure`, `module`, `component`, `param`, `call`],
+    references: [],
+    guides: [],
+    body: `These words remain reserved but are no longer accepted by the solver. A document that uses them fails with \`FREES-MIG-001\`; convert it with \`frees-cli migrate FILE\`, which prints version-2 syntax.
+
+| Legacy | Version 2 |
+| --- | --- |
+| \`PROCEDURE f(a, b : q, r) … END\` + \`CALL f(1, 2 : q, r)\` | \`function [q, r] = f(a, b) … end\` + \`[q, r] = f(1, 2)\` |
+| \`COMPONENT Gain(u, y)\` + \`PARAM k = 2\` | \`function [u, y] = Gain(k = 2)\` + \`port(u)\`, \`port(y)\` |
+| \`MODULE m(x : y) … END\` | No automatic conversion — rewrite as a \`function\` or a component. |
+
+## Syntax
+
+\`\`\`
+frees-cli migrate legacy.frees > model.frees
+\`\`\`
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — The legacy form is rejected
+
+\`\`\`frees error="FREES-MIG-001: \`CALL\` is legacy syntax"
+CALL divmod(17, 5 : q, r)
+\`\`\`
+
+### Verified example — The migrated form
+
+\`\`\`frees
+function [q, r] = divmod(a, b)
+  q := trunc(a / b)
+  r := a - q*b
+end
+[q, r] = divmod(17, 5)
+
+{ CHECK q 3 0.000001 }
+{ CHECK r 2 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+q = 3
+r = 2
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`\`FREES-MIG-001: \`PROCEDURE\` is legacy syntax; use the migration converter\`\` | Legacy block in the document. | Run \`frees-cli migrate\`. |
+| \`migration line 1: MODULE blocks require a model-specific conversion\` | \`migrate\` cannot convert a \`MODULE\`. | Rewrite it by hand. |`,
+  },
+  {
+    name: `connect`,
+    slug: `connect`,
+    category: `Language Keywords`,
+    summary: `Joins component ports; VARIANT/REQUIRE select model fidelity inside a component.`,
+    related: [`FUNCTION`, `DYNAMIC`, `Source`, `Sink`],
+    examples: [],
+    tags: [`keyword`, `component`, `port`, `connect`, `variant`, `require`, `network`],
+    references: [],
+    guides: [`comp-first-network`, `comp-connections`, `comp-domains`, `comp-authoring`, `comp-transient`, `gs-components`],
+    body: `\`connect(a.port, b.port, …)\` joins ports of the same domain into one node. Inside a component definition, \`VARIANT name … END\` blocks hold model-specific equations and \`REQUIRE\` names the parameters that variant needs; \`model$\` selects the variant per instance.
+
+## Syntax
+
+\`\`\`
+function [in, out] = Name(fluid$=Air, model$=default_variant, p1=…)
+  port(in)
+  port(out)
+  shared_equation
+  VARIANT name REQUIRE p2, p3
+    variant_equation
+  END
+end
+
+Name INST(fluid$=Air, model$=name, p2=…, p3=…)
+connect(A.out, INST.in)
+connect(PUMP.out, RAD.in, BYPASS.in)
+\`\`\`
+
+## Description
+
+Connecting a fluid node equates its pressure and enthalpy and sums mass flow; a heat node equates temperature and sums heat flow. Mismatched domains are a hard error. Equations outside any \`VARIANT\` are shared. \`REQUIRE\` is validated only for the selected variant. A component for a non-default fluid family declares it with a \`domain$=\` header parameter (\`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`).
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — A fan with two fidelity levels
+
+The \`curve\` variant gives $P_{out} = P_{in} + dP_0 - k_Q \\dot m^2 = 101325 + 300 - 150$.
+
+\`\`\`frees
+function [in, out] = MyFan(fluid$=Air, model$=simple)
+  port(in)
+  port(out)
+  out.mdot = in.mdot
+  out.h    = in.h
+  VARIANT simple
+    out.P = in.P + 250
+  END
+  VARIANT curve REQUIRE dP0, kQ
+    out.P = in.P + dP0 - kQ * in.mdot^2
+  END
+end
+Source SUP(fluid$=Air, mdot=0.1 [kg/s], P=101325 [Pa], T=293.15 [K])
+MyFan  F1(fluid$=Air, model$=curve, dP0=300, kQ=1.5e4)
+Sink   RET()
+connect(SUP.out, F1.in)
+connect(F1.out, RET.in)
+P_out = F1.out.P
+
+{ CHECK P_out 101475 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+P_out = 101475 [Pa]
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`connect(...): 'ret.nope' is not a port (instance.port) or a stream name.\` | Misspelled port. | Use a port the component declares. |
+| \`Component 'f1' (f): parameter 'dp0' has no value (give it a default or pass dp0=value). (required by the selected 'curve' variant).\` | A \`REQUIRE\` parameter was not supplied. | Pass it on the instance. |
+| \`Component 'f1' (f): unknown model$ 'other'. Variants: simple.\` | \`model$\` names no variant. | Use a listed variant. |
+| \`cannot connect a 'fluid' line (sup.out) to a 'gas' line (h1.in). …\` | Mismatched fluid families. | Couple them through a heat exchanger. |`,
+  },
+  {
+    name: `DYNAMIC`,
+    slug: `dynamic`,
+    category: `Language Keywords`,
+    summary: `Integrates a coupled ODE/DAE system in time and publishes its trajectory as an ODE Table.`,
+    related: [`LINEARIZE`, `PLOT`, `FinalValue`, `TimeAt`, `ODEValue`, `MaxValue`],
+    examples: [],
+    tags: [`keyword`, `block`, `transient`, `ode`, `dae`, `event`, `integrator`, `time`],
+    references: [],
+    guides: [],
+    body: `Declares a transient system. A variable becomes a **state** the moment \`der(X)\` appears in the body; each state needs one derivative equation and one initial condition \`X(0) = …\`. \`EVENT\` lines inside the block watch zero crossings.
+
+## Syntax
+
+\`\`\`
+DYNAMIC name (method = solver, time = t0 .. tf, points = n)
+  der(state) = rate_expression
+  state(0)   = initial_value
+  auxiliary  = algebraic_expression
+  EVENT label: condition -> stop
+  EVENT label: lhs = rhs | falling -> record
+  EVENT label: lhs = rhs | rising  -> set state = expression
+END
+\`\`\`
+
+## Description
+
+The block runs after the analytic equations: top-level values such as rate constants are visible inside it, and the trajectory accessors (\`FinalValue\`, \`TimeAt\`, \`ODEValue\`, \`MaxValue\`, …) read results back into the top-level solve. Every state, auxiliary and \`time\` becomes a column of the block's **ODE Table**.
+
+- **Options** — \`method\` (default \`ode45\`), the interval \`time = t0 .. tf\` (also spelled \`t\` or \`tspan\`), \`points\` (output samples), \`rtol\` and \`atol\`.
+- **\`EVENT\`** — \`stop\` ends the run at the crossing, \`record\` logs it and continues, \`set state = expr\` reassigns a state and restarts integration. \`| rising\` / \`| falling\` filter the crossing direction; give \`set\` events a direction so they cannot immediately retrigger.
+- An **empty** body is valid in a component network: storage components inject their own \`der(...)\` equations and initial conditions.
+
+## Mathematical Formulation
+
+$$ \\dot{\\mathbf{x}} = \\mathbf{f}(t, \\mathbf{x}, \\mathbf{z}), \\qquad \\mathbf{0} = \\mathbf{g}(t, \\mathbf{x}, \\mathbf{z}), \\qquad \\mathbf{x}(t_0) = \\mathbf{x}_0 $$
+
+An event fires where its guard $e(t, \\mathbf{x}) = \\mathrm{lhs} - \\mathrm{rhs}$ changes sign; the crossing time is root-found inside the step.
+
+> **Method:** explicit Runge–Kutta (\`ode1\`–\`ode5\`, \`ode23\`, \`ode45\`), Rosenbrock (\`ode23s\`), BDF (\`ode15s\`), Radau IIA (\`radau5\`), or the implicit DAE solver \`ida\` for component networks.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Coffee cooling to a drinkable temperature
+
+Newton's law of cooling with a \`stop\` event at 60 °C. The analytic crossing time is $\\ln(70/40)/0.05 = 11.1923$ s.
+
+\`\`\`frees
+k     = 0.05
+T_amb = 20
+DYNAMIC cooldown (method = ode45, time = 0 .. 120, points = 121)
+  der(T) = -k * (T - T_amb)
+  T(0)   = 90
+  EVENT drinkable: T = 60 | falling -> stop
+END
+t_drink = FinalValue('time')
+T_end   = FinalValue('T')
+
+{ CHECK t_drink 11.1923157 0.000001 }
+{ CHECK T_end 60 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+t_drink = 11.19232
+T_end = 60
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Clauses
+
+| Clause | Required | Description |
+| --- | --- | --- |
+| \`method = name\` | No | \`ode45\` (default), \`ode1\`–\`ode5\`, \`ode23\`, \`ode23s\`, \`ode15s\`, \`radau5\`, \`ida\`. |
+| \`time = t0 .. tf\` | Yes | Integration interval; \`t\` and \`tspan\` are accepted spellings. |
+| \`points = n\` | No | Number of output samples in the ODE Table. |
+| \`rtol\`, \`atol\` | No | Integrator tolerances. |
+| \`der(x) = …\` | Per state | Derivative equation. |
+| \`x(0) = …\` | Per state | Initial condition. |
+| \`EVENT label: … -> action\` | No | Zero-crossing event; action is \`stop\`, \`record\` or \`set state = expr\`. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`DYNAMIC a: state 'y' has no initial condition (y(0) = …).\` | A \`der(y)\` without \`y(0)\`. | Add the initial condition. |
+| \`DYNAMIC: unknown method 'foo'. …\` | Misspelled solver name. | Use one of the methods listed above. |
+| \`\`unterminated DYNAMIC a block: expected \`END\` \`\` | Missing \`END\`. | Close the block. |
+| \`TimeAt: column never reaches 60 in DYNAMIC 'cooldown'.\` | A \`stop\` event ends the run at the level being searched for. | Read \`FinalValue('time')\` instead, or search for a level the trajectory passes. |`,
+  },
+  {
+    name: `FOR`,
+    slug: `for`,
+    category: `Language Keywords`,
+    summary: `Repeats equations or assignments over an integer index.`,
+    related: [`FUNCTION`],
+    examples: [],
+    tags: [`keyword`, `loop`, `for`, `array`, `index`],
+    references: [],
+    guides: [],
+    body: `Generates one equation per index value. At the top level each iteration adds an equation to the system; inside a function body it is an ordinary loop over \`:=\` assignments.
+
+## Syntax
+
+\`\`\`
+FOR i = 1 TO n
+  x[i] = …
+END
+
+FOR i = 1 : n
+  …
+END
+\`\`\`
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Filling an array
+
+\`\`\`frees
+FOR i = 1 TO 4
+  q[i] = 10 * i
+END
+Q_total = q[1] + q[2] + q[3] + q[4]
+
+{ CHECK Q_total 100 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+q[1..4] = 10, 20, 30, 40
+Q_total = 100
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`\`unterminated FOR block: expected \`END\` \`\` | Missing \`END\`. | Close the loop. |
+| \`CALL is not supported inside a FOR loop within a PROCEDURE or FUNCTION …\` | Legacy \`CALL\` in a loop body. | Call the function directly. |`,
+  },
+  {
+    name: `FUNCTION`,
+    slug: `function`,
+    category: `Language Keywords`,
+    summary: `Defines a reusable function, with IF/WHILE/REPEAT control flow in ordered bodies.`,
+    related: [`FOR`, `and`, `if`, `connect`],
+    examples: [],
+    tags: [`keyword`, `function`, `procedure`, `control flow`, `if`, `while`, `repeat`, `loop`],
+    references: [],
+    guides: [],
+    body: `Defines a callable. An **ordered** body uses \`:=\` assignments that run top to bottom and may use \`IF … THEN … ELSE … END\`, \`WHILE … DO … END\` and \`REPEAT … UNTIL\`. Multiple outputs are declared in brackets and destructured at the call site.
+
+## Syntax
+
+\`\`\`
+function y = name(a, b)
+  y := expression
+end
+
+function [q, r] = name(a, b)
+  q := …
+  r := …
+end
+
+IF condition THEN … ELSE … END
+WHILE condition DO … END
+REPEAT … UNTIL condition
+\`\`\`
+
+## Description
+
+Keywords are case-insensitive. Control flow is only legal inside function bodies — the top level is declarative and uses the inline \`If(…)\` instead. Every output must be assigned on every path. A header of the form \`function [ports] = Name(params)\` with \`port(...)\` lines defines a **component** instead; see \`connect\`.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Loops and branches
+
+\`\`\`frees
+function s = sumto(n)
+  s := 0
+  i := 0
+  while i < n do
+    i := i + 1
+    s := s + i
+  end
+end
+function f = fact(n)
+  f := 1
+  k := 0
+  repeat
+    k := k + 1
+    f := f * k
+  until k >= n
+end
+function y = clip(x)
+  if x > 1 then
+    y := 1
+  else
+    y := x
+  end
+end
+a = sumto(10)
+b = fact(5)
+c = clip(3)
+d = clip(0.5)
+
+{ CHECK a 55 0.000001 }
+{ CHECK b 120 0.000001 }
+{ CHECK c 1 0.000001 }
+{ CHECK d 0.5 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+a = 55   b = 120   c = 1   d = 0.5
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`FUNCTION f never assigned a return value ('y := ...' missing)\` | A branch leaves the output unassigned. | Assign the output on every path. |
+| \`SYMBOLIC declarations are not allowed inside a PROCEDURE or FUNCTION.\` | \`SYMBOLIC\` in a body. | Move it to the top level. |
+| \`FUNCTION f defines 'y' with the equation … and also assigns it elsewhere\` | A body both assigns \`y := …\` and defines it with an equation \`y = …\`. | An equation defines a variable once; use \`:=\` for every assignment to it. |`,
+  },
+  {
+    name: `GUESS`,
+    slug: `guess`,
+    category: `Language Keywords`,
+    summary: `Seeds a variable's starting value and bounds for the nonlinear solver.`,
+    related: [`DYNAMIC`],
+    examples: [],
+    tags: [`keyword`, `guess`, `bounds`, `initial value`, `newton`, `convergence`],
+    references: [],
+    guides: [],
+    body: `Writes a variable's starting guess and bounds into the document, so the seed travels with the text instead of living only in Variable Info.
+
+## Syntax
+
+\`\`\`
+GUESS x = 2
+GUESS x [0, 10]
+GUESS x = 2 [0, 10]
+guess(x, 2, lower = 0, upper = 10)
+\`\`\`
+
+## Description
+
+A guess picks the root Newton converges to when an equation has several; bounds keep iteration in the physical range. Member paths (\`HX.in.P\`) are accepted. A \`GUESS\` in the text wins over Variable Information on conflict.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Selecting the root
+
+\`x^2 = 9\` and \`y^2 = 4\` each have two roots; the guesses and bounds select \`x = 3\` and \`y = -2\`.
+
+\`\`\`frees
+GUESS x = 2 [0, 10]
+x^2 = 9
+guess(y, -2, lower = -5, upper = 0)
+y^2 = 4
+
+{ CHECK x 3 0.000001 }
+{ CHECK y -2 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+x = 3
+y = -2
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`GUESS x: declare a guess (GUESS x = 2), bounds (GUESS x [0, 10]), or both.\` | A bare \`GUESS x\`. | Give a value, bounds, or both. |
+| \`GUESS x: the lower bound must be below the upper bound.\` | Crossed bounds. | Swap them. |
+| \`GUESS x: the guess 20 lies outside [0, 10].\` | Guess outside its own bounds. | Move the guess inside. |`,
+  },
+  {
+    name: `LINEARIZE`,
+    slug: `linearize`,
+    category: `Language Keywords`,
+    summary: `Numerically linearizes a DYNAMIC block into state-space matrices A, B, C, D.`,
+    related: [`DYNAMIC`, `ss2tf`, `bode`, `lqr`],
+    examples: [],
+    tags: [`keyword`, `block`, `linearization`, `state space`, `control`, `plant`],
+    references: [],
+    guides: [],
+    body: `Turns a named \`DYNAMIC\` block into a linear plant model. \`INPUT\` lists the exogenous variables to perturb and \`OUTPUT\` the observed quantities; the result is an ordinary set of matrices the control functions accept directly.
+
+## Syntax
+
+\`\`\`
+LINEARIZE name (block = dynamic_name, a = A, b = B, c = C, d = D)
+  INPUT  u1, u2
+  OUTPUT y1, inst.port.T
+END
+\`\`\`
+
+## Description
+
+States are the \`DYNAMIC\` block's \`der()\` variables. The Jacobians are evaluated about the block's **initial state** and the current input values, so pick an initial condition at the operating point you want to design for. Both \`INPUT\` and \`OUTPUT\` accept dotted member paths such as \`BATT.port.T\`. The matrix names default to \`A\`, \`B\`, \`C\`, \`D\`.
+
+## Mathematical Formulation
+
+$$ A = \\frac{\\partial \\mathbf{f}}{\\partial \\mathbf{x}}, \\quad B = \\frac{\\partial \\mathbf{f}}{\\partial \\mathbf{u}}, \\quad C = \\frac{\\partial \\mathbf{y}}{\\partial \\mathbf{x}}, \\quad D = \\frac{\\partial \\mathbf{y}}{\\partial \\mathbf{u}} \\quad \\text{at } (\\mathbf{x}_0, \\mathbf{u}_0) $$
+
+> **Method:** finite-difference Jacobians of the block's right-hand side and outputs.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Gravity-drained tank at equilibrium
+
+$A_t \\dot h = q_{in} - C\\sqrt{h}$ at $h_0 = 1$ gives $A = -C/(2A_t\\sqrt{h_0}) = -0.1$ and $B = 1/A_t = 0.5$.
+
+\`\`\`frees
+A_t  = 2
+C    = 0.4
+q_in = 0.4
+DYNAMIC tank (time = 0 .. 1)
+  der(h) = (q_in - C * sqrt(h)) / A_t
+  h(0)   = 1
+END
+LINEARIZE plant (block = tank, a = A, b = B, c = Cm, d = D)
+  INPUT  q_in
+  OUTPUT h
+END
+
+{ CHECK A[1,1] -0.1 0.000001 }
+{ CHECK B[1,1] 0.5 0.000001 }
+{ CHECK Cm[1,1] 1 0.000001 }
+{ CHECK D[1,1] 0 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+A[1,1] = -0.1   B[1,1] = 0.5   Cm[1,1] = 1   D[1,1] = 0
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Clauses
+
+| Clause | Required | Description |
+| --- | --- | --- |
+| \`block = name\` | Yes | The \`DYNAMIC\` block to linearize. |
+| \`a =\`, \`b =\`, \`c =\`, \`d =\` | No | Names of the result matrices (default \`A\`, \`B\`, \`C\`, \`D\`). |
+| \`INPUT …\` | Yes | Comma-separated inputs to perturb. |
+| \`OUTPUT …\` | Yes | Comma-separated observed quantities. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`LINEARIZE p: no DYNAMIC block named 'nope' (it names the transient component network to linearize).\` | \`block =\` names no \`DYNAMIC\` block. | Use the block's name. |`,
+  },
+  {
+    name: `PARAMETRIC`,
+    slug: `parametric`,
+    category: `Language Keywords`,
+    summary: `Declares a parametric sweep table whose rows are solved independently from the Tables tab.`,
+    related: [`TABLE`, `PLOT`, `TableAvg`],
+    examples: [],
+    tags: [`keyword`, `block`, `sweep`, `parametric`, `table`, `study`],
+    references: [],
+    guides: [],
+    body: `Declares a sweep: the listed columns form a Parametric Table, the swept column is filled from a range, and each row is solved as its own steady problem. The document is deliberately underspecified by the swept variable, so it runs from the **Tables** tab rather than with **Solve**.
+
+## Syntax
+
+\`\`\`
+PARAMETRIC name(var1, var2, …)
+  var1 = start : step : end
+END
+\`\`\`
+
+## Description
+
+The first header variable is normally the swept input; the remaining columns are outputs filled after each row solves. Rows run in parallel across the worker pool and keep their order. Table accessors (\`TableAvg\`, \`TableValue\`, …) read the finished columns back.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Velocity in three pipe sizes
+
+$v = \\dot V / (\\pi D^2/4)$ for $\\dot V = 0.002$ m³/s.
+
+\`\`\`json
+{
+  "operation": "solve_table",
+  "text": "PARAMETRIC pipe_sizes(D, v)\\n  D = 0.02 : 0.02 : 0.06\\nEND\\nV_dot = 0.002\\nv = V_dot / (pi# * D^2 / 4)",
+  "request": {
+    "table": {
+      "variables": ["D", "v"],
+      "rows": [{ "D": 0.02 }, { "D": 0.04 }, { "D": 0.06 }]
+    }
+  },
+  "checks": [
+    { "path": "results.0.values.v", "value": 6.366197723675814, "tolerance": 1e-8 },
+    { "path": "results.1.values.v", "value": 1.5915494309189535, "tolerance": 1e-8 },
+    { "path": "results.2.values.v", "value": 0.707355302630646, "tolerance": 1e-8 }
+  ]
+}
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+D = 0.02  v = 6.3662
+D = 0.04  v = 1.5915
+D = 0.06  v = 0.70736
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`There are 1 equations and 2 variables. The problem is underspecified …\` | **Solve** was pressed on a sweep document. | Run the table from the Tables tab. |`,
+  },
+  {
+    name: `PLOT`,
+    slug: `plot`,
+    category: `Language Keywords`,
+    summary: `Declares a plot in the equation text so it travels with the document.`,
+    related: [`DYNAMIC`, `PARAMETRIC`, `bode`],
+    examples: [],
+    tags: [`keyword`, `block`, `plot`, `chart`, `figure`, `bode`, `nyquist`],
+    references: [],
+    guides: [],
+    body: `Declares a chart as \`key = value\` lines. The Plots tab builds it after Check or Solve, so the figure is reproducible from the text alone.
+
+## Syntax
+
+\`\`\`
+PLOT 'Title'
+  kind = xy
+  x = column
+  y = column1, column2
+END
+\`\`\`
+
+## Description
+
+The name must be a quoted string. Recognized keys:
+
+- **\`kind\`** — \`xy\` (default; also \`line\`), \`property\`, \`psychro\`, \`bode\`, \`nyquist\`, \`nichols\`, \`polezero\` (\`pzmap\`), \`rootlocus\` (\`rlocus\`).
+- **xy** — \`x\`, \`y\` (comma-separated list), \`type\`, \`z\`, \`size\`.
+- **property** — \`fluid\`, \`diagram\`, \`quality\`, \`isolines\`, \`overlaystates\`, \`connectstates\`, \`closecycle\`.
+- **psychro** — \`pressure\`, \`tmin\`, \`tmax\`, \`wetbulb\`, \`enthalpy\`, \`volume\`.
+- **bode / nyquist** — \`omega\`, \`mag\`, \`phase\`, \`real\`, \`imag\`.
+- **format** — \`title\`, \`xlabel\`, \`ylabel\`, \`xlog\`, \`ylog\`, \`grid\`, \`legend\`, \`fontsize\`, \`xmin\`, \`xmax\`, \`ymin\`, \`ymax\`.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Plot a cooling trajectory
+
+The \`PLOT\` block does not change the solution; the check confirms the document solves with it present. $T(60) = 20 + 70e^{-3} = 23.485$.
+
+\`\`\`frees
+k     = 0.05
+T_amb = 20
+DYNAMIC cooldown (time = 0 .. 60, points = 61)
+  der(T) = -k * (T - T_amb)
+  T(0)   = 90
+END
+PLOT 'Cooling curve'
+  kind = xy
+  x = time
+  y = T
+  xlabel = 'time [s]'
+END
+T_end = FinalValue('T')
+
+{ CHECK T_end 23.48509 0.0001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+T_end = 23.485
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`\`expected a quoted plot name, found identifier \`Drag\` \`\` | Unquoted title. | Write \`PLOT 'Drag'\`. |`,
+  },
+  {
+    name: `STATE TABLE`,
+    slug: `state table`,
+    category: `Language Keywords`,
+    summary: `Groups numbered state-point variables of one circuit and binds them to a fluid.`,
+    related: [`Enthalpy`, `Temperature`, `PLOT`],
+    examples: [],
+    tags: [`keyword`, `block`, `state points`, `cycle`, `fluid`, `thermodynamics`],
+    references: [],
+    guides: [],
+    body: `Groups the variables of one thermodynamic circuit and declares its fluid. The Fluid States window uses it to fill missing properties and to overlay the cycle on a property chart.
+
+## Syntax
+
+\`\`\`
+STATE TABLE name(P1, T1, h1, P2, T2, h2)
+  FLUID = Water
+END
+\`\`\`
+
+## Description
+
+Every member must carry a **state number** (\`T1\`, \`P_2\`, \`h[3]\`). Variables in different state tables stay separate, so a \`P1\` in a water loop never mixes with one in a refrigerant loop. The block adds no equations: properties are still computed by your property calls.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Heating water by 100 kJ/kg
+
+\`\`\`frees
+STATE TABLE WaterLoop(P1, T1, h1, P2, T2, h2)
+  FLUID = Water
+END
+P1 = 200000
+T1 = 300
+h1 = Enthalpy(Water, T=T1, P=P1)
+P2 = P1
+h2 = h1 + 100000
+T2 = Temperature(Water, P=P2, h=h2)
+
+{ CHECK h1 112745.7491 0.001 }
+{ CHECK T2 323.9254095 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+h1 = 112745.7 [J/kg]
+T2 = 323.9254 [K]
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`STATE TABLE 'L': variable 'p' has no state number. State variables must be numbered (e.g. p1 or p[1]).\` | An unnumbered member. | Number every state variable. |`,
+  },
+  {
+    name: `SYMBOLIC`,
+    slug: `symbolic`,
+    category: `Language Keywords`,
+    summary: `Marks an independent variable so equations containing it are solved as identities.`,
+    related: [`tf`, `residue`],
+    examples: [],
+    tags: [`keyword`, `cas`, `identity`, `laplace`, `partial fractions`],
+    references: [],
+    guides: [],
+    body: `Marks a variable — usually the Laplace variable \`s\` — as symbolic. Any equation containing it must hold for all values of that variable; frees matches coefficients and solves for the remaining unknowns.
+
+## Syntax
+
+\`\`\`
+SYMBOLIC s
+\`\`\`
+
+## Description
+
+Both sides are brought over a common denominator and every power of the symbolic variable must match. The unknown coefficients become ordinary solved variables. An identity may contain only one symbolic variable, and \`SYMBOLIC\` is not allowed inside a function body.
+
+## Mathematical Formulation
+
+$$ \\frac{s+3}{s^2+3s+2} = \\frac{A}{s+1} + \\frac{B}{s+2} \\;\\Longrightarrow\\; s + 3 = A(s+2) + B(s+1) \\;\\; \\forall s $$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Partial fractions
+
+\`\`\`frees
+SYMBOLIC s
+(s + 3)/(s^2 + 3*s + 2) = A/(s+1) + B/(s+2)
+
+{ CHECK A 2 0.000001 }
+{ CHECK B -1 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+A = 2
+B = -1
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`An identity may involve only one SYMBOLIC variable, but found: [s, z]\` | Two symbolic variables in one identity. | Use one symbolic variable per identity. |
+| \`could not solve the identity for: a (it may be inconsistent or underdetermined)\` | The template cannot match the left side for all \`s\`. | Add the missing terms to the decomposition. |
+| \`SYMBOLIC declarations are not allowed inside a PROCEDURE or FUNCTION.\` | Declared inside a function body. | Declare it at the top level. |`,
+  },
+  {
+    name: `TABLE`,
+    slug: `table`,
+    category: `Language Keywords`,
+    summary: `Declares an inline lookup table that becomes a callable interpolating function.`,
+    related: [`Interpolate`, `Interpolate2D`, `Lookup`, `PARAMETRIC`],
+    examples: [],
+    tags: [`keyword`, `block`, `lookup`, `interpolation`, `curve`, `map`],
+    references: [],
+    guides: [],
+    body: `Defines a lookup table in the equation text. Once compiled it is callable like a function: \`name(x)\` interpolates linearly in column 1, \`name(x, p)\` interpolates bilinearly across a curve family.
+
+## Syntax
+
+\`\`\`
+TABLE name(x [x_unit]) [y_unit]
+  x1   y1
+  x2   y2
+END
+
+TABLE name(x : p = p1, p2, p3)
+  x1   y11  y12  y13
+  x2   y21  y22  y23
+END
+\`\`\`
+
+## Description
+
+Column 1 is the independent variable. Unit annotations in the header propagate to whatever is computed from the table. A curve family lists its parameter values after \`:\`; each further column is the curve at that parameter value. Outside the data range the lookup **clamps** to the end value rather than extrapolating. A \`TABLE\` in the document wins over a GUI Function Table of the same name.
+
+## Mathematical Formulation
+
+$$ y(x) = y_i + \\frac{x - x_i}{x_{i+1} - x_i}\\,(y_{i+1} - y_i), \\qquad x_i \\le x \\le x_{i+1} $$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Pump curve and an engine map
+
+\`\`\`frees
+TABLE pump_curve(flow [m^3/s]) [Pa]
+  0.0       50000
+  0.001     45000
+  0.002     32000
+  0.003     0
+END
+dP = pump_curve(0.0015)
+
+TABLE bsfc(rpm : load = 0.25, 0.50, 1.0)
+  1000   320   300   290
+  3000   280   260   250
+  5000   300   270   255
+END
+g = bsfc(2500, 0.6)
+
+{ CHECK dP 38500 0.000001 }
+{ CHECK g 268 0.000001 }
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+dP = 38500 [Pa]
+g = 268
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| Result pinned at an end value | The query lies outside the x range (lookups clamp). | Extend the table or check the argument's units. |`,
   },
   {
     name: `if`,
@@ -49857,6 +50098,62 @@ u[3] = 0
 | \`b\` | Number | Yes | Second operand. |`,
   },
   {
+    name: `cube`,
+    slug: `cube`,
+    category: `Math`,
+    summary: `Cube, x³.`,
+    related: [`sqr`],
+    examples: [],
+    tags: [`cube`, `math`, `power`],
+    references: [],
+    guides: [],
+    body: `Cube, x³.
+
+## Syntax
+
+\`\`\`
+y = cube(x)
+\`\`\`
+
+## Description
+
+\`cube(x)\` returns x·x·x.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Any real value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | x³. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Calculate a cube volume
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = cube(3)
+
+{ CHECK result 27 0.000027 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 27
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `Determinant`,
     slug: `determinant`,
     category: `Math`,
@@ -50447,6 +50744,150 @@ A[2,1] = 3
 | \`y\` | Number | Yes | Value / second coordinate. |`,
   },
   {
+    name: `hypot`,
+    slug: `hypot`,
+    category: `Math`,
+    summary: `Euclidean length of two real components.`,
+    related: [`sqrt`, `abs`, `magnitude`],
+    examples: [],
+    tags: [`hypot`],
+    references: [],
+    guides: [],
+    body: `Computes the Euclidean length of two real scalar components.
+
+## Syntax
+
+\`\`\`
+r = hypot(x, y)
+\`\`\`
+
+## Description
+
+\`r = hypot(x, y)\` evaluates the square root of \`x^2 + y^2\` using the
+backend's \`libm::hypot\` routine. Exactly two scalar arguments are required.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Find the resultant of perpendicular components
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = hypot(3, 4)
+
+{ CHECK result 5 0.0000049999999999999996 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 5
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+\`\`\`frees
+r = hypot(3, 4)
+{ CHECK r 5 0 }
+\`\`\`
+
+Expected result:
+
+\`\`\`text
+r = 5
+\`\`\`
+
+## Input Arguments
+
+### x — First component
+
+Real scalar. Use the same units for both components.
+
+**Example:** \`hypot(3, 4)\`
+
+**Data Types:** \`number\`
+
+### y — Second component
+
+Real scalar, which may be positive, negative, or zero.
+
+**Example:** \`hypot(3, -4)\`
+
+**Data Types:** \`number\`
+
+## Output Arguments
+
+### r — Euclidean length
+
+Nonnegative real scalar.
+
+**Example:** \`r = 5\`
+
+**Data Types:** \`number\`
+
+## Common Errors
+
+Check argument count, dimensions, and units before solving.`,
+  },
+  {
+    name: `int`,
+    slug: `int`,
+    category: `Math`,
+    summary: `Integer part — truncate toward zero.`,
+    related: [`trunc`, `floor`, `round`],
+    examples: [],
+    tags: [`int`, `math`, `truncate`],
+    references: [],
+    guides: [],
+    body: `Integer part — truncate toward zero.
+
+## Syntax
+
+\`\`\`
+y = int(x)
+\`\`\`
+
+## Description
+
+\`int(x)\` drops the fractional part, rounding toward zero (\`int(-2.7) = -2\`). Use \`floor\` to round toward −∞.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Any real value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | Integer-valued result. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a scalar engineering calculation
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = int(3.9)
+
+{ CHECK result 3 0.000003 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 3
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `Inverse`,
     slug: `inverse`,
     category: `Math`,
@@ -50713,6 +51154,62 @@ z = 0.3678794412
 | Error | Cause | Fix |
 | --- | --- | --- |
 | \`DOMAIN_ERROR\` | \`x ≤ 0\` | The logarithm requires a positive argument. |`,
+  },
+  {
+    name: `log`,
+    slug: `log`,
+    category: `Math`,
+    summary: `Base-10 logarithm (same as log10).`,
+    related: [`log10`, `ln`, `exp`],
+    examples: [],
+    tags: [`log`, `math`, `logarithm`],
+    references: [],
+    guides: [],
+    body: `Base-10 logarithm (same as log10).
+
+## Syntax
+
+\`\`\`
+y = log(x)
+\`\`\`
+
+## Description
+
+\`log(x)\` returns the **base-10** logarithm of x > 0. Use \`ln\` for the natural logarithm.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Positive, dimensionless value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | log₁₀(x). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a scalar engineering calculation
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = log(1000)
+
+{ CHECK result 3 0.000003 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 3
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
   },
   {
     name: `log10`,
@@ -51052,6 +51549,122 @@ y = 100
 | \`term\` | Number | Yes | Series-term expression. |`,
   },
   {
+    name: `ramp`,
+    slug: `ramp`,
+    category: `Math`,
+    summary: `Ramp function max(x, 0).`,
+    related: [`step`, `max`, `abs`],
+    examples: [],
+    tags: [`ramp`, `math`, `positive part`],
+    references: [],
+    guides: [],
+    body: `Ramp function max(x, 0).
+
+## Syntax
+
+\`\`\`
+y = ramp(x)
+\`\`\`
+
+## Description
+
+\`ramp(x)\` returns x for x ≥ 0 and 0 otherwise — the positive part of x.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Any real value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | max(x, 0), in the units of x. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Positive part of a signed flow
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+q_in  = ramp(-2)     { a reverse flow clips to zero }
+q_out = ramp(3.5)
+
+{ CHECK q_in 0 0.000001 }
+{ CHECK q_out 3.5 0.0000035 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+q_in = 0
+q_out = 3.5
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `rem`,
+    slug: `rem`,
+    category: `Math`,
+    summary: `Remainder of a/b, with the sign of a.`,
+    related: [`mod`, `int`],
+    examples: [],
+    tags: [`rem`, `math`, `remainder`, `modulo`],
+    references: [],
+    guides: [],
+    body: `Remainder of a/b, with the sign of a.
+
+## Syntax
+
+\`\`\`
+r = rem(a, b)
+\`\`\`
+
+## Description
+
+\`rem(a, b)\` returns a − b·trunc(a/b) (C \`fmod\`), so the result takes the sign of \`a\`: \`rem(-7, 3) = -1\`. \`b\` must be non-zero.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`a\` | Number | Yes | Dividend. |
+| \`b\` | Number | Yes | Divisor (non-zero). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`r\` | Number | Remainder, |r| < |b|. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Calculate a division remainder
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = rem(17, 5)
+
+{ CHECK result 2 0.000002 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 2
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `round`,
     slug: `round`,
     category: `Math`,
@@ -51377,6 +51990,62 @@ A[2,1] = 0
 | --- | --- | --- | --- |
 | \`A\` | Number | Yes | Matrix. |
 | \`b\` | Number | Yes | Second operand. |`,
+  },
+  {
+    name: `sqr`,
+    slug: `sqr`,
+    category: `Math`,
+    summary: `Square, x².`,
+    related: [`cube`, `sqrt`],
+    examples: [],
+    tags: [`sqr`, `math`, `square`],
+    references: [],
+    guides: [],
+    body: `Square, x².
+
+## Syntax
+
+\`\`\`
+y = sqr(x)
+\`\`\`
+
+## Description
+
+\`sqr(x)\` returns x·x.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Any real value. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | x², in squared units of x. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a scalar engineering calculation
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = sqr(3)
+
+{ CHECK result 9 0.000009 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 9
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
   },
   {
     name: `sqrt`,
@@ -51796,6 +52465,7 @@ ill-conditioning.
 c = cond(A)
 \`\`\`
 
+
 ## Description
 
 A condition number near 1 indicates a well-conditioned problem; very large values
@@ -51814,30 +52484,27 @@ where the \`σ\` are the singular values of \`A\`.
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Solve a complete model
+### Verified example — Condition number of a 2 x 2 matrix
 
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-// frees-language: 2
-TwoPhaseEnthalpySource SRC(mdot=0.02, h=435000)
-TwoPhaseCondenserUA COND(fluid$=R134a, UA=400, T_amb=305, V=0.002)
-TwoPhaseSink SNK()
-connect(SRC.out, COND.in)
-connect(COND.out, SNK.in)
-COND.m = 1.200000
+A = [4, 1; 2, 3]
+c = cond(A)
 
-{ CHECK cond.in.h 435000 0.435 }
-{ CHECK cond.in.mdot 0.02 2e-8 }
-{ CHECK cond.in.p 1040885.197 1.0408851966633037 }
+{ The same number from the singular values: sigma_max / sigma_min. }
+[sv] = SingularValues(A)
+kappa = sv[1] / sv[2]
+
+{ CHECK c 2.618033989 0.000002618033989 }
+{ CHECK kappa 2.618033989 0.000002618033989 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-cond.in.h = 435000
-cond.in.mdot = 0.02
-cond.in.p = 1040885.197
+c = 2.618033989
+kappa = 2.618033989
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -51865,7 +52532,68 @@ linear system is ill-conditioned.
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| \`SINGULAR_MATRIX\` | \`σ_min = 0\` | The matrix is singular — condition number is infinite. |`,
+| \`cond: the matrix is singular, so its condition number is infinite\` | \`σ_min = 0\` | The matrix is singular; check for a repeated or zero row or column. |`,
+  },
+  {
+    name: `copy`,
+    slug: `copy`,
+    category: `Matrix`,
+    summary: `BLAS vector copy.`,
+    related: [`scal`, `axpy`],
+    examples: [],
+    tags: [`copy`],
+    references: [],
+    guides: [`matrices-blas`],
+    body: `BLAS vector copy.
+
+## Syntax
+
+\`\`\`
+y = copy(x)
+\`\`\`
+
+## Description
+
+\`y = copy(x)\` returns a copy of the vector \`x\` (BLAS level-1 \`copy\`).
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Copy a measurement vector
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+x = [1, 2, 3]
+y = copy(x)
+
+{ CHECK x[1] 1 0.000001 }
+{ CHECK x[2] 2 0.000002 }
+{ CHECK x[3] 3 0.000003 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+x[1] = 1
+x[2] = 2
+x[3] = 3
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | Vector. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Vector | Same values as \`x\`. |`,
   },
   {
     name: `det`,
@@ -52010,24 +52738,29 @@ D[1,3] = 0
     name: `eig`,
     slug: `eig`,
     category: `Matrix`,
-    summary: `Unavailable eigenvalue alias; use Eigenvalues.`,
-    related: [`Eigenvalues`, `Eigen`],
+    summary: `Eigenvalues of a square matrix — the array-language spelling of Eigenvalues.`,
+    related: [`Eigenvalues`, `Eigen`, `eigvec`],
     examples: [],
-    tags: [`eig`, `matrix`],
+    tags: [`eig`, `eigenvalues`, `matrix`, `spectrum`],
     references: [],
     guides: [],
-    body: `Registered eigenvalue alias that is not implemented in the current runtime. Use \`Eigenvalues\` instead.
-
+    body: `Returns the **eigenvalues** of a square matrix \`A\`. \`eig\` is the array-language
+spelling of \`Eigenvalues\` and behaves identically: one output for a real
+spectrum, two (real and imaginary parts) for a complex one.
 
 ## Syntax
 
 \`\`\`
-eig(A)
+[lambda] = eig(A)
+[re, im] = eig(A)
 \`\`\`
 
 ## Description
 
-The eigenvalue problem below describes the intended operation, not an available implementation of this alias.
+\`[lambda] = eig(A)\` sizes \`lambda\` to the order of \`A\` and returns the
+eigenvalues in ascending order. A matrix with complex eigenvalues needs the
+two-output form; the one-output form refuses it rather than dropping the
+imaginary parts.
 
 ## Mathematical Formulation
 
@@ -52037,38 +52770,23 @@ $$ A v = \\lambda v, \\qquad \\det(A - \\lambda I) = 0 $$
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Analyze a two-channel matrix
+### Verified example — Eigenvalues of a coupled two-state system
 
-**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
-
-\`\`\`frees error="Unknown PROCEDURE or MODULE: 'eig'"
-A = [4, 0; 0, 9]
-[result] = eig(A)
-\`\`\`
-
-Expected diagnostic:
-
-\`\`\`text
-Syntax error: Unknown PROCEDURE or MODULE: 'eig'
-\`\`\`
-
-Working alternative — paste this complete document into the editor and solve:
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-A = [4, 0; 0, 9]
-[values] = Eigenvalues(A)
+A = [4, 1; 2, 3]
+[lambda] = eig(A)
 
-{ CHECK values[1] 4 0.000004 }
-{ CHECK values[2] 9 0.000009 }
-{ CHECK A[1,1] 4 0.000004 }
+{ CHECK lambda[1] 2 0.000002 }
+{ CHECK lambda[2] 5 0.000005 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-values[1] = 4
-values[2] = 9
-A[1,1] = 4
+lambda[1] = 2
+lambda[2] = 5
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -52077,7 +52795,20 @@ A[1,1] = 4
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| \`A\` | Number | Yes | Square input matrix. |`,
+| \`A\` | Matrix | Yes | Square input matrix. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`lambda\` | Vector | Eigenvalues, ascending (real spectrum). |
+| \`re\`, \`im\` | Vector | Real and imaginary parts (two-output form). |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Matrix has complex eigenvalues; this form supports real spectra only\` | \`A\` has complex eigenvalues and one output was requested | Use \`[re, im] = eig(A)\`. |`,
   },
   {
     name: `Eigen`,
@@ -52096,7 +52827,6 @@ directions; the eigenvalues their rates/frequencies.
 ## Syntax
 
 \`\`\`
-[lambda, V] = Eigen(A)
 [lambda, V] = Eigen(A)
 \`\`\`
 
@@ -52239,24 +52969,26 @@ A[1,1] = 4
     name: `eigvec`,
     slug: `eigvec`,
     category: `Matrix`,
-    summary: `Unavailable eigenvector alias; use Eigen.`,
-    related: [`Eigen`, `Eigenvalues`],
+    summary: `Eigenvectors of a square matrix — the eigenvector half of Eigen.`,
+    related: [`Eigen`, `Eigenvalues`, `eig`],
     examples: [],
-    tags: [`eigvec`, `matrix`],
+    tags: [`eigvec`, `eigenvectors`, `matrix`, `modes`],
     references: [],
     guides: [],
-    body: `Registered eigenvector alias that is not implemented in the current runtime. Use \`Eigen\` instead.
-
+    body: `Returns the **eigenvectors** of a square matrix \`A\` as the columns of \`V\`.
+\`[V] = eigvec(A)\` is \`[~, V] = Eigen(A)\`: the same vectors, in the same order
+as the eigenvalues \`eig\` returns.
 
 ## Syntax
 
 \`\`\`
-eigvec(A)
+[V] = eigvec(A)
 \`\`\`
 
 ## Description
 
-The eigenvector problem below describes the intended operation, not an available implementation of this alias.
+Column \`k\` of \`V\` is the unit-length eigenvector for the \`k\`-th eigenvalue in
+ascending order. Use \`Eigen\` when you need the eigenvalues alongside them.
 
 ## Mathematical Formulation
 
@@ -52266,38 +52998,25 @@ $$ A v_i = \\lambda_i v_i \\quad\\text{(columns are the eigenvectors)} $$
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Analyze a two-channel matrix
+### Verified example — Mode shapes of a coupled two-state system
 
-**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
-
-\`\`\`frees error="Unknown PROCEDURE or MODULE: 'eigvec'"
-A = [4, 0; 0, 9]
-[result] = eigvec(A)
-\`\`\`
-
-Expected diagnostic:
-
-\`\`\`text
-Syntax error: Unknown PROCEDURE or MODULE: 'eigvec'
-\`\`\`
-
-Working alternative — paste this complete document into the editor and solve:
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-A = [4, 0; 0, 9]
-[values, vectors] = Eigen(A)
+A = [4, 1; 2, 3]
+[V] = eigvec(A)
 
-{ CHECK values[1] 4 0.000004 }
-{ CHECK values[2] 9 0.000009 }
-{ CHECK vectors[1,1] 1 0.000001 }
+{ The first column belongs to lambda = 2, the second to lambda = 5. }
+{ CHECK V[1,1] -0.4472135955 0.0000004472135955 }
+{ CHECK V[2,1] 0.894427191 0.000000894427191 }
+{ CHECK V[1,2] 0.7071067812 0.0000007071067812 }
+{ CHECK V[2,2] 0.7071067812 0.0000007071067812 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-values[1] = 4
-values[2] = 9
-vectors[1,1] = 1
+V = [-0.4472135955, 0.7071067812; 0.894427191, 0.7071067812]
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -52306,101 +53025,231 @@ vectors[1,1] = 1
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| \`A\` | Number | Yes | Square input matrix. |`,
-  },
-  {
-    name: `EulerRotate`,
-    slug: `eulerrotate`,
-    category: `Matrix`,
-    summary: `Unavailable Euler rotation intrinsic; construct a rotation matrix explicitly.`,
-    related: [`Eigen`, `Transpose`],
-    examples: [],
-    tags: [`matrix`, `rotation`, `euler angles`, `kinematics`, `attitude`],
-    references: [],
-    guides: [`matrices-sys`],
-    body: `\`EulerRotate\` is registered but explicitly unported in the current engine.
-Construct a rotation matrix explicitly for a specified axis convention, as in
-the working alternative below.
-
-## Syntax
-
-\`\`\`
-[R] = EulerRotate(phi, theta, psi)
-R = EulerRotate(phi, theta, psi)
-\`\`\`
-
-## Description
-
-Elementary rotations can be multiplied to form an orthonormal rotation
-($R^\\top = R^{-1}$, $\\det R = 1$). No axis convention is implemented by this
-unavailable intrinsic; the following formula is a mathematical illustration only.
-
-## Mathematical Formulation
-
-A possible rotation convention is the product of three elementary rotations:
-
-$$ R(\\phi, \\theta, \\psi) = R_z(\\psi)\\,R_x(\\theta)\\,R_z(\\phi), \\qquad R^\\top R = I,\\ \\det R = 1 $$
-
-(the standard \`z–x–z\` convention).
-
-> **Method:** multiply the three elementary axis rotations.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Build a zero-angle rotation matrix
-
-**Current runtime limitation:** this invocation is not supported by the current engine. The diagnostic below is verified, not a successful calculation. Use the working alternative that follows.
-
-\`\`\`frees error="not yet supported"
-[R] = EulerRotate(0, 0, 0)
-\`\`\`
-
-Expected diagnostic:
-
-\`\`\`text
-CALL \`eulerrotate\` is not yet supported by the wasm engine
-\`\`\`
-
-Working alternative — paste this complete document into the editor and solve:
-
-\`\`\`frees
-theta = 0.5235987755982988
-R = [cos(theta), -sin(theta), 0; sin(theta), cos(theta), 0; 0, 0, 1]
-
-{ CHECK R[1,1] 0.8660254038 8.660254037844387e-7 }
-{ CHECK R[1,2] -0.5 4.999999999999999e-7 }
-{ CHECK R[1,3] 0 1e-8 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-R[1,1] = 0.8660254038
-R[1,2] = -0.5
-R[1,3] = 0
-\`\`\`
-
-<!-- verified-reference-example:end -->
-
-\`\`\`
-{ R = EulerRotate(phi, theta, psi) }
-\`\`\`
-
-## Input Arguments
-
-| Argument | Type | Required | Description |
-| --- | --- | --- | --- |
-| \`phi\` | Number | Yes | First rotation angle [rad]. |
-| \`theta\` | Number | Yes | Second rotation angle [rad]. |
-| \`psi\` | Number | Yes | Third rotation angle [rad]. |
+| \`A\` | Matrix | Yes | Square input matrix. |
 
 ## Output Arguments
 
 | Argument | Type | Description |
 | --- | --- | --- |
-| \`R\` | Matrix | 3×3 orthonormal rotation matrix. |`,
+| \`V\` | Matrix | Unit eigenvectors as columns, ordered like \`eig(A)\`. |`,
+  },
+  {
+    name: `EulerRotate`,
+    slug: `eulerrotate`,
+    category: `Matrix`,
+    summary: `3×3 rotation matrix from ZYX (yaw–pitch–roll) Euler angles in radians.`,
+    related: [`Eigen`, `Transpose`],
+    examples: [],
+    tags: [`matrix`, `rotation`, `euler angles`, `kinematics`, `attitude`],
+    references: [],
+    guides: [`matrices-sys`],
+    body: `Builds the **rotation matrix** for ZYX Euler angles: roll \`phi\` about x, pitch
+\`theta\` about y and yaw \`psi\` about z, in radians. \`R\` maps body-frame vectors
+into the reference frame — the aerospace yaw–pitch–roll convention, and
+MATLAB's \`eul2rotm([psi, theta, phi], 'ZYX')\`.
+
+## Syntax
+
+\`\`\`
+[R] = EulerRotate(phi, theta, psi)
+\`\`\`
+
+## Description
+
+The nine entries are closed-form expressions in \`sin\` and \`cos\` of the angles,
+so the angles may themselves be unknowns: the solver differentiates them
+analytically. \`R\` is orthonormal ($R^\\top = R^{-1}$, $\\det R = 1$).
+
+## Mathematical Formulation
+
+$$ R(\\phi, \\theta, \\psi) = R_z(\\psi)\\,R_y(\\theta)\\,R_x(\\phi) $$
+
+$$ R = \\begin{bmatrix}
+c_\\psi c_\\theta & c_\\psi s_\\theta s_\\phi - s_\\psi c_\\phi & c_\\psi s_\\theta c_\\phi + s_\\psi s_\\phi \\\\
+s_\\psi c_\\theta & s_\\psi s_\\theta s_\\phi + c_\\psi c_\\phi & s_\\psi s_\\theta c_\\phi - c_\\psi s_\\phi \\\\
+-s_\\theta & c_\\theta s_\\phi & c_\\theta c_\\phi
+\\end{bmatrix} $$
+
+where $c_x = \\cos x$ and $s_x = \\sin x$.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Attitude matrix of a banked, pitched, yawed body
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+phi = 0.1     { roll [rad] }
+theta = 0.2   { pitch [rad] }
+psi = 0.3     { yaw [rad] }
+[R] = EulerRotate(phi, theta, psi)
+
+{ CHECK R[1,1] 0.9362933636 0.0000009362933636 }
+{ CHECK R[1,2] -0.2750958473 0.0000002750958473 }
+{ CHECK R[2,3] -0.0369570135 0.0000000369570135 }
+{ CHECK R[3,1] -0.1986693308 0.0000001986693308 }
+{ CHECK R[3,3] 0.9751703272 0.0000009751703272 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+R[1,1] = 0.9362933636
+R[1,2] = -0.2750958473
+R[2,3] = -0.0369570135
+R[3,1] = -0.1986693308
+R[3,3] = 0.9751703272
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`phi\` | Number | Yes | Roll angle about x [rad]. |
+| \`theta\` | Number | Yes | Pitch angle about y [rad]. |
+| \`psi\` | Number | Yes | Yaw angle about z [rad]. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`R\` | Matrix | 3×3 orthonormal rotation matrix, \`Rz(psi)·Ry(theta)·Rx(phi)\`. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`EulerRotate expects 3 angles (phi, theta, psi) and 1 output matrix, e.g. [R] = EulerRotate(phi, theta, psi)\` | Wrong number of angles or outputs | Pass exactly three angles and name one output. |`,
+  },
+  {
+    name: `ger`,
+    slug: `ger`,
+    category: `Matrix`,
+    summary: `BLAS rank-1 update A + α·x·yᵀ.`,
+    related: [`gemv`, `gemm`, `axpy`, `scal`],
+    examples: [],
+    tags: [`ger`],
+    references: [],
+    guides: [`matrices-blas`],
+    body: `BLAS rank-1 update A + α·x·yᵀ.
+
+## Syntax
+
+\`\`\`
+B = ger(alpha, x, y, A)
+\`\`\`
+
+## Description
+
+\`B = ger(alpha, x, y, A)\` returns the BLAS level-2 rank-1 update \`A + alpha · x · yᵀ\`.
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Update a matrix with an outer product
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+x = [1; 2]
+y = [3; 4]
+A = [0, 0; 0, 0]
+B = ger(1, x, y, A)
+
+{ CHECK A[1,1] 0 1e-8 }
+{ CHECK A[1,2] 0 1e-8 }
+{ CHECK A[2,1] 0 1e-8 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+A[1,1] = 0
+A[1,2] = 0
+A[2,1] = 0
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`alpha\` | Number | Yes | Scale factor. |
+| \`x\` | Vector | Yes | Column vector, length m. |
+| \`y\` | Vector | Yes | Vector, length n. |
+| \`A\` | Matrix | Yes | m × n matrix. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`B\` | Matrix | m × n result. |`,
+  },
+  {
+    name: `identity`,
+    slug: `identity`,
+    category: `Matrix`,
+    summary: `n × n identity matrix.`,
+    related: [`eye`, `zeros`, `ones`, `diag`],
+    examples: [],
+    tags: [`identity`],
+    references: [],
+    guides: [`matrices-decl`],
+    body: `n × n identity matrix.
+
+## Syntax
+
+\`\`\`
+A = identity(n)
+\`\`\`
+
+## Description
+
+\`A = identity(n)\` returns the \`n × n\` identity matrix (same as \`eye(n)\`).
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Construct a three-channel identity map
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+A = identity(3)
+
+{ CHECK A[1,1] 1 0.000001 }
+{ CHECK A[1,2] 0 1e-8 }
+{ CHECK A[1,3] 0 1e-8 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+A[1,1] = 1
+A[1,2] = 0
+A[1,3] = 0
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`n\` | Number | Yes | Matrix size (positive integer). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`A\` | Matrix | n × n identity. |`,
   },
   {
     name: `inv`,
@@ -52479,7 +53328,6 @@ workhorse factorization behind linear solves and determinants.
 ## Syntax
 
 \`\`\`
-[L, U] = LUDecompose(A)
 [L, U] = LUDecompose(A)
 \`\`\`
 
@@ -52801,30 +53649,88 @@ Co[2,1] = 1
 | \`A\` | Number | Yes | Square input matrix. |`,
   },
   {
-    name: `singularvalues`,
-    slug: `singularvalues`,
+    name: `scal`,
+    slug: `scal`,
     category: `Matrix`,
-    summary: `Reference page for singularvalues.`,
-    related: [],
+    summary: `BLAS vector scaling α·x.`,
+    related: [`axpy`, `copy`, `ger`],
     examples: [],
-    tags: [`singularvalues`],
+    tags: [`scal`],
     references: [],
-    guides: [],
-    body: `Returns the singular values of a matrix.
+    guides: [`matrices-blas`],
+    body: `BLAS vector scaling α·x.
 
 ## Syntax
 
 \`\`\`
-[s] = singularvalues(A)
+y = scal(alpha, x)
 \`\`\`
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+\`y = scal(alpha, x)\` returns the BLAS level-1 scaling \`alpha · x\`.
 
-## Common Errors
+## Examples
 
-Check argument count, dimensions, and units before solving.
+<!-- verified-reference-example:start -->
+
+### Verified example — Scale a measurement vector
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+x = [1, 2, 3]
+y = scal(2, x)
+
+{ CHECK x[1] 1 0.000001 }
+{ CHECK x[2] 2 0.000002 }
+{ CHECK x[3] 3 0.000003 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+x[1] = 1
+x[2] = 2
+x[3] = 3
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`alpha\` | Number | Yes | Scale factor. |
+| \`x\` | Vector | Yes | Vector. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Vector | Scaled vector, same length as \`x\`. |`,
+  },
+  {
+    name: `singularvalues`,
+    slug: `singularvalues`,
+    category: `Matrix`,
+    summary: `Singular values of a matrix, largest first.`,
+    related: [`svd`, `Eigenvalues`, `cond`],
+    examples: [],
+    tags: [`singularvalues`],
+    references: [],
+    guides: [],
+    body: `Singular values of a matrix, largest first.
+
+## Syntax
+
+\`\`\`
+[s] = SingularValues(A)
+\`\`\`
+
+## Description
+
+\`[s] = SingularValues(A)\` returns the singular values σ of \`A\` in descending order. The ratio \`s[1] / s[n]\` is the 2-norm condition number (see \`cond\`).
 
 ## Examples
 
@@ -52851,7 +53757,19 @@ result[2] = 4
 A[1,1] = 4
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`A\` | Matrix | Yes | Real matrix. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`s\` | Vector | Singular values, largest first. |`,
   },
   {
     name: `svd`,
@@ -53043,219 +53961,6 @@ A[2,1] = 0
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | \`A\` | Number | Yes | Square input matrix. |`,
-  },
-  {
-    name: `copy`,
-    slug: `copy`,
-    category: `Matrix Functions`,
-    summary: `Reference page for copy.`,
-    related: [],
-    examples: [],
-    tags: [`copy`],
-    references: [],
-    guides: [`matrices-blas`],
-    body: `\`copy\` is available in the frees matrix functions surface.
-
-## Syntax
-
-\`\`\`
-copy(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Copy a measurement vector
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-x = [1, 2, 3]
-y = copy(x)
-
-{ CHECK x[1] 1 0.000001 }
-{ CHECK x[2] 2 0.000002 }
-{ CHECK x[3] 3 0.000003 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-x[1] = 1
-x[2] = 2
-x[3] = 3
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `ger`,
-    slug: `ger`,
-    category: `Matrix Functions`,
-    summary: `Reference page for ger.`,
-    related: [],
-    examples: [],
-    tags: [`ger`],
-    references: [],
-    guides: [`matrices-blas`],
-    body: `\`ger\` is available in the frees matrix functions surface.
-
-## Syntax
-
-\`\`\`
-ger(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Update a matrix with an outer product
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-x = [1; 2]
-y = [3; 4]
-A = [0, 0; 0, 0]
-B = ger(1, x, y, A)
-
-{ CHECK A[1,1] 0 1e-8 }
-{ CHECK A[1,2] 0 1e-8 }
-{ CHECK A[2,1] 0 1e-8 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-A[1,1] = 0
-A[1,2] = 0
-A[2,1] = 0
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `identity`,
-    slug: `identity`,
-    category: `Matrix Functions`,
-    summary: `Reference page for identity.`,
-    related: [],
-    examples: [],
-    tags: [`identity`],
-    references: [],
-    guides: [`matrices-decl`],
-    body: `\`identity\` is available in the frees matrix functions surface.
-
-## Syntax
-
-\`\`\`
-identity(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Construct a three-channel identity map
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-A = identity(3)
-
-{ CHECK A[1,1] 1 0.000001 }
-{ CHECK A[1,2] 0 1e-8 }
-{ CHECK A[1,3] 0 1e-8 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-A[1,1] = 1
-A[1,2] = 0
-A[1,3] = 0
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
-  },
-  {
-    name: `scal`,
-    slug: `scal`,
-    category: `Matrix Functions`,
-    summary: `Reference page for scal.`,
-    related: [],
-    examples: [],
-    tags: [`scal`],
-    references: [],
-    guides: [`matrices-blas`],
-    body: `\`scal\` is available in the frees matrix functions surface.
-
-## Syntax
-
-\`\`\`
-scal(...)
-\`\`\`
-
-## Description
-
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
-
-## Examples
-
-<!-- verified-reference-example:start -->
-
-### Verified example — Scale a measurement vector
-
-Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
-
-\`\`\`frees
-x = [1, 2, 3]
-y = scal(2, x)
-
-{ CHECK x[1] 1 0.000001 }
-{ CHECK x[2] 2 0.000002 }
-{ CHECK x[3] 3 0.000003 }
-\`\`\`
-
-Expected output (selected solution values; numerical rounding may vary):
-
-\`\`\`text
-x[1] = 1
-x[2] = 2
-x[3] = 3
-\`\`\`
-
-<!-- verified-reference-example:end -->`,
   },
   {
     name: `FinalValue`,
@@ -54225,7 +54930,11 @@ above the ideal-gas estimate because \`Z < 1\`.
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| \`UNKNOWN_FLUID\` | \`fluid$\` not in the table | Use a supported fluid name. |`,
+| \`Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.\` | \`fluid$\` is not in the cubic-EOS table (aliases such as \`co2\` and \`r717\` are accepted) | Use one of the listed fluids. |
+| \`Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.\` | Unsupported \`model$\` | Pass \`'SRK'\` or \`'PR'\`. |
+| \`Cubic EOS: no physical root for carbondioxide at T=-5 K, P=4000000 Pa.\` | The cubic has no positive-volume root at \`(T, P)\` — usually a unit slip | Check \`T\` [K] and \`P\` [Pa]. |
+
+\`phase$\` = \`'liquid'\` selects the liquid root and \`'vapor'\` (or \`'vapour'\`, \`'gas'\`) the vapour root; any other word is refused with \`Cubic EOS: phase$ must be 'liquid' or 'vapor'\`.`,
   },
   {
     name: `eos_enthalpy`,
@@ -54329,7 +55038,11 @@ forces.
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| \`UNKNOWN_FLUID\` | \`fluid$\` not in the table | Use a supported fluid name. |`,
+| \`Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.\` | \`fluid$\` is not in the cubic-EOS table (aliases such as \`co2\` and \`r717\` are accepted) | Use one of the listed fluids. |
+| \`Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.\` | Unsupported \`model$\` | Pass \`'SRK'\` or \`'PR'\`. |
+| \`Cubic EOS: no physical root for carbondioxide at T=-5 K, P=4000000 Pa.\` | The cubic has no positive-volume root at \`(T, P)\` — usually a unit slip | Check \`T\` [K] and \`P\` [Pa]. |
+
+\`phase$\` = \`'liquid'\` selects the liquid root and \`'vapor'\` (or \`'vapour'\`, \`'gas'\`) the vapour root; any other word is refused with \`Cubic EOS: phase$ must be 'liquid' or 'vapor'\`.`,
   },
   {
     name: `eos_entropy`,
@@ -54409,7 +55122,17 @@ p_from_v = 4344014.54 [Pa]
 | \`model$\` | String | Yes | Selector — One of \`SRK\`, \`PR\`. |
 | \`T\` | Number | Yes | Temperature [K]. |
 | \`P\` | Number | Yes | Pressure [Pa]. |
-| \`phase$\` | String | Yes | Selector — One of \`vapor\`, \`liquid\`. |`,
+| \`phase$\` | String | Yes | Selector — One of \`vapor\`, \`liquid\`. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.\` | \`fluid$\` is not in the cubic-EOS table (aliases such as \`co2\` and \`r717\` are accepted) | Use one of the listed fluids. |
+| \`Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.\` | Unsupported \`model$\` | Pass \`'SRK'\` or \`'PR'\`. |
+| \`Cubic EOS: no physical root for carbondioxide at T=-5 K, P=4000000 Pa.\` | The cubic has no positive-volume root at \`(T, P)\` — usually a unit slip | Check \`T\` [K] and \`P\` [Pa]. |
+
+\`phase$\` = \`'liquid'\` selects the liquid root and \`'vapor'\` (or \`'vapour'\`, \`'gas'\`) the vapour root; any other word is refused with \`Cubic EOS: phase$ must be 'liquid' or 'vapor'\`.`,
   },
   {
     name: `eos_pressure`,
@@ -54488,7 +55211,17 @@ p_from_v = 4344014.54 [Pa]
 | \`fluid$\` | String | Yes | Fluid name (e.g. Water, R134a, Air). |
 | \`model$\` | String | Yes | Selector — One of \`SRK\`, \`PR\`. |
 | \`T\` | Number | Yes | Temperature [K]. |
-| \`v\` | Number | Yes | Specific volume [m³/kg]. |`,
+| \`v\` | Number | Yes | Specific volume [m³/kg]. |
+
+## Common Errors
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| \`Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.\` | \`fluid$\` is not in the cubic-EOS table (aliases such as \`co2\` and \`r717\` are accepted) | Use one of the listed fluids. |
+| \`Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.\` | Unsupported \`model$\` | Pass \`'SRK'\` or \`'PR'\`. |
+| \`eos_pressure: specific volume v must be positive, got 0 m^3/kg.\` | \`v\` is zero, negative or not a number | Pass the specific volume in m³/kg. Volumes between 0 and the co-volume \`b\` are answered but are not physical states. |
+
+No range check is applied to \`v\`: a non-physical specific volume (for example \`v ≤ b\`) returns a pressure without an error, so validate \`v\` first.`,
   },
   {
     name: `eos_psat`,
@@ -54587,8 +55320,9 @@ the critical point is 304 K / 7.38 MPa).
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| \`SUPERCRITICAL\` | \`T ≥ Tc\` | No saturation pressure exists above the critical temperature. |
-| \`UNKNOWN_FLUID\` | \`fluid$\` not in the table | Use a supported fluid name. |`,
+| \`Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.\` | \`fluid$\` is not in the cubic-EOS table (aliases such as \`co2\` and \`r717\` are accepted) | Use one of the listed fluids. |
+| \`Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.\` | Unsupported \`model$\` | Pass \`'SRK'\` or \`'PR'\`. |
+| \`Cubic EOS: saturation pressure needs T < Tc (304.13 K) for carbondioxide, got 400 K.\` | \`T\` at or above the critical temperature | Saturation only exists below \`Tc\`. |`,
   },
   {
     name: `eos_volume`,
@@ -54687,7 +55421,11 @@ the reciprocal of the density.
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| \`UNKNOWN_FLUID\` | \`fluid$\` not in the table | Use a supported fluid name. |`,
+| \`Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.\` | \`fluid$\` is not in the cubic-EOS table (aliases such as \`co2\` and \`r717\` are accepted) | Use one of the listed fluids. |
+| \`Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.\` | Unsupported \`model$\` | Pass \`'SRK'\` or \`'PR'\`. |
+| \`Cubic EOS: no physical root for carbondioxide at T=-5 K, P=4000000 Pa.\` | The cubic has no positive-volume root at \`(T, P)\` — usually a unit slip | Check \`T\` [K] and \`P\` [Pa]. |
+
+\`phase$\` = \`'liquid'\` selects the liquid root and \`'vapor'\` (or \`'vapour'\`, \`'gas'\`) the vapour root; any other word is refused with \`Cubic EOS: phase$ must be 'liquid' or 'vapor'\`.`,
   },
   {
     name: `eos_z`,
@@ -54794,8 +55532,11 @@ just above the CO₂ critical temperature (304 K) at near-critical pressure.
 
 | Error | Cause | Fix |
 | --- | --- | --- |
-| \`UNKNOWN_FLUID\` | \`fluid$\` not in the critical-constant table | Use a supported fluid name. |
-| \`UNKNOWN_MODEL\` | \`model$\` not \`'SRK'\`/\`'PR'\` | Pass \`'SRK'\` or \`'PR'\`. |`,
+| \`Cubic EOS: unknown fluid 'name'. Known fluids: ammonia, carbondioxide, ethane, methane, nbutane, nitrogen, oxygen, propane, water.\` | \`fluid$\` is not in the cubic-EOS table (aliases such as \`co2\` and \`r717\` are accepted) | Use one of the listed fluids. |
+| \`Cubic EOS: model must be 'SRK' or 'PR', got 'VDW'.\` | Unsupported \`model$\` | Pass \`'SRK'\` or \`'PR'\`. |
+| \`Cubic EOS: no physical root for carbondioxide at T=-5 K, P=4000000 Pa.\` | The cubic has no positive-volume root at \`(T, P)\` — usually a unit slip | Check \`T\` [K] and \`P\` [Pa]. |
+
+\`phase$\` = \`'liquid'\` selects the liquid root and \`'vapor'\` (or \`'vapour'\`, \`'gas'\`) the vapour root; any other word is refused with \`Cubic EOS: phase$ must be 'liquid' or 'vapor'\`.`,
   },
   {
     name: `c_`,
@@ -56058,6 +56799,64 @@ y = beta(2, 3)
 1. NIST *Digital Library of Mathematical Functions*, §5.12.`,
   },
   {
+    name: `betainc`,
+    slug: `betainc`,
+    category: `Special Functions`,
+    summary: `Regularized incomplete beta function I_x(a, b).`,
+    related: [`beta`, `fcdf`, `tcdf`],
+    examples: [],
+    tags: [`betainc`, `special`, `beta`],
+    references: [],
+    guides: [],
+    body: `Regularized incomplete beta function I_x(a, b).
+
+## Syntax
+
+\`\`\`
+y = betainc(x, a, b)
+\`\`\`
+
+## Description
+
+\`betainc(x, a, b)\` returns I_x(a, b) = B(x; a, b)/B(a, b), which is P(X ≤ x) for X ~ Beta(a, b). Note the argument order: x first.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Upper limit in [0, 1]. |
+| \`a\` | Number | Yes | Shape parameter (> 0). |
+| \`b\` | Number | Yes | Shape parameter (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | Value in [0, 1]. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate an incomplete beta function
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = betainc(0.5, 2, 3)
+
+{ CHECK result 0.6875 6.874999999999999e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.6875
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `chebyshevt`,
     slug: `chebyshevt`,
     category: `Special Functions`,
@@ -56979,6 +57778,238 @@ y = loggamma(101)
 1. NIST *Digital Library of Mathematical Functions*, §5.2.`,
   },
   {
+    name: `anova1_df_between`,
+    slug: `anova1_df_between`,
+    category: `Stats`,
+    summary: `One-way ANOVA between-group degrees of freedom (k − 1).`,
+    related: [`anova1_f`, `anova1_pval`, `anova1_df_within`],
+    examples: [],
+    tags: [`anova1_df_between`, `stats`, `anova`, `hypothesis test`],
+    references: [],
+    guides: [],
+    body: `One-way ANOVA between-group degrees of freedom (k − 1).
+
+## Syntax
+
+\`\`\`
+df = anova1_df_between(g1, g2, ...)
+\`\`\`
+
+## Description
+
+\`anova1_df_between(g1, g2, ...)\` runs a one-way ANOVA F-test of whether all group means are equal, and returns the **between-group degrees of freedom (k − 1)**. Pass two or more groups as vectors.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`g1, g2, ...\` | Vector | Yes | Two or more groups of observations. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`df\` | Number | Between-group degrees of freedom (k − 1). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare readings from three sensor batches
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = anova1_df_between([9, 10, 11], [11, 12, 13], [13, 14, 15])
+
+{ CHECK result 2 0.000002 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 2
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `anova1_df_within`,
+    slug: `anova1_df_within`,
+    category: `Stats`,
+    summary: `One-way ANOVA within-group degrees of freedom (N − k).`,
+    related: [`anova1_f`, `anova1_pval`, `anova1_df_between`],
+    examples: [],
+    tags: [`anova1_df_within`, `stats`, `anova`, `hypothesis test`],
+    references: [],
+    guides: [],
+    body: `One-way ANOVA within-group degrees of freedom (N − k).
+
+## Syntax
+
+\`\`\`
+df = anova1_df_within(g1, g2, ...)
+\`\`\`
+
+## Description
+
+\`anova1_df_within(g1, g2, ...)\` runs a one-way ANOVA F-test of whether all group means are equal, and returns the **within-group degrees of freedom (N − k)**. Pass two or more groups as vectors.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`g1, g2, ...\` | Vector | Yes | Two or more groups of observations. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`df\` | Number | Within-group degrees of freedom (N − k). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare readings from three sensor batches
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = anova1_df_within([9, 10, 11], [11, 12, 13], [13, 14, 15])
+
+{ CHECK result 6 0.000006 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 6
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `anova1_f`,
+    slug: `anova1_f`,
+    category: `Stats`,
+    summary: `One-way ANOVA F statistic.`,
+    related: [`anova1_pval`, `anova1_df_between`, `anova1_df_within`],
+    examples: [],
+    tags: [`anova1_f`, `stats`, `anova`, `hypothesis test`],
+    references: [],
+    guides: [],
+    body: `One-way ANOVA F statistic.
+
+## Syntax
+
+\`\`\`
+F = anova1_f(g1, g2, ...)
+\`\`\`
+
+## Description
+
+\`anova1_f(g1, g2, ...)\` runs a one-way ANOVA F-test of whether all group means are equal, and returns the **F statistic**. Pass two or more groups as vectors.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`g1, g2, ...\` | Vector | Yes | Two or more groups of observations. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`F\` | Number | F statistic. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare readings from three sensor batches
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = anova1_f([9, 10, 11], [11, 12, 13], [13, 14, 15])
+
+{ CHECK result 12 0.000012 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 12
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `anova1_pval`,
+    slug: `anova1_pval`,
+    category: `Stats`,
+    summary: `One-way ANOVA p-value.`,
+    related: [`anova1_f`, `anova1_df_between`, `anova1_df_within`],
+    examples: [],
+    tags: [`anova1_pval`, `stats`, `anova`, `hypothesis test`],
+    references: [],
+    guides: [],
+    body: `One-way ANOVA p-value.
+
+## Syntax
+
+\`\`\`
+p = anova1_pval(g1, g2, ...)
+\`\`\`
+
+## Description
+
+\`anova1_pval(g1, g2, ...)\` runs a one-way ANOVA F-test of whether all group means are equal, and returns the **p-value**. Pass two or more groups as vectors.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`g1, g2, ...\` | Vector | Yes | Two or more groups of observations. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`p\` | Number | P-value. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare readings from three sensor batches
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = anova1_pval([9, 10, 11], [11, 12, 13], [13, 14, 15])
+
+{ CHECK result 0.008 1e-8 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.008
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `average`,
     slug: `average`,
     category: `Stats`,
@@ -57034,6 +58065,128 @@ result = 20
 | \`x1\` | Number | Yes | First value. |
 | \`x2\` | Number | Yes | Second value. |
 | \`...\` | Number | Yes | Additional values (variadic). |`,
+  },
+  {
+    name: `bootstrap_ci_hi`,
+    slug: `bootstrap_ci_hi`,
+    category: `Stats`,
+    summary: `Upper bound of a seeded bootstrap confidence interval for the mean.`,
+    related: [`bootstrap_ci_lo`, `ci_mean_hi`],
+    examples: [],
+    tags: [`bootstrap_ci_hi`, `stats`, `bootstrap`, `confidence interval`],
+    references: [],
+    guides: [],
+    body: `Upper bound of a seeded bootstrap confidence interval for the mean.
+
+## Syntax
+
+\`\`\`
+b = bootstrap_ci_hi(confidence, n_resamples, seed, data)
+\`\`\`
+
+## Description
+
+\`bootstrap_ci_hi(confidence, n_resamples, seed, data)\` draws \`n_resamples\` bootstrap samples (with replacement) from \`data\` and returns the **upper percentile bound** of the resampled means. The same seed always gives the same interval.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`confidence\` | Number | Yes | Confidence level in (0, 1). |
+| \`n_resamples\` | Number | Yes | Number of bootstrap resamples. |
+| \`seed\` | Number | Yes | Random seed (integer). |
+| \`data\` | Vector | Yes | Sample values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`b\` | Number | Upper bound, in the units of \`data\`. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Bootstrap a mean with a reproducible seed
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = bootstrap_ci_hi(0.95, 200, 42, [19, 20, 21, 22, 20])
+
+{ CHECK result 21.4 0.0000214 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 21.4
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `bootstrap_ci_lo`,
+    slug: `bootstrap_ci_lo`,
+    category: `Stats`,
+    summary: `Lower bound of a seeded bootstrap confidence interval for the mean.`,
+    related: [`bootstrap_ci_hi`, `ci_mean_lo`],
+    examples: [],
+    tags: [`bootstrap_ci_lo`, `stats`, `bootstrap`, `confidence interval`],
+    references: [],
+    guides: [],
+    body: `Lower bound of a seeded bootstrap confidence interval for the mean.
+
+## Syntax
+
+\`\`\`
+b = bootstrap_ci_lo(confidence, n_resamples, seed, data)
+\`\`\`
+
+## Description
+
+\`bootstrap_ci_lo(confidence, n_resamples, seed, data)\` draws \`n_resamples\` bootstrap samples (with replacement) from \`data\` and returns the **lower percentile bound** of the resampled means. The same seed always gives the same interval.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`confidence\` | Number | Yes | Confidence level in (0, 1). |
+| \`n_resamples\` | Number | Yes | Number of bootstrap resamples. |
+| \`seed\` | Number | Yes | Random seed (integer). |
+| \`data\` | Vector | Yes | Sample values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`b\` | Number | Lower bound, in the units of \`data\`. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Bootstrap a mean with a reproducible seed
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = bootstrap_ci_lo(0.95, 200, 42, [19, 20, 21, 22, 20])
+
+{ CHECK result 19.6 0.000019600000000000002 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 19.6
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
   },
   {
     name: `chi_square`,
@@ -57107,6 +58260,301 @@ i1_val = 1.590636857
 | --- | --- | --- | --- |
 | \`x\` | Number | Yes | Vapor quality (0–1). |
 | \`df\` | Number | Yes | Degrees of freedom. |`,
+  },
+  {
+    name: `chi2gof_df`,
+    slug: `chi2gof_df`,
+    category: `Stats`,
+    summary: `Chi-square goodness-of-fit degrees of freedom (k − 1).`,
+    related: [`chi2gof_stat`, `chi2gof_pval`],
+    examples: [],
+    tags: [`chi2gof_df`, `stats`, `chi-square`, `goodness of fit`],
+    references: [],
+    guides: [],
+    body: `Chi-square goodness-of-fit degrees of freedom (k − 1).
+
+## Syntax
+
+\`\`\`
+df = chi2gof_df(observed, expected)
+\`\`\`
+
+## Description
+
+\`chi2gof_df(observed, expected)\` runs a Pearson χ² goodness-of-fit test of observed counts against expected counts (rescaled to the observed total), and returns the **degrees of freedom (k − 1)**.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`observed\` | Vector | Yes | Observed counts per category. |
+| \`expected\` | Vector | Yes | Expected counts per category (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`df\` | Number | Degrees of freedom (k − 1). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare observed and expected category counts
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = chi2gof_df([18, 22, 20], [20, 20, 20])
+
+{ CHECK result 2 0.000002 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 2
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `chi2gof_pval`,
+    slug: `chi2gof_pval`,
+    category: `Stats`,
+    summary: `Chi-square goodness-of-fit p-value.`,
+    related: [`chi2gof_stat`, `chi2gof_df`],
+    examples: [],
+    tags: [`chi2gof_pval`, `stats`, `chi-square`, `goodness of fit`],
+    references: [],
+    guides: [],
+    body: `Chi-square goodness-of-fit p-value.
+
+## Syntax
+
+\`\`\`
+p = chi2gof_pval(observed, expected)
+\`\`\`
+
+## Description
+
+\`chi2gof_pval(observed, expected)\` runs a Pearson χ² goodness-of-fit test of observed counts against expected counts (rescaled to the observed total), and returns the **p-value**.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`observed\` | Vector | Yes | Observed counts per category. |
+| \`expected\` | Vector | Yes | Expected counts per category (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`p\` | Number | P-value. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare observed and expected category counts
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = chi2gof_pval([18, 22, 20], [20, 20, 20])
+
+{ CHECK result 0.8187307531 8.187307530779818e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.8187307531
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `chi2gof_stat`,
+    slug: `chi2gof_stat`,
+    category: `Stats`,
+    summary: `Chi-square goodness-of-fit χ² statistic.`,
+    related: [`chi2gof_pval`, `chi2gof_df`],
+    examples: [],
+    tags: [`chi2gof_stat`, `stats`, `chi-square`, `goodness of fit`],
+    references: [],
+    guides: [],
+    body: `Chi-square goodness-of-fit χ² statistic.
+
+## Syntax
+
+\`\`\`
+chi2 = chi2gof_stat(observed, expected)
+\`\`\`
+
+## Description
+
+\`chi2gof_stat(observed, expected)\` runs a Pearson χ² goodness-of-fit test of observed counts against expected counts (rescaled to the observed total), and returns the **χ² statistic**.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`observed\` | Vector | Yes | Observed counts per category. |
+| \`expected\` | Vector | Yes | Expected counts per category (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`chi2\` | Number | Χ² statistic. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare observed and expected category counts
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = chi2gof_stat([18, 22, 20], [20, 20, 20])
+
+{ CHECK result 0.4 4e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.4
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ci_mean_hi`,
+    slug: `ci_mean_hi`,
+    category: `Stats`,
+    summary: `Upper bound of the t-based confidence interval for the mean.`,
+    related: [`ci_mean_lo`, `bootstrap_ci_hi`],
+    examples: [],
+    tags: [`ci_mean_hi`, `stats`, `confidence interval`],
+    references: [],
+    guides: [],
+    body: `Upper bound of the t-based confidence interval for the mean.
+
+## Syntax
+
+\`\`\`
+b = ci_mean_hi(confidence, data)
+\`\`\`
+
+## Description
+
+\`ci_mean_hi(confidence, data)\` returns the **upper bound** of the Student-t confidence interval for the population mean of \`data\`, at confidence level \`confidence\` (e.g. 0.95).
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`confidence\` | Number | Yes | Confidence level in (0, 1), e.g. 0.95. |
+| \`data\` | Vector | Yes | Sample values (n ≥ 2). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`b\` | Number | Upper bound, in the units of \`data\`. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Bound a mean temperature at 95 percent confidence
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ci_mean_hi(0.95, [19, 20, 21, 22, 20])
+
+{ CHECK result 21.81571478 0.00002181571477698227 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 21.81571478
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ci_mean_lo`,
+    slug: `ci_mean_lo`,
+    category: `Stats`,
+    summary: `Lower bound of the t-based confidence interval for the mean.`,
+    related: [`ci_mean_hi`, `bootstrap_ci_lo`],
+    examples: [],
+    tags: [`ci_mean_lo`, `stats`, `confidence interval`],
+    references: [],
+    guides: [],
+    body: `Lower bound of the t-based confidence interval for the mean.
+
+## Syntax
+
+\`\`\`
+b = ci_mean_lo(confidence, data)
+\`\`\`
+
+## Description
+
+\`ci_mean_lo(confidence, data)\` returns the **lower bound** of the Student-t confidence interval for the population mean of \`data\`, at confidence level \`confidence\` (e.g. 0.95).
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`confidence\` | Number | Yes | Confidence level in (0, 1), e.g. 0.95. |
+| \`data\` | Vector | Yes | Sample values (n ≥ 2). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`b\` | Number | Lower bound, in the units of \`data\`. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Bound a mean temperature at 95 percent confidence
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ci_mean_lo(0.95, [19, 20, 21, 22, 20])
+
+{ CHECK result 18.98428522 0.000018984285223017727 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 18.98428522
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
   },
   {
     name: `Convolve`,
@@ -57209,6 +58657,124 @@ b = [7, -2, 0.5]
 | \`Convolve requires two non-empty sequences\` | An empty input. | Both sequences need at least one element. |`,
   },
   {
+    name: `corrcoef`,
+    slug: `corrcoef`,
+    category: `Stats`,
+    summary: `Pearson correlation coefficient (alias of pearson).`,
+    related: [`pearson`, `spearman`],
+    examples: [],
+    tags: [`corrcoef`, `stats`, `correlation`],
+    references: [],
+    guides: [],
+    body: `Pearson correlation coefficient (alias of pearson).
+
+## Syntax
+
+\`\`\`
+r = corrcoef(x, y)
+\`\`\`
+
+## Description
+
+\`corrcoef(x, y)\` returns the Pearson correlation coefficient r ∈ [−1, 1]; it computes exactly what \`pearson\` does.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First series. |
+| \`y\` | Vector | Yes | Second series (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`r\` | Number | Correlation coefficient (dimensionless). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Measure linear correlation
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = corrcoef([1, 2, 3, 4], [3, 4, 6, 7])
+
+{ CHECK result 0.9899494937 9.899494936611665e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.9899494937
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `cov`,
+    slug: `cov`,
+    category: `Stats`,
+    summary: `Unbiased (n − 1) sample covariance of two series.`,
+    related: [`pearson`, `corrcoef`],
+    examples: [],
+    tags: [`cov`, `stats`, `covariance`],
+    references: [],
+    guides: [],
+    body: `Unbiased (n − 1) sample covariance of two series.
+
+## Syntax
+
+\`\`\`
+c = cov(x, y)
+\`\`\`
+
+## Description
+
+\`cov(x, y)\` returns the Bessel-corrected sample covariance of the paired series \`x\` and \`y\`.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First series. |
+| \`y\` | Vector | Yes | Second series (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`c\` | Number | Covariance, in units of x·y. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Measure covariance of paired readings
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = cov([1, 2, 3, 4], [3, 4, 6, 7])
+
+{ CHECK result 2.333333333 0.0000023333333333333336 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 2.333333333
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `Detrend`,
     slug: `detrend`,
     category: `Stats`,
@@ -57309,6 +58875,64 @@ T = [20.1, 20.4, 20.6, 21.0]
 | --- | --- | --- |
 | \`Detrend mode must be 'linear' or 'constant'\` | An unrecognised mode string. | Use one of the two spellings; \`'const'\` and \`'mean'\` are also accepted for the constant form. |
 | \`Detrend requires the output vector to match the input length\` | A declared output of a different size. | Leave the output bare and let it be sized, or declare it \`[1:n]\`. |`,
+  },
+  {
+    name: `fcdf`,
+    slug: `fcdf`,
+    category: `Stats`,
+    summary: `F distribution — P(X ≤ x).`,
+    related: [`fpdf`, `finv`],
+    examples: [],
+    tags: [`fcdf`, `stats`, `distribution`, `f distribution`],
+    references: [],
+    guides: [],
+    body: `F distribution — P(X ≤ x).
+
+## Syntax
+
+\`\`\`
+y = fcdf(x, d1, d2)
+\`\`\`
+
+## Description
+
+\`fcdf(x, d1, d2)\` returns the P(X ≤ x) of the F distribution with \`d1\` numerator and \`d2\` denominator degrees of freedom.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Evaluation point (≥ 0). |
+| \`d1\` | Number | Yes | Numerator degrees of freedom (> 0). |
+| \`d2\` | Number | Yes | Denominator degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | Cumulative probability in [0, 1]. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a variance-ratio probability
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = fcdf(2, 4, 10)
+
+{ CHECK result 0.8294730742 8.294730741512228e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.8294730742
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
   },
   {
     name: `FFT`,
@@ -57633,6 +59257,122 @@ a = [1]
 | \`FiltFilt requires at least two samples\` | A one-sample record. | There is nothing to reflect about; use **Filter** or a longer record. |`,
   },
   {
+    name: `finv`,
+    slug: `finv`,
+    category: `Stats`,
+    summary: `F distribution — inverse CDF (quantile).`,
+    related: [`fcdf`, `fpdf`],
+    examples: [],
+    tags: [`finv`, `stats`, `distribution`, `f distribution`],
+    references: [],
+    guides: [],
+    body: `F distribution — inverse CDF (quantile).
+
+## Syntax
+
+\`\`\`
+y = finv(p, d1, d2)
+\`\`\`
+
+## Description
+
+\`finv(p, d1, d2)\` returns the inverse CDF (quantile) of the F distribution with \`d1\` numerator and \`d2\` denominator degrees of freedom.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`p\` | Number | Yes | Probability in (0, 1). |
+| \`d1\` | Number | Yes | Numerator degrees of freedom (> 0). |
+| \`d2\` | Number | Yes | Denominator degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | Quantile x with P(X ≤ x) = p. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Find a variance-ratio critical value
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = finv(0.95, 4, 10)
+
+{ CHECK result 3.478049691 0.0000034780496907652303 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 3.478049691
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `fpdf`,
+    slug: `fpdf`,
+    category: `Stats`,
+    summary: `F distribution — probability density.`,
+    related: [`fcdf`, `finv`],
+    examples: [],
+    tags: [`fpdf`, `stats`, `distribution`, `f distribution`],
+    references: [],
+    guides: [],
+    body: `F distribution — probability density.
+
+## Syntax
+
+\`\`\`
+y = fpdf(x, d1, d2)
+\`\`\`
+
+## Description
+
+\`fpdf(x, d1, d2)\` returns the probability density of the F distribution with \`d1\` numerator and \`d2\` denominator degrees of freedom.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Evaluation point (≥ 0). |
+| \`d1\` | Number | Yes | Numerator degrees of freedom (> 0). |
+| \`d2\` | Number | Yes | Denominator degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | Density value. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a variance-ratio density
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = fpdf(1, 4, 10)
+
+{ CHECK result 0.4553496296 4.5534962958825516e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.4553496296
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `IFFT`,
     slug: `ifft`,
     category: `Stats`,
@@ -57755,6 +59495,8 @@ intercept(xvals, yvals)
 
 Least-squares linear-fit intercept
 
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
 ## Mathematical Formulation
 
 $$ b = \\bar y - m\\,\\bar x $$
@@ -57789,16 +59531,72 @@ result = 2
 | \`yvals\` | Number | Yes | Dependent-variable data (vector). |`,
   },
   {
+    name: `kurtosis`,
+    slug: `kurtosis`,
+    category: `Stats`,
+    summary: `Bias-corrected sample excess kurtosis (Fisher).`,
+    related: [`skewness`, `mad`],
+    examples: [],
+    tags: [`kurtosis`, `stats`, `moment`],
+    references: [],
+    guides: [],
+    body: `Bias-corrected sample excess kurtosis (Fisher).
+
+## Syntax
+
+\`\`\`
+k = kurtosis(x1, x2, x3, x4, ...)
+\`\`\`
+
+## Description
+
+\`kurtosis(x1, ..., xn)\` returns the bias-corrected **excess** kurtosis (SciPy \`kurtosis(bias=False, fisher=True)\`), so a normal sample gives ≈ 0. Needs at least four values.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x1, x2, x3, x4, ...\` | Number | Yes | Four or more values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`k\` | Number | Excess kurtosis (dimensionless). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a scalar engineering calculation
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = kurtosis(1, 2, 2, 3, 7)
+
+{ CHECK result 3.32231405 0.000003322314049586774 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 3.32231405
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `linfit`,
     slug: `linfit`,
     category: `Stats`,
-    summary: `Reference page for linfit.`,
-    related: [],
+    summary: `Straight-line least-squares fit: slope, intercept and R².`,
+    related: [`polyfit`, `slope`, `intercept`, `r2`],
     examples: [],
     tags: [`linfit`],
     references: [],
     guides: [],
-    body: `Fits a straight line and returns its slope, intercept, and coefficient of determination.
+    body: `Straight-line least-squares fit: slope, intercept and R².
 
 ## Syntax
 
@@ -57808,11 +59606,7 @@ result = 2
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+\`[slope, intercept, r2] = linfit(x, y)\` fits \`y ≈ slope·x + intercept\` by ordinary least squares and returns the coefficient of determination with it — the three scalar accessors \`slope\`, \`intercept\` and \`r2\` in one call.
 
 ## Examples
 
@@ -57839,6 +59633,77 @@ Expected output (selected solution values; numerical rounding may vary):
 intercept = 0
 r2 = 1
 slope = 2
+\`\`\`
+
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | Sample abscissae. |
+| \`y\` | Vector | Yes | Sample ordinates (same length as \`x\`). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`slope\` | Number | Fitted slope. |
+| \`intercept\` | Number | Fitted intercept. |
+| \`r2\` | Number | Coefficient of determination R². |`,
+  },
+  {
+    name: `mad`,
+    slug: `mad`,
+    category: `Stats`,
+    summary: `Median absolute deviation: median(|xᵢ − median(x)|).`,
+    related: [`trimmedmean`, `skewness`],
+    examples: [],
+    tags: [`mad`, `stats`, `robust`, `spread`],
+    references: [],
+    guides: [],
+    body: `Median absolute deviation: median(|xᵢ − median(x)|).
+
+## Syntax
+
+\`\`\`
+d = mad(x1, x2, ...)
+\`\`\`
+
+## Description
+
+\`mad(x1, x2, ...)\` returns the unscaled median absolute deviation, a robust spread measure. Multiply by 1.4826 to estimate σ for normal data.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x1, x2, ...\` | Number | Yes | One or more values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`d\` | Number | MAD, in the units of the values. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a scalar engineering calculation
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = mad(9, 10, 10, 11, 30)
+
+{ CHECK result 1 0.000001 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 1
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -58495,6 +60360,65 @@ dt = (peakindex(2, 0, 3, x) - peakindex(1, 0, 3, x)) / 100
 | \`the ordinal must be a positive whole number\` | \`k\` was 0, negative or fractional. | Peaks are numbered from 1. |`,
   },
   {
+    name: `pearson`,
+    slug: `pearson`,
+    category: `Stats`,
+    summary: `Pearson linear correlation coefficient of two series.`,
+    related: [`corrcoef`, `spearman`, `cov`],
+    examples: [],
+    tags: [`pearson`, `stats`, `correlation`],
+    references: [],
+    guides: [],
+    body: `Pearson linear correlation coefficient of two series.
+
+## Syntax
+
+\`\`\`
+r = pearson(x, y)
+\`\`\`
+
+## Description
+
+\`pearson(x, y)\` returns the Pearson correlation coefficient r ∈ [−1, 1] of the paired series. \`corrcoef\` is an alias.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First series. |
+| \`y\` | Vector | Yes | Second series (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`r\` | Number | Correlation coefficient (dimensionless). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Measure linear correlation
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = pearson([1, 2, 3, 4], [3, 4, 6, 7])
+
+{ CHECK result 0.9899494937 9.899494936611665e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.9899494937
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `percentile`,
     slug: `percentile`,
     category: `Stats`,
@@ -58560,16 +60484,138 @@ v[1] = 2
 | \`...\` | Number | Yes | Additional values (variadic). |`,
   },
   {
+    name: `permtest_pval`,
+    slug: `permtest_pval`,
+    category: `Stats`,
+    summary: `Permutation test for equal means — p-value.`,
+    related: [`permtest_stat`, `ttest2_pval`],
+    examples: [],
+    tags: [`permtest_pval`, `stats`, `permutation`, `nonparametric`],
+    references: [],
+    guides: [],
+    body: `Permutation test for equal means — p-value.
+
+## Syntax
+
+\`\`\`
+y = permtest_pval(n_perms, seed, x, y)
+\`\`\`
+
+## Description
+
+\`permtest_pval(n_perms, seed, x, y)\` runs a seeded permutation test of whether two independent samples have equal means: labels are reshuffled \`n_perms\` times and the result is the **p-value (count + 1)/(n_perms + 1)**. The same seed always gives the same result.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`n_perms\` | Number | Yes | Number of random permutations. |
+| \`seed\` | Number | Yes | Random seed (integer) for reproducibility. |
+| \`x\` | Vector | Yes | First sample. |
+| \`y\` | Vector | Yes | Second sample. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | P-value (count + 1)/(n_perms + 1). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare two batches with a seeded permutation test
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = permtest_pval(200, 42, [9, 10, 11], [12, 13, 14])
+
+{ CHECK result 0.1144278607 1.1442786069651741e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.1144278607
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `permtest_stat`,
+    slug: `permtest_stat`,
+    category: `Stats`,
+    summary: `Permutation test for equal means — observed difference of means |x̄ − ȳ|.`,
+    related: [`permtest_pval`, `ttest2_pval`],
+    examples: [],
+    tags: [`permtest_stat`, `stats`, `permutation`, `nonparametric`],
+    references: [],
+    guides: [],
+    body: `Permutation test for equal means — observed difference of means |x̄ − ȳ|.
+
+## Syntax
+
+\`\`\`
+y = permtest_stat(n_perms, seed, x, y)
+\`\`\`
+
+## Description
+
+\`permtest_stat(n_perms, seed, x, y)\` runs a seeded permutation test of whether two independent samples have equal means: labels are reshuffled \`n_perms\` times and the result is the **observed difference of means |x̄ − ȳ|**. The same seed always gives the same result.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`n_perms\` | Number | Yes | Number of random permutations. |
+| \`seed\` | Number | Yes | Random seed (integer) for reproducibility. |
+| \`x\` | Vector | Yes | First sample. |
+| \`y\` | Vector | Yes | Second sample. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | Observed difference of means |x̄ − ȳ|. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare two batches with a seeded permutation test
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = permtest_stat(200, 42, [9, 10, 11], [12, 13, 14])
+
+{ CHECK result 3 0.000003 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 3
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `polyfit`,
     slug: `polyfit`,
     category: `Stats`,
-    summary: `Reference page for polyfit.`,
-    related: [],
+    summary: `Least-squares polynomial fit; coefficients in ascending powers.`,
+    related: [`linfit`, `slope`, `intercept`, `r2`],
     examples: [],
     tags: [`polyfit`],
     references: [],
     guides: [],
-    body: `Fits a polynomial by least squares and returns coefficients in ascending powers.
+    body: `Least-squares polynomial fit; coefficients in ascending powers.
 
 ## Syntax
 
@@ -58579,11 +60625,7 @@ v[1] = 2
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+\`[c] = polyfit(x, y, degree)\` fits a polynomial of the given degree to the points \`(x, y)\` by least squares and returns its coefficients in **ascending** powers: \`y ≈ c[1] + c[2]·x + … + c[degree+1]·x^degree\`. Note the order — it is the reverse of MATLAB's \`polyfit\`.
 
 ## Examples
 
@@ -58611,7 +60653,21 @@ c[2] = 0
 c[3] = 1
 \`\`\`
 
-<!-- verified-reference-example:end -->`,
+<!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | Sample abscissae. |
+| \`y\` | Vector | Yes | Sample ordinates (same length as \`x\`). |
+| \`degree\` | Number | Yes | Polynomial degree (≥ 0, less than the number of points). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`c\` | Vector | \`degree + 1\` coefficients, constant term first. |`,
   },
   {
     name: `probability`,
@@ -58721,6 +60777,8 @@ r2(xvals, yvals)
 
 Linear-fit coefficient of determination R^2
 
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
 ## Mathematical Formulation
 
 $$ R^2 = 1 - \\frac{\\sum (y_i - \\hat y_i)^2}{\\sum (y_i - \\bar y)^2} $$
@@ -58729,31 +60787,25 @@ $$ R^2 = 1 - \\frac{\\sum (y_i - \\hat y_i)^2}{\\sum (y_i - \\bar y)^2} $$
 
 <!-- verified-reference-example:start -->
 
-### Verified example — Solve a complete model
+### Verified example — Quality of a calibration line
 
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-// frees-language: 2
-VoltageSource VS(E=10)
-Resistor R1(R=3)
-Resistor R2(R=2)
-Ground   G()
-connect(VS.p, R1.a)
-connect(R1.b, R2.a)
-connect(R2.b, VS.n, G.port)
+{ Pass the data as inline lists; a named array is expanded into its
+  elements and is not accepted as a single argument. }
+R2 = r2([1, 2, 3, 4, 5], [2.1, 3.9, 6.2, 7.8, 10.1])
+m  = slope([1, 2, 3, 4, 5], [2.1, 3.9, 6.2, 7.8, 10.1])
 
-{ CHECK g.port.i 0 1e-8 }
-{ CHECK g.port.v 0 1e-8 }
-{ CHECK r1.a.i 2 0.000002 }
+{ CHECK R2 0.9973053289 9.973053289e-7 }
+{ CHECK m 1.99 0.00000199 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-g.port.i = 0
-g.port.v = 0
-r1.a.i = 2
+R2 = 0.9973053289
+m = 1.99
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -58935,6 +60987,62 @@ result = 2
 | \`...\` | Number | Yes | Additional values (variadic). |`,
   },
   {
+    name: `skewness`,
+    slug: `skewness`,
+    category: `Stats`,
+    summary: `Bias-corrected sample skewness (Fisher).`,
+    related: [`kurtosis`, `mad`],
+    examples: [],
+    tags: [`skewness`, `stats`, `moment`],
+    references: [],
+    guides: [],
+    body: `Bias-corrected sample skewness (Fisher).
+
+## Syntax
+
+\`\`\`
+s = skewness(x1, x2, x3, ...)
+\`\`\`
+
+## Description
+
+\`skewness(x1, x2, x3, ...)\` returns the bias-corrected sample skewness (SciPy \`skew(bias=False)\`). Needs at least three values.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x1, x2, x3, ...\` | Number | Yes | Three or more values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`s\` | Number | Skewness (dimensionless). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a scalar engineering calculation
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = skewness(1, 2, 2, 3, 7)
+
+{ CHECK result 1.744369497 0.0000017443694974549943 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 1.744369497
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `slope`,
     slug: `slope`,
     category: `Stats`,
@@ -58956,6 +61064,8 @@ slope(xvals, yvals)
 ## Description
 
 Least-squares linear-fit slope
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
 ## Mathematical Formulation
 
@@ -59079,6 +61189,65 @@ p = [1, 3, 2, 6, 4, 9, 5, 12]
 | \`Smooth window is longer than the series\` | \`k > n\`. | Shorten the window, or lengthen the record. |`,
   },
   {
+    name: `spearman`,
+    slug: `spearman`,
+    category: `Stats`,
+    summary: `Spearman rank correlation coefficient of two series.`,
+    related: [`pearson`, `corrcoef`],
+    examples: [],
+    tags: [`spearman`, `stats`, `correlation`, `rank`],
+    references: [],
+    guides: [],
+    body: `Spearman rank correlation coefficient of two series.
+
+## Syntax
+
+\`\`\`
+rho = spearman(x, y)
+\`\`\`
+
+## Description
+
+\`spearman(x, y)\` returns the Spearman rank correlation ρ ∈ [−1, 1] — the Pearson correlation of the ranks, robust to monotone non-linearity and outliers.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First series. |
+| \`y\` | Vector | Yes | Second series (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`rho\` | Number | Rank correlation (dimensionless). |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare ranks of paired readings
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = spearman([1, 2, 3, 4], [3, 4, 6, 7])
+
+{ CHECK result 1 0.000001 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 1
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `std`,
     slug: `std`,
     category: `Stats`,
@@ -59193,6 +61362,767 @@ v[1] = 1
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | \`x\` | Number | Yes | Vapor quality (0–1). |`,
+  },
+  {
+    name: `tcdf`,
+    slug: `tcdf`,
+    category: `Stats`,
+    summary: `Student's t distribution — P(T ≤ x).`,
+    related: [`tpdf`, `tinv`],
+    examples: [],
+    tags: [`tcdf`, `stats`, `distribution`, `student t`],
+    references: [],
+    guides: [],
+    body: `Student's t distribution — P(T ≤ x).
+
+## Syntax
+
+\`\`\`
+y = tcdf(x, df)
+\`\`\`
+
+## Description
+
+\`tcdf(x, df)\` returns the P(T ≤ x) of Student's t distribution with \`df\` degrees of freedom.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Evaluation point. |
+| \`df\` | Number | Yes | Degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | Cumulative probability in [0, 1]. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a Student-t tail threshold
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = tcdf(2, 9)
+
+{ CHECK result 0.9617235881 9.617235881146496e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.9617235881
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `tinv`,
+    slug: `tinv`,
+    category: `Stats`,
+    summary: `Student's t distribution — inverse CDF (quantile).`,
+    related: [`tcdf`, `tpdf`],
+    examples: [],
+    tags: [`tinv`, `stats`, `distribution`, `student t`],
+    references: [],
+    guides: [],
+    body: `Student's t distribution — inverse CDF (quantile).
+
+## Syntax
+
+\`\`\`
+y = tinv(p, df)
+\`\`\`
+
+## Description
+
+\`tinv(p, df)\` returns the inverse CDF (quantile) of Student's t distribution with \`df\` degrees of freedom.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`p\` | Number | Yes | Probability in (0, 1). |
+| \`df\` | Number | Yes | Degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | Quantile t with P(T ≤ t) = p. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Find a two-sided 95 percent t threshold
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = tinv(0.975, 9)
+
+{ CHECK result 2.262157163 0.0000022621571627982053 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 2.262157163
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `tpdf`,
+    slug: `tpdf`,
+    category: `Stats`,
+    summary: `Student's t distribution — probability density.`,
+    related: [`tcdf`, `tinv`],
+    examples: [],
+    tags: [`tpdf`, `stats`, `distribution`, `student t`],
+    references: [],
+    guides: [],
+    body: `Student's t distribution — probability density.
+
+## Syntax
+
+\`\`\`
+y = tpdf(x, df)
+\`\`\`
+
+## Description
+
+\`tpdf(x, df)\` returns the probability density of Student's t distribution with \`df\` degrees of freedom.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Number | Yes | Evaluation point. |
+| \`df\` | Number | Yes | Degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`y\` | Number | Density value. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Evaluate a Student-t density
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = tpdf(0, 9)
+
+{ CHECK result 0.3880349089 3.880349088716686e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.3880349089
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `trimmedmean`,
+    slug: `trimmedmean`,
+    category: `Stats`,
+    summary: `α-trimmed mean: drop the lowest and highest α fraction, average the rest.`,
+    related: [`wmean`, `mad`, `average`],
+    examples: [],
+    tags: [`trimmedmean`, `stats`, `robust`, `mean`],
+    references: [],
+    guides: [],
+    body: `α-trimmed mean: drop the lowest and highest α fraction, average the rest.
+
+## Syntax
+
+\`\`\`
+m = trimmedmean(alpha, values)
+\`\`\`
+
+## Description
+
+\`trimmedmean(alpha, values)\` removes the lowest and the highest \`alpha\` fraction of the data (each side) and returns the mean of what remains — a mean that ignores outliers.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`alpha\` | Number | Yes | Fraction trimmed from each side, in [0, 0.5). |
+| \`values\` | Vector | Yes | Sample values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`m\` | Number | Trimmed mean, in the units of \`values\`. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Suppress extremes in sensor readings
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = trimmedmean(0.2, [1, 10, 11, 12, 100])
+
+{ CHECK result 11 0.000011 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 11
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ttest_paired_df`,
+    slug: `ttest_paired_df`,
+    category: `Stats`,
+    summary: `Degrees of freedom of the paired-samples t-test.`,
+    related: [`ttest_paired_stat`, `ttest_paired_pval`],
+    examples: [],
+    tags: [`ttest_paired_df`, `stats`, `hypothesis test`, `t-test`],
+    references: [],
+    guides: [],
+    body: `Degrees of freedom of the paired-samples t-test.
+
+## Syntax
+
+\`\`\`
+df = ttest_paired_df(x, y)
+\`\`\`
+
+## Description
+
+\`ttest_paired_df(x, y)\` tests whether the mean difference x − y is zero — a one-sample t-test on the differences (two-sided p-value, n − 1 degrees of freedom) — and returns the **degrees of freedom**. The sibling accessors return the other results of the same test.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First measurement of each pair. |
+| \`y\` | Vector | Yes | Second measurement of each pair (same length as \`x\`). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`df\` | Number | Degrees of freedom. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare measurements before and after calibration
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ttest_paired_df([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
+
+{ CHECK result 4 0.000004 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 4
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ttest_paired_pval`,
+    slug: `ttest_paired_pval`,
+    category: `Stats`,
+    summary: `Two-sided p-value of the paired-samples t-test.`,
+    related: [`ttest_paired_stat`, `ttest_paired_df`],
+    examples: [],
+    tags: [`ttest_paired_pval`, `stats`, `hypothesis test`, `t-test`],
+    references: [],
+    guides: [],
+    body: `Two-sided p-value of the paired-samples t-test.
+
+## Syntax
+
+\`\`\`
+p = ttest_paired_pval(x, y)
+\`\`\`
+
+## Description
+
+\`ttest_paired_pval(x, y)\` tests whether the mean difference x − y is zero — a one-sample t-test on the differences (two-sided p-value, n − 1 degrees of freedom) — and returns the **two-sided p-value**. The sibling accessors return the other results of the same test.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First measurement of each pair. |
+| \`y\` | Vector | Yes | Second measurement of each pair (same length as \`x\`). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`p\` | Number | Two-sided p-value. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare measurements before and after calibration
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ttest_paired_pval([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
+
+{ CHECK result 0.05160595781 5.1605957811174716e-8 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.05160595781
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ttest_paired_stat`,
+    slug: `ttest_paired_stat`,
+    category: `Stats`,
+    summary: `t statistic of the paired-samples t-test.`,
+    related: [`ttest_paired_pval`, `ttest_paired_df`],
+    examples: [],
+    tags: [`ttest_paired_stat`, `stats`, `hypothesis test`, `t-test`],
+    references: [],
+    guides: [],
+    body: `t statistic of the paired-samples t-test.
+
+## Syntax
+
+\`\`\`
+t = ttest_paired_stat(x, y)
+\`\`\`
+
+## Description
+
+\`ttest_paired_stat(x, y)\` tests whether the mean difference x − y is zero — a one-sample t-test on the differences (two-sided p-value, n − 1 degrees of freedom) — and returns the **t statistic**. The sibling accessors return the other results of the same test.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First measurement of each pair. |
+| \`y\` | Vector | Yes | Second measurement of each pair (same length as \`x\`). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`t\` | Number | T statistic. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare measurements before and after calibration
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ttest_paired_stat([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
+
+{ CHECK result -2.745625892 0.000002745625891934576 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = -2.745625892
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ttest1_df`,
+    slug: `ttest1_df`,
+    category: `Stats`,
+    summary: `Degrees of freedom of the one-sample t-test.`,
+    related: [`ttest1_stat`, `ttest1_pval`],
+    examples: [],
+    tags: [`ttest1_df`, `stats`, `hypothesis test`, `t-test`],
+    references: [],
+    guides: [],
+    body: `Degrees of freedom of the one-sample t-test.
+
+## Syntax
+
+\`\`\`
+df = ttest1_df(mu0, data)
+\`\`\`
+
+## Description
+
+\`ttest1_df(mu0, data)\` tests whether the population mean of \`data\` equals \`mu0\` (t = (x̄ − μ₀)/(s/√n), two-sided p-value, n − 1 degrees of freedom) and returns the **degrees of freedom**. The sibling accessors return the other results of the same test.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`mu0\` | Number | Yes | Hypothesised population mean. |
+| \`data\` | Vector | Yes | Sample values (n ≥ 2). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`df\` | Number | Degrees of freedom. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare sensor readings with a nominal value
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ttest1_df(10, [9, 10, 11, 12, 10])
+
+{ CHECK result 4 0.000004 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 4
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ttest1_pval`,
+    slug: `ttest1_pval`,
+    category: `Stats`,
+    summary: `Two-sided p-value of the one-sample t-test.`,
+    related: [`ttest1_stat`, `ttest1_df`],
+    examples: [],
+    tags: [`ttest1_pval`, `stats`, `hypothesis test`, `t-test`],
+    references: [],
+    guides: [],
+    body: `Two-sided p-value of the one-sample t-test.
+
+## Syntax
+
+\`\`\`
+p = ttest1_pval(mu0, data)
+\`\`\`
+
+## Description
+
+\`ttest1_pval(mu0, data)\` tests whether the population mean of \`data\` equals \`mu0\` (t = (x̄ − μ₀)/(s/√n), two-sided p-value, n − 1 degrees of freedom) and returns the **two-sided p-value**. The sibling accessors return the other results of the same test.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`mu0\` | Number | Yes | Hypothesised population mean. |
+| \`data\` | Vector | Yes | Sample values (n ≥ 2). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`p\` | Number | Two-sided p-value. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare sensor readings with a nominal value
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ttest1_pval(10, [9, 10, 11, 12, 10])
+
+{ CHECK result 0.4766206673 4.7662066727284056e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.4766206673
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ttest1_stat`,
+    slug: `ttest1_stat`,
+    category: `Stats`,
+    summary: `t statistic of the one-sample t-test.`,
+    related: [`ttest1_pval`, `ttest1_df`],
+    examples: [],
+    tags: [`ttest1_stat`, `stats`, `hypothesis test`, `t-test`],
+    references: [],
+    guides: [],
+    body: `t statistic of the one-sample t-test.
+
+## Syntax
+
+\`\`\`
+t = ttest1_stat(mu0, data)
+\`\`\`
+
+## Description
+
+\`ttest1_stat(mu0, data)\` tests whether the population mean of \`data\` equals \`mu0\` (t = (x̄ − μ₀)/(s/√n), two-sided p-value, n − 1 degrees of freedom) and returns the **t statistic**. The sibling accessors return the other results of the same test.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`mu0\` | Number | Yes | Hypothesised population mean. |
+| \`data\` | Vector | Yes | Sample values (n ≥ 2). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`t\` | Number | T statistic. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare sensor readings with a nominal value
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ttest1_stat(10, [9, 10, 11, 12, 10])
+
+{ CHECK result 0.7844645406 7.844645405527369e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.7844645406
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ttest2_df`,
+    slug: `ttest2_df`,
+    category: `Stats`,
+    summary: `Degrees of freedom of Welch's two-sample t-test.`,
+    related: [`ttest2_stat`, `ttest2_pval`],
+    examples: [],
+    tags: [`ttest2_df`, `stats`, `hypothesis test`, `t-test`],
+    references: [],
+    guides: [],
+    body: `Degrees of freedom of Welch's two-sample t-test.
+
+## Syntax
+
+\`\`\`
+df = ttest2_df(x, y)
+\`\`\`
+
+## Description
+
+\`ttest2_df(x, y)\` tests whether two independent samples have the same mean without assuming equal variances (two-sided p-value, Welch–Satterthwaite degrees of freedom) and returns the **degrees of freedom**. The sibling accessors return the other results of the same test.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First independent sample. |
+| \`y\` | Vector | Yes | Second independent sample. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`df\` | Number | Degrees of freedom. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare measurements before and after calibration
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ttest2_df([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
+
+{ CHECK result 6.789606035 0.0000067896060352053624 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 6.789606035
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ttest2_pval`,
+    slug: `ttest2_pval`,
+    category: `Stats`,
+    summary: `Two-sided p-value of Welch's two-sample t-test.`,
+    related: [`ttest2_stat`, `ttest2_df`],
+    examples: [],
+    tags: [`ttest2_pval`, `stats`, `hypothesis test`, `t-test`],
+    references: [],
+    guides: [],
+    body: `Two-sided p-value of Welch's two-sample t-test.
+
+## Syntax
+
+\`\`\`
+p = ttest2_pval(x, y)
+\`\`\`
+
+## Description
+
+\`ttest2_pval(x, y)\` tests whether two independent samples have the same mean without assuming equal variances (two-sided p-value, Welch–Satterthwaite degrees of freedom) and returns the **two-sided p-value**. The sibling accessors return the other results of the same test.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First independent sample. |
+| \`y\` | Vector | Yes | Second independent sample. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`p\` | Number | Two-sided p-value. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare measurements before and after calibration
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ttest2_pval([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
+
+{ CHECK result 0.1848228852 1.848228851621454e-7 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 0.1848228852
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `ttest2_stat`,
+    slug: `ttest2_stat`,
+    category: `Stats`,
+    summary: `t statistic of Welch's two-sample t-test.`,
+    related: [`ttest2_pval`, `ttest2_df`],
+    examples: [],
+    tags: [`ttest2_stat`, `stats`, `hypothesis test`, `t-test`],
+    references: [],
+    guides: [],
+    body: `t statistic of Welch's two-sample t-test.
+
+## Syntax
+
+\`\`\`
+t = ttest2_stat(x, y)
+\`\`\`
+
+## Description
+
+\`ttest2_stat(x, y)\` tests whether two independent samples have the same mean without assuming equal variances (two-sided p-value, Welch–Satterthwaite degrees of freedom) and returns the **t statistic**. The sibling accessors return the other results of the same test.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`x\` | Vector | Yes | First independent sample. |
+| \`y\` | Vector | Yes | Second independent sample. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`t\` | Number | T statistic. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Compare measurements before and after calibration
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = ttest2_stat([9, 10, 11, 12, 10], [10, 10, 12, 14, 13])
+
+{ CHECK result -1.475729575 0.000001475729574745244 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = -1.475729575
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
   },
   {
     name: `var`,
@@ -59440,6 +62370,124 @@ im = [0, 0, 0, 0, 0, 0, 0, 0]
 | --- | --- | --- |
 | \`Unknown window\` | A name outside the list. | Use one of the five; the name is matched case-insensitively. |
 | \`Window option 2 must be a quoted name\` | The kind was passed unquoted. | Write \`'hann'\`, with quotes. |`,
+  },
+  {
+    name: `wmean`,
+    slug: `wmean`,
+    category: `Stats`,
+    summary: `Weighted arithmetic mean.`,
+    related: [`wvar`, `average`, `trimmedmean`],
+    examples: [],
+    tags: [`wmean`, `stats`, `weighted`, `mean`],
+    references: [],
+    guides: [],
+    body: `Weighted arithmetic mean.
+
+## Syntax
+
+\`\`\`
+m = wmean(weights, values)
+\`\`\`
+
+## Description
+
+\`wmean(weights, values)\` returns Σwᵢxᵢ / Σwᵢ. Note the order: weights first.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`weights\` | Vector | Yes | Non-negative weights with a positive sum. |
+| \`values\` | Vector | Yes | Values (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`m\` | Number | Weighted mean, in the units of \`values\`. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Average weighted temperature readings
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = wmean([1, 2, 1], [18, 20, 22])
+
+{ CHECK result 20 0.000019999999999999998 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 20
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `wvar`,
+    slug: `wvar`,
+    category: `Stats`,
+    summary: `Bessel-corrected weighted sample variance (reliability weights).`,
+    related: [`wmean`],
+    examples: [],
+    tags: [`wvar`, `stats`, `weighted`, `variance`],
+    references: [],
+    guides: [],
+    body: `Bessel-corrected weighted sample variance (reliability weights).
+
+## Syntax
+
+\`\`\`
+v = wvar(weights, values)
+\`\`\`
+
+## Description
+
+\`wvar(weights, values)\` returns the unbiased weighted variance with denominator Σwᵢ − Σwᵢ²/Σwᵢ (the statsmodels \`DescrStatsW\` convention). Weights first.
+
+Pass vectors as inline lists such as \`[1, 2, 3]\`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| \`weights\` | Vector | Yes | Non-negative weights with a positive sum. |
+| \`values\` | Vector | Yes | Values (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| \`v\` | Number | Weighted variance, in squared units of \`values\`. |
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — Estimate weighted measurement variance
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
+
+\`\`\`frees
+result = wvar([1, 2, 1], [18, 20, 22])
+
+{ CHECK result 3.2 0.0000032 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+result = 3.2
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
   },
   {
     name: `XCorr`,

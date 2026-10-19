@@ -1,29 +1,25 @@
 ---
 name: ger
-category: Matrix Functions
-summary: Reference page for ger.
-related: []
+category: Matrix
+summary: BLAS rank-1 update A + α·x·yᵀ.
+related: [gemv, gemm, axpy, scal]
 examples: []
 tags: [ger]
 ---
 
 # ger
 
-`ger` is available in the frees matrix functions surface.
+BLAS rank-1 update A + α·x·yᵀ.
 
 ## Syntax
 
 ```
-ger(...)
+B = ger(alpha, x, y, A)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
-
-## Common Errors
-
-Check argument count, dimensions, and units before solving.
+`B = ger(alpha, x, y, A)` returns the BLAS level-2 rank-1 update `A + alpha · x · yᵀ`.
 
 ## Examples
 
@@ -53,3 +49,18 @@ A[2,1] = 0
 ```
 
 <!-- verified-reference-example:end -->
+
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `alpha` | Number | Yes | Scale factor. |
+| `x` | Vector | Yes | Column vector, length m. |
+| `y` | Vector | Yes | Vector, length n. |
+| `A` | Matrix | Yes | m × n matrix. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `B` | Matrix | m × n result. |

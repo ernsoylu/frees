@@ -521,8 +521,8 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "rustprop"
-version = "0.1.0"
-source = "git+https://github.com/ernsoylu/RustProp?tag=v0.1.0#3a6945b9120be1cb4b6c9fde3a2845aa4db58db1"
+version = "0.2.0"
+source = "git+https://github.com/ernsoylu/RustProp?tag=v0.2.0#0d261850e7e990079b25dacc6c6a69ed99b9950e"
 dependencies = [
  "rustprop-core",
  "rustprop-data",
@@ -533,29 +533,29 @@ dependencies = [
 
 [[package]]
 name = "rustprop-core"
-version = "0.1.0"
-source = "git+https://github.com/ernsoylu/RustProp?tag=v0.1.0#3a6945b9120be1cb4b6c9fde3a2845aa4db58db1"
+version = "0.2.0"
+source = "git+https://github.com/ernsoylu/RustProp?tag=v0.2.0#0d261850e7e990079b25dacc6c6a69ed99b9950e"
 
 [[package]]
 name = "rustprop-data"
-version = "0.1.0"
-source = "git+https://github.com/ernsoylu/RustProp?tag=v0.1.0#3a6945b9120be1cb4b6c9fde3a2845aa4db58db1"
+version = "0.2.0"
+source = "git+https://github.com/ernsoylu/RustProp?tag=v0.2.0#0d261850e7e990079b25dacc6c6a69ed99b9950e"
 dependencies = [
  "rustprop-core",
 ]
 
 [[package]]
 name = "rustprop-heos"
-version = "0.1.0"
-source = "git+https://github.com/ernsoylu/RustProp?tag=v0.1.0#3a6945b9120be1cb4b6c9fde3a2845aa4db58db1"
+version = "0.2.0"
+source = "git+https://github.com/ernsoylu/RustProp?tag=v0.2.0#0d261850e7e990079b25dacc6c6a69ed99b9950e"
 dependencies = [
  "rustprop-core",
 ]
 
 [[package]]
 name = "rustprop-humid-air"
-version = "0.1.0"
-source = "git+https://github.com/ernsoylu/RustProp?tag=v0.1.0#3a6945b9120be1cb4b6c9fde3a2845aa4db58db1"
+version = "0.2.0"
+source = "git+https://github.com/ernsoylu/RustProp?tag=v0.2.0#0d261850e7e990079b25dacc6c6a69ed99b9950e"
 dependencies = [
  "rustprop-core",
  "rustprop-heos",
@@ -564,16 +564,16 @@ dependencies = [
 
 [[package]]
 name = "rustprop-if97"
-version = "0.1.0"
-source = "git+https://github.com/ernsoylu/RustProp?tag=v0.1.0#3a6945b9120be1cb4b6c9fde3a2845aa4db58db1"
+version = "0.2.0"
+source = "git+https://github.com/ernsoylu/RustProp?tag=v0.2.0#0d261850e7e990079b25dacc6c6a69ed99b9950e"
 dependencies = [
  "rustprop-core",
 ]
 
 [[package]]
 name = "rustprop-incompressible"
-version = "0.1.0"
-source = "git+https://github.com/ernsoylu/RustProp?tag=v0.1.0#3a6945b9120be1cb4b6c9fde3a2845aa4db58db1"
+version = "0.2.0"
+source = "git+https://github.com/ernsoylu/RustProp?tag=v0.2.0#0d261850e7e990079b25dacc6c6a69ed99b9950e"
 dependencies = [
  "rustprop-core",
  "rustprop-heos",

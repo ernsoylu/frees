@@ -1,19 +1,20 @@
 ---
 name: HydraulicFlowDivider
 category: Component (hydraulic)
-summary: Acausal hydraulic-domain component HydraulicFlowDivider with ports in, outa, outb.
+summary: "Ideal spool flow divider: forces the flow split frac/(1-frac) regardless of the branch loads; the inlet pressure is the power-conserving mix."
 related: []
 examples: []
 tags: [hydraulicflowdivider, component, hydraulic, acausal]
 references: []
-generated: true
 ---
 
 # HydraulicFlowDivider
 
-Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Ideal spool flow divider: forces the flow split frac/(1-frac) regardless of the branch loads; the inlet pressure is the power-conserving mix.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/hydraulic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

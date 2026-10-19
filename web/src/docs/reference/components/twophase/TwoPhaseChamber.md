@@ -45,13 +45,13 @@ $$
 \begin{aligned}
 \text{der}\left(in.p\right) &= \frac{in.mdot - out.mdot}{c} \\
 \text{init}\left(in.p\right) &= p0 \\
-rho &= \text{Density}\left(\mathrm{fluid}, =in.p, p=hcv\right) \\
+rho &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=hcv\right) \\
 q &= ua\cdot \left(wall.t - tcv\right) \\
 \text{der}\left(hcv\right) &= \frac{in.mdot\cdot \left(in.h - hcv\right) + q}{rho\cdot v} \\
 \text{init}\left(hcv\right) &= h0 \\
 out.p &= in.p \\
 out.h &= hcv \\
-tcv &= \text{Temperature}\left(\mathrm{fluid}, =in.p, p=hcv\right) \\
+tcv &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=hcv\right) \\
 wall.qdot &= q \\
 m &= rho\cdot v
 \end{aligned}

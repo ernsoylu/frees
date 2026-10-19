@@ -376,22 +376,26 @@ pub fn evaluate(output: &str, parts: &[&str], values: &[f64]) -> Result<f64> {
             // `panic = "abort"`, so an out-of-bounds index would take down the
             // whole module instead of returning a diagnostic; both engines
             // still refuse the call.
-            if indicators.len() == 1 && indicators[0] == "h" && !values.is_empty() {
-                let target = values[0] * gas.molar_mass / 1000.0;
-                return temperature_from(target, |t| h_molar(&gas, t), |t| cp_molar(&gas, t));
-            }
-            if indicators.len() == 2
-                && indicators[0] == "s"
-                && indicators[1] == "p"
-                && values.len() == 2
-            {
-                let target = values[0] * gas.molar_mass / 1000.0;
-                let p = values[1];
-                return temperature_from(
-                    target,
-                    |t| s_molar(&gas, t, p),
-                    |t| cp_molar(&gas, t) / t,
-                );
+            // h fixes T on its own for an ideal gas, so a P alongside it (in
+            // either order) is accepted and does not change the answer.
+            let at = |key: &str| {
+                let j = indicators.iter().position(|i| *i == key)?;
+                values.get(j).copied()
+            };
+            match (indicators.len(), at("h"), at("s"), at("p")) {
+                (1, Some(h), _, _) | (2, Some(h), _, Some(_)) => {
+                    let target = h * gas.molar_mass / 1000.0;
+                    return temperature_from(target, |t| h_molar(&gas, t), |t| cp_molar(&gas, t));
+                }
+                (2, _, Some(s), Some(p)) => {
+                    let target = s * gas.molar_mass / 1000.0;
+                    return temperature_from(
+                        target,
+                        |t| s_molar(&gas, t, p),
+                        |t| cp_molar(&gas, t) / t,
+                    );
+                }
+                _ => {}
             }
             Err(FreesError::evaluation(format!(
                 "Temperature({}, ...) takes h=... or s=..., P=... for an ideal gas.",
@@ -544,6 +548,14 @@ mod tests {
             ev("enthalpy", "c8h18", &["t"], &[600.0]),
             -1_140_075.014271301,
         );
+    }
+
+    #[test]
+    fn temperature_from_h_accepts_a_pressure_in_either_order() {
+        let h = 211_795.142_924_018_96; // n2 at 500 K, from the oracle above
+        close(ev("temperature", "n2", &["h"], &[h]), 500.0);
+        close(ev("temperature", "n2", &["p", "h"], &[101_325.0, h]), 500.0);
+        close(ev("temperature", "n2", &["h", "p"], &[h, 101_325.0]), 500.0);
     }
 
     #[test]

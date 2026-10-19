@@ -667,7 +667,7 @@ fn eval_residue(name: &Name<'_>, args: &[f64]) -> Result<f64> {
     if form == "s" && res.orders.iter().any(|&o| o > 1) {
         return Err(err(
             "residue: repeated poles require the 6-output form with an order array, \
-             e.g. CALL residue(num, den : r_r, r_i, p_r, p_i, ord, k)",
+             e.g. [r_r, r_i, p_r, p_i, ord, k] = residue(num, den)",
         ));
     }
     if is_k {

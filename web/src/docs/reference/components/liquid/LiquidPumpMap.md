@@ -1,19 +1,20 @@
 ---
 name: LiquidPumpMap
 category: Component (liquid)
-summary: Acausal liquid-domain component LiquidPumpMap with ports in, out.
+summary: "Head-curve pump: rise from a tabulated head map [m] vs volumetric flow, with the hydraulic inefficiency heating the coolant (out.h mirrors LiquidPump)."
 related: [LiquidPump, PumpMap]
 examples: []
 tags: [pump, liquid-pump-family, liquidpumpmap, map, data:rho-map, ports:in-out, flow-closed, energy-work, steady, map-driven, liquid, component, acausal]
 references: []
-generated: true
 ---
 
 # LiquidPumpMap
 
-Reusable acausal **liquid-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Head-curve pump: rise from a tabulated head map [m] vs volumetric flow, with the hydraulic inefficiency heating the coolant (out.h mirrors LiquidPump).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **liquid-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/liquid.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

@@ -330,6 +330,20 @@ pub struct Svd {
     pub v: Mat,
 }
 
+/// The 2-norm condition number `sigma_max / sigma_min` — what MATLAB's
+/// `cond(A)` returns. A singular matrix has no finite one, so it is refused
+/// rather than handed to the solver as `inf`.
+pub fn condition_number(a: &Mat) -> Result<f64> {
+    let s = singular_values(a)?;
+    let (max, min) = (s[0], s[s.len() - 1]);
+    if min == 0.0 {
+        return Err(err(
+            "cond: the matrix is singular, so its condition number is infinite",
+        ));
+    }
+    Ok(max / min)
+}
+
 /// Singular values in non-increasing order (length `min(m, n)`). Port of
 /// `LinearAlgebra.singularValues`.
 pub fn singular_values(a: &Mat) -> Result<Vec<f64>> {
@@ -1416,6 +1430,11 @@ pub fn eval_intrinsic(name: &str, args: &[f64]) -> Option<Result<f64>> {
             let (i, j, n) = (parse_dim(i)?, parse_dim(j)?, parse_dim(n)?);
             Some(from_row_major(args, n, n).and_then(|a| Ok(expm(&a)?[i][j])))
         }
+        // cond$<m>$<n>: 2-norm condition number, sigma_max / sigma_min.
+        ["cond", m, n] => {
+            let (m, n) = (parse_dim(m)?, parse_dim(n)?);
+            Some(from_row_major(args, m, n).and_then(|a| condition_number(&a)))
+        }
         ["svd", "s", k, m, n] => {
             let (k, m, n) = (parse_dim(k)?, parse_dim(m)?, parse_dim(n)?);
             Some(from_row_major(args, m, n).and_then(|a| Ok(singular_values(&a)?[k])))
@@ -1499,7 +1518,7 @@ fn check_real_spectrum(e: &Eigen) -> Result<()> {
         return Err(err(
             "Matrix has complex eigenvalues; this form supports real spectra \
              only (symmetric matrices always qualify). Use the two-output form \
-             CALL Eigenvalues(A : re, im) to get a complex spectrum as \
+             [re, im] = Eigenvalues(A) to get a complex spectrum as \
              real/imaginary parts.",
         ));
     }
@@ -2104,5 +2123,16 @@ mod tests {
         let one_empty_row: Mat = vec![Vec::new()];
         assert_eq!(mat_mul(&vec![vec![1.0, 2.0]], &empty), one_empty_row);
         assert_eq!(mat_mul(&vec![vec![1.0]], &zero_wide), one_empty_row);
+    }
+
+    #[test]
+    fn condition_number_is_the_singular_value_ratio() {
+        // [4, 1; 2, 3]: sigma = 5.1166727, 1.9544165 -> kappa = (3 + sqrt 5)/2.
+        let k = eval_intrinsic("cond$2$2", &[4.0, 1.0, 2.0, 3.0])
+            .unwrap()
+            .unwrap();
+        assert!((k - (3.0 + 5f64.sqrt()) / 2.0).abs() < 1e-12, "{k}");
+        let singular = eval_intrinsic("cond$2$2", &[1.0, 2.0, 2.0, 4.0]).unwrap();
+        assert!(singular.unwrap_err().to_string().contains("singular"));
     }
 }

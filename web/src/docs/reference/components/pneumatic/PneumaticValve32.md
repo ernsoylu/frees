@@ -1,19 +1,20 @@
 ---
 name: PneumaticValve32
 category: Component (pneumatic)
-summary: Acausal pneumatic-domain component PneumaticValve32 with ports sup_in, work, exh_out, u.
+summary: "3/2 directional valve: the spool command u blends supply->work (u·C) against work->exhaust ((1-u)·C), both ISO 6358 paths — u=1 pressurizes, u=0 vents."
 related: []
 examples: []
 tags: [pneumaticvalve32, component, pneumatic, acausal]
 references: []
-generated: true
 ---
 
 # PneumaticValve32
 
-Reusable acausal **pneumatic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+3/2 directional valve: the spool command u blends supply->work (u·C) against work->exhaust ((1-u)·C), both ISO 6358 paths — u=1 pressurizes, u=0 vents.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **pneumatic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/pneumatic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 
@@ -40,8 +41,8 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \begin{aligned}
-t_{s} &= \text{Temperature}\left(\mathrm{fluid}, =sup_{in.p}, p=sup_{in.h}\right) \\
-t_{w} &= \text{Temperature}\left(\mathrm{fluid}, =work.p, p=work.h\right) \\
+t_{s} &= \text{Temperature}\left(\mathrm{fluid\$}, p=sup_{in.p}, h=sup_{in.h}\right) \\
+t_{w} &= \text{Temperature}\left(\mathrm{fluid\$}, p=work.p, h=work.h\right) \\
 m_{in} &= \text{iso6358}\left(u.sig\cdot c, b, sup_{in.p}, t_{s}, work.p\right) \\
 m_{out} &= \text{iso6358}\left(\left(1 - u.sig\right)\cdot c, b, work.p, t_{w}, exh_{out.p}\right) \\
 sup_{in.mdot} &= m_{in} \\

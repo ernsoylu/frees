@@ -31,7 +31,7 @@ V   = V0 - drop          { water volume at t = 60 s }
 The `DYNAMIC ... END` block integrates coupled, multi-state ODE systems. A variable becomes a **state** the moment `der(X)` appears; each state needs one derivative equation and one initial condition. Algebraic auxiliaries (any equation without a `der`) are recomputed every step and become extra columns you can plot.
 
 ```
-DYNAMIC name (method = solver, t = t0 .. tf, points = n_samples)
+DYNAMIC name (method = solver, time = t0 .. tf, points = n_samples)
   der(state) = rate_equation
   state(0)   = initial_value
   auxiliary  = algebraic_calc      { an extra output column }
@@ -40,9 +40,9 @@ DYNAMIC name (method = solver, t = t0 .. tf, points = n_samples)
 END
 ```
 
-An `EVENT` watches the zero crossing of its condition (`| rising` / `| falling` filters the direction). **`stop`** ends the run at the crossing; **`record`** logs it and continues; **`set state = expr`** reassigns a state at the crossing and restarts integration from the modified value — a *discrete* switch. That is what makes true hysteresis possible: a thermostat latch (`der(q) = 0`, one event setting `q = 1` at the low threshold, another setting `q = 0` at the high one) shows two distinct switching temperatures, which no smooth relay can. Give set events an explicit direction so the reassignment can't immediately retrigger itself.
+The interval option may be spelled `time`, `t` or `tspan`; `rtol` and `atol` set the integrator tolerances.
 
-[Diagram: GuessConvergence]
+An `EVENT` watches the zero crossing of its condition (`| rising` / `| falling` filters the direction). **`stop`** ends the run at the crossing; **`record`** logs it and continues; **`set state = expr`** reassigns a state at the crossing and restarts integration from the modified value — a *discrete* switch. That is what makes true hysteresis possible: a thermostat latch (`der(q) = 0`, one event setting `q = 1` at the low threshold, another setting `q = 0` at the high one) shows two distinct switching temperatures, which no smooth relay can. Give set events an explicit direction so the reassignment can't immediately retrigger itself.
 
 ## Choosing a solver
 | Need | Method | Notes |
@@ -51,6 +51,8 @@ An `EVENT` watches the zero crossing of its condition (`| rising` / `| falling` 
 | Mildly stiff / cheaper | `ode23` | Bogacki–Shampine 3(2) adaptive. |
 | Fixed-step teaching | `ode1`–`ode5` | Euler, Heun, RK3, RK4, Dormand–Prince. Use many points. |
 | Stiff | `ode23s` / `ode15s` | Implicit Rosenbrock / BDF. Use when `ode45` needs tiny steps or stalls. |
+| Stiff, high accuracy | `radau5` | 5th-order Radau IIA (also `radau`, `radauiia`). |
+| Component networks (DAE) | `ida` | SUNDIALS-style implicit DAE solver — the default choice for fluid loops; see *Steady ↔ Transient Networks*. |
 
 Stiffness shows up when rates differ by orders of magnitude (e.g. fast chemistry alongside slow dynamics). If `ode45` runs slowly or the trajectory looks jagged, switch to `ode15s`.
 
@@ -134,6 +136,8 @@ Newton iterates from the guess in **Variable Info** (`Ctrl + I`); a guess near t
 2. Solve — every variable now gets a physically sensible value.
 3. Copy those values into the guesses (Variable Info), restore the real equation, and solve again from the good starting point.
 
+[Diagram: GuessConvergence]
+
 ## Common stalls
 - **Singular Jacobian** — two equations are effectively the same, so the system is rank-deficient. A subtle version: two property calls from the *same* independent pair add no new information — `h = Enthalpy(Water, T=T, P=P)` together with `T = Temperature(Water, h=h, P=P)` just restate one relationship and stall the solver. Supply a genuinely independent equation instead.
 - **Max iterations / diverged** — usually a guess or bound problem. Set a guess near the expected order of magnitude and bound the variable to its physical range (e.g. `T ≥ 0`, `0 ≤ x ≤ 1`).
@@ -196,13 +200,12 @@ Warnings never block a solve, but they are usually pointing at a real slip: a mi
 
 `connect` domain mismatches, port-count errors, mismatched fluid families, missing `PARAM`/`REQUIRE` values, and the shared-stream limit are all **deliberate hard errors** with their own page — see *Troubleshooting Networks*.
 
-## Job FAILED without a diagnostic / stuck in PENDING
+## "Operation stopped" or the engine restarted
 
-These come from the compute tier, not your model:
+These come from the in-browser worker pool, not your model:
 
-- **Stuck PENDING** — no compute workers are consuming the queue. Check `GET /api/health`: the `compute` entry counts live workers (see *Health & Scaling*).
-- **FAILED after a worker crash** — a redelivered task is dropped by design (the poison-message guard) so one pathological job can't crash-loop the tier. Re-submit once; if it fails again, the model itself is killing the worker — reduce it and report.
-- **429 Too many requests** — the API rate-limits bursts; wait a moment and retry.
+- **Operation stopped** — you pressed **Stop**, a parametric sweep, optimization or Monte Carlo run hit its cooperative deadline (120 s by default), or the worker pool was reduced while the request was running. Shorten the sweep or raise the elapsed-time limit in **Preferences**, then run again.
+- **The engine restarted** — a fatal WebAssembly trap or an out-of-memory condition ends every worker, rejects the requests in flight, and starts fresh workers on the next request. Your document is untouched; solve again. If the same model restarts the engine every time, reduce it and report it.
 
 [Related: debugging, comp-troubleshooting, api]
 

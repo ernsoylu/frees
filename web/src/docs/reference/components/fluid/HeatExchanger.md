@@ -44,10 +44,10 @@ hot_{out.mdot} &= hot_{in.mdot} \\
 hot_{out.p} &= hot_{in.p} \\
 cold_{out.mdot} &= cold_{in.mdot} \\
 cold_{out.p} &= cold_{in.p} \\
-th &= \text{Temperature}\left(\mathrm{hot}, =hot_{in.p}, p=hot_{in.h}\right) \\
-tc &= \text{Temperature}\left(\mathrm{cold}, =cold_{in.p}, p=cold_{in.h}\right) \\
-c_{h} &= hot_{in.mdot}\cdot \text{Cp}\left(\mathrm{hot}, =hot_{in.p}, p=hot_{in.h}\right) \\
-c_{c} &= cold_{in.mdot}\cdot \text{Cp}\left(\mathrm{cold}, =cold_{in.p}, p=cold_{in.h}\right) \\
+th &= \text{Temperature}\left(\mathrm{hot\$}, p=hot_{in.p}, h=hot_{in.h}\right) \\
+tc &= \text{Temperature}\left(\mathrm{cold\$}, p=cold_{in.p}, h=cold_{in.h}\right) \\
+c_{h} &= hot_{in.mdot}\cdot \text{Cp}\left(\mathrm{hot\$}, p=hot_{in.p}, h=hot_{in.h}\right) \\
+c_{c} &= cold_{in.mdot}\cdot \text{Cp}\left(\mathrm{cold\$}, p=cold_{in.p}, h=cold_{in.h}\right) \\
 cmin &= \text{min}\left(c_{h}, c_{c}\right) \\
 cmax &= \text{max}\left(c_{h}, c_{c}\right) \\
 eps &= \text{hx\_effectiveness}\left(arr\$, \frac{ua}{cmin}, \frac{cmin}{cmax}\right) \\

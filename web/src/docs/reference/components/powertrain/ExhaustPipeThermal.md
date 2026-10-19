@@ -1,19 +1,22 @@
 ---
 name: ExhaustPipeThermal
 category: Component (powertrain)
-summary: Acausal powertrain-domain component ExhaustPipeThermal with ports in, out, amb.
+summary: "Exhaust pipe with thermal wall: gas duct exchanging with a two-node RC wall whose outer face convects (hA) to the ambient heat port (underhood soak studies)."
 related: []
 examples: []
 tags: [exhaustpipethermal, component, powertrain, acausal]
 references: []
-generated: true
 ---
 
 # ExhaustPipeThermal
 
-Reusable acausal **powertrain-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Exhaust pipe with thermal wall: gas duct exchanging with a two-node RC wall whose outer face convects (hA) to the ambient heat port (underhood soak studies).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The convective link is what lets the ambient side be a plain temperature source — the wall faces are states and must never be T-pinned.
+
+Reusable acausal **powertrain-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/powertrain.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

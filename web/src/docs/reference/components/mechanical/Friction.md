@@ -33,7 +33,7 @@ Friction inst(Fc, Fs, vs, bv, eps)
 | `Fs` | Number | Static friction force [N]. |
 | `vs` | Number | Reference / slip velocity [m/s]. |
 | `bv` | Number | Viscous-friction coefficient. |
-| `eps` | Number | Effectiveness / roughness. |
+| `eps` | Number | Stick–slip smoothing speed [rad/s] — regularizes the sign of the slip speed. |
 
 ## Constitutive Equations
 

@@ -144,10 +144,12 @@ The effectiveness–NTU rating example forms `NTU = UA/C_min` directly; `hx_NTU`
 performs the reverse map `ε → NTU` for the same arrangement when sizing to a
 target effectiveness.
 
+Related gallery example:
+
 [Run: hx-effectiveness-ntu]
 
-**Expected:** for `ε ≈ 0.711`, `Cr = 0.75`, `hx_NTU('counterflow', 0.711, 0.75) ≈ 1.91`
-(recovering the example's `NTU = UA/C_min`).
+**Expected:** for `ε ≈ 0.711`, `Cr = 0.75`, `hx_NTU('counterflow', 0.711, 0.75) ≈ 1.92`
+— the example's `NTU = UA/C_min ≈ 1.91`, recovered to within the rounding of `ε`.
 
 ## Input Arguments
 

@@ -1,29 +1,40 @@
 ---
 name: ttest_paired_df
-category: Built-in Functions
-summary: Reference page for ttest_paired_df.
-related: []
+category: Stats
+summary: Degrees of freedom of the paired-samples t-test.
+related: [ttest_paired_stat, ttest_paired_pval]
 examples: []
-tags: [ttest_paired_df]
+tags: [ttest_paired_df, stats, hypothesis test, t-test]
 ---
 
 # ttest_paired_df
 
-`ttest_paired_df` is available in the frees built-in functions surface.
+Degrees of freedom of the paired-samples t-test.
 
 ## Syntax
 
 ```
-ttest_paired_df(...)
+df = ttest_paired_df(x, y)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`ttest_paired_df(x, y)` tests whether the mean difference x − y is zero — a one-sample t-test on the differences (two-sided p-value, n − 1 degrees of freedom) — and returns the **degrees of freedom**. The sibling accessors return the other results of the same test.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | First measurement of each pair. |
+| `y` | Vector | Yes | Second measurement of each pair (same length as `x`). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `df` | Number | Degrees of freedom. |
 
 ## Examples
 

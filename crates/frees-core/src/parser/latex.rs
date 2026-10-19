@@ -330,11 +330,18 @@ fn property_call_latex(func: &str, arg_lates: &[String]) -> String {
             arg_lates.join(", ")
         );
     }
-    let mut sb = format!("{TEXT_OPEN}{output}}}\\left(\\mathrm{{{}}}", parts[2]);
+    // A string-variable fluid (`fluid$`) keeps its own `$`, which encodes as an
+    // empty segment (`prop$volume$fluid$$p$h`); the input names follow it.
+    let (fluid, first_name) = if parts.get(3) == Some(&"") {
+        (format!("{}$", parts[2]), 4)
+    } else {
+        (parts[2].to_string(), 3)
+    };
+    let mut sb = format!("{TEXT_OPEN}{output}}}\\left(\\mathrm{{{fluid}}}");
     let mut i = 0;
-    while i + 3 < parts.len() && i < arg_lates.len() {
+    while i + first_name < parts.len() && i < arg_lates.len() {
         sb.push_str(", ");
-        sb.push_str(parts[i + 3]);
+        sb.push_str(parts[i + first_name]);
         sb.push('=');
         sb.push_str(&arg_lates[i]);
         i += 1;
@@ -854,6 +861,13 @@ mod tests {
         assert_eq!(
             expr_to_latex_named(&prop, &names(&[("t", "T")])),
             "\\text{Enthalpy}\\left(\\mathrm{r134a}, t=T, x=x\\right)"
+        );
+
+        // A string-variable fluid adds an empty `$` segment; names must not shift.
+        let prop = Expr::call("prop$volume$fluid$$p$h", vec![var("in.p"), var("in.h")]);
+        assert_eq!(
+            expr_to_latex(&prop),
+            "\\text{Volume}\\left(\\mathrm{fluid$}, p=in.p, h=in.h\\right)"
         );
     }
 

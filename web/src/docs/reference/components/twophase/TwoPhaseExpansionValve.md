@@ -41,7 +41,7 @@ $$
 \begin{aligned}
 out.mdot &= in.mdot \\
 out.h &= in.h \\
-rho_{in} &= \text{Density}\left(\mathrm{fluid}, =in.p, p=in.h\right) \\
+rho_{in} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 in.mdot\cdot \left|in.mdot\right| &= cv^{2}\cdot 2\cdot rho_{in}\cdot \left(in.p - out.p\right)
 \end{aligned}
 $$

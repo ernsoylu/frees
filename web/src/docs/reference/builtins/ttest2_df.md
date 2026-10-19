@@ -1,29 +1,40 @@
 ---
 name: ttest2_df
-category: Built-in Functions
-summary: Reference page for ttest2_df.
-related: []
+category: Stats
+summary: Degrees of freedom of Welch's two-sample t-test.
+related: [ttest2_stat, ttest2_pval]
 examples: []
-tags: [ttest2_df]
+tags: [ttest2_df, stats, hypothesis test, t-test]
 ---
 
 # ttest2_df
 
-`ttest2_df` is available in the frees built-in functions surface.
+Degrees of freedom of Welch's two-sample t-test.
 
 ## Syntax
 
 ```
-ttest2_df(...)
+df = ttest2_df(x, y)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`ttest2_df(x, y)` tests whether two independent samples have the same mean without assuming equal variances (two-sided p-value, Welch–Satterthwaite degrees of freedom) and returns the **degrees of freedom**. The sibling accessors return the other results of the same test.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | First independent sample. |
+| `y` | Vector | Yes | Second independent sample. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `df` | Number | Degrees of freedom. |
 
 ## Examples
 

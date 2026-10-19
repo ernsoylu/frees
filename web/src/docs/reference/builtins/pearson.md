@@ -1,29 +1,40 @@
 ---
 name: pearson
-category: Built-in Functions
-summary: Reference page for pearson.
-related: []
+category: Stats
+summary: Pearson linear correlation coefficient of two series.
+related: [corrcoef, spearman, cov]
 examples: []
-tags: [pearson]
+tags: [pearson, stats, correlation]
 ---
 
 # pearson
 
-`pearson` is available in the frees built-in functions surface.
+Pearson linear correlation coefficient of two series.
 
 ## Syntax
 
 ```
-pearson(...)
+r = pearson(x, y)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`pearson(x, y)` returns the Pearson correlation coefficient r ∈ [−1, 1] of the paired series. `corrcoef` is an alias.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | First series. |
+| `y` | Vector | Yes | Second series (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `r` | Number | Correlation coefficient (dimensionless). |
 
 ## Examples
 

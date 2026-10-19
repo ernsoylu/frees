@@ -411,10 +411,7 @@ impl<'a> DynamicAccessorContext<'a> {
 
     /// The index of the block owning `column`, or `None`.
     fn owner_block(&self, column: &str) -> Option<usize> {
-        let col = column.to_ascii_lowercase();
-        self.shapes
-            .iter()
-            .position(|shape| owns_column(shape, &col))
+        owner_index(&self.shapes, &column.to_ascii_lowercase())
     }
 
     /// The input-variable signature of a block at the current iterate. A missing
@@ -518,14 +515,32 @@ pub fn resolve(
 /// engine calls before any context exists (while augmenting the accessor
 /// equations' structural dependencies).
 pub fn input_vars_for_column(systems: &[DynamicSystem], column: &str) -> Vec<String> {
-    let col = column.to_ascii_lowercase();
-    for ds in systems {
-        let shape = analyze(ds);
-        if owns_column(&shape, &col) {
-            return shape.input_vars.into_iter().collect();
-        }
+    let shapes: Vec<Shape> = systems.iter().map(analyze).collect();
+    match owner_index(&shapes, &column.to_ascii_lowercase()) {
+        Some(block) => shapes[block].input_vars.iter().cloned().collect(),
+        None => Vec::new(),
     }
-    Vec::new()
+}
+
+/// The block owning lowercased `col`: the first whose static shape owns it,
+/// else the first whose equations merely reference it.
+///
+/// The fallback exists because the static shape cannot see *implicit*
+/// auxiliaries: a component network's port member (`v1$in$mdot`) is fixed by an
+/// equation whose left side is not a plain name, so [`analyze`] files it as an
+/// input — yet `DynamicSolver::register_implicit_auxiliaries` makes every such
+/// name a table column unless the analytic solve already knows it. A name that
+/// really is an analytic input then fails in [`compute`], which lists the
+/// columns the block actually produced.
+fn owner_index(shapes: &[Shape], col: &str) -> Option<usize> {
+    shapes
+        .iter()
+        .position(|shape| owns_column(shape, col))
+        .or_else(|| {
+            shapes
+                .iter()
+                .position(|shape| shape.input_vars.contains(col))
+        })
 }
 
 /// Whether a block owns a column.
@@ -838,6 +853,22 @@ mod tests {
         assert_eq!(input_vars_for_column(&systems, "qdot"), ["gain", "rate"]);
         assert_eq!(input_vars_for_column(&systems, "temp"), ["gain", "rate"]);
         assert!(input_vars_for_column(&systems, "nope").is_empty());
+    }
+
+    #[test]
+    fn a_referenced_name_falls_back_to_the_block_that_reads_it() {
+        // `rate` and `gain` are no state or plain auxiliary of either block, only
+        // read by them — the shape of a component port member that the solver
+        // promotes to an implicit-auxiliary column. Block `a` reads `rate` only;
+        // block `b` reads both. Shape ownership still wins first.
+        let systems = vec![block("a", &["h"], &[]), block("b", &["temp"], &["qdot"])];
+        assert_eq!(input_vars_for_column(&systems, "gain"), ["gain", "rate"]);
+        assert_eq!(input_vars_for_column(&systems, "rate"), ["rate"]);
+        let shapes: Vec<Shape> = systems.iter().map(analyze).collect();
+        assert_eq!(owner_index(&shapes, "rate"), Some(0));
+        assert_eq!(owner_index(&shapes, "gain"), Some(1));
+        assert_eq!(owner_index(&shapes, "qdot"), Some(1));
+        assert_eq!(owner_index(&shapes, "nope"), None);
     }
 
     // -- the live bridge -----------------------------------------------------

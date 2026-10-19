@@ -1,19 +1,22 @@
 ---
 name: HydraulicPilotCheckValve
 category: Component (hydraulic)
-summary: Acausal hydraulic-domain component HydraulicPilotCheckValve with ports in, out, pilot.
+summary: "Pilot-operated check valve: a pilot pressure (ratio rp) can hold the poppet open against reverse ΔP — the load-holding valve."
 related: []
 examples: []
 tags: [hydraulicpilotcheckvalve, component, hydraulic, acausal]
 references: []
-generated: true
 ---
 
 # HydraulicPilotCheckValve
 
-Reusable acausal **hydraulic-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Pilot-operated check valve: a pilot pressure (ratio rp) can hold the poppet open against reverse ΔP — the load-holding valve.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+The pilot port draws no flow.
+
+Reusable acausal **hydraulic-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/hydraulic.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

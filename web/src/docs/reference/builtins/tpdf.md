@@ -1,29 +1,38 @@
 ---
 name: tpdf
-category: Built-in Functions
-summary: Reference page for tpdf.
-related: []
+category: Stats
+summary: Student's t distribution — probability density.
+related: [tcdf, tinv]
 examples: []
-tags: [tpdf]
+tags: [tpdf, stats, distribution, student t]
 ---
 
 # tpdf
 
-`tpdf` is available in the frees built-in functions surface.
+Student's t distribution — probability density.
 
 ## Syntax
 
 ```
-tpdf(...)
+y = tpdf(x, df)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`tpdf(x, df)` returns the probability density of Student's t distribution with `df` degrees of freedom.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Number | Yes | Evaluation point. |
+| `df` | Number | Yes | Degrees of freedom (> 0). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `y` | Number | Density value. |
 
 ## Examples
 

@@ -1,19 +1,22 @@
 ---
 name: BatteryPack
 category: Component (electrical)
-summary: Acausal electrical-domain component BatteryPack with ports p, n, heat.
+summary: "Battery pack: Ns series × Np parallel of the map cell, lumped (uniform SOC and temperature — the standard pack-level rung)."
 related: []
 examples: []
 tags: [batterypack, component, electrical, acausal]
 references: []
-generated: true
 ---
 
 # BatteryPack
 
-Reusable acausal **electrical-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Battery pack: Ns series × Np parallel of the map cell, lumped (uniform SOC and temperature — the standard pack-level rung).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+C_th is the PACK thermal mass; heat generation scales with the cell count.
+
+Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/electrical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

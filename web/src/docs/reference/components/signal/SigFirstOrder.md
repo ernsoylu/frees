@@ -1,19 +1,20 @@
 ---
 name: SigFirstOrder
 category: Component (signal)
-summary: Acausal signal-domain component SigFirstOrder with ports in, out.
+summary: First-order lag 1/(1+τs).
 related: []
 examples: []
 tags: [sigfirstorder, component, signal, acausal]
 references: []
-generated: true
 ---
 
 # SigFirstOrder
 
-Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+First-order lag 1/(1+τs).
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/signal.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

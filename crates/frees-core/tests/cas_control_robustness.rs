@@ -909,7 +909,10 @@ fn a_control_name_in_expression_position_is_refused_by_name() {
                R = 1\n\
                K = lqr(A, B, Q, R)\n";
     let message = solve_refused(src);
-    assert!(message.contains("not yet supported: lqr"), "{message}");
+    assert!(
+        message.contains("lqr cannot be used inside an expression"),
+        "{message}"
+    );
     assert!(message.contains("control systems"), "{message}");
     assert!(message.contains("K = lqr(A, B, Q, R)"), "{message}");
 }

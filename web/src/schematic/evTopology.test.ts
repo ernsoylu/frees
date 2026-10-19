@@ -122,10 +122,10 @@ describe('EV thermal-management example', () => {
   it('gives each block the symbol of what it is', () => {
     expect(node('pump').shape).toBe('pump')
     expect(node('cmp').shape).toBe('compressor')
-    expect(node('or1').shape).toBe('valve')
+    expect(node('or1').shape).toBe('restrictor')
     expect(node('bcp').shape).toBe('exchanger')
     expect(node('chlr').shape).toBe('exchanger')
-    expect(node('batt').shape).toBe('store')
+    expect(node('batt').shape).toBe('block') // MassGen models a thermal mass, not an electrical battery.
     expect(node('mix').shape).toBe('junction')
     // A fixed-temperature ambient is a boundary that FEEDS the network, so it
     // takes the source terminal rather than the ground ladder.

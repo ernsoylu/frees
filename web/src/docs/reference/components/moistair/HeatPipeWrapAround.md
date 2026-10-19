@@ -1,17 +1,20 @@
 ---
 name: HeatPipeWrapAround
 category: Component (moistair)
-summary: Acausal moistair-domain component HeatPipeWrapAround with ports pre_in, pre_out, re_in, re_out.
+summary: "Heat-pipe wrap-around, and the pumped run-around recuperative loop that is the same idea with a glycol circuit: a PASSIVE loop that takes sensible heat out of the air entering the cooling coil and puts exactly that heat back into the air leaving it."
 related: []
 examples: []
 tags: [heatpipewraparound, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # HeatPipeWrapAround
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Heat-pipe wrap-around, and the pumped run-around recuperative loop that is the same idea with a glycol circuit: a PASSIVE loop that takes sensible heat out of the air entering the cooling coil and puts exactly that heat back into the air leaving it.
+
+Three vectors in sequence on the chart — sensible precool at constant W, then the coil's cooling-with-dehumidification, then sensible reheat at constant W — with no new energy anywhere.  That is why it displaces the reheat energy codes restrict: the reheat IS the precool, moved downstream. It also raises latent capacity, because the coil now sees air already cooled toward its dew point.  The defining property is Q_pre = Q_re EXACTLY, so the reheat leg is closed on the enthalpy the precool leg gave up rather than on a second effectiveness — a temperature-effectiveness pair would leave a small residual loop energy that is precisely what a passive device cannot have.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

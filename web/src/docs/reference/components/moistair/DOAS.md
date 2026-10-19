@@ -1,17 +1,20 @@
 ---
 name: DOAS
 category: Component (moistair)
-summary: Acausal moistair-domain component DOAS with ports oa_in, sup_out, exh_in, exh_out.
+summary: "Dedicated outdoor air system: recovery wheel, cooling coil sized by apparatus dew point, and reheat, conditioning the VENTILATION air on its own."
 related: []
 examples: []
 tags: [doas, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # DOAS
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Dedicated outdoor air system: recovery wheel, cooling coil sized by apparatus dew point, and reheat, conditioning the VENTILATION air on its own.
+
+The point of a DOAS is that it SEPARATES the sensible and latent loads. The coil is driven to a dew point low enough to absorb the whole building's latent gain, the reheat brings the dry bulb back to something neutral, and the space sensible load is then left to terminals that have no latent capacity at all — chilled beams, radiant panels, fan coils run dry, VRF. A tool that assumes one coil serves both loads cannot represent this at all, and neither can a terminal-unit model without a dew-point margin to check against.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

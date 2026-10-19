@@ -1,29 +1,40 @@
 ---
 name: cov
-category: Built-in Functions
-summary: Reference page for cov.
-related: []
+category: Stats
+summary: Unbiased (n − 1) sample covariance of two series.
+related: [pearson, corrcoef]
 examples: []
-tags: [cov]
+tags: [cov, stats, covariance]
 ---
 
 # cov
 
-`cov` is available in the frees built-in functions surface.
+Unbiased (n − 1) sample covariance of two series.
 
 ## Syntax
 
 ```
-cov(...)
+c = cov(x, y)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`cov(x, y)` returns the Bessel-corrected sample covariance of the paired series `x` and `y`.
 
-## Common Errors
+Pass vectors as inline lists such as `[1, 2, 3]`: a named array variable is expanded into its elements and is not yet accepted as a single argument.
 
-Check argument count, dimensions, and units before solving.
+## Input Arguments
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | Vector | Yes | First series. |
+| `y` | Vector | Yes | Second series (same length). |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `c` | Number | Covariance, in units of x·y. |
 
 ## Examples
 

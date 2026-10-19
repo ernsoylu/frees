@@ -1,29 +1,37 @@
 ---
 name: skewness
-category: Built-in Functions
-summary: Reference page for skewness.
-related: []
+category: Stats
+summary: Bias-corrected sample skewness (Fisher).
+related: [kurtosis, mad]
 examples: []
-tags: [skewness]
+tags: [skewness, stats, moment]
 ---
 
 # skewness
 
-`skewness` is available in the frees built-in functions surface.
+Bias-corrected sample skewness (Fisher).
 
 ## Syntax
 
 ```
-skewness(...)
+s = skewness(x1, x2, x3, ...)
 ```
 
 ## Description
 
-See the backend signature for accepted arguments and returned values.
+`skewness(x1, x2, x3, ...)` returns the bias-corrected sample skewness (SciPy `skew(bias=False)`). Needs at least three values.
 
-## Common Errors
+## Input Arguments
 
-Check argument count, dimensions, and units before solving.
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x1, x2, x3, ...` | Number | Yes | Three or more values. |
+
+## Output Arguments
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `s` | Number | Skewness (dimensionless). |
 
 ## Examples
 

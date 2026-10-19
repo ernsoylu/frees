@@ -668,7 +668,7 @@ impl Flattener<'_> {
                 Ok(true)
             }
             "dot" | "norm" | "nrm2" | "determinant" | "asum" | "trace" | "matrixnorm"
-            | "fronorm" => {
+            | "fronorm" | "cond" => {
                 self.flatten_vector_or_det(func, lhs, args, source, loop_vars)?;
                 Ok(true)
             }
@@ -846,6 +846,7 @@ impl Flattener<'_> {
             "asum" => self.vector_abs_sum(args, loop_vars)?,
             "determinant" => self.matrix_determinant(args, loop_vars)?,
             "trace" => self.matrix_trace(args, loop_vars)?,
+            "cond" => self.matrix_condition(args, loop_vars)?,
             "matrixnorm" | "fronorm" => self.matrix_frobenius_norm(args, loop_vars)?,
             other => {
                 return Err(parse_err(format!(
@@ -913,6 +914,16 @@ impl Flattener<'_> {
         Ok(Expr::Call {
             function: format!("det${}", m.rows),
             args: entries,
+        })
+    }
+
+    /// Condition number: a runtime `cond$<m>$<n>` SVD intrinsic over the
+    /// row-major entries (`crate::linalg::condition_number`).
+    fn matrix_condition(&self, args: &[Expr], loop_vars: &Scope) -> Result<Expr> {
+        let m = self.parse_matrix_info(arg_at(args, 0, "cond")?, loop_vars)?;
+        Ok(Expr::Call {
+            function: format!("cond${}${}", m.rows, m.cols),
+            args: m.elements.iter().flatten().cloned().collect(),
         })
     }
 
@@ -1042,9 +1053,26 @@ impl Flattener<'_> {
         loop_vars: &Scope,
         shapes: &mut HashMap<String, Shape>,
     ) -> Result<()> {
-        let def_name = name.to_ascii_lowercase();
+        let mut def_name = name.to_ascii_lowercase();
         let inputs: Vec<Expr> = inputs.iter().map(|e| resolve_shapes(e, shapes)).collect();
         let mut outputs: Vec<Expr> = outputs.iter().map(|e| resolve_shapes(e, shapes)).collect();
+
+        // `eig` is `Eigenvalues`; `[V] = eigvec(A)` is `[~, V] = Eigen(A)`,
+        // its eigenvalue output bound to an unforgeable sink.
+        match def_name.as_str() {
+            "eig" => def_name = "eigenvalues".into(),
+            "eigvec" if outputs.len() == 1 => {
+                let sink = match &outputs[0] {
+                    Expr::Var(n) | Expr::ArrayAccess { name: n, .. } => {
+                        format!("{IGNORED_OUTPUT_PREFIX}eigvec_{n}")
+                    }
+                    _ => format!("{IGNORED_OUTPUT_PREFIX}eigvec"),
+                };
+                outputs.insert(0, Expr::Var(sink));
+                def_name = "eigen".into();
+            }
+            _ => {}
+        }
 
         self.pad_omitted_outputs(&def_name, &inputs, &mut outputs);
         // Sizing failures defer to the flattener's own (more specific) error.
@@ -1060,6 +1088,7 @@ impl Flattener<'_> {
             "svd" => self.flatten_svd(&inputs, &outputs, source, loop_vars),
             "eigenvalues" => self.flatten_eigen(false, &inputs, &outputs, source, loop_vars),
             "eigen" => self.flatten_eigen(true, &inputs, &outputs, source, loop_vars),
+            "eulerrotate" => self.flatten_euler_rotate(&inputs, &outputs, source, loop_vars),
             "fft" => self.flatten_fft(false, &inputs, &outputs, source, loop_vars),
             "ifft" => self.flatten_fft(true, &inputs, &outputs, source, loop_vars),
             "convolve" => self.flatten_convolve(&inputs, &outputs, source, loop_vars),
@@ -1101,7 +1130,7 @@ impl Flattener<'_> {
                     )))
                 } else if self.defs.function(&def_name).is_some() {
                     Err(parse_err(format!(
-                        "'{def_name}' is a FUNCTION, not callable with CALL \
+                        "'{def_name}' is a FUNCTION, not a multi-output call \
                          (use it directly in an expression)"
                     )))
                 } else {
@@ -1162,6 +1191,7 @@ impl Flattener<'_> {
                 let n = self.in_mat_rows(inputs, 0, loop_vars)?;
                 set_mat(outputs, 0, n, n);
             }
+            "eulerrotate" => set_mat(outputs, 0, 3, 3),
             "singularvalues" => {
                 let rows = self.in_mat_rows(inputs, 0, loop_vars)?;
                 let cols = self.in_mat_cols(inputs, 0, loop_vars)?;
@@ -1310,7 +1340,7 @@ impl Flattener<'_> {
         if inputs.len() != 5 || outputs.len() != 1 {
             return Err(parse_err(
                 "Interp2 expects (x[1:m], y[1:n], Z[1:m,1:n], xq, yq : zq), \
-                 e.g. CALL Interp2(x, y, Z, 1.5, 2.5 : zq)",
+                 e.g. [zq] = Interp2(x, y, Z, 1.5, 2.5)",
             ));
         }
         let x = self.parse_vector_info(&inputs[0], loop_vars)?;
@@ -1354,7 +1384,7 @@ impl Flattener<'_> {
         if inputs.len() != 1 || outputs.len() != 2 {
             return Err(parse_err(
                 "LUDecompose expects exactly 1 input matrix and 2 output matrices, \
-                 e.g. CALL LUDecompose(A[1:3,1:3] : L[1:3,1:3], U[1:3,1:3])",
+                 e.g. [L, U] = LUDecompose(A)",
             ));
         }
         let a = self.parse_matrix_info(&inputs[0], loop_vars)?;
@@ -1454,7 +1484,7 @@ impl Flattener<'_> {
         if inputs.len() != 1 || outputs.len() != 2 {
             return Err(parse_err(
                 "QR expects 1 input matrix and 2 output matrices, \
-                 e.g. CALL QR(A[1:3,1:3] : Q[1:3,1:3], R[1:3,1:3])",
+                 e.g. [Q, R] = QR(A)",
             ));
         }
         let a = self.parse_matrix_info(&inputs[0], loop_vars)?;
@@ -1512,7 +1542,7 @@ impl Flattener<'_> {
         if inputs.len() != 1 || outputs.len() != 1 {
             return Err(parse_err(
                 "Cholesky expects 1 input matrix and 1 output matrix, \
-                 e.g. CALL Cholesky(A[1:3,1:3] : L[1:3,1:3])",
+                 e.g. [L] = Cholesky(A)",
             ));
         }
         let a = self.parse_matrix_info(&inputs[0], loop_vars)?;
@@ -1540,6 +1570,71 @@ impl Flattener<'_> {
         Ok(())
     }
 
+    /// `[R] = EulerRotate(phi, theta, psi)`: the ZYX (yaw–pitch–roll)
+    /// rotation `R = Rz(psi)·Ry(theta)·Rx(phi)`, angles in radians — MATLAB's
+    /// `eul2rotm([psi, theta, phi], 'ZYX')`. Closed form, so the nine entries
+    /// are ordinary equations with analytic derivatives.
+    fn flatten_euler_rotate(
+        &mut self,
+        inputs: &[Expr],
+        outputs: &[Expr],
+        source: &str,
+        loop_vars: &Scope,
+    ) -> Result<()> {
+        if inputs.len() != 3 || outputs.len() != 1 {
+            return Err(parse_err(
+                "EulerRotate expects 3 angles (phi, theta, psi) and 1 output matrix, \
+                 e.g. [R] = EulerRotate(phi, theta, psi)",
+            ));
+        }
+        let r = self.parse_matrix_info(&outputs[0], loop_vars)?;
+        if r.rows != 3 || r.cols != 3 {
+            return Err(parse_err("EulerRotate: the output R must be 3x3."));
+        }
+        let angle = |i: usize| self.expand_expr(&inputs[i], loop_vars);
+        let (phi, theta, psi) = (angle(0)?, angle(1)?, angle(2)?);
+        let (c, s) = (
+            |a: &Expr| Expr::call("cos", vec![a.clone()]),
+            |a: &Expr| Expr::call("sin", vec![a.clone()]),
+        );
+        let mul = |a: Expr, b: Expr| Expr::bin(BinOp::Mul, a, b);
+        let add = |a: Expr, b: Expr| Expr::bin(BinOp::Add, a, b);
+        let sub = |a: Expr, b: Expr| Expr::bin(BinOp::Sub, a, b);
+        let (cf, sf, ct, st, cp, sp) = (c(&phi), s(&phi), c(&theta), s(&theta), c(&psi), s(&psi));
+        let entries = [
+            [
+                mul(cp.clone(), ct.clone()),
+                sub(
+                    mul(mul(cp.clone(), st.clone()), sf.clone()),
+                    mul(sp.clone(), cf.clone()),
+                ),
+                add(
+                    mul(mul(cp.clone(), st.clone()), cf.clone()),
+                    mul(sp.clone(), sf.clone()),
+                ),
+            ],
+            [
+                mul(sp.clone(), ct.clone()),
+                add(
+                    mul(mul(sp.clone(), st.clone()), sf.clone()),
+                    mul(cp.clone(), cf.clone()),
+                ),
+                sub(
+                    mul(mul(sp.clone(), st.clone()), cf.clone()),
+                    mul(cp.clone(), sf.clone()),
+                ),
+            ],
+            [Expr::Neg(Box::new(st)), mul(ct.clone(), sf), mul(ct, cf)],
+        ];
+        self.reserve(9)?;
+        for (i, row) in entries.into_iter().enumerate() {
+            for (j, value) in row.into_iter().enumerate() {
+                self.push(Equation::new(r.elements[i][j].clone(), value, source))?;
+            }
+        }
+        Ok(())
+    }
+
     /// Port of `EquationParser.flattenMatExp`: the matrix exponential `e^A`.
     fn flatten_mat_exp(
         &mut self,
@@ -1551,7 +1646,7 @@ impl Flattener<'_> {
         if inputs.len() != 1 || outputs.len() != 1 {
             return Err(parse_err(
                 "MatExp expects 1 input matrix and 1 output matrix, \
-                 e.g. CALL MatExp(A[1:2,1:2] : E[1:2,1:2])",
+                 e.g. [E] = MatExp(A)",
             ));
         }
         let a = self.parse_matrix_info(&inputs[0], loop_vars)?;
@@ -1591,7 +1686,7 @@ impl Flattener<'_> {
         if inputs.len() != 1 || outputs.len() != 1 {
             return Err(parse_err(
                 "SingularValues expects 1 input matrix and 1 output vector, \
-                 e.g. CALL SingularValues(A[1:3,1:2] : s[1:2])",
+                 e.g. [s] = SingularValues(A)",
             ));
         }
         let a = self.parse_matrix_info(&inputs[0], loop_vars)?;
@@ -1629,7 +1724,7 @@ impl Flattener<'_> {
     ) -> Result<()> {
         if inputs.len() != 1 || outputs.len() != 3 {
             return Err(parse_err(
-                "SVD expects 1 input matrix and 3 output matrices, e.g. CALL SVD(A : U, S, V)",
+                "SVD expects 1 input matrix and 3 output matrices, e.g. [U, S, V] = SVD(A)",
             ));
         }
         let a = self.parse_matrix_info(&inputs[0], loop_vars)?;
@@ -1821,12 +1916,12 @@ impl Flattener<'_> {
         if inputs.len() != 1 || !count_ok {
             return Err(parse_err(if want_vectors {
                 "Eigen expects 1 input matrix and 2 outputs (eigenvalue vector, \
-                 eigenvector matrix), e.g. CALL Eigen(A[1:3,1:3] : lambda[1:3], V[1:3,1:3])"
+                 eigenvector matrix), e.g. [lambda, V] = Eigen(A)"
             } else {
                 "Eigenvalues expects 1 input matrix and 1 output vector (real spectra) \
                  or 2 output vectors (real and imaginary parts), e.g. \
-                 CALL Eigenvalues(A[1:3,1:3] : lambda[1:3]) or \
-                 CALL Eigenvalues(A[1:2,1:2] : re[1:2], im[1:2])"
+                 [lambda] = Eigenvalues(A) or \
+                 [re, im] = Eigenvalues(A)"
             }));
         }
         let a = self.parse_matrix_info(&inputs[0], loop_vars)?;
@@ -1918,7 +2013,7 @@ impl Flattener<'_> {
         if inputs.len() != 2 || outputs.len() != 2 {
             return Err(parse_err(format!(
                 "{name} expects 2 input vectors (real, imag) and 2 output vectors, \
-                 e.g. CALL {name}(re[1:n], im[1:n] : outRe[1:n], outIm[1:n])"
+                 e.g. [outRe, outIm] = {name}(re, im)"
             )));
         }
         let re = self.parse_vector_info(&inputs[0], loop_vars)?;
@@ -2012,7 +2107,7 @@ impl Flattener<'_> {
         if !(1..=2).contains(&inputs.len()) || outputs.len() != 1 {
             return Err(parse_err(
                 "Detrend expects 1 input vector, an optional 'linear'/'constant' mode, \
-                 and 1 output vector, e.g. CALL Detrend(y[1:n] : yd[1:n])",
+                 and 1 output vector, e.g. [yd] = Detrend(y)",
             ));
         }
         let mode = if inputs.len() == 2 {
@@ -2058,7 +2153,7 @@ impl Flattener<'_> {
         if inputs.len() != 2 || outputs.len() != 1 {
             return Err(parse_err(
                 "Smooth expects 1 input vector, an odd window length and 1 output \
-                 vector, e.g. CALL Smooth(x[1:n], 5 : y[1:n])",
+                 vector, e.g. [y] = Smooth(x, 5)",
             ));
         }
         let x = self.parse_vector_info(&inputs[0], loop_vars)?;
@@ -2101,7 +2196,7 @@ impl Flattener<'_> {
         if inputs.len() != 2 || outputs.len() != 1 {
             return Err(parse_err(
                 "Window expects 1 input vector, a quoted window name and 1 output \
-                 vector, e.g. CALL Window(x[1:n], 'hann' : y[1:n])",
+                 vector, e.g. [y] = Window(x, 'hann')",
             ));
         }
         let kind = Self::call_option(
@@ -2149,7 +2244,7 @@ impl Flattener<'_> {
         if inputs.len() != 3 || outputs.len() != 1 {
             return Err(parse_err(format!(
                 "{name} expects numerator, denominator and signal vectors plus 1 \
-                 output vector, e.g. CALL {name}(b[1:3], a[1:2], x[1:n] : y[1:n])"
+                 output vector, e.g. [y] = {name}(b, a, x)"
             )));
         }
         let b = self.parse_vector_info(&inputs[0], loop_vars)?;
@@ -2182,7 +2277,7 @@ impl Flattener<'_> {
         if inputs.len() != 2 || outputs.len() != 1 {
             return Err(parse_err(
                 "XCorr expects 2 input vectors and 1 output vector, \
-                 e.g. CALL XCorr(a[1:m], b[1:n] : c[1:m+n-1])",
+                 e.g. [c] = XCorr(a, b)",
             ));
         }
         let a = self.parse_vector_info(&inputs[0], loop_vars)?;
@@ -2215,7 +2310,7 @@ impl Flattener<'_> {
             return Err(parse_err(
                 "Welch expects a signal vector, a sample rate and a segment length, \
                  plus frequency and PSD output vectors, e.g. \
-                 CALL Welch(x[1:n], 1000, 256 : f[1:129], pxx[1:129])",
+                 [f, pxx] = Welch(x, 1000, 256)",
             ));
         }
         let x = self.parse_vector_info(&inputs[0], loop_vars)?;
@@ -2260,7 +2355,7 @@ impl Flattener<'_> {
         if inputs.len() != 2 || outputs.len() != 1 {
             return Err(parse_err(
                 "Convolve expects 2 input vectors and 1 output vector, \
-                 e.g. CALL Convolve(a[1:m], b[1:n] : c[1:m+n-1])",
+                 e.g. [c] = Convolve(a, b)",
             ));
         }
         let a = self.parse_vector_info(&inputs[0], loop_vars)?;
@@ -2302,7 +2397,7 @@ impl Flattener<'_> {
         if inputs.len() != 2 || outputs.len() != 3 {
             return Err(parse_err(
                 "LinFit expects 2 input vectors and 3 outputs (slope, intercept, r2), \
-                 e.g. CALL LinFit(x[1:n], y[1:n] : slope, intercept, r2)",
+                 e.g. [slope, intercept, r2] = LinFit(x, y)",
             ));
         }
         let x = self.parse_vector_info(&inputs[0], loop_vars)?;
@@ -2340,7 +2435,7 @@ impl Flattener<'_> {
         if inputs.len() != 3 || outputs.len() != 1 {
             return Err(parse_err(
                 "PolyFit expects 2 input vectors and a degree, plus 1 output coefficient \
-                 vector, e.g. CALL PolyFit(x[1:n], y[1:n], 2 : c[1:3])",
+                 vector, e.g. [c] = PolyFit(x, y, 2)",
             ));
         }
         let x = self.parse_vector_info(&inputs[0], loop_vars)?;
@@ -3242,17 +3337,41 @@ impl Flattener<'_> {
                 right: Box::new(self.expand_expr(right, loop_vars)?),
             }),
             Expr::Call { function, args } => {
+                let is_slice = |arg: &Expr| {
+                    matches!(arg, Expr::ArrayAccess { indices, .. }
+                        if indices.iter().any(|ix| matches!(ix, Expr::Range { .. })))
+                };
                 let mut expanded_args = Vec::with_capacity(args.len());
                 for arg in args {
                     match arg {
-                        Expr::ArrayAccess { name, indices }
-                            if indices.iter().any(|ix| matches!(ix, Expr::Range { .. })) =>
-                        {
+                        Expr::ArrayAccess { name, indices } if is_slice(arg) => {
                             expanded_args.extend(
                                 self.expand_array_access_to_elements(name, indices, loop_vars)?,
                             );
                         }
                         other => expanded_args.push(self.expand_expr(other, loop_vars)?),
+                    }
+                }
+                // A list-taking intrinsic (`cov(x, y)`, `wmean(w, x)`) reads
+                // each argument as a bracket literal, so splicing a named
+                // array into its elements breaks its arity. Where it would,
+                // the slice is passed as a literal instead; every call the
+                // splice fits keeps the Java's behaviour.
+                if let Some(intrinsic) = eval::lookup_intrinsic(function) {
+                    if matches!(intrinsic.body, eval::Body::Lazy(_))
+                        && args.iter().any(is_slice)
+                        && !intrinsic.arity.accepts(expanded_args.len())
+                        && intrinsic.arity.accepts(args.len())
+                    {
+                        expanded_args = args
+                            .iter()
+                            .map(|arg| match arg {
+                                Expr::ArrayAccess { name, indices } if is_slice(arg) => {
+                                    self.slice_literal(name, indices, loop_vars)
+                                }
+                                other => self.expand_expr(other, loop_vars),
+                            })
+                            .collect::<Result<_>>()?;
                     }
                 }
                 Ok(Expr::Call {
@@ -3302,6 +3421,25 @@ impl Flattener<'_> {
             }),
             Expr::Not(operand) => Ok(Expr::Not(Box::new(self.expand_expr(operand, loop_vars)?))),
         }
+    }
+
+    /// A slice as the bracket literal a list-taking intrinsic reads:
+    /// `[a, b, c]` for a vector, `[[a, b], [c, d]]` row by row for a matrix.
+    fn slice_literal(&self, name: &str, indices: &[Expr], loop_vars: &Scope) -> Result<Expr> {
+        let elements = self.expand_array_access_to_elements(name, indices, loop_vars)?;
+        if indices.len() != 2 {
+            return Ok(Expr::ArrayLiteral(elements));
+        }
+        let cols = match self.expand_expr(&indices[1], loop_vars)? {
+            Expr::Range { start, end } => self.expand_range_index(&start, &end, loop_vars)?.len(),
+            _ => 1,
+        };
+        Ok(Expr::ArrayLiteral(
+            elements
+                .chunks(cols.max(1))
+                .map(|row| Expr::ArrayLiteral(row.to_vec()))
+                .collect(),
+        ))
     }
 
     /// Splice a slice argument (`v[1:3]`, `A[1:2,1:2]`) into its element
@@ -3873,7 +4011,7 @@ fn set_mat(outputs: &mut [Expr], index: usize, rows: usize, cols: usize) {
 /// item 34 closed — all must stay out of this list, or `flatten_call_proc`
 /// short-circuits before their flatteners.
 /// `procedures::EXPANDED_CALL_TARGETS` is the matching stage-2 allowance.
-const UNPORTED_CALL_INTRINSICS: [&str; 2] = ["eulerrotate", "eulerdecompose"];
+const UNPORTED_CALL_INTRINSICS: [&str; 1] = ["eulerdecompose"];
 
 /// The number of outputs a fixed-shape CALL intrinsic produces, used to pad
 /// trailing omission. `-1` for user-defined calls and for intrinsics whose
@@ -4602,6 +4740,21 @@ mod tests {
     }
 
     #[test]
+    fn named_arrays_reach_list_taking_intrinsics_as_literals() {
+        let eqs = expand("x = [1, 2]\ny = [3, 4]\nc = cov(x, y)");
+        assert_eq!(
+            eqs.last().unwrap().rhs,
+            Expr::Call {
+                function: "cov".into(),
+                args: vec![
+                    Expr::ArrayLiteral(vec![var("x[1]"), var("x[2]")]),
+                    Expr::ArrayLiteral(vec![var("y[1]"), var("y[2]")]),
+                ],
+            }
+        );
+    }
+
+    #[test]
     fn matrix_in_an_unsupported_operator_position_is_refused() {
         let message = expand_err("v = [1; 2]\ny = v ^ 2");
         assert!(
@@ -4994,7 +5147,7 @@ mod tests {
         assert!(
             message.contains(
                 "FFT expects 2 input vectors (real, imag) and 2 output vectors, \
-                 e.g. CALL FFT(re[1:n], im[1:n] : outRe[1:n], outIm[1:n])"
+                 e.g. [outRe, outIm] = FFT(re, im)"
             ),
             "{message}"
         );
@@ -5227,17 +5380,9 @@ mod tests {
     /// name rather than as an unknown procedure. (The eigen pair left this
     /// list when ledger item 34 closed.)
     #[test]
-    fn the_euler_decompositions_are_still_refused() {
-        for name in ["eulerrotate", "eulerdecompose"] {
-            assert!(
-                UNPORTED_CALL_INTRINSICS.contains(&name),
-                "`{name}` is not implemented and must remain refused"
-            );
-            assert!(
-                !control::flatten::handles(name),
-                "`{name}` must not be claimed by control::flatten"
-            );
-        }
+    fn the_euler_decomposition_is_still_refused() {
+        assert!(UNPORTED_CALL_INTRINSICS.contains(&"eulerdecompose"));
+        assert!(!control::flatten::handles("eulerdecompose"));
         // The eigen pair must stay out of control::flatten too — they are
         // matrix-expansion intrinsics, dispatched in flatten_call_proc.
         for name in ["eigenvalues", "eigen"] {

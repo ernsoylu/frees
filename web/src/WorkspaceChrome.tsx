@@ -59,6 +59,7 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
+import { useMediaQuery } from '@mantine/hooks'
 import { useState } from 'react'
 import { CheckResponse, SolveResponse, TableRowResult, TableStats } from './api'
 import type { LayoutPerspective } from './workspace/WorkspaceDock'
@@ -73,6 +74,7 @@ import { FUNCTION_CATEGORIES } from './functionCatalog'
 // longer `tip` (the hover tooltip when collapsed).
 const VIEWS = [
   { value: 'equations', label: 'Editor', tip: 'Editor', icon: IconCode },
+  { value: 'workspace', label: 'Variables', tip: 'Variable Explorer', icon: IconVariable },
   { value: 'table', label: 'Tables', tip: 'Tables — parametric runs & curve functions', icon: IconTable },
   { value: 'plots', label: 'Plots', tip: 'Plots — X-Y, property & psychrometric', icon: IconChartLine },
   {
@@ -377,15 +379,13 @@ export function Rail({
 }: Readonly<RailProps>) {
   const openSet = new Set(openKinds)
   const openIdSet = new Set(openIds)
-  const [expanded, setExpanded] = useState(
-    () => localStorage.getItem(RAIL_EXPANDED_KEY) === 'true',
-  )
+  const wideScreen = useMediaQuery('(min-width: 1100px)', false, { getInitialValueInEffect: false })
+  const [expandedPreference, setExpandedPreference] = useState(() => localStorage.getItem(RAIL_EXPANDED_KEY))
+  const expanded = expandedPreference === null ? wideScreen : expandedPreference === 'true'
   const toggle = () => {
-    setExpanded((e) => {
-      const next = !e
-      localStorage.setItem(RAIL_EXPANDED_KEY, String(next))
-      return next
-    })
+    const next = String(!expanded)
+    localStorage.setItem(RAIL_EXPANDED_KEY, next)
+    setExpandedPreference(next)
   }
 
   // Light/dark toggle. Mantine persists the choice to localStorage via its
@@ -403,10 +403,12 @@ export function Rail({
 
   return (
     <Stack
+      component="nav"
+      aria-label="Workspace navigation"
       justify="space-between"
       p={6}
       w={expanded ? 200 : undefined}
-      style={{ borderRight: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}
+      style={{ borderRight: '1px solid var(--mantine-color-default-border)', flexShrink: 0, overflowY: 'auto' }}
     >
       <Stack gap={4}>
         <RailEntry
@@ -651,7 +653,7 @@ export function checkPill(checkResult: CheckResponse): PillContent {
   }
 }
 
-function tablePill(
+export function tablePill(
   results: TableRowResult[],
   checkResult: CheckResponse | null,
   checkMessage: string,

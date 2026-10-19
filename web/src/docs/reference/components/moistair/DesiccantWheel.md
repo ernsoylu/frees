@@ -1,17 +1,20 @@
 ---
 name: DesiccantWheel
 category: Component (moistair)
-summary: Acausal moistair-domain component DesiccantWheel with ports proc_in, proc_out, reg_in, reg_out.
+summary: "Solid desiccant wheel: the process air leaves warmer and drier at near-constant enthalpy, with latent effectiveness against the sorbent equilibrium humidity ratio."
 related: []
 examples: []
 tags: [desiccantwheel, component, moistair, acausal]
 references: []
-generated: true
 ---
 
 # DesiccantWheel
 
-Reusable acausal **moistair-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Solid desiccant wheel: the process air leaves warmer and drier at near-constant enthalpy, with latent effectiveness against the sorbent equilibrium humidity ratio.
+
+Solid desiccant wheel. The process side runs DOWN AND TO THE RIGHT on the psychrometric chart: the latent heat released as vapour is sorbed reappears as sensible heat, so the air leaves WARMER and DRIER at near-constant enthalpy. That is the mirror image of adiabatic evaporative cooling, and it is the one process direction a cooling-only component set cannot express at all.  eff_L is latent effectiveness against the desiccant's equilibrium humidity ratio W_eq, which is set by sorbent type and regeneration temperature. f_carry is the extra enthalpy carried over from the hot regeneration sector — real wheels are not perfectly adiabatic, and 80–90% of the process temperature rise is heat of sorption with the balance carried over, so f_carry is small. (`LiquidDesiccantContactor` names its equivalent `f_excess` and defines it on the temperature GAIN rather than on an enthalpy gap, because a liquid contactor has no regeneration port to take the gap against.) Moisture and energy leave on the regeneration stream; both balances close on the dry-air basis.
+
+Reusable acausal **moistair-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Auto-generated** from this port's component library (`crates/frees-core/src/components/library-data/`). The ports, parameters, and variants are taken from the component definition; a worked example and prose discussion are added as the page is curated.
 

@@ -1,19 +1,22 @@
 ---
 name: SigRelay
 category: Component (signal)
-summary: Acausal signal-domain component SigRelay with ports in, out.
+summary: "Smooth relay/comparator: `low` below the threshold, `high` above it, with a tanh transition of width eps."
 related: []
 examples: []
 tags: [sigrelay, component, signal, acausal]
 references: []
-generated: true
 ---
 
 # SigRelay
 
-Reusable acausal **signal-domain** component. Instantiate it and connect its ports; instantiation expands the constitutive equations below into scalar equations solved by the standard Newton/Tarjan pipeline.
+Smooth relay/comparator: `low` below the threshold, `high` above it, with a tanh transition of width eps.
 
-> **Auto-generated** from the component library (`backend/core/src/main/resources/components/`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
+(True hysteresis needs discrete memory — deliberately out of the frees band; schedule the threshold instead.)
+
+Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
+
+> **Generated** from the component library (`crates/frees-core/src/components/library-data/signal.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.
 
 ## Usage
 

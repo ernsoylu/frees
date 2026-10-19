@@ -18,7 +18,6 @@ Hankel values can then be truncated for model reduction.
 
 ```
 [Ab, Bb, Cb] = balreal(A, B, C)
-[Ab, Bb, Cb] = balreal(A, B, C)
 ```
 
 ## Description

@@ -249,7 +249,7 @@ Several fluid-like domains share the same `(P, mdot, h)` bond but must never be 
 | `oil` | Oil hydraulics | `HydraulicPump`, `ReliefValve` |
 | `moistair` | Humid air (HVAC) | `MoistAirSource`, `CoolingCoil`, `MixingBox` |
 
-Connecting mismatched families is, again, a hard error. The built-ins carry the right tag already; your own components opt in with `PARAM domain$ = gas` (see *Writing Your Own Component*).
+Connecting mismatched families is, again, a hard error. The built-ins carry the right tag already; your own components opt in with a `domain$=gas` header parameter (see *Writing Your Own Component*).
 
 ## Humid air: the W rider
 
@@ -339,7 +339,7 @@ The rules:
 - **Ports** carry whatever members your equations reference. Use `(P, mdot, h)` members and the port is a fluid port; use `(T, Qdot)` and it is a heat port — domain inference is automatic (see *Domains & Fluid Families*). A port referenced only as `port.sig` becomes a causal **signal** port: one writer, any readers — use one for every command input rather than pinning a component's internals from outside.
 - **Parameters** — a trailing `$` marks a string parameter (`fluid$` is special: it names the stream's fluid for property calls and per-port fluid inference). Defaults live directly in the function header.
 - **Locals and outputs** — any bare name in the body is instance-private (auto-namespaced). Reading it from outside as `inst.name` makes it a named output.
-- **Fluid family** — a component for a non-default family opts in with `PARAM domain$ = gas` (or `oil`, `moistair`, `liquid`, `twophase`), so the connector guard protects your lines too.
+- **Fluid family** — a component for a non-default family opts in with a `domain$=gas` header parameter, e.g. `function [in, out] = MyValve(fluid$=Air, domain$=gas)` (or `oil`, `moistair`, `liquid`, `twophase`), so the connector guard protects your lines too.
 - **Composition** — a component body may instantiate other components and `connect` them: build a subsystem once, stamp it many times.
 - **Time** — a body may reference the reserved global `time` (never namespaced) to build time-driven behavior; the `DYNAMIC` integrators pin it, and a steady document sets `time = 0` explicitly.
 - **Keep closures C¹-smooth.** Newton differentiates everything, so a hard `if`/corner in a constitutive law stalls convergence. Use smooth surrogates — a `tanh` gate, the hinge `0.5*(x + sqrt(x^2 + eps^2))`, odd-symmetric flow laws — and expose the smoothing width as an `eps` parameter.
