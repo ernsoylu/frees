@@ -125,7 +125,3 @@ TABLE lin(x)
 END
 s = dtable('lin', 0.5)    { = 3, exactly }
 ```
-
-## See also
-
-`dtable1`, `Interpolate`, `Differentiate`

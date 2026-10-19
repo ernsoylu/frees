@@ -68,7 +68,9 @@ import {
   LearningMapDiagram
 } from './docs/DocDiagrams';
 
-function CopyButton({ code }: Readonly<{ code: string }>) {
+// `floating` pins it to the top-right of a plain code block; a runnable
+// block puts it in its toolbar instead.
+function CopyButton({ code, floating = true }: Readonly<{ code: string; floating?: boolean }>) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
     void navigator.clipboard.writeText(code);
@@ -81,7 +83,7 @@ function CopyButton({ code }: Readonly<{ code: string }>) {
       variant="light"
       color={copied ? "green" : "teal"}
       onClick={handleCopy}
-      style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}
+      style={floating ? { position: 'absolute', top: '8px', right: '8px', zIndex: 10 } : undefined}
     >
       {copied ? "Copied!" : "Copy Code"}
     </Button>
@@ -158,6 +160,7 @@ function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title
         <Group gap="xs">
           <Button size="xs" variant="filled" color="teal" onClick={() => run()} loading={running}>Run</Button>
           <Button size="xs" variant="light" onClick={openInEditor}>Open in Editor</Button>
+          <CopyButton code={code} floating={false} />
         </Group>
       </Group>
       {vary.length > 0 && (
@@ -185,10 +188,7 @@ function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title
           ))}
         </Stack>
       )}
-      <Box style={{ position: 'relative' }}>
-        <CopyButton code={code} />
-        <Code block style={{ background: 'transparent', maxHeight: '340px', overflowY: 'auto' }}>{code}</Code>
-      </Box>
+      <Code block style={{ background: 'transparent', maxHeight: '340px', overflowY: 'auto' }}>{code}</Code>
       {error && (
         <Alert color="red" mt="sm" title="Did not solve">
           <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{error}</Text>
@@ -966,7 +966,28 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
       );
       continue;
     }
-    
+
+    // 3b. Ordered lists. `start` keeps a list that resumes after a heading
+    // ("5. …") numbered from where the source left off.
+    const ordered = /^(\d+)\.\s+(.*)$/.exec(trimmed);
+    if (ordered) {
+      const start = Number(ordered[1]);
+      const listItems: string[] = [];
+      let m: RegExpExecArray | null;
+      while (i < lines.length && (m = /^\d+\.\s+(.*)$/.exec(lines[i].trim()))) {
+        listItems.push(m[1]);
+        i++;
+      }
+      elements.push(
+        <List key={`olist-${i}`} type="ordered" start={start} spacing="xs" mb="md" style={{ lineHeight: 1.6 }}>
+          {listItems.map((item, idx) => (
+            <List.Item key={idx}>{renderInlineContent(item)}</List.Item>
+          ))}
+        </List>
+      );
+      continue;
+    }
+
     // 4. Blockquotes / Alerts
     if (trimmed.startsWith('>')) {
       const alertLines: string[] = [];
@@ -1338,16 +1359,19 @@ function FoldSection({ title, open, children }: Readonly<{ title: string; open: 
 function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage; onNavigate: (id: string) => void }>) {
   const verified = page.body.includes('verified-reference-example');
   const mono = pageFamily(page) === 'Guide' ? undefined : 'monospace';
-  const functions = page.related.map((r) => {
+  // Frontmatter lists can repeat an entry (or differ only in case, and lookup
+  // is case-insensitive); show each link once.
+  const related = page.related.filter((r, i, all) => all.findIndex((o) => o.toLowerCase() === r.toLowerCase()) === i);
+  const functions = related.map((r) => {
     const target = REFERENCE_BY_SLUG.get(r.toLowerCase());
     return target
       ? <Anchor key={r} size="sm" ff="monospace" c="teal.4" onClick={() => onNavigate(REFPAGE + target.slug)}>{r}</Anchor>
       : <Text key={r} size="sm" ff="monospace">{r}</Text>;
   });
-  const topics = page.guides.filter((g) => NAV_LABELS[g]).map((g) => (
+  const topics = [...new Set(page.guides)].filter((g) => NAV_LABELS[g]).map((g) => (
     <Anchor key={g} size="sm" c="teal.4" onClick={() => onNavigate(g)}>{NAV_LABELS[g]}</Anchor>
   ));
-  const examples = page.examples.map((id) => (
+  const examples = [...new Set(page.examples)].map((id) => (
     <Anchor key={id} size="sm" ff="monospace" c="teal.4" onClick={() => onNavigate('examples')}>{id}</Anchor>
   ));
   return (
