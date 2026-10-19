@@ -3039,7 +3039,7 @@ export default function App() {
           onUnitIdsChange={handleStateUnitIdsChange}
           onFillMissing={() => {
             setFillMissingFor(s.name)
-            onSolve(true)
+            void onSolve(true)
           }}
           solving={solving && fillMissingFor === s.name}
           solvable={solvable}

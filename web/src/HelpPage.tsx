@@ -71,7 +71,7 @@ import {
 function CopyButton({ code }: Readonly<{ code: string }>) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
-    navigator.clipboard.writeText(code);
+    void navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -253,7 +253,7 @@ function UnitsReference() {
 
   useEffect(() => {
     let cancelled = false;
-    getReference()
+    void getReference()
       .then((ref) => {
         if (cancelled) return;
         setUnits(ref.units);
@@ -373,7 +373,7 @@ function FluidsReference() {
 
   useEffect(() => {
     let cancelled = false;
-    getFluids().then((f) => { if (!cancelled) setFluids(f); });
+    void getFluids().then((f) => { if (!cancelled) setFluids(f); });
     return () => { cancelled = true; };
   }, []);
 
@@ -481,7 +481,7 @@ function ConstantsReference() {
   const [constants, setConstants] = useState<ConstantInfo[] | null>(null);
   useEffect(() => {
     let cancelled = false;
-    getReference().then((ref) => { if (!cancelled) setConstants(ref.constants); });
+    void getReference().then((ref) => { if (!cancelled) setConstants(ref.constants); });
     return () => { cancelled = true; };
   }, []);
   const rows = constants ?? [];
