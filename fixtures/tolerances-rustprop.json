@@ -567,6 +567,70 @@
       "Like ida-adaptive-path, a fidelity change on either side moves this, and the",
       "dead-entry guard watches ODE cells, so the entry dies loudly if the two",
       "meshes ever coincide."
+    ],
+    "smooth-clamp-regulariser": [
+      "THE GOLDEN IS NOT A DUTY. IT IS A REGULARISER'S RESIDUE, RECOVERED BY AN",
+      "ELEVEN-DIGIT CANCELLATION, AND ITS TRAILING DIGITS ARE THE NEWTON SOLVE'S",
+      "OWN LAST ULPS. MoistAirWallHX (components/library-data/moistair.frees) clamps",
+      "its outlet humidity at saturation with a C-1 smooth min, and reports the",
+      "latent duty off the clamped difference:",
+      "",
+      "    out.W = 0.5 * (in.W + W_sat - sqrt((in.W - W_sat)^2 + 1e-12))",
+      "    Q_lat = in.mdot * 2.501e6 * (in.W - out.W)",
+      "",
+      "On a DRY coil (W_sat > in.W) the exact min is in.W, the clamp branch never",
+      "engages, and the true latent duty is identically 0 W. What the smooth form",
+      "leaves behind is the 1e-12 regulariser and nothing else. With",
+      "d = W_sat - in.W,",
+      "",
+      "    in.W - out.W = 0.5 * (sqrt(d^2 + 1e-12) - d)",
+      "                 = 2.5e-13/d - 1e-24/(16 d^3) + ...",
+      "",
+      "and the second term is 1.0e-10 of the first at the operating points this",
+      "corpus visits, so 2.5e-13/d is a closed form for the residue to ten digits.",
+      "Both engines report that residue. They report it by cancelling ~11 digits",
+      "off a Newton-solved out.W against in.W, and THAT is where they part.",
+      "",
+      "THE DIVERGENCE IS COUNTED IN ULPS OF out.W, NOT IN PROPERTIES. in.W is",
+      "~1e-2 and its ulp is 1.7347e-18, so one ulp of out.W moves a 0.9 kg/s coil's",
+      "Q_lat by 3.905e-12 W -- and because the residue itself is only ~1.1e-5 W,",
+      "one ulp is 3.4e-7 of the reported value. A relative measure on such a",
+      "variable is a measure of how many ulps apart two Newton iterates stopped,",
+      "which neither engine controls and neither is asked to: the block's stop",
+      "criterion bounds the residual, not the eleventh digit of a difference taken",
+      "inside it. So this is the exact-zero shape the `absolute` channel exists",
+      "for, arriving from the model's own algebra rather than from the oracle's",
+      "property table -- and it is graded in watts, per variable.",
+      "",
+      "WHICH SIDE IS NEARER NEEDS NO THIRD LIBRARY HERE, because the closed form",
+      "above is an oracle in its own right. Measured against 2.5e-13/d at the",
+      "instance below, this engine's residue is 1.203e-7 out and the golden's is",
+      "5.592e-6 out -- the port is 46x closer to the exact evaluation of the",
+      "document's own equations. (The property leaves are separately clean: the",
+      "coil's W_sat agrees with the CoolProp 8.0.0 wheel to 1.2e-16 and its inlet",
+      "state is bit-identical between the two engines.)",
+      "",
+      "AND THE ELEVENTH DIGIT IS NOT EVEN A PROPERTY OF THE BUILD. Measured at the",
+      "first instance: replaying its document ALONE in a fresh process and replaying",
+      "it inside the full 1 283-fixture corpus put the SAME binary's sister coil 8",
+      "ulps and 1 ulp from the golden respectively -- an 8x swing in the reported",
+      "relative error with nothing changed but what the process solved beforehand.",
+      "The swing is what was measured; the identified candidate -- not an isolated",
+      "cause -- is props/rustprop_warm.rs, which seeds each (P,h)/(P,s) flash from",
+      "the previous answer, so a warm-started flash can converge on a different last",
+      "ulp than a cold one. Anything graded",
+      "configuration that grades it, and a variable whose ulp count moves between",
+      "contexts cannot hold an entry at all: it will pass the fixture's relative",
+      "tolerance in one of them, and the channel's dead-entry guard will say so.",
+      "",
+      "AND THE CONTROL GROUP IS THE SAME COMPONENT, WET. Where a coil really does",
+      "dehumidify, in.W > W_sat, the clamp engages, out.W tracks saturation and the",
+      "regulariser is a 1e-12 rounding on a real number instead of the whole of it.",
+      "The first instance of this mechanism carries such a coil in the same",
+      "document -- 1229.83 W of genuine latent duty -- and the two engines agree on",
+      "it to 3.0665e-12. Same component, same equation, same 1e-12: where the",
+      "physics is there they agree to 3e-12; where the physics is a structural",
+      "zero they part at 5.5e-6. That contrast is the mechanism."
     ]
   },
   "fixtures": {
@@ -1008,6 +1072,17 @@
         "sen.sh": {
           "absolute": 1.9e-06,
           "measured": 1.263309e-06
+        }
+      }
+    },
+    "ev-tms-api-model-integrated-model-solves-with-plain-solver": {
+      "unit": "W",
+      "mechanism": "smooth-clamp-regulariser",
+      "reason": "A DRY MOIST-AIR COIL WHOSE LATENT DUTY IS IDENTICALLY ZERO. CONDA's air never reaches saturation (W_sat - W_in = 0.1053), so the smooth min out.W = 0.5*(in.W + W_sat - sqrt((in.W - W_sat)^2 + 1e-12)) stays off its clamp and the reported q_lat is only the 1e-12 regulariser's residue, mdot*2.501e6*(sqrt(d^2+1e-12)-d)/2 = 5.3440027623906899e-6 W at 50 digits -- the value the golden now holds. Engines differ only in that residue's last digits: the developer machine that regenerated this golden (2026-10-21) lands 6.25e-12 W below it and the ubuntu-latest CI runner 9.37e-12 W above it, so no f64 golden can sit inside the 1e-9 relative band on both. Every other variable of the fixture is graded relatively at the default.",
+      "variables": {
+        "conda.q_lat": {
+          "absolute": 1.5e-11,
+          "measured": 9.3673e-12
         }
       }
     }

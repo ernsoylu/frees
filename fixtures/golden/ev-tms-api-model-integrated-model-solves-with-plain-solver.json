@@ -62,7 +62,7 @@
       "conda.out.p": 101325.0,
       "conda.out.w": 0.009999999992183178,
       "conda.q": -11767.480060145044,
-      "conda.q_lat": 5.343996510934201E-6,
+      "conda.q_lat": 5.34400276239069E-6,
       "conda.t_in": 315.404612567691,
       "conda.t_out": 328.1460476094894,
       "conda.w_sat": 0.1153002823872955,
@@ -428,6 +428,6 @@
   },
   "oracle": {
     "engine": "frees-core (Rust)",
-    "generated_by": "Rust engine 2026-10-21. LiquidWallHX (and CatalystLightOff) now use the exact isothermal-wall effectiveness Q = (1 - exp(-UA/(mdot*cp)))*mdot*cp*(T_in - T_wall) instead of UA*(T_in - T_wall) at the inlet difference, the first-order Taylor term of the same law. The Java oracle's inlet-difference law over-predicts the duty at NTU >~ 1 and can drive the outlet past the wall temperature (a second-law violation; in this corpus up to 2.1x the stream's available heat). Owner decision 2026-10-21: results must match the physical law."
+    "generated_by": "Rust engine 2026-10-21. LiquidWallHX (and CatalystLightOff) now use the exact isothermal-wall effectiveness Q = (1 - exp(-UA/(mdot*cp)))*mdot*cp*(T_in - T_wall) instead of UA*(T_in - T_wall) at the inlet difference, the first-order Taylor term of the same law. The Java oracle's inlet-difference law over-predicts the duty at NTU >~ 1 and can drive the outlet past the wall temperature (a second-law violation; in this corpus up to 2.1x the stream's available heat). Owner decision 2026-10-21: results must match the physical law. conda.q_lat holds the closed-form regulariser residue mdot*2.501e6*(sqrt(d^2+1e-12)-d)/2, d = W_sat - W_in, evaluated at 50 digits: the dry coil's true latent duty is 0 W and the reported value is pure floating-point residue whose last digits vary by platform (graded on the absolute channel)."
   }
 }
