@@ -148,7 +148,7 @@ function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title
       text: code,
       ts: Date.now(),
     }));
-    window.open('/', '_blank');
+    window.open(import.meta.env.BASE_URL, '_blank');
   };
 
   const shown = vars ? vars.slice(0, 60) : [];
