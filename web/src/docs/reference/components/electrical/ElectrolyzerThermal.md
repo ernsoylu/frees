@@ -81,17 +81,17 @@ connect(EL.cool_out, SNK.in)
 i_stack = EL.p.I
 h_out = SNK.h
 
-{ CHECK bus.n.i -19.97290086 0.00001997290085607633 }
+{ CHECK bus.n.i 19.97290086 0.00001997290085607633 }
 { CHECK bus.n.v 0 1e-8 }
-{ CHECK bus.p.i 19.97290086 0.00001997290085607633 }
+{ CHECK bus.p.i -19.97290086 0.00001997290085607633 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-bus.n.i = -19.97290086
+bus.n.i = 19.97290086
 bus.n.v = 0
-bus.p.i = 19.97290086
+bus.p.i = -19.97290086
 ```
 
 <!-- verified-reference-example:end -->

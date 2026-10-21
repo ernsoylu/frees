@@ -48,7 +48,7 @@ out.p &= in.p \\
 tsat &= \text{T\_sat}\left(\mathrm{fluid\$}, p=in.p\right) \\
 hg &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 l_{need} &= \frac{in.mdot\cdot \left(hg - in.h\right)}{u_{tp}\cdot 3.141592653589793\cdot d\cdot \left(wall.t - tsat\right)} \\
-l_{tp} &= 0.5\,\left(l_{need} + l - \sqrt{\left(l_{need} - l\right)^{2} + eps_{zone}^{2}}\right) \\
+l_{tp} &= 0.5\,\left(\text{max}\left(l_{need}, 0\right) + l - \sqrt{\left(\text{max}\left(l_{need}, 0\right) - l\right)^{2} + eps_{zone}^{2}}\right) \\
 q_{tp} &= u_{tp}\cdot 3.141592653589793\cdot d\cdot l_{tp}\cdot \left(wall.t - tsat\right) \\
 l_{sh} &= l - l_{tp} \\
 r_{sh} &= \text{zone\_ramp}\left(l_{sh}, eps_{zone}\right) \\

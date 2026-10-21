@@ -3082,7 +3082,8 @@ fn override_spec(o: &VariableOverride) -> Result<(String, VarSpec)> {
 }
 
 /// Map a public GUESS name onto the solver key. Dotted member paths
-/// (`hx.in.p`) expand to `$`-flattened scalars (`hx$in$p`).
+/// (`hx.in.p`) expand to `$`-flattened scalars (`hx$in$p`); a nested
+/// subsystem's path keeps its dots (`evap.ev.wall.t` → `evap.ev$wall$t`).
 fn guess_spec_key(name: &str, specs: &BTreeMap<String, VarSpec>) -> Option<String> {
     if specs.contains_key(name) {
         return Some(name.to_string());
@@ -3091,7 +3092,18 @@ fn guess_spec_key(name: &str, specs: &BTreeMap<String, VarSpec>) -> Option<Strin
     if mangled != name && specs.contains_key(&mangled) {
         return Some(mangled);
     }
-    None
+    // A component nested in a subsystem keeps its dotted instance path:
+    // `evap.ev.wall.t` is `evap.ev$wall$t`. Mangle only the trailing dots.
+    let dots: Vec<usize> = name.match_indices('.').map(|(i, _)| i).collect();
+    (1..dots.len()).find_map(|k| {
+        let split = dots[dots.len() - 1 - k];
+        let key = format!(
+            "{}{}",
+            &name[..split + 1],
+            name[split + 1..].replace('.', "$")
+        );
+        specs.contains_key(&key).then_some(key)
+    })
 }
 
 fn apply_guess(spec: &mut VarSpec, guess: &GuessDirective) {
@@ -3216,6 +3228,11 @@ fn seed_property_argument_guesses(
     specs: &mut BTreeMap<String, VarSpec>,
     missing: Missing,
 ) {
+    // A user guess on one end of a pure equality — a `connect` endpoint or a
+    // pass-through `out.P = in.P` — is the guess for the other end too, so one
+    // GUESS per node seeds a whole closed loop. Before the nominals below,
+    // which only ever fill what is still at the default.
+    propagate_equality_guesses(equations, specs, missing);
     // The fluid-aware refrigerant pressure seed runs **first**, so the generic
     // 1-bar nominal below cannot overwrite it.
     for equation in equations {
@@ -3234,6 +3251,99 @@ fn seed_property_argument_guesses(
     for equation in equations {
         seed_consistent_enthalpy(&equation.lhs, specs, missing);
         seed_consistent_enthalpy(&equation.rhs, specs, missing);
+    }
+    for equation in equations {
+        seed_property_output(equation, specs, missing);
+    }
+}
+
+/// Seed `x` in `x = T_sat(…)` or `x = <any property>(<incompressible>, …)`
+/// with the call evaluated at its arguments' (already seeded) guesses. A
+/// coolant density or viscosity left at 1 — a velocity ~10³ too high —
+/// derails a pump-into-pipe block; a saturation temperature left at 1 K makes
+/// a superheat state `T = Tsat + SH` unevaluable before Newton's first step.
+fn seed_property_output(
+    equation: &Equation,
+    specs: &mut BTreeMap<String, VarSpec>,
+    missing: Missing,
+) {
+    let (Expr::Var(name), Expr::Call { function, args }) = (&equation.lhs, &equation.rhs) else {
+        return;
+    };
+    let name = name.to_ascii_lowercase();
+    // Only an incompressible liquid (no dome) has a seeded state that is
+    // reliably the operating phase; a refrigerant's could sit across the dome.
+    // T_sat is a function of P alone, so its seed is unambiguous for any fluid
+    // (an evaporator's `Enthalpy(P, T=Tevap+SH)` is NaN with Tevap at 1 K).
+    // An incompressible liquid has no dome, so ANY property output at the
+    // seeded (P, h) is the operating phase's — a coolant `T_in` at 1 K against
+    // an h near 345 K is what stalls a closed coolant loop's energy ring.
+    let seedable = prop_tokens(function).is_some_and(|tokens| {
+        tokens.get(1).copied() == Some("t_sat")
+            || tokens.get(2).is_some_and(|fluid| {
+                crate::props::propfun::resolve_fluid(fluid)
+                    .is_ok_and(|resolved| resolved.starts_with("INCOMP::"))
+            })
+    });
+    if !seedable || !needs_seed(&name, specs) {
+        return;
+    }
+    let mut scope = Scope::default();
+    for arg in args {
+        match arg {
+            Expr::Num { .. } => {}
+            Expr::Var(v) => {
+                let v = v.to_ascii_lowercase();
+                let Some(spec) = specs.get(&v) else { return };
+                scope.insert(v, spec.guess);
+            }
+            _ => return,
+        }
+    }
+    if let Ok(value) = crate::eval::eval(&equation.rhs, &scope) {
+        if value.is_finite() {
+            apply_nominal_guess(&name, value, specs, missing);
+        }
+    }
+}
+
+/// Copy a non-default guess — and its bounds — across every `a = b` equation to
+/// the side still at [`DEFAULT_GUESS`], to a fixpoint. Equal variables share a
+/// physical range: a bound on one alias that the others lack lets Newton wander
+/// an unbounded alias to a negative pressure.
+fn propagate_equality_guesses(
+    equations: &[Equation],
+    specs: &mut BTreeMap<String, VarSpec>,
+    missing: Missing,
+) {
+    let user_guess = |specs: &BTreeMap<String, VarSpec>, v: &str| {
+        specs
+            .get(v)
+            .map(|s| s.guess)
+            .filter(|g| *g != DEFAULT_GUESS)
+    };
+    loop {
+        let mut changed = false;
+        for equation in equations {
+            let (Expr::Var(a), Expr::Var(b)) = (&equation.lhs, &equation.rhs) else {
+                continue;
+            };
+            let (a, b) = (a.to_ascii_lowercase(), b.to_ascii_lowercase());
+            for (from, to) in [(&a, &b), (&b, &a)] {
+                if let Some(g) = user_guess(specs, from) {
+                    if needs_seed(to, specs) {
+                        let (lo, hi) = specs
+                            .get(from)
+                            .map_or((f64::NEG_INFINITY, f64::INFINITY), |s| (s.lower, s.upper));
+                        apply_nominal_guess_with_bounds(to, g, lo, hi, specs, missing);
+                        changed |= !needs_seed(to, specs);
+                    }
+                }
+            }
+        }
+        if !changed {
+            break;
+        }
     }
 }
 
@@ -3325,6 +3435,13 @@ fn seed_prop_args_in(expr: &Expr, specs: &mut BTreeMap<String, VarSpec>, missing
                             );
                         }
                     }
+                }
+            }
+            // A Reynolds number left at 1 sits deep in the laminar branch
+            // (f = 64): a pump-into-pipe loop then stalls there. Start turbulent.
+            if function.eq_ignore_ascii_case("friction_factor") {
+                if let Some(Expr::Var(name)) = args.first() {
+                    apply_nominal_guess(&name.to_ascii_lowercase(), 1.0e4, specs, missing);
                 }
             }
             for arg in args {
@@ -4679,13 +4796,21 @@ fn solve_block_with_fallback(
                         for name in &merged.variables {
                             values.insert(name.clone(), initial_guess(name, specs));
                         }
-                        // A merge that fails to converge propagates its own
-                        // error (Java: the uncaught `config.newton().solveBlock`
-                        // inside the catch block).
+                        // A merge that fails too reports the ORIGINAL block's
+                        // failure: the merged rescue swallows many solved blocks,
+                        // so its error names dozens of unrelated equations
+                        // instead of the block that actually stalled.
                         iterations += solve_block(
                             index, &merged, equations, values, settings, specs, ctx, None, None,
-                        )?;
-                        skip.extend(merged_indices);
+                        )
+                        .map_err(|_| first_error)?;
+                        // Only blocks BEFORE this one are done: a later block
+                        // the merge pulled in may also read a block between the
+                        // two that has not run yet (it solved against that
+                        // variable's guess). Let the loop re-solve it in order —
+                        // from the merged values, so a consistent one converges
+                        // at once.
+                        skip.extend(merged_indices.into_iter().filter(|&i| i < index));
                         actual_solved = Some(merged);
                     }
                     None => return Err(first_error),

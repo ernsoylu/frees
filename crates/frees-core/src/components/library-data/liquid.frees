@@ -47,7 +47,7 @@ port(out)
   V        = in.mdot / (rho * A)
   Re_d     = reynolds(rho, V, D, mu)
   f        = friction_factor(Re_d, rough / D)
-  out.P    = in.P - f * (L / D) * rho * V^2 / 2
+  out.P    = in.P - f * (L / D) * rho * V * abs(V) / 2
 end
 
 // Single-phase heat addition to the coolant — a battery cold plate / cold-plate
@@ -74,6 +74,9 @@ end
 // heat to (or takes it from) the wall node. Pairs with a refrigerant-side
 // evaporator/condenser through a shared wall connection to form a cross-domain
 // bridge (the EV chiller). Q>0 when the coolant is warmer than the wall.
+// Exact isothermal-wall effectiveness ε = 1 − exp(−UA/ṁc_p): the outlet
+// approaches the wall temperature but never crosses it at any NTU, and the
+// form stays evaluable as the flow shuts (ṁ → 0, ε → 1).
 function [in, out, wall] = LiquidWallHX(fluid$, UA, domain$ = liquid)
 port(in)
 port(out)
@@ -81,8 +84,10 @@ port(wall)
   out.mdot  = in.mdot
   out.P     = in.P
   T_in      = Temperature(fluid$, P=in.P, h=in.h)
-  Q         = UA * (T_in - wall.T)
-  out.h     = in.h - Q / in.mdot
+  cp_w      = Cp(fluid$, P=in.P, h=in.h)
+  eps_w     = 1 - exp(-UA / (abs(in.mdot) * cp_w + 1e-12))
+  out.h     = in.h - eps_w * cp_w * (T_in - wall.T)
+  Q         = in.mdot * (in.h - out.h)
   wall.Qdot = -Q
 end
 

@@ -94,7 +94,7 @@ connect(LOCK.out, AT.lock)
 tq_hold = SO.a.tau
 
 { CHECK at.gear.sig 3 0.000003 }
-{ CHECK at.in.tau -100 0.00009999999999999999 }
+{ CHECK at.in.tau 100 0.00009999999999999999 }
 { CHECK at.in.w 250 0.00025 }
 ```
 
@@ -102,7 +102,7 @@ Expected output (selected solution values; numerical rounding may vary):
 
 ```text
 at.gear.sig = 3
-at.in.tau = -100
+at.in.tau = 100
 at.in.w = 250
 ```
 

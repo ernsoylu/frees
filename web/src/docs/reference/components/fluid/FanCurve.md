@@ -40,7 +40,7 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \begin{aligned}
 q &= \frac{in.mdot}{rho} \\
-dp &= dp0\cdot \left(1 - \left(\frac{q}{q0}\right)^{2}\right) \\
+dp &= dp0\cdot \left(1 - \frac{q\cdot \left|q\right|}{q0^{2}}\right) \\
 out.mdot &= in.mdot \\
 out.p &= in.p + dp
 \end{aligned}

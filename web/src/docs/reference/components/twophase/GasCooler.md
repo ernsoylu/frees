@@ -46,7 +46,7 @@ out.p &= in.p - dp \\
 t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 cp_{g} &= \text{Cp}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 epsg &= 1 - e^{\frac{-ua}{in.mdot\cdot cp_{g}}} \\
-q &= epsg\cdot in.mdot\cdot cp_{g}\cdot \left(t_{in} - wall.t\right) \\
+q &= epsg\cdot in.mdot\cdot \left(in.h - \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, t=wall.t\right)\right) \\
 out.h &= in.h - \frac{q}{in.mdot} \\
 wall.qdot &= -q
 \end{aligned}

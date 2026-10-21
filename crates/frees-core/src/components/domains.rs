@@ -811,14 +811,24 @@ pub fn equality(stream_a: &str, member: &str, stream_b: &str, prefix: &str) -> E
 /// Port of `kirchhoffBalance`. This is `ΣQ̇=0` for heat, `ΣI=0` for electrical,
 /// `Στ=0` for mechanical rotational and `ΣF=0` for translational; the sum is
 /// built left-associatively in endpoint order, as the Java does.
+///
+/// `boundary[i]` negates endpoint `i`: a subsystem's own port inside one of its
+/// internal connects, whose flow variable is the flow INTO the subsystem — out
+/// of this inner node. Missing entries are `false`.
 pub fn kirchhoff_balance<S: AsRef<str>>(
     streams: &[S],
+    boundary: &[bool],
     flow_member: &str,
     prefix: &str,
 ) -> Equation {
     let mut sum: Option<Expr> = None;
-    for st in streams {
+    for (i, st) in streams.iter().enumerate() {
         let f = stream_member(st.as_ref(), flow_member);
+        let f = if boundary.get(i).copied().unwrap_or(false) {
+            Expr::Neg(Box::new(f))
+        } else {
+            f
+        };
         sum = Some(match sum {
             None => f,
             Some(acc) => Expr::bin(BinOp::Add, acc, f),
@@ -869,21 +879,33 @@ pub fn port_direction(reference: &str) -> PortDirection {
 ///
 /// `streams[i]` must be the stream `refs[i]` resolves to. `source_text` is the
 /// `connect(...)` declaration's own text, quoted back in the rejection.
+///
+/// `receives[i]` marks an endpoint whose component never states its ṁ — a
+/// pressure boundary such as a tank. Its direction is not in its name either,
+/// but there is no sign to get wrong: it takes whatever the node delivers, so
+/// it counts as an inlet. Any other unreadable endpoint is still rejected.
+///
+/// `boundary[i]` swaps endpoint `i`'s role: a subsystem's own `in` port, seen
+/// from inside, feeds the inner node (an outlet of it), and its `out` drains it.
 pub fn mass_conservation<S: AsRef<str>, R: AsRef<str>>(
     streams: &[S],
     refs: &[R],
+    receives: &[bool],
+    boundary: &[bool],
     prefix: &str,
     source_text: &str,
 ) -> Result<Equation> {
     let mut outlets: Option<Expr> = None;
     let mut inlets: Option<Expr> = None;
-    for (stream, reference) in streams.iter().zip(refs.iter()) {
+    for (i, (stream, reference)) in streams.iter().zip(refs.iter()).enumerate() {
         let reference = reference.as_ref();
         let mdot = stream_member(stream.as_ref(), "mdot");
-        let side = match port_direction(reference) {
-            PortDirection::Out => &mut outlets,
-            PortDirection::In => &mut inlets,
-            PortDirection::Unknown => {
+        let swapped = boundary.get(i).copied().unwrap_or(false);
+        let side = match (port_direction(reference), swapped) {
+            (PortDirection::Out, false) | (PortDirection::In, true) => &mut outlets,
+            (PortDirection::In, false) | (PortDirection::Out, true) => &mut inlets,
+            (PortDirection::Unknown, _) if receives.get(i).copied().unwrap_or(false) => &mut inlets,
+            (PortDirection::Unknown, _) => {
                 return Err(FreesError::parse(format!(
                     "connect(...): cannot tell whether '{reference}' is an inlet or an \
                      outlet for the mass balance — name the port with 'in'/'out', or \
@@ -1576,7 +1598,7 @@ mod tests {
     #[test]
     fn heat_conserves_qdot_as_a_kirchhoff_sum() {
         // ΣQ̇ = 0 over three endpoints, summed left-associatively.
-        let eq = kirchhoff_balance(&["a", "b", "c"], "qdot", "CONNECT: ");
+        let eq = kirchhoff_balance(&["a", "b", "c"], &[], "qdot", "CONNECT: ");
         let expected = Expr::bin(
             BinOp::Add,
             Expr::bin(BinOp::Add, Expr::var("a$qdot"), Expr::var("b$qdot")),
@@ -1598,7 +1620,7 @@ mod tests {
                 panic!("{domain} should use a Kirchhoff balance");
             };
             assert_eq!(flow, member);
-            let eq = kirchhoff_balance(&["p", "n"], flow, "");
+            let eq = kirchhoff_balance(&["p", "n"], &[], flow, "");
             assert_eq!(
                 eq.lhs,
                 Expr::bin(
@@ -1617,6 +1639,8 @@ mod tests {
         let eq = mass_conservation(
             &["s1", "s2", "s3"],
             &["SPL.in", "SPL.out1", "SPL.out2"],
+            &[],
+            &[],
             "CONNECT: ",
             "connect(SPL.in, SPL.out1, SPL.out2)",
         )
@@ -1645,6 +1669,8 @@ mod tests {
         let e = mass_conservation(
             &["s1", "s2", "s3"],
             &["A.out", "B.in", "MIX.c"],
+            &[],
+            &[],
             "CONNECT: ",
             "connect(A.out, B.in, MIX.c)",
         )
@@ -1662,6 +1688,8 @@ mod tests {
         let e = mass_conservation(
             &["s1", "s2"],
             &["A.out", "B.out"],
+            &[],
+            &[],
             "CONNECT: ",
             "connect(A.out, B.out)",
         )
@@ -1675,7 +1703,7 @@ mod tests {
 
     #[test]
     fn an_empty_node_yields_the_vacuous_balance_rather_than_panicking() {
-        let eq = kirchhoff_balance::<&str>(&[], "i", "");
+        let eq = kirchhoff_balance::<&str>(&[], &[], "i", "");
         assert_eq!(eq.lhs, Expr::num(0.0));
         assert_eq!(eq.rhs, Expr::num(0.0));
     }

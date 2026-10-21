@@ -86,7 +86,7 @@ connect(PIPE.out, TAIL.in)
 connect(PIPE.amb, AMB.port)
 t_gas_out = Temperature(Air, P=TAIL.P, h=TAIL.h)
 
-{ CHECK amb.port.qdot -1599.775965 0.0015997759651071209 }
+{ CHECK amb.port.qdot 1599.775965 0.0015997759651071209 }
 { CHECK amb.port.t 300 0.0003 }
 { CHECK exh.out.h 893764.5365 0.8937645364954598 }
 ```
@@ -94,7 +94,7 @@ t_gas_out = Temperature(Air, P=TAIL.P, h=TAIL.h)
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-amb.port.qdot = -1599.775965
+amb.port.qdot = 1599.775965
 amb.port.t = 300
 exh.out.h = 893764.5365
 ```

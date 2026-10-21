@@ -45,7 +45,7 @@ n_{rev} &= \frac{shaft.w}{2\,3.141592653589793} \\
 out.mdot &= rho\cdot disp\cdot n_{rev}\cdot eta_{v} \\
 in.mdot &= out.mdot \\
 out.h &= in.h \\
-shaft.tau &= \frac{-\frac{disp\cdot \left(out.p - in.p\right)}{2\,3.141592653589793}}{eta_{m}}
+shaft.tau &= \frac{\frac{disp\cdot \left(out.p - in.p\right)}{2\,3.141592653589793}}{eta_{m}}
 \end{aligned}
 $$
 

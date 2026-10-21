@@ -269,6 +269,11 @@ pub struct ConnectDecl {
     pub ports: Vec<String>,
     /// The declaration as the user wrote it, verbatim, for diagnostics.
     pub source_text: String,
+    /// Per endpoint, whether it is the enclosing subsystem's OWN port inside
+    /// one of its internal connects. Seen from inside, that port is the outside
+    /// world: its flow enters this node with the opposite sign. Empty for every
+    /// top-level connect.
+    pub boundary: Vec<bool>,
 }
 
 /// Everything the component layer of one document declared.

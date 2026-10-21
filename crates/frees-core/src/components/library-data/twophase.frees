@@ -102,7 +102,9 @@ port(wall)
   // and Q_tp = full latent duty (complete-evaporation regime, superheat downstream);
   // when it is too short, L_tp = L, Q_tp < full duty and the outlet stays two-phase.
   L_need    = in.mdot * (hg - in.h) / (U_tp * pi# * D * (wall.T - Tsat))
-  L_tp      = 0.5 * (L_need + L - sqrt((L_need - L)^2 + eps_zone^2))
+  // max(…, 0): with the wall on the wrong side of saturation the wanted
+  // length is negative — no zone, never a negative one (a spurious root).
+  L_tp      = 0.5 * (max(L_need, 0) + L - sqrt((max(L_need, 0) - L)^2 + eps_zone^2))
   Q_tp      = U_tp * pi# * D * L_tp * (wall.T - Tsat)
   L_sh      = L - L_tp
   r_sh      = zone_ramp(L_sh, eps_zone)
@@ -128,7 +130,7 @@ port(wall)
   // (smooth-min). Long enough ⇒ Q_cond = full latent duty and the outlet subcools;
   // too short ⇒ L_cond = L, Q_cond < full duty and the outlet stays two-phase.
   L_need    = in.mdot * (in.h - hf) / (U_cond * pi# * D * (Tsat - wall.T))
-  L_cond    = 0.5 * (L_need + L - sqrt((L_need - L)^2 + eps_zone^2))
+  L_cond    = 0.5 * (max(L_need, 0) + L - sqrt((max(L_need, 0) - L)^2 + eps_zone^2))
   Q_cond    = U_cond * pi# * D * L_cond * (Tsat - wall.T)
   L_sc      = L - L_cond
   r_sc      = zone_ramp(L_sc, eps_zone)
@@ -790,7 +792,10 @@ port(wall)
   T_in      = Temperature(fluid$, P=in.P, h=in.h)
   cp_g      = Cp(fluid$, P=in.P, h=in.h)
   epsg      = 1 - exp(-UA / (in.mdot * cp_g))
-  Q         = epsg * in.mdot * cp_g * (T_in - wall.T)
+  // Enthalpy potential, not cp_in·ΔT: near the pseudo-critical point cp
+  // swings tenfold, and cp_in·ΔT caps the duty far short of cooling to the
+  // wall (UA then has no effect). Identical for a constant-cp gas.
+  Q         = epsg * in.mdot * (in.h - Enthalpy(fluid$, P=in.P, T=wall.T))
   out.h     = in.h - Q / in.mdot
   wall.Qdot = -Q
 end

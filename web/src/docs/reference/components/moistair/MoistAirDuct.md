@@ -50,7 +50,7 @@ a &= \frac{3.141592653589793}{4}\cdot d^{2} \\
 v &= \frac{in.mdot\cdot \left(1 + in.w\right)}{rho\cdot a} \\
 re_{d} &= \text{reynolds}\left(rho, v, d, mu_{a}\right) \\
 f &= \text{friction\_factor}\left(re_{d}, \frac{rough}{d}\right) \\
-out.p &= in.p - \frac{f\cdot \frac{l}{d}\cdot rho\cdot v^{2}}{2}
+out.p &= in.p - \frac{f\cdot \frac{l}{d}\cdot rho\cdot v\cdot \left|v\right|}{2}
 \end{aligned}
 $$
 

@@ -455,6 +455,10 @@ where
                 nj_out,
             )?;
         }
+        // The stall paths below judge the residuals against the row scale; at
+        // iteration 0 it is still the all-ones start, which holds a converged
+        // 1e6-Pa pressure balance to 1e-12 Pa and calls it "stalled".
+        row_scale(&scratch.jacobian, x, scale);
 
         let mut damped = false;
         let accepted: Accepted;

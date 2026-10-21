@@ -196,7 +196,7 @@ port(out)
   V        = in.mdot * (1 + in.W) / (rho * A)
   Re_d     = reynolds(rho, V, D, mu_a)
   f        = friction_factor(Re_d, rough / D)
-  out.P    = in.P - f * (L / D) * rho * V^2 / 2
+  out.P    = in.P - f * (L / D) * rho * V * abs(V) / 2
 end
 
 // Air filter: quadratic loss with a fouling multiplier (foul = 1 clean; scale

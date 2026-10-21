@@ -27,8 +27,8 @@
 //
 //   3. ```json analysis blocks of the shape
 //      {operation, text, request, checks:[{path, value, tolerance}]} where
-//      operation is monte_carlo | parameter_fit | sensitivity — the paths that
-//      have no equation-document form.
+//      operation is monte_carlo | parameter_fit | sensitivity | solve_table |
+//      optimize | optimize_multi — the paths that have no equation-document form.
 //
 // Run: node scripts/check-doc-examples.mjs     (needs web/src/wasm/pkg built)
 
@@ -66,7 +66,7 @@ function markdownFiles(dir) {
   return out
 }
 
-const ANALYSIS = new Set(['monte_carlo', 'parameter_fit', 'sensitivity', 'solve_table', 'repl_evaluate'])
+const ANALYSIS = new Set(['monte_carlo', 'parameter_fit', 'sensitivity', 'solve_table', 'repl_evaluate', 'optimize', 'optimize_multi'])
 
 const CHECK_MARKER = /\{\s*CHECK\s+(\S+)\s+(\S+)\s+(\S+)\s*\}/g
 
@@ -213,6 +213,9 @@ function runAnalysis(c) {
   if (result.truncated === true) throw new Error(`${c.operation}: result truncated`)
   if (result.diagnostics?.complete === false) throw new Error(`${c.operation}: incomplete`)
   if (result.diagnostics?.designComplete === false) throw new Error(`${c.operation}: incomplete design`)
+  // An optimum that violates its own constraints is a warning, not a failure,
+  // in the engine; a documented example must not ship one.
+  if (result.warning) throw new Error(`${c.operation}: ${result.warning}`)
 
   for (const { path: p, value, tolerance } of c.checks || []) {
     const actual = p.split('.').reduce((o, k) => o?.[k], result)

@@ -3,7 +3,7 @@
   "source": "LiquidSource    SRC(fluid$=EG50, mdot=0.3, P=200000, T=315)\nLiquidPump      PUMP(fluid$=EG50, eta=0.6)\nLiquidColdPlate CP(Q=5000)\nLiquidWallHX    RAD(fluid$=EG50, UA=800)\nThermalSource   AMB(T=298)\nLiquidSink      OUT()\nconnect(SRC.out, PUMP.in)\nconnect(PUMP.out, CP.in)\nconnect(CP.out, RAD.in)\nconnect(RAD.wall, AMB.port)\nconnect(RAD.out, OUT.in)\nOUT.in.P = 200000\n",
   "expect": {
     "variables": {
-      "amb.port.qdot": 17484.200203257114,
+      "amb.port.qdot": 12170.726163269139,
       "amb.port.t": 298.0,
       "cp.in.h": 73658.46116313775,
       "cp.in.mdot": 0.3,
@@ -11,8 +11,8 @@
       "cp.out.h": 90325.12782980442,
       "cp.out.mdot": 0.3,
       "cp.out.p": 200000.0,
-      "out.h": 32044.460485614036,
-      "out.in.h": 32044.460485614036,
+      "out.h": 49756.04061890729,
+      "out.in.h": 49756.04061890729,
       "out.in.mdot": 0.3,
       "out.in.p": 200000.0,
       "out.mdot": 0.3,
@@ -23,17 +23,19 @@
       "pump.out.h": 73658.46116313775,
       "pump.out.mdot": 0.3,
       "pump.out.p": 200000.0,
-      "pump.v": 9.503000888818257E-4,
+      "pump.v": 0.0009503000888818257,
       "pump.w": 0.0,
+      "rad.cp_w": 3444.263897764319,
+      "rad.eps_w": 0.5389432452216619,
       "rad.in.h": 90325.12782980442,
       "rad.in.mdot": 0.3,
       "rad.in.p": 200000.0,
-      "rad.out.h": 32044.460485614036,
+      "rad.out.h": 49756.04061890729,
       "rad.out.mdot": 0.3,
       "rad.out.p": 200000.0,
-      "rad.q": 17484.200203257114,
+      "rad.q": 12170.726163269139,
       "rad.t_in": 319.8552502540714,
-      "rad.wall.qdot": -17484.200203257114,
+      "rad.wall.qdot": -12170.726163269139,
       "rad.wall.t": 298.0,
       "src.out.h": 73658.46116313775,
       "src.out.mdot": 0.3,
@@ -63,6 +65,8 @@
       "pump$out$p": "pump.out.p",
       "pump$v": "pump.v",
       "pump$w": "pump.w",
+      "rad$cp_w": "rad.cp_w",
+      "rad$eps_w": "rad.eps_w",
       "rad$in$h": "rad.in.h",
       "rad$in$mdot": "rad.in.mdot",
       "rad$in$p": "rad.in.p",
@@ -77,13 +81,13 @@
       "src$out$mdot": "src.out.mdot",
       "src$out$p": "src.out.p"
     },
-    "block_count": 35,
+    "block_count": 37,
     "ode_tables": [
     ],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Rust engine 2026-10-21. LiquidWallHX (and CatalystLightOff) now use the exact isothermal-wall effectiveness Q = (1 - exp(-UA/(mdot*cp)))*mdot*cp*(T_in - T_wall) instead of UA*(T_in - T_wall) at the inlet difference, the first-order Taylor term of the same law. The Java oracle's inlet-difference law over-predicts the duty at NTU >~ 1 and can drive the outlet past the wall temperature (a second-law violation; in this corpus up to 2.1x the stream's available heat). Owner decision 2026-10-21: results must match the physical law."
   }
 }
