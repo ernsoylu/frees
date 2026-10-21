@@ -6,6 +6,12 @@
       "measured": 6.66e-9,
       "mechanism": "rustprop-transcendentals-glibc-vs-wasm32-libm",
       "reason": "ode23s transient with MoistAirSource/CabinZone evaluating HAPropsSI in the loop. rustprop uses std::f64::exp/ln/powf which resolves to glibc natively and compiler-rt/libm on wasm32; 1-ulp property variations integrate to a 6.66e-9 trajectory difference against the JDK/native baseline."
+    },
+    "ev-battery-cooling-pid": {
+      "relative": 6e-6,
+      "measured": 4.43e-6,
+      "mechanism": "rustprop-transcendentals-glibc-vs-wasm32-libm",
+      "reason": "ode23s transient (4000 s, 400 rows) of a five-domain closed loop: BatteryPack -> LiquidWallHX cold plate -> Chiller (MovingBoundaryEvaporator, R134a) -> EXVCmd under a clamped PID. Its golden was regenerated natively on 2026-10-21 (LiquidWallHX exact isothermal-wall law), so native replay is exact; wasm32 resolves rustprop's exp/ln/powf through compiler-rt/libm instead of glibc, and the 1-ulp property differences integrate through the PID loop. The worst cell is ch.ev$l_tp at row 45 (diff 4.20e-6 m on a column scale of 0.948, 4.43e-6), where the evaporator's smooth-min zone-length corner amplifies them; the solved scalars agree to 1.8e-11. Before the regeneration this fixture carried a 3.6e-6 rustprop-vs-Java relaxation that absorbed the same effect."
     }
   }
 }
