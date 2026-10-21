@@ -69,7 +69,7 @@ v_rod = CF.rod.vel
 
 { CHECK cf.rod.f 50 0.000049999999999999996 }
 { CHECK cf.rod.vel 0 1e-8 }
-{ CHECK cf.g.port.f -50 0.000049999999999999996 }
+{ CHECK cf.g.port.f 50 0.000049999999999999996 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
@@ -77,7 +77,7 @@ Expected output (selected solution values; numerical rounding may vary):
 ```text
 cf.rod.f = 50
 cf.rod.vel = 0
-cf.g.port.f = -50
+cf.g.port.f = 50
 ```
 
 <!-- verified-reference-example:end -->

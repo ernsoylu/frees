@@ -42,7 +42,7 @@ $$
 \begin{aligned}
 rho &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 q &= \frac{in.mdot}{rho} \\
-dp &= dp0\cdot \left(1 - \left(\frac{q}{q0}\right)^{2}\right) \\
+dp &= dp0\cdot \left(1 - \frac{q\cdot \left|q\right|}{q0^{2}}\right) \\
 out.mdot &= in.mdot \\
 out.p &= in.p + dp \\
 out.h &= in.h + \frac{dp}{rho\cdot eta}

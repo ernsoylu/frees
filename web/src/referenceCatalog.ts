@@ -2775,7 +2775,7 @@ ch.cool_in.p = 200000
     examples: [],
     tags: [`exv`, `component`, `ac`, `acausal`],
     references: [],
-    guides: [],
+    guides: [`md-co2-transcritical`],
     body: `An electronic expansion valve with a commanded opening.
 
 ## Domain
@@ -3123,7 +3123,7 @@ air.out.p = 101325
     examples: [],
     tags: [`txv`, `component`, `ac`, `acausal`],
     references: [],
-    guides: [],
+    guides: [`md-cabin-ac`, `md-hpwh`],
     body: `A thermostatic expansion valve that meters refrigerant to hold a target superheat.
 
 ## Domain
@@ -4757,17 +4757,17 @@ connect(EL.cool_out, SNK.in)
 i_stack = EL.p.I
 h_out = SNK.h
 
-{ CHECK bus.n.i -19.97290086 0.00001997290085607633 }
+{ CHECK bus.n.i 19.97290086 0.00001997290085607633 }
 { CHECK bus.n.v 0 1e-8 }
-{ CHECK bus.p.i 19.97290086 0.00001997290085607633 }
+{ CHECK bus.p.i -19.97290086 0.00001997290085607633 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-bus.n.i = -19.97290086
+bus.n.i = 19.97290086
 bus.n.v = 0
-bus.p.i = 19.97290086
+bus.p.i = -19.97290086
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -4952,17 +4952,17 @@ connect(FC.cool_out, SNK.in)
 i_stack = BUS.p.I
 h_out = SNK.h
 
-{ CHECK bus.n.i 53.74668195 0.00005374668194675808 }
+{ CHECK bus.n.i -53.74668195 0.00005374668194675808 }
 { CHECK bus.n.v 0 1e-8 }
-{ CHECK bus.p.i -53.74668195 0.00005374668194675808 }
+{ CHECK bus.p.i 53.74668195 0.00005374668194675808 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-bus.n.i = 53.74668195
+bus.n.i = -53.74668195
 bus.n.v = 0
-bus.p.i = -53.74668195
+bus.p.i = 53.74668195
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -7169,7 +7169,7 @@ a &= \\frac{3.141592653589793}{4}\\cdot d^{2} \\\\
 v &= \\frac{in.mdot}{rho\\cdot a} \\\\
 re_{d} &= \\text{reynolds}\\left(rho, v, d, mu\\right) \\\\
 f &= \\text{friction\\_factor}\\left(re_{d}, \\frac{rough}{d}\\right) \\\\
-out.p &= in.p - \\frac{f\\cdot \\frac{l}{d}\\cdot rho\\cdot v^{2}}{2}
+out.p &= in.p - \\frac{f\\cdot \\frac{l}{d}\\cdot rho\\cdot v\\cdot \\left|v\\right|}{2}
 \\end{aligned}
 $$
 
@@ -7301,7 +7301,7 @@ snk.in.p = 300000
     examples: [],
     tags: [`fan`, `fan-family`, `constant-rise`, `data:dP0-Q0-eta`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `component`, `fluid`, `acausal`],
     references: [],
-    guides: [],
+    guides: [`md-dehumidifier`],
     body: `Adds a pressure rise to a gas/air stream, computing the fan work.
 
 ## Domain
@@ -7335,7 +7335,7 @@ $$
 \\begin{aligned}
 rho &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 q &= \\frac{in.mdot}{rho} \\\\
-dp &= dp0\\cdot \\left(1 - \\left(\\frac{q}{q0}\\right)^{2}\\right) \\\\
+dp &= dp0\\cdot \\left(1 - \\frac{q\\cdot \\left|q\\right|}{q0^{2}}\\right) \\\\
 out.mdot &= in.mdot \\\\
 out.p &= in.p + dp \\\\
 out.h &= in.h + \\frac{dp}{rho\\cdot eta}
@@ -7412,7 +7412,7 @@ Instantiating the component expands these acausal equations (over its port membe
 $$
 \\begin{aligned}
 q &= \\frac{in.mdot}{rho} \\\\
-dp &= dp0\\cdot \\left(1 - \\left(\\frac{q}{q0}\\right)^{2}\\right) \\\\
+dp &= dp0\\cdot \\left(1 - \\frac{q\\cdot \\left|q\\right|}{q0^{2}}\\right) \\\\
 out.mdot &= in.mdot \\\\
 out.p &= in.p + dp
 \\end{aligned}
@@ -7985,7 +7985,7 @@ a &= \\frac{3.141592653589793}{4}\\cdot d^{2} \\\\
 v &= \\frac{in.mdot}{rho\\cdot a} \\\\
 re_{d} &= \\text{reynolds}\\left(rho, v, d, mu\\right) \\\\
 f &= \\text{friction\\_factor}\\left(re_{d}, \\frac{rough}{d}\\right) \\\\
-out.p &= in.p - \\frac{f\\cdot \\frac{l}{d}\\cdot rho\\cdot v^{2}}{2}
+out.p &= in.p - \\frac{f\\cdot \\frac{l}{d}\\cdot rho\\cdot v\\cdot \\left|v\\right|}{2}
 \\end{aligned}
 $$
 
@@ -8120,7 +8120,7 @@ sh1.tau = 124.7774754
     examples: [`pump-sizing`, `rankine-cycle`],
     tags: [`pump`, `pump-family`, `data:eta`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `component`, `fluid`, `acausal`],
     references: [],
-    guides: [],
+    guides: [`md-fuel-cell`, `md-engine-warmup`, `md-cooling-tower`],
     body: `Raises the pressure of a liquid stream, computing the work from a pump efficiency.
 
 ## Domain
@@ -8380,7 +8380,7 @@ c1.p = 300000
     examples: [],
     tags: [`sink`, `component`, `fluid`, `acausal`],
     references: [],
-    guides: [],
+    guides: [`md-peltier`],
     body: `A fluid boundary that absorbs a stream at a set pressure.
 
 ## Domain
@@ -11873,7 +11873,7 @@ n_{rev} &= \\frac{shaft.w}{2\\,3.141592653589793} \\\\
 out.mdot &= rho\\cdot disp\\cdot n_{rev}\\cdot eta_{v} \\\\
 in.mdot &= out.mdot \\\\
 out.h &= in.h \\\\
-shaft.tau &= \\frac{-\\frac{disp\\cdot \\left(out.p - in.p\\right)}{2\\,3.141592653589793}}{eta_{m}}
+shaft.tau &= \\frac{\\frac{disp\\cdot \\left(out.p - in.p\\right)}{2\\,3.141592653589793}}{eta_{m}}
 \\end{aligned}
 $$
 
@@ -13913,7 +13913,7 @@ a &= \\frac{3.141592653589793}{4}\\cdot d^{2} \\\\
 v &= \\frac{in.mdot}{rho\\cdot a} \\\\
 re_{d} &= \\text{reynolds}\\left(rho, v, d, mu\\right) \\\\
 f &= \\text{friction\\_factor}\\left(re_{d}, \\frac{rough}{d}\\right) \\\\
-out.p &= in.p - \\frac{f\\cdot \\frac{l}{d}\\cdot rho\\cdot v^{2}}{2}
+out.p &= in.p - \\frac{f\\cdot \\frac{l}{d}\\cdot rho\\cdot v\\cdot \\left|v\\right|}{2}
 \\end{aligned}
 $$
 
@@ -14755,7 +14755,7 @@ l1.mdot = 0.5
     tags: [`liquidwallhx`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
-    body: `A liquid-to-wall heat exchanger.
+    body: `A liquid-to-wall heat exchanger with the exact isothermal-wall effectiveness ε = 1 − exp(−UA/ṁc_p): the outlet approaches the wall temperature but never crosses it.
 
 ## Domain
 
@@ -14788,11 +14788,14 @@ $$
 out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
 t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
-q &= ua\\cdot \\left(t_{in} - wall.t\\right) \\\\
-out.h &= in.h - \\frac{q}{in.mdot} \\\\
+cp_{w} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+eps_{w} &= 1 - e^{\\frac{-ua}{\\left|in.mdot\\right|\\cdot cp_{w} + 1.0E-12}} \\\\
+out.h &= in.h - eps_{w}\\cdot cp_{w}\\cdot \\left(t_{in} - wall.t\\right) \\\\
+q &= in.mdot\\cdot \\left(in.h - out.h\\right) \\\\
 wall.qdot &= -q
 \\end{aligned}
 $$
+
 
 ## Examples
 
@@ -14817,7 +14820,7 @@ connect(RAD.wall, AMB.port)
 connect(RAD.out, OUT.in)
 OUT.in.P = 200000
 
-{ CHECK amb.port.qdot 17484.2002 0.017484200203257114 }
+{ CHECK amb.port.qdot 12170.7262 0.0121707 }
 { CHECK amb.port.t 298 0.000298 }
 { CHECK cp.in.h 73658.46116 0.07365846116313775 }
 \`\`\`
@@ -14825,7 +14828,7 @@ OUT.in.P = 200000
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-amb.port.qdot = 17484.2002
+amb.port.qdot = 12170.7262
 amb.port.t = 298
 cp.in.h = 73658.46116
 \`\`\`
@@ -15467,7 +15470,7 @@ v_rod = CF.rod.vel
 
 { CHECK cf.rod.f 50 0.000049999999999999996 }
 { CHECK cf.rod.vel 0 1e-8 }
-{ CHECK cf.g.port.f -50 0.000049999999999999996 }
+{ CHECK cf.g.port.f 50 0.000049999999999999996 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
@@ -15475,7 +15478,7 @@ Expected output (selected solution values; numerical rounding may vary):
 \`\`\`text
 cf.rod.f = 50
 cf.rod.vel = 0
-cf.g.port.f = -50
+cf.g.port.f = 50
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -19899,7 +19902,7 @@ a &= \\frac{3.141592653589793}{4}\\cdot d^{2} \\\\
 v &= \\frac{in.mdot\\cdot \\left(1 + in.w\\right)}{rho\\cdot a} \\\\
 re_{d} &= \\text{reynolds}\\left(rho, v, d, mu_{a}\\right) \\\\
 f &= \\text{friction\\_factor}\\left(re_{d}, \\frac{rough}{d}\\right) \\\\
-out.p &= in.p - \\frac{f\\cdot \\frac{l}{d}\\cdot rho\\cdot v^{2}}{2}
+out.p &= in.p - \\frac{f\\cdot \\frac{l}{d}\\cdot rho\\cdot v\\cdot \\left|v\\right|}{2}
 \\end{aligned}
 $$
 
@@ -22374,7 +22377,7 @@ connect(LOCK.out, AT.lock)
 tq_hold = SO.a.tau
 
 { CHECK at.gear.sig 3 0.000003 }
-{ CHECK at.in.tau -100 0.00009999999999999999 }
+{ CHECK at.in.tau 100 0.00009999999999999999 }
 { CHECK at.in.w 250 0.00025 }
 \`\`\`
 
@@ -22382,7 +22385,7 @@ Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
 at.gear.sig = 3
-at.in.tau = -100
+at.in.tau = 100
 at.in.w = 250
 \`\`\`
 
@@ -22433,14 +22436,16 @@ The acausal equations this component expands into (over its port members and par
 $$
 \\begin{aligned}
 t_{g} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+cp_{g} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
+eps_{c} &= 1 - e^{\\frac{-ua}{\\left|in.mdot\\right|\\cdot cp_{g} + 1.0E-12}} \\\\
 eta &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{tb - t50}{k}\\right)\\right) \\\\
-q &= ua\\cdot \\left(t_{g} - tb\\right) \\\\
+out.h &= in.h - eps_{c}\\cdot cp_{g}\\cdot \\left(t_{g} - tb\\right) \\\\
+q &= in.mdot\\cdot \\left(in.h - out.h\\right) \\\\
 qexo &= eta\\cdot in.mdot\\cdot q_{exo} \\\\
 \\text{der}\\left(tb\\right) &= \\frac{q + qexo}{c} \\\\
 \\text{init}\\left(tb\\right) &= t0 \\\\
 out.mdot &= in.mdot \\\\
-out.p &= in.p \\\\
-out.h &= in.h - \\frac{q}{in.mdot}
+out.p &= in.p
 \\end{aligned}
 $$
 
@@ -22713,7 +22718,7 @@ tl.fx = 3985.916842
     examples: [`engine-map-2d`, `engine-cycle-wiebe`],
     tags: [`engine`, `component`, `powertrain`, `acausal`],
     references: [],
-    guides: [],
+    guides: [`md-engine-warmup`],
     body: `An internal-combustion engine acting as a torque source.
 
 ## Domain
@@ -22867,7 +22872,7 @@ connect(PIPE.out, TAIL.in)
 connect(PIPE.amb, AMB.port)
 t_gas_out = Temperature(Air, P=TAIL.P, h=TAIL.h)
 
-{ CHECK amb.port.qdot -1599.775965 0.0015997759651071209 }
+{ CHECK amb.port.qdot 1599.775965 0.0015997759651071209 }
 { CHECK amb.port.t 300 0.0003 }
 { CHECK exh.out.h 893764.5365 0.8937645364954598 }
 \`\`\`
@@ -22875,7 +22880,7 @@ t_gas_out = Temperature(Air, P=TAIL.P, h=TAIL.h)
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-amb.port.qdot = -1599.775965
+amb.port.qdot = 1599.775965
 amb.port.t = 300
 exh.out.h = 893764.5365
 \`\`\`
@@ -27918,7 +27923,7 @@ out.p &= in.p - dp \\\\
 t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 cp_{g} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 epsg &= 1 - e^{\\frac{-ua}{in.mdot\\cdot cp_{g}}} \\\\
-q &= epsg\\cdot in.mdot\\cdot cp_{g}\\cdot \\left(t_{in} - wall.t\\right) \\\\
+q &= epsg\\cdot in.mdot\\cdot \\left(in.h - \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=wall.t\\right)\\right) \\\\
 out.h &= in.h - \\frac{q}{in.mdot} \\\\
 wall.qdot &= -q
 \\end{aligned}
@@ -28012,7 +28017,7 @@ out.p &= in.p \\\\
 tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
 hf &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
 l_{need} &= \\frac{in.mdot\\cdot \\left(in.h - hf\\right)}{u_{cond}\\cdot 3.141592653589793\\cdot d\\cdot \\left(tsat - wall.t\\right)} \\\\
-l_{cond} &= 0.5\\,\\left(l_{need} + l - \\sqrt{\\left(l_{need} - l\\right)^{2} + eps_{zone}^{2}}\\right) \\\\
+l_{cond} &= 0.5\\,\\left(\\text{max}\\left(l_{need}, 0\\right) + l - \\sqrt{\\left(\\text{max}\\left(l_{need}, 0\\right) - l\\right)^{2} + eps_{zone}^{2}}\\right) \\\\
 q_{cond} &= u_{cond}\\cdot 3.141592653589793\\cdot d\\cdot l_{cond}\\cdot \\left(tsat - wall.t\\right) \\\\
 l_{sc} &= l - l_{cond} \\\\
 r_{sc} &= \\text{zone\\_ramp}\\left(l_{sc}, eps_{zone}\\right) \\\\
@@ -28107,7 +28112,7 @@ out.p &= in.p \\\\
 tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
 hg &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 l_{need} &= \\frac{in.mdot\\cdot \\left(hg - in.h\\right)}{u_{tp}\\cdot 3.141592653589793\\cdot d\\cdot \\left(wall.t - tsat\\right)} \\\\
-l_{tp} &= 0.5\\,\\left(l_{need} + l - \\sqrt{\\left(l_{need} - l\\right)^{2} + eps_{zone}^{2}}\\right) \\\\
+l_{tp} &= 0.5\\,\\left(\\text{max}\\left(l_{need}, 0\\right) + l - \\sqrt{\\left(\\text{max}\\left(l_{need}, 0\\right) - l\\right)^{2} + eps_{zone}^{2}}\\right) \\\\
 q_{tp} &= u_{tp}\\cdot 3.141592653589793\\cdot d\\cdot l_{tp}\\cdot \\left(wall.t - tsat\\right) \\\\
 l_{sh} &= l - l_{tp} \\\\
 r_{sh} &= \\text{zone\\_ramp}\\left(l_{sh}, eps_{zone}\\right) \\\\
@@ -39179,7 +39184,7 @@ d1 = 71.1847863 [kg/m^3]
     examples: [],
     tags: [`cp`, `property`, `fluid`, `rustprop`],
     references: [],
-    guides: [`thermo`],
+    guides: [`thermo`, `md-battery-coldplate`],
     body: `Isobaric specific heat capacity [J/kg-K] of a fluid at a state fixed by named inputs.
 
 ## Syntax
@@ -39943,7 +39948,7 @@ cp_n2 = 1062.921679 [J/kg-K]
     examples: [],
     tags: [`humrat`, `property`, `humid-air`, `rustprop`],
     references: [],
-    guides: [`humidair`, `tut-coil`],
+    guides: [`humidair`, `md-hpwh`, `md-dehumidifier`, `tut-coil`],
     body: `Humidity ratio (kg water vapour per kg dry air) [kg/kg] of humid air (AirH2O) from three named inputs.
 
 ## Syntax
@@ -40361,7 +40366,7 @@ s1 = 1715.577416 [J/kg-K]
     examples: [],
     tags: [`quality`, `property`, `fluid`, `rustprop`],
     references: [],
-    guides: [],
+    guides: [`md-co2-transcritical`],
     body: `Vapour quality (mass fraction of vapour) [–] of a fluid at a state fixed by named inputs.
 
 ## Syntax
@@ -40503,7 +40508,7 @@ native builds also use rustprop by default and return \`-1\` for single-phase st
     examples: [],
     tags: [`relhum`, `property`, `humid-air`, `rustprop`],
     references: [],
-    guides: [`humidair`],
+    guides: [`humidair`, `md-cabin-ac`, `md-dehumidifier`, `md-zone-pid`],
     body: `Relative humidity (0–1) [–] of humid air (AirH2O) from three named inputs.
 
 ## Syntax
@@ -40837,7 +40842,7 @@ cp_n2 = 1062.921679 [J/kg-K]
     examples: [`pressure-cooker`, `uncertain-tank-inventory`],
     tags: [`temperature`, `property`, `fluid`, `rustprop`],
     references: [],
-    guides: [`debugging`, `errors`, `comp-authoring`, `thermo`],
+    guides: [`debugging`, `errors`, `comp-authoring`, `thermo`, `md-battery-coldplate`, `md-fuel-cell`],
     body: `Temperature [K] of a fluid at a state fixed by named inputs.
 
 ## Syntax
@@ -41305,7 +41310,7 @@ v = 0.8577882434 [m^3/kg]
     examples: [],
     tags: [`wetbulb`, `property`, `humid-air`, `rustprop`],
     references: [],
-    guides: [`humidair`],
+    guides: [`humidair`, `md-cooling-tower`],
     body: `Thermodynamic wet-bulb temperature [K] of humid air (AirH2O) from three named inputs.
 
 ## Syntax
@@ -42314,7 +42319,7 @@ ai_a = 3.702 [m^2]
     examples: [`ev-thermal-management`],
     tags: [`fin`, `efficiency`, `extended surface`, `tanh`, `conduction`],
     references: [],
-    guides: [],
+    guides: [`md-finned-cylinder`],
     body: `Returns the **efficiency of a straight fin** with an insulated tip from its
 dimensionless parameter \`mL\` — the ratio of the heat the fin actually dissipates
 to what it would dissipate if its entire surface were at the base temperature.
@@ -43034,7 +43039,7 @@ value — the high-conductance side of the chiller.
     examples: [`ev-thermal-management`],
     tags: [`heat transfer`, `air side`, `zukauskas`, `tube bank`, `cross-flow`, `nusselt`, `film coefficient`],
     references: [],
-    guides: [],
+    guides: [`md-finned-cylinder`],
     body: `Returns the **external air/gas-side heat-transfer coefficient** \`h\` [W/m²·K] for
 cross-flow over a finned-tube bank, using the **Žukauskas** correlation. Use it for
 the air side of a radiator, condenser, or cabin evaporator.
@@ -46886,11 +46891,7 @@ TABLE lin(x)
   2   6
 END
 s = dtable('lin', 0.5)    { = 3, exactly }
-\`\`\`
-
-## See also
-
-\`dtable1\`, \`Interpolate\`, \`Differentiate\``,
+\`\`\``,
   },
   {
     name: `dtable1`,
@@ -47003,11 +47004,7 @@ TABLE quad(x)
   2   4
 END
 s = dtable1('quad', 1)    { = 2 — the natural spline through x² has the exact slope at the middle knot }
-\`\`\`
-
-## See also
-
-\`dtable\`, \`Interpolate1\`, \`Differentiate\``,
+\`\`\``,
   },
   {
     name: `interp2`,
@@ -50291,7 +50288,7 @@ distance[2] = 0
     examples: [`damped-oscillator`, `sounding-rocket-trajectory`],
     tags: [`math`, `exponential`, `elementary`],
     references: [],
-    guides: [`math-funcs`, `symbolic-cas`],
+    guides: [`math-funcs`, `md-overview`, `md-iec`, `symbolic-cas`],
     body: `Returns the **exponential** \`eˣ\`. The argument must be dimensionless (the function
 is only meaningful for a pure number).
 
@@ -52056,7 +52053,7 @@ result = 9
     examples: [`tank-draining`, `ev-thermal-management`],
     tags: [`math`, `square root`, `elementary`],
     references: [],
-    guides: [`calculus`, `comp-authoring`, `repl`, `math-funcs`, `variables`, `tut-msd`],
+    guides: [`calculus`, `comp-authoring`, `repl`, `math-funcs`, `variables`, `md-finned-cylinder`],
     body: `Returns the **square root** \`√x\`. In frees it also propagates units — the result
 carries the square root of the argument's unit (e.g. \`sqrt(m^2) → m\`).
 
@@ -52453,7 +52450,7 @@ result[2,1] = 0
     examples: [`ev-thermal-management`],
     tags: [`matrix`, `condition number`, `conditioning`, `svd`, `linear algebra`],
     references: [],
-    guides: [],
+    guides: [`md-cabin-ac`, `md-hpwh`, `md-cooling-tower`],
     body: `Returns the **condition number** of a matrix \`A\` — the ratio of its largest to
 smallest singular value. It measures how much relative error in the data can be
 amplified when solving \`Ax = b\`; a large value flags near-singularity and
@@ -53260,7 +53257,7 @@ A[1,3] = 0
     examples: [],
     tags: [`inv`, `matrix`],
     references: [],
-    guides: [],
+    guides: [`md-ev-drive`],
     body: `Matrix inverse
 
 
@@ -53971,7 +53968,7 @@ A[2,1] = 0
     examples: [`newton-cooling-transient`],
     tags: [`ode`, `dynamic`, `accessor`, `final value`, `transient`, `trajectory`],
     references: [],
-    guides: [`dynamic-ode`, `comp-transient`, `tut-msd`],
+    guides: [`dynamic-ode`, `comp-transient`, `md-room-heater-pid`, `md-engine-warmup`, `md-zone-pid`, `md-battery-pcm`],
     body: `Returns the **last value** of a named column of the integrated \`DYNAMIC\` (ODE)
 result table — the value at the end of the integration window. Use it to feed a
 transient result back into the analytic solve (e.g. close a sizing loop on a final
@@ -54062,7 +54059,7 @@ scalar in the analytic part of the document.
     examples: [`newton-cooling-transient`],
     tags: [`ode`, `dynamic`, `accessor`, `maximum`, `peak`, `transient`, `trajectory`],
     references: [],
-    guides: [`dynamic-ode`, `comp-transient`, `tut-msd`],
+    guides: [`dynamic-ode`, `comp-transient`, `md-room-heater-pid`, `md-engine-warmup`, `md-zone-pid`, `md-battery-pcm`],
     body: `Returns the **peak value** of a named column of the integrated \`DYNAMIC\` (ODE)
 result table over the whole integration window. Use it to size against a transient
 maximum — e.g. peak overshoot, peak temperature, or peak altitude.
@@ -54215,7 +54212,7 @@ Vrc_start = 0
     examples: [],
     tags: [`odeavg`, `ode`, `results`],
     references: [],
-    guides: [],
+    guides: [`md-room-heater-pid`, `md-battery-pcm`],
     body: `Time-mean of an ODE column
 
 
@@ -54671,7 +54668,7 @@ trajectory.
     examples: [`newton-cooling-transient`],
     tags: [`ode`, `dynamic`, `accessor`, `crossing`, `time`, `event`, `trajectory`],
     references: [],
-    guides: [`dynamic-ode`, `comp-transient`, `tut-msd`],
+    guides: [`dynamic-ode`, `comp-transient`, `md-room-heater-pid`, `md-engine-warmup`, `md-brake-fade`, `tut-msd`],
     body: `Returns the **time** at which a named \`DYNAMIC\` (ODE) column first crosses a target
 value \`val\`. Use it to read out event times — when a temperature reaches a
 threshold, a tank empties, or a response settles.
@@ -60763,7 +60760,7 @@ p = probability(75, 85, 80, 5)   { 0.6827 }
     examples: [],
     tags: [`r2`, `stats`],
     references: [],
-    guides: [],
+    guides: [`md-rtd-bridge`],
     body: `Linear-fit coefficient of determination R^2
 
 

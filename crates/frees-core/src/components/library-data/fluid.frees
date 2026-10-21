@@ -76,7 +76,7 @@ port(out)
   V        = in.mdot / (rho * A)
   Re_d     = reynolds(rho, V, D, mu)
   f        = friction_factor(Re_d, rough / D)
-  out.P    = in.P - f * (L / D) * rho * V^2 / 2
+  out.P    = in.P - f * (L / D) * rho * V * abs(V) / 2
 end
 
 function [in, out] = Fan(fluid$, dP0, Q0, eta)
@@ -84,7 +84,7 @@ port(in)
 port(out)
   rho      = Density(fluid$, P=in.P, h=in.h)
   Q        = in.mdot / rho
-  dP       = dP0 * (1 - (Q / Q0)^2)
+  dP       = dP0 * (1 - Q * abs(Q) / Q0^2)
   out.mdot = in.mdot
   out.P    = in.P + dP
   out.h    = in.h + dP / (rho * eta)
@@ -98,14 +98,14 @@ port(out)
   V        = in.mdot / (rho * A)
   Re_d     = reynolds(rho, V, D, mu)
   f        = friction_factor(Re_d, rough / D)
-  out.P    = in.P - f * (L / D) * rho * V^2 / 2
+  out.P    = in.P - f * (L / D) * rho * V * abs(V) / 2
 end
 
 function [in, out] = FanCurve(rho, dP0, Q0)
 port(in)
 port(out)
   Q        = in.mdot / rho
-  dP       = dP0 * (1 - (Q / Q0)^2)
+  dP       = dP0 * (1 - Q * abs(Q) / Q0^2)
   out.mdot = in.mdot
   out.P    = in.P + dP
 end

@@ -9,7 +9,7 @@
       "at.gb.out.w": 62.5,
       "at.gb.u.sig": 3.0,
       "at.gear.sig": 3.0,
-      "at.in.tau": -100.0,
+      "at.in.tau": 100.0,
       "at.in.w": 250.0,
       "at.lock.sig": 0.0,
       "at.lu.a.tau": 0.0,
@@ -18,7 +18,7 @@
       "at.lu.b.w": 187.5,
       "at.lu.dw": 62.5,
       "at.lu.u.sig": 0.0,
-      "at.out.tau": 351.0,
+      "at.out.tau": -351.0,
       "at.out.w": 62.5,
       "at.tc.pump.tau": 100.0,
       "at.tc.pump.w": 250.0,
@@ -27,20 +27,20 @@
       "at.tc.turb.tau": -130.0,
       "at.tc.turb.w": 187.5,
       "gear.out.sig": 3.0,
-      "gi.port.tau": 100.0,
+      "gi.port.tau": -100.0,
       "gi.port.w": 0.0,
-      "go.port.tau": -351.0,
+      "go.port.tau": 351.0,
       "go.port.w": 0.0,
       "lock.out.sig": 0.0,
-      "si.a.tau": 100.0,
+      "si.a.tau": -100.0,
       "si.a.w": 250.0,
-      "si.b.tau": -100.0,
+      "si.b.tau": 100.0,
       "si.b.w": 0.0,
-      "so.a.tau": -351.0,
+      "so.a.tau": 351.0,
       "so.a.w": 62.5,
-      "so.b.tau": 351.0,
+      "so.b.tau": -351.0,
       "so.b.w": 0.0,
-      "tq_hold": -351.0
+      "tq_hold": 351.0
     },
     "display_names": {
       "at$gear$sig": "at.gear.sig",
@@ -85,10 +85,12 @@
       "trmap": "trmap"
     },
     "block_count": 38,
+    "ode_tables": [
+    ],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Rust engine 2026-10-20. Subsystem boundary-port sign fix: a hierarchical component's own port inside its internal connect now enters that node's Kirchhoff sum negated (seen from inside it is the outside world). The Java oracle counted it with the same sign in the outer and inner nodes, inverting every through-variable (current, heat flow, torque, force) across a subsystem boundary — e.g. a wrapped battery charged its load. Values now equal the hand-flattened model; only boundary-flow signs changed."
   }
 }

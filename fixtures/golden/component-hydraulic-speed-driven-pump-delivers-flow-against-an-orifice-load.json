@@ -6,7 +6,7 @@
       "dis.port.h": 0.0,
       "dis.port.mdot": 0.1285176165467055,
       "dis.port.p": 0.0,
-      "g.port.tau": 0.1718122107782511,
+      "g.port.tau": -0.1718122107782511,
       "g.port.w": 0.0,
       "ori.in.h": 0.0,
       "ori.in.mdot": 0.1285176165467055,
@@ -21,11 +21,11 @@
       "pmp.out.h": 0.0,
       "pmp.out.mdot": 0.1285176165467055,
       "pmp.out.p": 97157.51625203544,
-      "pmp.shaft.tau": -0.1718122107782511,
+      "pmp.shaft.tau": 0.1718122107782511,
       "pmp.shaft.w": 100.0,
-      "ss.a.tau": 0.1718122107782511,
+      "ss.a.tau": -0.1718122107782511,
       "ss.a.w": 100.0,
-      "ss.b.tau": -0.1718122107782511,
+      "ss.b.tau": 0.1718122107782511,
       "ss.b.w": 0.0,
       "suc.out.h": 0.0,
       "suc.out.mdot": 0.1285176165467055,
@@ -66,7 +66,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Rust engine 2026-10-20. HydraulicPump shaft torque sign fixed: a pump is a load and absorbs shaft power (tau*w > 0 under the flow-into-component convention, like RoadLoad; HydraulicMotor is the driver with tau < 0). The Java oracle gave the pump a driver's sign, so a torque-driven pump created energy. Speeds, flows and pressures are unchanged; only torque signs flip."
   }
 }

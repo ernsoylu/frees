@@ -74,7 +74,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use crate::ast::{Equation, Expr, Statement};
+use crate::ast::{BinOp, Equation, Expr, Statement};
 use crate::components::def::{ComponentDef, ComponentInst, ConnectDecl, ParamOverrides};
 use crate::components::domains::{
     self, ConnectorTypes, Domain, InstanceView, JunctionRule, StreamMembers,
@@ -817,6 +817,11 @@ fn flatten_instance<'d>(
                 .map(|r| rewrite_sub_ref(r, &inst.name, def, &port_map))
                 .collect(),
             source_text: sc.source_text.clone(),
+            boundary: sc
+                .ports
+                .iter()
+                .map(|r| !r.contains('.') && def.ports.contains(&r.to_ascii_lowercase()))
+                .collect(),
         });
     }
     stack.pop();
@@ -1236,6 +1241,166 @@ impl Network<'_> {
         }
     }
 
+    /// The connects whose mass balance is dropped: exactly one per **closed**
+    /// mass network. A network is the streams joined by connects and by each
+    /// component's pure-ṁ conservation equations (`out.mdot = in.mdot`,
+    /// `out.mdot = in1.mdot + in2.mdot`, …); it is closed when no member port is
+    /// a boundary — a source, sink, expansion tank or storage volume, i.e. a
+    /// fluid port its component does not tie to another by such an equation.
+    /// Around a closed network every balance sums to `0 = 0`, so one of them is
+    /// redundant whatever its topology (ring, split/mix, figure-eight). The
+    /// dropped one is the first connect that closes a pass-through ring, as
+    /// before, or else the network's last connect.
+    fn closed_mass_drops(&self, all_sts: &[Vec<String>]) -> BTreeSet<usize> {
+        let fluid = |st: &str| domains::node_domain(&[st], &self.stream_members) == Domain::Fluid;
+        let mut net = UnionFind::new();
+        for sts in all_sts {
+            for st in &sts[1..] {
+                net.union(&sts[0], st);
+            }
+        }
+        let mut boundary: Vec<String> = Vec::new();
+        for ri in &self.instances {
+            let mut linked: BTreeSet<String> = BTreeSet::new();
+            // A storage volume accumulates mass: it opens the network.
+            let storage = is_pressure_capacitive(ri.def);
+            for eq in ri.effective_body().into_iter().filter(|_| !storage) {
+                if let Some(ports) = pure_mass_ports(eq, ri) {
+                    if ports.len() >= 2 {
+                        let streams: Vec<&str> =
+                            ports.iter().filter_map(|p| ri.stream_of_port(p)).collect();
+                        for st in &streams[1..] {
+                            net.union(streams[0], st);
+                        }
+                        linked.extend(ports);
+                    }
+                }
+            }
+            for (port, stream) in &ri.port_to_stream {
+                if fluid(stream) && !linked.contains(port) {
+                    boundary.push(stream.clone());
+                }
+            }
+        }
+        // A bare stream name in a connect (`connect(H.out, s3)`, with `s3.P`
+        // written at top level) belongs to no component: the user's own
+        // equations bound it, so it is a boundary too.
+        // So is an open end: a port no connect touches and no other component
+        // shares (its state is pinned by the user's own equations).
+        let mut owners: BTreeMap<&str, usize> = BTreeMap::new();
+        for ri in &self.instances {
+            for st in ri.streams() {
+                *owners.entry(st).or_default() += 1;
+            }
+        }
+        let connected: BTreeSet<&str> = all_sts.iter().flatten().map(String::as_str).collect();
+        for sts in all_sts {
+            boundary.extend(
+                sts.iter()
+                    .filter(|st| !owners.contains_key(st.as_str()))
+                    .cloned(),
+            );
+        }
+        boundary.extend(
+            owners
+                .iter()
+                .filter(|(st, n)| **n == 1 && !connected.contains(*st) && fluid(st))
+                .map(|(st, _)| st.to_string()),
+        );
+        let open: BTreeSet<String> = boundary.iter().map(|st| net.find(st)).collect();
+        let mut ring = self.passthrough_links().remove("mdot").unwrap_or_default();
+        let mut chosen: BTreeMap<String, usize> = BTreeMap::new();
+        let mut last: BTreeMap<String, usize> = BTreeMap::new();
+        for (ci, sts) in all_sts.iter().enumerate() {
+            if !sts.iter().all(|st| fluid(st)) {
+                continue;
+            }
+            let root = net.find(&sts[0]);
+            if open.contains(&root) {
+                continue;
+            }
+            let closes_ring = sts
+                .iter()
+                .enumerate()
+                .any(|(i, a)| sts[i + 1..].iter().any(|b| ring.connected(a, b)));
+            if closes_ring && !chosen.contains_key(&root) {
+                chosen.insert(root.clone(), ci);
+            }
+            last.insert(root, ci);
+            for st in &sts[1..] {
+                ring.union(&sts[0], st);
+            }
+        }
+        for (root, ci) in last {
+            chosen.entry(root).or_insert(ci);
+        }
+        chosen.into_values().collect()
+    }
+
+    /// Per member, the port pairs each component carries through as an affine
+    /// pass-through `out.m = in.m [± parameters]` — `out.mdot = in.mdot`, a
+    /// fixed-ΔP `out.P = in.P - dP`, an isenthalpic `out.h = in.h`. Around a
+    /// loop made only of such links the closing connect's equality for `m` is
+    /// implied by the rest of the loop; any other element (a compressor's
+    /// `out.h`, a pump whose ΔP comes from the flow) makes it a real equation.
+    /// A capacitive volume states no ṁ equality, so it still breaks the cycle.
+    fn passthrough_links(&self) -> BTreeMap<String, UnionFind> {
+        fn member_ref(e: &Expr) -> Option<(String, String)> {
+            match e {
+                Expr::Var(name) => name
+                    .split_once('.')
+                    .filter(|(_, m)| !m.contains('.'))
+                    .map(|(p, m)| (p.to_ascii_lowercase(), m.to_ascii_lowercase())),
+                _ => None,
+            }
+        }
+        fn parameter_only(e: &Expr, ri: &ResolvedInstance<'_>) -> bool {
+            match e {
+                Expr::Num { .. } => true,
+                Expr::Var(name) => !name.contains('.') && ri.numeric(name).is_some(),
+                Expr::Neg(inner) => parameter_only(inner, ri),
+                Expr::BinOp { left, right, .. } => {
+                    parameter_only(left, ri) && parameter_only(right, ri)
+                }
+                Expr::Call { args, .. } => args.iter().all(|a| parameter_only(a, ri)),
+                _ => false,
+            }
+        }
+        let mut links: BTreeMap<String, UnionFind> = BTreeMap::new();
+        for ri in self
+            .instances
+            .iter()
+            .filter(|ri| !is_pressure_capacitive(ri.def))
+        {
+            for eq in ri.effective_body() {
+                let Some((pa, m)) = member_ref(&eq.lhs) else {
+                    continue;
+                };
+                let other = match &eq.rhs {
+                    Expr::BinOp {
+                        op: BinOp::Add | BinOp::Sub,
+                        left,
+                        right,
+                    } if parameter_only(right, ri) => member_ref(left),
+                    Expr::BinOp {
+                        op: BinOp::Add,
+                        left,
+                        right,
+                    } if parameter_only(left, ri) => member_ref(right),
+                    rhs => member_ref(rhs),
+                };
+                let Some((pb, mb)) = other else { continue };
+                if mb != m || pa == pb {
+                    continue;
+                }
+                if let (Some(sa), Some(sb)) = (ri.stream_of_port(&pa), ri.stream_of_port(&pb)) {
+                    links.entry(m).or_default().union(sa, sb);
+                }
+            }
+        }
+        links
+    }
+
     /// Connected streams share a fluid (they share `P` and `h`), so a fluid known
     /// on one endpoint of a `connect` flows to the others — letting derived
     /// properties resolve on the synthetic free-port streams of fluid-less
@@ -1341,11 +1506,48 @@ impl Network<'_> {
             return Ok(());
         }
         self.check_no_capacitive_capacitive()?;
-        let mut uf = UnionFind::new();
-        // Capacitive volumes break the cycle (they are states, not pass-throughs).
-        self.seed_component_links(&mut uf, true);
+        // `node_uf` is stream identity through connects alone. `loop_ufs` adds,
+        // per member, every component's affine pass-through (see
+        // `passthrough_links`): a connect closing a loop of those for `m` owes
+        // no `m` relation. ṁ closes around any steady loop; P and h close only
+        // around elements that carry them through — never past a compressor.
+        let mut node_uf = UnionFind::new();
+        let mut loop_ufs = self.passthrough_links();
+        let all_sts = self.resolved_connect_streams()?;
+        let mass_drops = self.closed_mass_drops(&all_sts);
+        // Connection sets: connects that name a common endpoint are one node
+        // (`connect(A.p, B.p)` + `connect(A.p, C.p)` ≡ `connect(A.p, B.p, C.p)`),
+        // so they share ONE flow rule, emitted at the set's last connect. A
+        // subsystem's own boundary port does not join its inner and outer
+        // connects: those are two nodes, linked through it with opposite signs.
+        let mut set_uf = UnionFind::new();
+        let inner =
+            |ci: usize, i: usize| self.connects[ci].boundary.get(i).copied().unwrap_or(false);
+        for (ci, sts) in all_sts.iter().enumerate() {
+            let keep: Vec<&String> = sts
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| !inner(ci, *i))
+                .map(|(_, s)| s)
+                .collect();
+            for st in keep.iter().skip(1) {
+                set_uf.union(keep[0], st);
+            }
+        }
+        let set_of: Vec<String> = all_sts
+            .iter()
+            .enumerate()
+            .map(|(ci, sts)| {
+                let anchor = sts.iter().enumerate().find(|(i, _)| !inner(ci, *i));
+                set_uf.find(anchor.map_or(&sts[0], |(_, s)| s))
+            })
+            .collect();
+        let mut set_members: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
+        for (ci, root) in set_of.iter().enumerate() {
+            set_members.entry(root.as_str()).or_default().push(ci);
+        }
 
-        for c in &self.connects {
+        for (ci, c) in self.connects.iter().enumerate() {
             let refs = &c.ports;
             if refs.len() < 2 {
                 return Err(FreesError::parse(format!(
@@ -1364,17 +1566,6 @@ impl Network<'_> {
                 domains::check_fluid_connector_type(&sts, refs, &self.connector_types)?;
             }
 
-            // Loop closure: do two endpoints already share a connection set?
-            let mut loop_closing = false;
-            'outer: for (i, a) in sts.iter().enumerate() {
-                for b in &sts[i + 1..] {
-                    if uf.connected(a, b) {
-                        loop_closing = true;
-                        break 'outer;
-                    }
-                }
-            }
-
             // Across variables — equal across the node, emitted as spanning-tree
             // equalities (cycle-closing edges are redundant).
             let across = domains::across_members_for_node(
@@ -1385,21 +1576,57 @@ impl Network<'_> {
             );
             let root = &sts[0];
             for st in &sts[1..] {
-                if !uf.connected(root, st) {
+                if !node_uf.connected(root, st) {
                     for member in &across {
-                        out.push(self.equality(root, member, st, &prefix, display_names));
+                        let closes_loop = loop_ufs
+                            .get_mut(*member)
+                            .is_some_and(|uf| uf.connected(root, st));
+                        if !closes_loop {
+                            out.push(self.equality(root, member, st, &prefix, display_names));
+                        }
                     }
+                    node_uf.union(root, st);
+                }
+                for uf in loop_ufs.values_mut() {
                     uf.union(root, st);
                 }
             }
 
-            // Flow conservation.
+            // Flow conservation, once per connection set (see `set_of`).
+            let group = &set_members[set_of[ci].as_str()];
+            if group.last() != Some(&ci) {
+                continue;
+            }
+            let mut flow_sts: Vec<String> = Vec::new();
+            let mut flow_refs: Vec<String> = Vec::new();
+            let mut flow_boundary: Vec<bool> = Vec::new();
+            for &gi in group {
+                for (i, (st, r)) in all_sts[gi].iter().zip(&self.connects[gi].ports).enumerate() {
+                    let b = inner(gi, i);
+                    let seen = flow_sts
+                        .iter()
+                        .zip(&flow_boundary)
+                        .any(|(s2, b2)| s2 == st && *b2 == b);
+                    if !seen {
+                        flow_sts.push(st.clone());
+                        flow_refs.push(r.clone());
+                        flow_boundary.push(b);
+                    }
+                }
+            }
+            let loop_closing = group.iter().any(|gi| mass_drops.contains(gi));
+            let (sts, refs) = (flow_sts, &flow_refs);
             match dom.junction_rule() {
                 JunctionRule::Kirchhoff(flow) => {
                     for st in &sts {
                         self.register_member(st, flow, display_names);
                     }
-                    out.push(domains::kirchhoff_balance(&sts, flow, &prefix));
+                    out.push(domains::kirchhoff_balance(
+                        &sts,
+                        &flow_boundary,
+                        flow,
+                        &prefix,
+                    ));
                 }
                 // Causal broadcast: across equality only, no flow.
                 JunctionRule::Broadcast => {}
@@ -1416,9 +1643,18 @@ impl Network<'_> {
                         for st in &sts {
                             self.register_member(st, "mdot", display_names);
                         }
+                        // A boundary port whose body never states its ṁ (a tank,
+                        // an atmosphere, an expansion tank) receives flow, like
+                        // every other domain's into-the-component convention.
+                        let receives: Vec<bool> = sts
+                            .iter()
+                            .map(|st| !self.stream_members.has(st, "mdot"))
+                            .collect();
                         out.push(domains::mass_conservation(
                             &sts,
                             refs,
+                            &receives,
+                            &flow_boundary,
                             &prefix,
                             &c.source_text,
                         )?);
@@ -1524,8 +1760,12 @@ impl Network<'_> {
             };
             return Ok(self.stream_member(stream, member, display_names));
         }
+        // A parameter value is written in the instantiating (top-level) scope, so
+        // a reference such as `HeatSource H(Q = PID.out.sig)` must land on the
+        // same flat name (`pid$out$sig`) the PID body writes — otherwise the
+        // dotted name becomes a second, unconstrained unknown.
         if let Some(value) = ri.numeric(name) {
-            return Ok(value.clone());
+            return self.rewrite_top(value, display_names);
         }
         // A string parameter used as a *fluid* argument is already baked into the
         // encoded property-call name (it never reaches here as a bare Var).
@@ -1610,30 +1850,39 @@ impl Network<'_> {
             return Ok(Expr::Var(name.to_string()));
         }
         let segs: Vec<&str> = name.split('.').collect();
-        if let Some(ri) = self.instance(segs[0]) {
-            if segs.len() >= 2 {
-                if let Some(stream) = ri.stream_of_port(segs[1]) {
-                    if segs.len() < 3 {
-                        return Err(FreesError::parse(format!(
-                            "Reference '{name}' to port '{}' of component '{}' needs a \
-                             member (e.g. {name}.P).",
-                            segs[1], segs[0]
-                        )));
-                    }
-                    return Ok(self.top_stream_member(stream, segs[2], display_names));
+        // Longest instance prefix: a component nested in a subsystem is
+        // flattened to a dotted instance name (`evap.ev`), so `EVAP.EV.SH`
+        // must match `evap.ev` before falling back to a stream member.
+        let found = (1..segs.len()).rev().find_map(|k| {
+            let prefix = segs[..k].join(".");
+            self.instance(&prefix).map(|ri| (prefix, ri, &segs[k..]))
+        });
+        if let Some((inst, ri, rest)) = found {
+            if let Some(stream) = ri.stream_of_port(rest[0]) {
+                if rest.len() < 2 {
+                    return Err(FreesError::parse(format!(
+                        "Reference '{name}' to port '{}' of component '{inst}' needs a \
+                         member (e.g. {name}.P).",
+                        rest[0]
+                    )));
                 }
+                return Ok(self.top_stream_member(stream, rest[1], display_names));
             }
             // instance output / local: inst.output
-            if segs.len() != 2 {
+            if rest.len() != 1 {
                 return Err(FreesError::parse(format!(
-                    "Reference '{name}' to component '{}' is not a port member or named \
-                     output.",
-                    segs[0]
+                    "Reference '{name}' to component '{inst}' is not a port member or named \
+                     output."
                 )));
             }
-            let flat = format!("{}${}", segs[0], segs[1]);
+            // `inst.param` reads the value the instance was given (`PACK.Voc`),
+            // rather than minting an unconstrained `pack$voc` unknown.
+            if let Some(value) = ri.numeric(rest[0]) {
+                return self.rewrite_top(value, display_names);
+            }
+            let flat = format!("{inst}${}", rest[0]);
             if !display_names.contains_key(&flat) {
-                display_names.insert(flat.clone(), format!("{}.{}", segs[0], segs[1]));
+                display_names.insert(flat.clone(), format!("{inst}.{}", rest[0]));
             }
             return Ok(Expr::Var(flat));
         }
@@ -1663,7 +1912,15 @@ impl Network<'_> {
         member: &str,
         display_names: &mut BTreeMap<String, String>,
     ) -> Expr {
-        if let (Some(prop), Some(fluid)) = (derived_prop(member), self.stream_fluid.get(stream)) {
+        // `build_stream_fluid_map` tags every port of a fluid-bearing component,
+        // a heat `wall` port included; `HX.wall.T` is that port's own
+        // temperature, never a property call on a nonexistent `(P, h)`.
+        let fluid_stream = domains::node_domain(&[stream], &self.stream_members) == Domain::Fluid;
+        if let (Some(prop), Some(fluid), true) = (
+            derived_prop(member),
+            self.stream_fluid.get(stream),
+            fluid_stream,
+        ) {
             let p = self.stream_member(stream, "p", display_names);
             let h = self.stream_member(stream, "h", display_names);
             return Expr::call(
@@ -1771,6 +2028,32 @@ impl Network<'_> {
             streams: endpoint_streams,
         }
     }
+}
+
+/// The ports of a body equation stating pure mass conservation — only
+/// `port.mdot` terms, numbers and parameters (`out.mdot = in1.mdot + in2.mdot`,
+/// `outa.mdot = u * in.mdot`) — or `None` for any other equation.
+fn pure_mass_ports(eq: &Equation, ri: &ResolvedInstance<'_>) -> Option<BTreeSet<String>> {
+    fn walk(e: &Expr, ri: &ResolvedInstance<'_>, ports: &mut BTreeSet<String>) -> bool {
+        match e {
+            Expr::Num { .. } => true,
+            Expr::Var(name) => match name.split_once('.') {
+                Some((port, member)) => {
+                    let port = port.to_ascii_lowercase();
+                    let ok =
+                        member.eq_ignore_ascii_case("mdot") && ri.stream_of_port(&port).is_some();
+                    ports.insert(port);
+                    ok
+                }
+                None => ri.numeric(name).is_some(),
+            },
+            Expr::Neg(inner) => walk(inner, ri, ports),
+            Expr::BinOp { left, right, .. } => walk(left, ri, ports) && walk(right, ri, ports),
+            _ => false,
+        }
+    }
+    let mut ports = BTreeSet::new();
+    (walk(&eq.lhs, ri, &mut ports) && walk(&eq.rhs, ri, &mut ports)).then_some(ports)
 }
 
 /// Port of `namespaceLocal`: a bare local/output name becomes
@@ -1919,6 +2202,7 @@ mod tests {
         ConnectDecl {
             ports: refs.iter().map(|r| r.to_ascii_lowercase()).collect(),
             source_text: format!("connect({})", refs.join(",")),
+            boundary: Vec::new(),
         }
     }
 
@@ -2374,7 +2658,7 @@ mod tests {
     // =====================================================================
 
     #[test]
-    fn a_loop_closing_connect_emits_nothing_at_all() {
+    fn a_loop_closing_connect_emits_only_what_the_loop_does_not_imply() {
         let pump = comp(
             "Pump",
             &["in", "out"],
@@ -2387,10 +2671,12 @@ mod tests {
             &[conn(&["P.out", "R.in"]), conn(&["R.out", "P.in"])],
             &["P.in.P = 200", "P.in.h = 50", "P.in.mdot = 4"],
         );
-        // Six body equations, three from the first node, ZERO from the second:
-        // both endpoints are already connected through the two pass-throughs, so
-        // the across equalities are redundant and the loop Σṁ is cyclically
-        // dependent. The Java oracle solves exactly 12 variables here.
+        // Six body equations, three from the first node, ONE from the closing
+        // node: the loop Σṁ is cyclically dependent and h passes through both
+        // elements unchanged, so those closures are implied — but R's pressure
+        // drop depends on the flow, so the closing P equality is a real
+        // equation (it is what fixes ṁ). The Java oracle dropped it too, and
+        // returned a 92 Pa jump across one connection.
         assert_eq!(
             out.eqs(),
             vec![
@@ -2403,6 +2689,7 @@ mod tests {
                 "p$out$p = r$in$p",
                 "p$out$h = r$in$h",
                 "p$out$mdot = r$in$mdot",
+                "r$out$p = p$in$p",
             ]
         );
     }
@@ -4088,10 +4375,11 @@ mod tests {
     }
 
     #[test]
-    fn the_closed_loop_solves_to_the_oracles_numbers() {
-        // Oracle: corpus/c5_loop.frees — note `r.out.p = 292` while
-        // `p.in.p = 200`: the loop-closing connect emitted nothing, which is the
-        // documented behaviour, not a rounding artefact.
+    fn the_closed_loop_solves_to_its_operating_point() {
+        // corpus/c5_loop.frees without its ṁ pin: the Java oracle pinned
+        // `P.in.mdot = 4` and returned `r.out.p = 292` against `p.in.p = 200`
+        // across one connection. Honouring that connection, the loop itself
+        // fixes the flow where the pump's 100 Pa meets the 2·ṁ drop: ṁ = 50.
         let pump = comp(
             "Pump",
             &["in", "out"],
@@ -4102,7 +4390,7 @@ mod tests {
             &[pump, res()],
             &[inst("Pump", "P", &[], &[]), inst("Res", "R", &[], &[])],
             &[conn(&["P.out", "R.in"]), conn(&["R.out", "P.in"])],
-            &["P.in.P = 200", "P.in.h = 50", "P.in.mdot = 4"],
+            &["P.in.P = 200", "P.in.h = 50"],
         );
         assert_solves(
             &out,
@@ -4110,8 +4398,8 @@ mod tests {
                 ("p$in$p", 200.0),
                 ("p$out$p", 300.0),
                 ("r$in$p", 300.0),
-                ("r$out$p", 292.0),
-                ("r$out$mdot", 4.0),
+                ("r$out$p", 200.0),
+                ("r$out$mdot", 50.0),
                 ("r$out$h", 50.0),
             ],
         );
@@ -4707,17 +4995,16 @@ mod tests {
              connect(P.out, R.in)\n\
              connect(R.out, P.in)\n\
              P.in.P = 200\n\
-             P.in.h = 50\n\
-             P.in.mdot = 4\n",
+             P.in.h = 50\n",
             &[
                 ("p.in.h", 50.0),
-                ("p.in.mdot", 4.0),
+                ("p.in.mdot", 50.0),
                 ("p.in.p", 200.0),
                 ("p.out.p", 300.0),
                 ("r.in.p", 300.0),
                 ("r.out.h", 50.0),
-                ("r.out.mdot", 4.0),
-                ("r.out.p", 292.0),
+                ("r.out.mdot", 50.0),
+                ("r.out.p", 200.0),
             ],
         );
     }

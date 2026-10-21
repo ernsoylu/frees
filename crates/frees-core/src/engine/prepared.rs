@@ -230,13 +230,23 @@ impl PreparedDocument {
 
         if !matches {
             self.prep_count += 1;
-            let mut subsystem: Vec<Equation> = self.ordinary_equations.to_vec();
+            let mut subsystem: Vec<Equation> = match &self.unaugmented {
+                Some(raw) if !pinned.is_empty() => raw.clone(),
+                _ => self.ordinary_equations.to_vec(),
+            };
             for (name, value) in pinned {
                 subsystem.push(Equation::new(
                     Expr::var(name),
                     Expr::num(*value),
                     format!("{name} = {value}"),
                 ));
+            }
+            // A pinned decision (an optimizer's `Kp`) that only a DYNAMIC block
+            // reads is absent from the text the accessors were linked against,
+            // so `FinalValue(...)` could be solved before the pin and integrate
+            // without it. Re-link with the pins in the system.
+            if self.unaugmented.is_some() && !pinned.is_empty() {
+                subsystem = super::augment_accessor_dependencies(&self.doc, subsystem);
             }
             let (constants, knowns) = builtin_constants(&subsystem);
             let report = block_system(&subsystem, &knowns)?;
@@ -490,12 +500,8 @@ impl PreparedDocument {
                 failed_block_index,
                 iterations,
             }) => {
-                let (residuals, max_residual) = residuals_at(
-                    &prep.subsystem,
-                    &prep.report.blocks,
-                    &prep.work_scope,
-                    base_ctx,
-                );
+                let (residuals, max_residual) =
+                    residuals_at(&prep.subsystem, &prep.report.blocks, &prep.work_scope, ctx);
                 let block_equations = block_equation_texts(&prep.report.blocks, &prep.subsystem);
                 let display_names = prep.display_names.clone();
                 return Err(SolveFailure {
@@ -601,7 +607,9 @@ impl PreparedDocument {
         }
 
         let (residuals, max_residual) =
-            residuals_at(&prep.subsystem, &prep.report.blocks, &scope_mut, base_ctx);
+            // `ctx`, not `base_ctx`: an ODE accessor line (`T = FinalValue('x')`)
+            // must read the cached DYNAMIC table, or its residual reports the value.
+            residuals_at(&prep.subsystem, &prep.report.blocks, &scope_mut, ctx);
         let block_equations = block_equation_texts(&prep.report.blocks, &prep.subsystem);
 
         let mut inferred_units = prep.unit_report.inferred.clone();

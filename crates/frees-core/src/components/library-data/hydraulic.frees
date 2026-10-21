@@ -65,7 +65,9 @@ port(shaft)
   out.mdot  = rho * disp * n_rev * eta_v
   in.mdot   = out.mdot
   out.h     = in.h
-  shaft.tau = -(disp * (out.P - in.P) / (2 * pi#)) / eta_m
+  // A load: it absorbs shaft power (τ·ω > 0, flow into the component is
+  // positive), like RoadLoad — HydraulicMotor is the driver with τ < 0.
+  shaft.tau = (disp * (out.P - in.P) / (2 * pi#)) / eta_m
 end
 
 // Signal-commanded proportional valve: spool command u.sig ∈ [0,1] scales the

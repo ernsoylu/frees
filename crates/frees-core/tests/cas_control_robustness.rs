@@ -929,13 +929,16 @@ fn an_unshapeable_control_output_is_refused_at_parse_time() {
 /// A model that is only degenerate *at its solution* cannot be caught at parse
 /// time, and it must not become a hang either. `d = [0]` makes the plant
 /// singular, so the generated `step$…` intrinsics start failing as Newton walks
-/// toward it; the outcome is the solver's own bounded non-convergence report.
+/// toward it; the outcome is a bounded report naming the failing block's cause.
 #[test]
 fn a_plant_that_degenerates_at_the_solution_terminates_with_a_diagnostic() {
     let message = within(Duration::from_secs(30), "step on a singular plant", || {
         solve_refused("n = [1]\nd = [0]\n[y, t] = step(n, d)\n")
     });
-    assert!(message.contains("did not converge"), "{message}");
+    assert!(
+        message.contains("leading denominator coefficient cannot be zero"),
+        "{message}"
+    );
 }
 
 /// A CAS identity that has no solution, is nonlinear in its unknowns, or has

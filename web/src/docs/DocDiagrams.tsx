@@ -59,7 +59,7 @@ function BraytonStateCard({ point, label, name, temp, pres }: {
 
 export function SolverPipelineDiagram() {
   return (
-    <svg viewBox="0 0 800 240" width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+    <svg viewBox="0 40 800 180" width="100%" style={{ height: 'auto', display: 'block', background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
       <defs>
         <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#339AF0" />
@@ -149,7 +149,7 @@ export function SolverPipelineDiagram() {
 
 export function DegreesOfFreedomDiagram() {
   return (
-    <svg viewBox="0 0 800 280" width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+    <svg viewBox="0 0 800 280" width="100%" style={{ height: 'auto', display: 'block', background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
       <defs>
         <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#FF6B6B" />
@@ -221,7 +221,7 @@ export function DegreesOfFreedomDiagram() {
 
 export function DependentPropertiesDiagram() {
   return (
-    <svg viewBox="0 0 800 340" width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+    <svg viewBox="-50 0 840 340" width="100%" style={{ height: 'auto', display: 'block', background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
       <defs>
         <linearGradient id="domeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#4c6ef5" stopOpacity="0.15" />
@@ -269,7 +269,7 @@ export function DependentPropertiesDiagram() {
 
 export function GuessConvergenceDiagram() {
   return (
-    <svg viewBox="0 0 800 340" width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+    <svg viewBox="0 -15 840 355" width="100%" style={{ height: 'auto', display: 'block', background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
       <defs>
         <marker id="tangentArrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
           <path d="M 0 1.5 L 6 5 L 0 8.5 z" fill="#7950F2" />
@@ -343,8 +343,8 @@ export function BraytonCycleDiagram() {
   const S4 = { x: 670, y: 162 };
 
   return (
-    <svg viewBox="0 0 740 360" width="100%" height="auto"
-         style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+    <svg viewBox="0 0 740 360" width="100%"
+         style={{ height: 'auto', display: 'block', background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
       <BraytonDefs />
 
       {/* Title */}
@@ -468,7 +468,7 @@ function FourBoxLoop({ title, boxes, heatIn, heatOut, work }: Readonly<{
   const w = 150, h = 58;
   const TL = { x: 80, y: 60 }, TR = { x: 410, y: 60 }, BR = { x: 410, y: 215 }, BL = { x: 80, y: 215 };
   return (
-    <svg viewBox="0 0 640 320" width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+    <svg viewBox="0 0 640 320" width="100%" style={{ height: 'auto', display: 'block', background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
       <defs>{D_ARROW}</defs>
       <text x="320" y="28" fill={THEME.textColor} fontSize="14" fontWeight="700" textAnchor="middle">{title}</text>
       <CkBox x={TL.x} y={TL.y} w={w} h={h} fill={THEME.secondary} title={boxes[0]} />
@@ -506,7 +506,7 @@ export function EvThermalDiagram() {
   const C = THEME.accent;   // coolant (teal)
   const R = THEME.secondary; // refrigerant (purple)
   return (
-    <svg viewBox="0 0 700 380" width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+    <svg viewBox="0 0 700 345" width="100%" style={{ height: 'auto', display: 'block', background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
       <defs>{D_ARROW}</defs>
       <text x="350" y="26" fill={THEME.textColor} fontSize="14" fontWeight="700" textAnchor="middle">EV Thermal-Management System</text>
       <text x="165" y="48" fill={C} fontSize="11" fontWeight="700" textAnchor="middle">Coolant loop (EG50)</text>
@@ -599,7 +599,7 @@ export function LearningMapDiagram({ onNavigate }: { onNavigate?: (id: string) =
   const colX = (i: number) => 15 + i * (colW + colGap);
   const colMidY = (i: number) => topPad + (LEARNING_MAP[i].nodes.length * (nodeH + nodeGap) - nodeGap) / 2;
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="auto" style={{ background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ height: 'auto', display: 'block', background: THEME.bg, fontFamily: 'system-ui, sans-serif' }}>
       <defs>
         <marker id="lmArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 1.5 L 6 5 L 0 8.5 z" fill={THEME.textDimmed} />

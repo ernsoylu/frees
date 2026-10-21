@@ -45,14 +45,16 @@ The acausal equations this component expands into (over its port members and par
 $$
 \begin{aligned}
 t_{g} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+cp_{g} &= \text{Cp}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+eps_{c} &= 1 - e^{\frac{-ua}{\left|in.mdot\right|\cdot cp_{g} + 1.0E-12}} \\
 eta &= 0.5\,\left(1 + \tanh\left(\frac{tb - t50}{k}\right)\right) \\
-q &= ua\cdot \left(t_{g} - tb\right) \\
+out.h &= in.h - eps_{c}\cdot cp_{g}\cdot \left(t_{g} - tb\right) \\
+q &= in.mdot\cdot \left(in.h - out.h\right) \\
 qexo &= eta\cdot in.mdot\cdot q_{exo} \\
 \text{der}\left(tb\right) &= \frac{q + qexo}{c} \\
 \text{init}\left(tb\right) &= t0 \\
 out.mdot &= in.mdot \\
-out.p &= in.p \\
-out.h &= in.h - \frac{q}{in.mdot}
+out.p &= in.p
 \end{aligned}
 $$
 

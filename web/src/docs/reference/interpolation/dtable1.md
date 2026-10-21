@@ -111,7 +111,3 @@ TABLE quad(x)
 END
 s = dtable1('quad', 1)    { = 2 — the natural spline through x² has the exact slope at the middle knot }
 ```
-
-## See also
-
-`dtable`, `Interpolate1`, `Differentiate`

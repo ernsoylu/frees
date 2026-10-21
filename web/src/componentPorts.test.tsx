@@ -80,6 +80,8 @@ it('recognizes electronic expansion valves alongside the existing schematic fami
   expect(symbolOf('UnrecognizedComponent').shape).toBe('block')
 })
 
+// Exhaustive and CPU-bound: every symbol path, token by token, then all 312
+// component illustrations. ~2 s on a workstation, ~5–8 s on a shared CI runner.
 it('preserves engineering geometry in the FREES dark palette and selects it for every component', () => {
   const parser = new DOMParser()
   for (const shape of Object.keys(SHAPE_LABELS)) {
@@ -110,4 +112,4 @@ it('preserves engineering geometry in the FREES dark palette and selects it for 
     const doc = parser.parseFromString(markup, 'text/html')
     expect(doc.querySelector('figure img')?.getAttribute('src'), spec.type).toBe(`/component-symbols/dark/${symbolOf(spec.type).shape}.svg`)
   }
-})
+}, 30_000)

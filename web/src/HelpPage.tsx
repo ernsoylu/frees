@@ -68,7 +68,9 @@ import {
   LearningMapDiagram
 } from './docs/DocDiagrams';
 
-function CopyButton({ code }: Readonly<{ code: string }>) {
+// `floating` pins it to the top-right of a plain code block; a runnable
+// block puts it in its toolbar instead.
+function CopyButton({ code, floating = true }: Readonly<{ code: string; floating?: boolean }>) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
     void navigator.clipboard.writeText(code);
@@ -81,7 +83,7 @@ function CopyButton({ code }: Readonly<{ code: string }>) {
       variant="light"
       color={copied ? "green" : "teal"}
       onClick={handleCopy}
-      style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}
+      style={floating ? { position: 'absolute', top: '8px', right: '8px', zIndex: 10 } : undefined}
     >
       {copied ? "Copied!" : "Copy Code"}
     </Button>
@@ -158,6 +160,7 @@ function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title
         <Group gap="xs">
           <Button size="xs" variant="filled" color="teal" onClick={() => run()} loading={running}>Run</Button>
           <Button size="xs" variant="light" onClick={openInEditor}>Open in Editor</Button>
+          <CopyButton code={code} floating={false} />
         </Group>
       </Group>
       {vary.length > 0 && (
@@ -185,10 +188,7 @@ function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title
           ))}
         </Stack>
       )}
-      <Box style={{ position: 'relative' }}>
-        <CopyButton code={code} />
-        <Code block style={{ background: 'transparent', maxHeight: '340px', overflowY: 'auto' }}>{code}</Code>
-      </Box>
+      <Code block style={{ background: 'transparent', maxHeight: '340px', overflowY: 'auto' }}>{code}</Code>
       {error && (
         <Alert color="red" mt="sm" title="Did not solve">
           <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{error}</Text>
@@ -729,6 +729,33 @@ const CATEGORIES: NavCategory[] = [
     ]
   },
   {
+    title: 'Multi-Domain Examples',
+    overview: 'md-overview',
+    items: [
+      { id: 'md-overview', label: 'Overview', blurb: 'Twenty verified multi-domain models, eighteen with optimizations.', keywords: ['multi-domain', 'multidomain', 'examples', 'optimization', 'coupled', 'system'] },
+      { id: 'md-battery-coldplate', label: '1. Battery Pack Cold Plate', blurb: 'Minimise pump power while keeping the pack at or below 40 °C.', keywords: ['electrical', 'heat', 'liquid', 'battery', 'pack', 'cold', 'plate'] },
+      { id: 'md-cabin-ac', label: '2. Cabin A/C Loop (R134a + Moist Air)', blurb: 'Minimise compressor power while still delivering 5.5 kW of cooling.', keywords: ['two-phase', 'moist air', 'heat', 'cabin', 'a/c', 'loop', 'r134a', 'moist', 'air'] },
+      { id: 'md-fuel-cell', label: '3. PEM Fuel Cell with Closed Coolant Loop', blurb: 'Maximise electrical output with the coolant leaving the stack at or below 85 °C.', keywords: ['electrical', 'liquid', 'moist air', 'heat', 'pem', 'fuel', 'cell', 'with', 'closed', 'coolant', 'loop'] },
+      { id: 'md-peltier', label: '4. Thermoelectric (Peltier) Cooler', blurb: 'Find the supply voltage that gives the coldest plate — then trace the full temperature-versus-power Pareto front.', keywords: ['electrical', 'solid thermal', 'thermoelectric', 'peltier', 'cooler'] },
+      { id: 'md-finned-cylinder', label: '5. Air-Cooled Finned Cylinder', blurb: 'Minimise fin mass with the liner at or below 200 °C.', keywords: ['solid thermal', 'air convection', 'radiation', 'air-cooled', 'finned', 'cylinder'] },
+      { id: 'md-room-heater-pid', label: '6. Room Heater with PID Thermostat', blurb: 'Tune Kp for the fastest warm-up with at most 0.3 K overshoot.', keywords: ['electrical', 'heat', 'signal', 'sensor', 'room', 'heater', 'with', 'pid', 'thermostat'] },
+      { id: 'md-motor-pump', label: '7. DC Motor → Gearbox → Hydraulic Pump', blurb: 'Choose the gear ratio that extracts the most hydraulic power from the 24 V supply.', keywords: ['electrical', 'rotational', 'hydraulic', 'motor', 'gearbox', 'pump'] },
+      { id: 'md-iec', label: '8. Data-Centre Indirect Evaporative Cooler', blurb: 'Minimise fan power with supply air at or below 25.5 °C.', keywords: ['moist air', 'electrical', 'heat', 'data-centre', 'indirect', 'evaporative', 'cooler'] },
+      { id: 'md-hpwh', label: '9. Heat-Pump Water Heater (closed loop)', blurb: 'Maximise heating COP while delivering water at 45 °C or hotter.', keywords: ['two-phase', 'liquid', 'moist air', 'heat', 'heat-pump', 'water', 'heater', 'closed', 'loop'] },
+      { id: 'md-co2-transcritical', label: '10. Transcritical CO₂: Optimum Gas-Cooler Pressure', blurb: 'Find the high-side pressure that maximises COP — the textbook transcritical optimum.', keywords: ['two-phase/supercritical', 'heat', 'transcritical', 'co₂:', 'optimum', 'gas-cooler', 'pressure'] },
+      { id: 'md-engine-warmup', label: '11. Engine Warm-Up with a Wax Thermostat', blurb: 'Transient study across heat, liquid.', keywords: ['heat', 'liquid', 'engine', 'warm-up', 'with', 'wax', 'thermostat'] },
+      { id: 'md-dehumidifier', label: '12. DX Dehumidifier with Heat-Pipe Wrap-Around', blurb: 'Choose the coil apparatus dew point that maximises moisture removal per kWh.', keywords: ['moist air', 'refrigeration', 'electrical', 'dehumidifier', 'with', 'heat-pipe', 'wrap-around'] },
+      { id: 'md-zone-pid', label: '13. Office Zone Pull-Down with PID Supply Air', blurb: 'Transient study across moist air, heat, signal, sensor.', keywords: ['moist air', 'heat', 'signal', 'sensor', 'office', 'zone', 'pull-down', 'with', 'pid', 'supply', 'air'] },
+      { id: 'md-pv-pump', label: '14. Direct-Coupled PV Water Pump', blurb: 'Choose the gear ratio that pumps the most water at 850 W/m² without an MPPT.', keywords: ['signal', 'electrical', 'rotational', 'hydraulic', 'direct-coupled', 'water', 'pump'] },
+      { id: 'md-ev-drive', label: '15. EV Drive Unit with Liquid Cooling', blurb: 'Minimise coolant pumping power with the stator jacket at or below 80 °C.', keywords: ['electrical', 'rotational', 'signal', 'heat', 'liquid', 'drive', 'unit', 'with', 'cooling'] },
+      { id: 'md-battery-pcm', label: '16. Battery Module with PCM Passive Cooling', blurb: 'Find the lightest module that keeps the cells at or below 45 °C during a 2C discharge.', keywords: ['electrical', 'heat', 'battery', 'module', 'with', 'pcm', 'passive', 'cooling'] },
+      { id: 'md-cooling-tower', label: '17. Chiller Plant with Cooling Tower', blurb: 'Choose the tower air flow that minimises total plant power (chiller + fan + pump).', keywords: ['liquid', 'moist air', 'signal', 'electrical', 'chiller', 'plant', 'with', 'cooling', 'tower'] },
+      { id: 'md-brake-fade', label: '18. Brake Heating and Thermal Fade', blurb: 'Find the lightest rotor that stays at or below 700 K in a hot stop from 100 km/h.', keywords: ['rotational', 'heat', 'signal', 'brake', 'heating', 'and', 'thermal', 'fade'] },
+      { id: 'md-rtd-bridge', label: '19. Pt100 RTD Bridge: Self-Heating vs Resolution', blurb: 'Choose the bridge excitation that minimises the combined measurement error.', keywords: ['electrical', 'heat', 'sensor', 'pt100', 'rtd', 'bridge:', 'self-heating', 'resolution'] },
+      { id: 'md-radiant-ceiling', label: '20. Chilled Radiant Ceiling with Dew-Point Guard', blurb: 'Maximise cooling while keeping the panel 2 K above the room dew point.', keywords: ['liquid', 'heat', 'moist air', 'chilled', 'radiant', 'ceiling', 'with', 'dew-point', 'guard'] },
+    ]
+  },
+  {
     title: 'Architecture & Deployment',
     overview: 'deploy-overview',
     items: [
@@ -966,7 +993,28 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
       );
       continue;
     }
-    
+
+    // 3b. Ordered lists. `start` keeps a list that resumes after a heading
+    // ("5. …") numbered from where the source left off.
+    const ordered = /^(\d+)\.\s+(.*)$/.exec(trimmed);
+    if (ordered) {
+      const start = Number(ordered[1]);
+      const listItems: string[] = [];
+      let m: RegExpExecArray | null;
+      while (i < lines.length && (m = /^\d+\.\s+(.*)$/.exec(lines[i].trim()))) {
+        listItems.push(m[1]);
+        i++;
+      }
+      elements.push(
+        <List key={`olist-${i}`} type="ordered" start={start} spacing="xs" mb="md" style={{ lineHeight: 1.6 }}>
+          {listItems.map((item, idx) => (
+            <List.Item key={idx}>{renderInlineContent(item)}</List.Item>
+          ))}
+        </List>
+      );
+      continue;
+    }
+
     // 4. Blockquotes / Alerts
     if (trimmed.startsWith('>')) {
       const alertLines: string[] = [];
@@ -1228,7 +1276,7 @@ function scopeOf(active: string): string {
   if (active === 'ref-index') return 'functions';
   const cat = CATEGORY_OF_TOPIC.get(active)?.title;
   if (cat === 'System Modeling with Components') return 'components';
-  if (cat === 'Examples & Tutorials') return 'tutorials';
+  if (cat === 'Examples & Tutorials' || cat === 'Multi-Domain Examples') return 'tutorials';
   return 'docs';
 }
 
@@ -1338,16 +1386,19 @@ function FoldSection({ title, open, children }: Readonly<{ title: string; open: 
 function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage; onNavigate: (id: string) => void }>) {
   const verified = page.body.includes('verified-reference-example');
   const mono = pageFamily(page) === 'Guide' ? undefined : 'monospace';
-  const functions = page.related.map((r) => {
+  // Frontmatter lists can repeat an entry (or differ only in case, and lookup
+  // is case-insensitive); show each link once.
+  const related = page.related.filter((r, i, all) => all.findIndex((o) => o.toLowerCase() === r.toLowerCase()) === i);
+  const functions = related.map((r) => {
     const target = REFERENCE_BY_SLUG.get(r.toLowerCase());
     return target
       ? <Anchor key={r} size="sm" ff="monospace" c="teal.4" onClick={() => onNavigate(REFPAGE + target.slug)}>{r}</Anchor>
       : <Text key={r} size="sm" ff="monospace">{r}</Text>;
   });
-  const topics = page.guides.filter((g) => NAV_LABELS[g]).map((g) => (
+  const topics = [...new Set(page.guides)].filter((g) => NAV_LABELS[g]).map((g) => (
     <Anchor key={g} size="sm" c="teal.4" onClick={() => onNavigate(g)}>{NAV_LABELS[g]}</Anchor>
   ));
-  const examples = page.examples.map((id) => (
+  const examples = [...new Set(page.examples)].map((id) => (
     <Anchor key={id} size="sm" ff="monospace" c="teal.4" onClick={() => onNavigate('examples')}>{id}</Anchor>
   ));
   return (

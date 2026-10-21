@@ -2,16 +2,51 @@
   "name": "adv_junction_loop_closure_cycle",
   "source": "// Union-find loop closure: connect(a,b), connect(b,c), connect(c,a) must\n// collapse to ONE node, not three, and must not double-count the flow sum.\nThermalSource S1(T = 400)\nConduction    C1(k = 10, area = 1, L = 0.1)\nConduction    C2(k = 10, area = 1, L = 0.1)\nThermalSource S2(T = 300)\nconnect(S1.port, C1.a)\nconnect(C1.b, C2.a)\nconnect(C2.a, C1.b)\nconnect(C2.b, S2.port)\nq1 = C1.Q\nq2 = C2.Q\ntm = C1.b.T\n",
   "expect": {
-    "variables": {},
-    "display_names": {},
-    "block_count": 0,
-    "error": {
-      "type": "SolverException",
-      "message": "There are 18 equations and 17 variables. The problem is overspecified and cannot be solved. Redundant relation (no free variable left to determine): CONNECT c2.a, c1.b: sum(qdot) = 0. A common cause: the same physics stated twice — a boundary pinning a quantity a component already defines (a re-equated mixer pressure, a T-pinned wall state), or two property calls restating one relation."
-    }
+    "variables": {
+      "c1.a.qdot": 5000.0,
+      "c1.a.t": 400.0,
+      "c1.b.qdot": -5000.0,
+      "c1.b.t": 350.0,
+      "c1.q": 5000.0,
+      "c2.a.qdot": 5000.0,
+      "c2.a.t": 350.0,
+      "c2.b.qdot": -5000.0,
+      "c2.b.t": 300.0,
+      "c2.q": 5000.0,
+      "q1": 5000.0,
+      "q2": 5000.0,
+      "s1.port.qdot": -5000.0,
+      "s1.port.t": 400.0,
+      "s2.port.qdot": 5000.0,
+      "s2.port.t": 300.0,
+      "tm": 350.0
+    },
+    "display_names": {
+      "c1$a$qdot": "c1.a.qdot",
+      "c1$a$t": "c1.a.t",
+      "c1$b$qdot": "c1.b.qdot",
+      "c1$b$t": "c1.b.t",
+      "c1$q": "c1.q",
+      "c2$a$qdot": "c2.a.qdot",
+      "c2$a$t": "c2.a.t",
+      "c2$b$qdot": "c2.b.qdot",
+      "c2$b$t": "c2.b.t",
+      "c2$q": "c2.q",
+      "q1": "q1",
+      "q2": "q2",
+      "s1$port$qdot": "s1.port.qdot",
+      "s1$port$t": "s1.port.t",
+      "s2$port$qdot": "s2.port.qdot",
+      "s2$port$t": "s2.port.t",
+      "tm": "tm"
+    },
+    "block_count": 12,
+    "ode_tables": [
+    ],
+    "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Rust engine 2026-10-20. The fixture's stated intent - repeated connects of the same endpoints collapse to ONE node and the flow sum is not double-counted - is now met: each connection set emits a single flow rule. The Java oracle emitted one Kirchhoff sum per connect statement and failed as overspecified. q1 = q2 = k*A*dT/L = 5000 W exactly."
   }
 }

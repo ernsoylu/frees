@@ -1206,18 +1206,21 @@ y = s1.sig
     );
 }
 
-/// A component parameter whose value names another instance's output that is
-/// itself unbound. The substitution must not resolve it to something plausible.
+/// A component parameter whose value names another instance's port member is
+/// bound to that member — `SigGain G(k = C.out.sig)` reads C's output — rather
+/// than minting a second, unconstrained `c.out.sig` unknown (which used to make
+/// a signal-driven heater or voltage source unsolvable).
 #[test]
-fn a_parameter_referencing_a_dangling_instance_output_is_refused() {
-    rejected(
+fn a_parameter_referencing_another_instance_output_reads_that_output() {
+    let values = solved(
         "\
-SigGain G(s1, s2, k = G.out.sig)
-s1.sig = 1
+SigConstant C(s0, k = 5)
+SigGain G(s1, s2, k = C.out.sig)
+s1.sig = 2
 y = s2.sig
 ",
-        "underspecified",
     );
+    assert_eq!(values.get("y").copied(), Some(10.0), "{values:?}");
 }
 
 /// A self-referential parameter default (`PARAM k = k`) must terminate. Naive

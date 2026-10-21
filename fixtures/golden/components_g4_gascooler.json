@@ -5,29 +5,29 @@
     "variables": {
       "gc.cp_g": 1037.1867730618653,
       "gc.epsg": 0.764541300411564,
-      "gc.in.h": 513753.2087456875,
+      "gc.in.h": 513753.2087456874,
       "gc.in.mdot": 0.1,
       "gc.in.p": 3000000.0,
-      "gc.out.h": 446350.57818474417,
+      "gc.out.h": 446036.8541640043,
       "gc.out.mdot": 0.1,
       "gc.out.p": 2950000.0,
-      "gc.q": 6740.263056094334,
-      "gc.t_in": 390.0,
-      "gc.wall.qdot": -6740.263056094334,
+      "gc.q": 6771.635458168306,
+      "gc.t_in": 389.99999999999994,
+      "gc.wall.qdot": -6771.635458168306,
       "gc.wall.t": 305.0,
-      "h_in": 513753.2087456875,
-      "q": 6740.263056094334,
-      "snk.h": 446350.57818474417,
-      "snk.in.h": 446350.57818474417,
+      "h_in": 513753.2087456874,
+      "q": 6771.635458168306,
+      "snk.h": 446036.8541640043,
+      "snk.in.h": 446036.8541640043,
       "snk.in.mdot": 0.1,
       "snk.in.p": 2950000.0,
       "snk.mdot": 0.1,
       "snk.p": 2950000.0,
-      "src.out.h": 513753.2087456875,
+      "src.out.h": 513753.2087456874,
       "src.out.mdot": 0.1,
       "src.out.p": 3000000.0,
-      "t_out": 325.1158262246573,
-      "wall.port.qdot": 6740.263056094334,
+      "t_out": 324.8155139214183,
+      "wall.port.qdot": 6771.635458168306,
       "wall.port.t": 305.0
     },
     "display_names": {
@@ -65,7 +65,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Rust engine 2026-10-20. GasCooler now drives its isothermal-wall effectiveness with the enthalpy potential h_in - h(P, T_wall) instead of cp_in*(T_in - T_wall); identical for a constant-cp gas, and required for R744 near the pseudo-critical point, where cp_in*dT capped the duty and made UA irrelevant. Air at 3 MPa moves 0.47% (Q 6740 -> 6772 W)."
   }
 }

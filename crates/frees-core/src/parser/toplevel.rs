@@ -172,15 +172,15 @@ type ComponentFunctionParams = (Vec<String>, Vec<Option<String>>, Vec<Option<Exp
 ///
 /// Lexes, then parses. Unsupported block constructs produce an explicit error.
 pub fn parse_document(source: &str) -> Result<Document> {
+    let tokens = crate::lexer::tokenize(source)?;
     if !crate::parser::legacy_import_enabled() {
-        if let Some(keyword) = legacy_declaration(source) {
+        if let Some(keyword) = legacy_declaration(source, &tokens) {
             return Err(FreesError::parse_at(
                 format!("FREES-MIG-001: `{keyword}` is legacy syntax; use the migration converter"),
                 Span::at(0),
             ));
         }
     }
-    let tokens = crate::lexer::tokenize(source)?;
     parse_token_stream(source, &tokens, crate::parser::expr::parse_expr)
 }
 
@@ -190,22 +190,23 @@ pub fn parse_legacy_document(source: &str) -> Result<Document> {
     parse_token_stream(source, &tokens, crate::parser::expr::parse_expr)
 }
 
-fn legacy_declaration(source: &str) -> Option<&'static str> {
-    source.lines().find_map(|line| {
-        let code = line
-            .split_once("//")
-            .map_or(line, |(code, _)| code)
-            .trim_start();
-        ["CALL", "MODULE", "PROCEDURE", "COMPONENT"]
-            .into_iter()
-            .find(|keyword| {
-                code.get(..keyword.len())
-                    .is_some_and(|head| head.eq_ignore_ascii_case(keyword))
-                    && code
-                        .get(keyword.len()..)
-                        .and_then(|rest| rest.chars().next())
-                        .is_some_and(|ch| !ch.is_ascii_alphanumeric() && ch != '_')
-            })
+/// A legacy block keyword opening a line. Read from the token stream, so the
+/// word "Module" at the start of a `{ … }` comment line is not a declaration.
+fn legacy_declaration(source: &str, tokens: &[Token]) -> Option<&'static str> {
+    tokens.iter().find_map(|token| {
+        let keyword = match token.kind {
+            TokenKind::Call => "CALL",
+            TokenKind::Module => "MODULE",
+            TokenKind::Procedure => "PROCEDURE",
+            TokenKind::Component => "COMPONENT",
+            _ => return None,
+        };
+        let start = token.span.start as usize;
+        let line_start = source[..start].rfind('\n').map_or(0, |i| i + 1);
+        source[line_start..start]
+            .trim()
+            .is_empty()
+            .then_some(keyword)
     })
 }
 
@@ -817,6 +818,7 @@ impl<'a> Parser<'a> {
                         ProcStatement::Connect { ports } => connects.push(ConnectDecl {
                             ports,
                             source_text: "connect(...)".to_string(),
+                            boundary: Vec::new(),
                         }),
                         ProcStatement::Variant {
                             name,
@@ -2254,6 +2256,7 @@ impl<'a> Parser<'a> {
         Ok(ConnectDecl {
             ports,
             source_text: self.text_since(start_pos),
+            boundary: Vec::new(),
         })
     }
 

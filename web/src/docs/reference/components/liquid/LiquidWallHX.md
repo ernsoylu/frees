@@ -9,7 +9,7 @@ tags: [liquidwallhx, component, liquid, acausal]
 
 # LiquidWallHX
 
-A liquid-to-wall heat exchanger.
+A liquid-to-wall heat exchanger with the exact isothermal-wall effectiveness ε = 1 − exp(−UA/ṁc_p): the outlet approaches the wall temperature but never crosses it.
 
 ## Domain
 
@@ -42,11 +42,14 @@ $$
 out.mdot &= in.mdot \\
 out.p &= in.p \\
 t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
-q &= ua\cdot \left(t_{in} - wall.t\right) \\
-out.h &= in.h - \frac{q}{in.mdot} \\
+cp_{w} &= \text{Cp}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
+eps_{w} &= 1 - e^{\frac{-ua}{\left|in.mdot\right|\cdot cp_{w} + 1.0E-12}} \\
+out.h &= in.h - eps_{w}\cdot cp_{w}\cdot \left(t_{in} - wall.t\right) \\
+q &= in.mdot\cdot \left(in.h - out.h\right) \\
 wall.qdot &= -q
 \end{aligned}
 $$
+
 
 ## Examples
 
@@ -71,7 +74,7 @@ connect(RAD.wall, AMB.port)
 connect(RAD.out, OUT.in)
 OUT.in.P = 200000
 
-{ CHECK amb.port.qdot 17484.2002 0.017484200203257114 }
+{ CHECK amb.port.qdot 12170.7262 0.0121707 }
 { CHECK amb.port.t 298 0.000298 }
 { CHECK cp.in.h 73658.46116 0.07365846116313775 }
 ```
@@ -79,7 +82,7 @@ OUT.in.P = 200000
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-amb.port.qdot = 17484.2002
+amb.port.qdot = 12170.7262
 amb.port.t = 298
 cp.in.h = 73658.46116
 ```

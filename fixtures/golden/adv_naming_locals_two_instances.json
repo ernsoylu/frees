@@ -2,16 +2,60 @@
   "name": "adv_naming_locals_two_instances",
   "source": "// Two instances of the same component: every component-local must be mangled\n// per instance (PA.W vs PB.W) and displayed with a dot. No property call, so\n// the values are exact and the naming is the only thing under test.\nCOMPONENT Lift(in, out)\n  PARAM v, eta\n  out.mdot = in.mdot\n  out.h    = in.h + v * (out.P - in.P) / eta\n  W        = in.mdot * (out.h - in.h)\nEND\nCOMPONENT FluidBoundary(out)\n  PARAM P, h, mdot\n  out.P    = P\n  out.h    = h\n  out.mdot = mdot\nEND\nFluidBoundary SRC(f1, P = 100000, h = 112000, mdot = 2.0)\nLift          PA(f1, f2, v = 0.001, eta = 0.8)\nLift          PB(f2, f3, v = 0.001, eta = 0.6)\nSink          SK(f3)\nf2.P = 200000\nf3.P = 400000\nwa = PA.W\nwb = PB.W\nva = PA.v\n",
   "expect": {
-    "variables": {},
-    "display_names": {},
-    "block_count": 0,
-    "error": {
-      "type": "SolverException",
-      "message": "There are 17 equations and 18 variables. The problem is underspecified and cannot be solved. Free quantity (no defining relation): va. Coupled to: pa.v. A common cause: an element chain with no constitutive law for that quantity — e.g. an efficiency-only machine or rigid pass-through between boundaries leaves its through-flow or a port pressure free; add an orifice/valve/flow-map element or pin a boundary value."
-    }
+    "variables": {
+      "f1.h": 112000.0,
+      "f1.mdot": 2.0,
+      "f1.p": 100000.0,
+      "f2.h": 112125.0,
+      "f2.mdot": 2.0,
+      "f2.p": 200000.0,
+      "f3.h": 112458.33333333333,
+      "f3.mdot": 2.0,
+      "f3.p": 400000.0,
+      "pa.w": 250.0,
+      "pb.w": 666.666666666657,
+      "sk.h": 112458.33333333333,
+      "sk.mdot": 2.0,
+      "sk.p": 400000.0,
+      "va": 0.001,
+      "wa": 250.0,
+      "wb": 666.666666666657
+    },
+    "display_names": {
+      "eta": "eta",
+      "f1": "f1",
+      "f1$h": "f1.h",
+      "f1$mdot": "f1.mdot",
+      "f1$p": "f1.p",
+      "f2": "f2",
+      "f2$h": "f2.h",
+      "f2$mdot": "f2.mdot",
+      "f2$p": "f2.p",
+      "f3": "f3",
+      "f3$h": "f3.h",
+      "f3$mdot": "f3.mdot",
+      "f3$p": "f3.p",
+      "h": "h",
+      "mdot": "mdot",
+      "p": "P",
+      "pa$w": "pa.w",
+      "pb$w": "pb.w",
+      "sk$h": "sk.h",
+      "sk$mdot": "sk.mdot",
+      "sk$p": "sk.p",
+      "v": "v",
+      "va": "va",
+      "w": "W",
+      "wa": "wa",
+      "wb": "wb"
+    },
+    "block_count": 17,
+    "ode_tables": [
+    ],
+    "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Rust engine 2026-10-20. The Java oracle failed this document: 'va = PA.v' minted a free unknown pa.v instead of reading the instance parameter. Corrected in components/expander.rs (rewrite_top_var); values are exact (no property calls): va = 0.001, wa = 250, wb = 666.67."
   }
 }

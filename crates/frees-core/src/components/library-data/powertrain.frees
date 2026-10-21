@@ -169,21 +169,25 @@ port(port)
   port.f  = m * g * sin(map$(s))
 end
 
-// Catalyst light-off: brick thermal mass heated by the exhaust stream
-// (effectiveness-free UA link) plus the exotherm of converted feed once the
-// brick passes light-off; conversion is a C1 sigmoid in brick temperature.
+// Catalyst light-off: brick thermal mass heated by the exhaust stream plus
+// the exotherm of converted feed once the brick passes light-off; conversion
+// is a C1 sigmoid in brick temperature. The gas-to-brick link is the exact
+// isothermal-wall effectiveness ε = 1 − exp(−UA/ṁc_p), so the gas never
+// leaves colder than the brick it heats.
 function [in, out] = CatalystLightOff(fluid$, C, UA, T50, k, q_exo, T0)
 port(in)
 port(out)
   T_g      = Temperature(fluid$, P=in.P, h=in.h)
+  cp_g     = Cp(fluid$, P=in.P, h=in.h)
+  eps_c    = 1 - exp(-UA / (abs(in.mdot) * cp_g + 1e-12))
   eta      = 0.5 * (1 + tanh((Tb - T50) / k))
-  Q        = UA * (T_g - Tb)
+  out.h    = in.h - eps_c * cp_g * (T_g - Tb)
+  Q        = in.mdot * (in.h - out.h)
   Qexo     = eta * in.mdot * q_exo
   der(Tb)  = (Q + Qexo) / C
   init(Tb) = T0
   out.mdot = in.mdot
   out.P    = in.P
-  out.h    = in.h - Q / in.mdot
 end
 
 // Exhaust pipe with thermal wall: gas duct exchanging with a two-node RC wall
