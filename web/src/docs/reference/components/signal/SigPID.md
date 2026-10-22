@@ -12,7 +12,7 @@ references: []
 
 PID controller on the (sp − pv) error with an integrator state and a realizable filtered derivative (filter τ).
 
-The `clamped` variant saturates the output to [umin, umax] and back-calculates the integrator (anti-windup reset time Taw) so the integral unwinds while the output is pinned.
+The `clamped` variant saturates the output to [umin, umax] and back-calculates the integrator (anti-windup reset time Taw [s], scaled by Ki because `ie` integrates the error, not the integral term) so the integral unwinds while the output is pinned. It needs Ki ≠ 0.
 
 Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
@@ -73,7 +73,7 @@ $$
 $$
 \begin{aligned}
 out.sig &= \text{min}\left(\text{max}\left(u_{raw}, umin\right), umax\right) \\
-\text{der}\left(ie\right) &= e + \frac{out.sig - u_{raw}}{taw}
+\text{der}\left(ie\right) &= e + \frac{out.sig - u_{raw}}{ki\cdot taw}
 \end{aligned}
 $$
 

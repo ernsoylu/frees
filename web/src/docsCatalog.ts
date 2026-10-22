@@ -2654,12 +2654,12 @@ Domains: electrical (mains-fed resistive heater, voltage commanded by the contro
   The PID output is the heater voltage: the VoltageSource reads it straight
   from the signal wire, VoltageSource SUPPLY(E = PID.out.sig). }
 
-Kp = 40                            { proportional gain, V/K - the tuning variable }
+Kp = 40 [V/K]                      { proportional gain - the tuning variable }
 
-SigConstant     SET(k=294.15)                       { 21 C setpoint }
+SigConstant     SET(k=294.15 [K])                   { 21 C setpoint }
 SigThermalProbe PROBE()
-SigFirstOrder   SENSOR(tau=90, y0=278.15)            { thermistor lag, 90 s }
-SigPID          PID(model$=clamped, Kp=Kp, Ki=0.08, Kd=0, tau=1, i0=0, d0=0, umin=0, umax=230, Taw=60)
+SigFirstOrder   SENSOR(tau=90 [s], y0=278.15 [K])    { thermistor lag }
+SigPID          PID(model$=clamped, Kp=Kp, Ki=0.08 [V/K-s], Kd=0 [V-s/K], tau=1 [s], i0=0 [K-s], d0=0 [K], umin=0 [V], umax=230 [V], Taw=750 [s])
 connect(SET.out, PID.sp)
 connect(PROBE.out, SENSOR.in)
 connect(SENSOR.out, PID.pv)
@@ -2717,7 +2717,7 @@ In the app: delete (or comment out) the \`Kp = …\` line so \`Kp\` is free, the
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Electric room heater under PID thermostat control with sensor lag\\n{ Domains: electrical (mains-fed resistive heater, voltage commanded by the\\n  controller) -> heat (room air + furniture thermal mass, envelope losses to\\n  winter ambient) -> sensor (thermistor with first-order lag) -> signal (PID\\n  with output clamping and anti-windup).\\n  The PID output is the heater voltage: the VoltageSource reads it straight\\n  from the signal wire, VoltageSource SUPPLY(E = PID.out.sig). }\\n\\n\\nSigConstant     SET(k=294.15)                       { 21 C setpoint }\\nSigThermalProbe PROBE()\\nSigFirstOrder   SENSOR(tau=90, y0=278.15)            { thermistor lag, 90 s }\\nSigPID          PID(model$=clamped, Kp=Kp, Ki=0.08, Kd=0, tau=1, i0=0, d0=0, umin=0, umax=230, Taw=60)\\nconnect(SET.out, PID.sp)\\nconnect(PROBE.out, SENSOR.in)\\nconnect(SENSOR.out, PID.pv)\\n\\nVoltageSource   SUPPLY(E = PID.out.sig)\\nHeatingResistor HEATER(R=17.63 [ohm])                     { 3 kW at 230 V }\\nGround          GND()\\nconnect(SUPPLY.p, HEATER.p)\\nconnect(SUPPLY.n, HEATER.n, GND.port)\\n\\nThermalMass ROOM(C=4.0e5 [J/K], T0=278.15 [K])                { air + furnishings, starts at 5 C }\\nConvection  ENVELOPE(htc=1 [W/m^2-K], area=55 [m^2])                { UA = 55 W/K }\\nThermalSource OUTSIDE(T=268.15 [K])                     { -5 C }\\nconnect(HEATER.heat, ROOM.port, PROBE.port, ENVELOPE.a)\\nconnect(ENVELOPE.b, OUTSIDE.port)\\n\\nDYNAMIC warmup(method = ode23s, time = 0 .. 10800, points = 1081)\\nEND\\n\\nT_final  = FinalValue('room.port.t')\\nT_peak   = MaxValue('room.port.t')\\novershoot = T_peak - 294.15\\nt_reach  = TimeAt('room.port.t', 293.15)            { first time within 1 K }\\nP_avg    = ODEAvg('heater.q')                        { mean heater power, W }\\nE_kWh    = P_avg * 10800 / 3.6e6\\n",
+  "text": "// Electric room heater under PID thermostat control with sensor lag\\n{ Domains: electrical (mains-fed resistive heater, voltage commanded by the\\n  controller) -> heat (room air + furniture thermal mass, envelope losses to\\n  winter ambient) -> sensor (thermistor with first-order lag) -> signal (PID\\n  with output clamping and anti-windup).\\n  The PID output is the heater voltage: the VoltageSource reads it straight\\n  from the signal wire, VoltageSource SUPPLY(E = PID.out.sig). }\\n\\n\\nSigConstant     SET(k=294.15 [K])                   { 21 C setpoint }\\nSigThermalProbe PROBE()\\nSigFirstOrder   SENSOR(tau=90 [s], y0=278.15 [K])    { thermistor lag }\\nSigPID          PID(model$=clamped, Kp=Kp, Ki=0.08 [V/K-s], Kd=0 [V-s/K], tau=1 [s], i0=0 [K-s], d0=0 [K], umin=0 [V], umax=230 [V], Taw=750 [s])\\nconnect(SET.out, PID.sp)\\nconnect(PROBE.out, SENSOR.in)\\nconnect(SENSOR.out, PID.pv)\\n\\nVoltageSource   SUPPLY(E = PID.out.sig)\\nHeatingResistor HEATER(R=17.63 [ohm])                     { 3 kW at 230 V }\\nGround          GND()\\nconnect(SUPPLY.p, HEATER.p)\\nconnect(SUPPLY.n, HEATER.n, GND.port)\\n\\nThermalMass ROOM(C=4.0e5 [J/K], T0=278.15 [K])                { air + furnishings, starts at 5 C }\\nConvection  ENVELOPE(htc=1 [W/m^2-K], area=55 [m^2])                { UA = 55 W/K }\\nThermalSource OUTSIDE(T=268.15 [K])                     { -5 C }\\nconnect(HEATER.heat, ROOM.port, PROBE.port, ENVELOPE.a)\\nconnect(ENVELOPE.b, OUTSIDE.port)\\n\\nDYNAMIC warmup(method = ode23s, time = 0 .. 10800, points = 1081)\\nEND\\n\\nT_final  = FinalValue('room.port.t')\\nT_peak   = MaxValue('room.port.t')\\novershoot = T_peak - 294.15\\nt_reach  = TimeAt('room.port.t', 293.15)            { first time within 1 K }\\nP_avg    = ODEAvg('heater.q')                        { mean heater power, W }\\nE_kWh    = P_avg * 10800 / 3.6e6\\n",
   "request": {
     "objective": "t_reach",
     "decisions": [
@@ -3431,12 +3431,12 @@ Domains: moist air (zone air temperature AND humidity states, conditioned supply
   An integral-of-absolute-error (IAE) signal chain - difference, absolute
   value, integrator - scores the tuning while the zone is pulled down. }
 
-Kp = 0.25                          { proportional gain, (kg/s)/K - the tuning variable }
+Kp = 0.25 [kg/s-K]                 { proportional gain - the tuning variable }
 
-SigConstant     SET(k=297.15)                        { 24 C setpoint }
+SigConstant     SET(k=297.15 [K])                    { 24 C setpoint }
 SigThermalProbe PROBE()
-SigFirstOrder   SENSOR(tau=30, y0=303.15)
-SigPID          PID(model$=clamped, Kp=Kp, Ki=0.002, Kd=0, tau=1, i0=0, d0=0, umin=0.08, umax=0.9, Taw=120)
+SigFirstOrder   SENSOR(tau=30 [s], y0=303.15 [K])
+SigPID          PID(model$=clamped, Kp=Kp, Ki=0.002 [kg/s^2-K], Kd=0 [kg/K], tau=1 [s], i0=0 [K-s], d0=0 [K], umin=0.08 [kg/s], umax=0.9 [kg/s], Taw=60000 [s])
 { cooling is reverse-acting: measurement on sp, setpoint on pv }
 connect(PROBE.out, SENSOR.in)
 connect(SENSOR.out, PID.sp)
@@ -3445,7 +3445,7 @@ connect(SET.out, PID.pv)
 { IAE = integral of |T_sensed - T_set| }
 SigDiff        ERR()
 SigAbs         ABSE()
-SigIntegrator  IAE(y0=0)
+SigIntegrator  IAE(y0=0 [K-s])
 connect(SENSOR.out, ERR.in1)
 connect(SET.out, ERR.in2)
 connect(ERR.out, ABSE.in)
@@ -3973,7 +3973,7 @@ Domains: rotational mechanics (vehicle mass reflected to the wheel as an inertia
 C_rotor = 5500 [J/K]                { rotor thermal mass (~11 kg cast iron) }
 
 { 1500 kg car on 0.31 m wheels, all four brakes lumped: J = m*r^2 }
-Inertia     CAR(J=1500*0.31^2, w0=100/3.6/0.31 [rad/s])       { from 100 km/h }
+Inertia     CAR(J=1500*0.31^2, w0=100 [km/h]/0.31 [m])       { from 100 km/h }
 RoadLoad    ROAD(Crr=14 [N-m], Caero=0.0042 [kg-m^2])                  { N.m at the wheel }
 MechGround  GND()
 WheelBrakeThermal BRK(Tmax=2600 [N-m], eps=0.5 [rad/s], C=C_rotor, hA=35 [W/K], T_amb=303.15 [K], T_fade=673.15 [K], k_fade=0.45, eps_f=40 [K], T0=573.15 [K])
@@ -4020,7 +4020,7 @@ In the app: delete (or comment out) the \`C_rotor = …\` line so \`C_rotor\` is
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Repeated hard stop: brake heating and thermal fade\\n{ Domains: rotational mechanics (vehicle mass reflected to the wheel as an\\n  inertia, aerodynamic/rolling road load) + heat (brake rotor thermal mass\\n  with convective cooling, friction power as its heat input) + signal (the\\n  driver's brake-pedal command).\\n\\n  WheelBrakeThermal makes the friction torque fall once the rotor passes its\\n  fade temperature, so the stop lengthens as the rotor heats - a two-way\\n  mechanical/thermal coupling. Rotor heat capacity C is the design lever. }\\n\\n\\n{ 1500 kg car on 0.31 m wheels, all four brakes lumped: J = m*r^2 }\\nInertia     CAR(J=1500*0.31^2, w0=100/3.6/0.31 [rad/s])       { from 100 km/h }\\nRoadLoad    ROAD(Crr=14 [N-m], Caero=0.0042 [kg-m^2])                  { N.m at the wheel }\\nMechGround  GND()\\nWheelBrakeThermal BRK(Tmax=2600 [N-m], eps=0.5 [rad/s], C=C_rotor, hA=35 [W/K], T_amb=303.15 [K], T_fade=673.15 [K], k_fade=0.45, eps_f=40 [K], T0=573.15 [K])\\nSigStep     PEDAL(t0=0.5, before=0, after=0.9, eps=0.1)\\nconnect(CAR.port, ROAD.shaft, BRK.a)\\nconnect(BRK.b, GND.port)\\nconnect(PEDAL.out, BRK.u)\\n\\nDYNAMIC stop(method = ode23s, time = 0 .. 8, points = 401)\\nEND\\n\\nv_end    = FinalValue('car.port.w') * 0.31 * 3.6   { km/h after 8 s }\\nT_peak   = MaxValue('brk.tr')                      { peak rotor temperature, K }\\nt_stop   = TimeAt('car.port.w', 0.5)               { time to ~0.6 km/h }\\nE_brake  = 0.5 * 1500 * (100/3.6)^2               { kinetic energy, J }\\nm_rotor  = C_rotor / 500                            { rotor mass at c = 500 J/kg-K, kg }\\n",
+  "text": "// Repeated hard stop: brake heating and thermal fade\\n{ Domains: rotational mechanics (vehicle mass reflected to the wheel as an\\n  inertia, aerodynamic/rolling road load) + heat (brake rotor thermal mass\\n  with convective cooling, friction power as its heat input) + signal (the\\n  driver's brake-pedal command).\\n\\n  WheelBrakeThermal makes the friction torque fall once the rotor passes its\\n  fade temperature, so the stop lengthens as the rotor heats - a two-way\\n  mechanical/thermal coupling. Rotor heat capacity C is the design lever. }\\n\\n\\n{ 1500 kg car on 0.31 m wheels, all four brakes lumped: J = m*r^2 }\\nInertia     CAR(J=1500*0.31^2, w0=100 [km/h]/0.31 [m])       { from 100 km/h }\\nRoadLoad    ROAD(Crr=14 [N-m], Caero=0.0042 [kg-m^2])                  { N.m at the wheel }\\nMechGround  GND()\\nWheelBrakeThermal BRK(Tmax=2600 [N-m], eps=0.5 [rad/s], C=C_rotor, hA=35 [W/K], T_amb=303.15 [K], T_fade=673.15 [K], k_fade=0.45, eps_f=40 [K], T0=573.15 [K])\\nSigStep     PEDAL(t0=0.5, before=0, after=0.9, eps=0.1)\\nconnect(CAR.port, ROAD.shaft, BRK.a)\\nconnect(BRK.b, GND.port)\\nconnect(PEDAL.out, BRK.u)\\n\\nDYNAMIC stop(method = ode23s, time = 0 .. 8, points = 401)\\nEND\\n\\nv_end    = FinalValue('car.port.w') * 0.31 * 3.6   { km/h after 8 s }\\nT_peak   = MaxValue('brk.tr')                      { peak rotor temperature, K }\\nt_stop   = TimeAt('car.port.w', 0.5)               { time to ~0.6 km/h }\\nE_brake  = 0.5 * 1500 * (100/3.6)^2               { kinetic energy, J }\\nm_rotor  = C_rotor / 500                            { rotor mass at c = 500 J/kg-K, kg }\\n",
   "request": {
     "objective": "m_rotor",
     "decisions": [

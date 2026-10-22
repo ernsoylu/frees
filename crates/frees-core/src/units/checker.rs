@@ -702,6 +702,17 @@ impl Checker {
         }
         match function {
             "abs" | "real" | "imag" | "uncertaintyof" => self.dim_of_first(args),
+            // A DYNAMIC body's time derivative: the state's units per second.
+            // A dimensionless state marks a unitless model, whose time is
+            // unitless too, so its derivative stays a wildcard.
+            "der" => {
+                let state = self.dim_of_first(args);
+                if state.known && !state.quantity.is_dimensionless() {
+                    Dim::of(Quantity::new(1.0, per_second(state.quantity.dims)))
+                } else {
+                    Dim::unknown()
+                }
+            }
             // ArrayElmt returns one element, so it carries the array's units.
             "arrayelmt" => self.dim_of_first(args),
             // Radiation view factors take length arguments and return a
@@ -917,6 +928,24 @@ impl Checker {
             // probability/quantile; do not constrain the (possibly dimensioned)
             // inputs.
             "normalcdf" | "normalpdf" | "normalinvcdf" => Dim::unknown(),
+            // If(cond, then, else) / If(a, b, lt, eq, gt): the value is one of
+            // the branches, so it carries the first branch with known units
+            // (a bare `0` branch adapts, as everywhere).
+            "if" => {
+                let branches = if args.len() == 5 {
+                    &args[2..]
+                } else {
+                    args.get(1..).unwrap_or_default()
+                };
+                let mut result = Dim::unknown();
+                for branch in branches {
+                    let dim = self.dim_of(branch);
+                    if dim.known && !result.known {
+                        result = dim;
+                    }
+                }
+                result
+            }
             _ => {
                 // sin, cos, tan, exp, ln, log10, log2, arc*: argument must be
                 // dimensionless.
@@ -945,6 +974,12 @@ impl Checker {
             None => Dim::unknown(),
         }
     }
+}
+
+/// `dims` divided by seconds — the units of a time derivative.
+fn per_second(mut dims: Dims) -> Dims {
+    dims[2] -= 1.0;
+    dims
 }
 
 /// Null-propagating multiplicative combination of two analyzed terms.
@@ -1205,6 +1240,41 @@ mod tests {
         );
         assert!(report.warnings.is_empty(), "{:?}", report.warnings);
         assert_ne!(report.inferred.get("vs").map(String::as_str), Some("-"));
+    }
+
+    #[test]
+    fn der_carries_the_states_units_per_second() {
+        let der = |state: &str| Expr::call("der", vec![Expr::var(state)]);
+        let equations = vec![
+            Equation::new(der("x"), Expr::var("v"), "der(x) = v"),
+            Equation::new(
+                der("v"),
+                Expr::bin(BinOp::Div, Expr::var("f"), Expr::var("m")),
+                "der(v) = F/m",
+            ),
+        ];
+        let report = check_units(&equations, &units(&[("x", "m"), ("f", "N"), ("m", "kg")]));
+        assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+        assert_eq!(report.inferred.get("v").map(String::as_str), Some("m/s"));
+
+        // A force is not a velocity: der(x) = F must warn.
+        let mismatch = vec![Equation::new(der("x"), Expr::var("f"), "der(x) = F")];
+        let report = check_units(&mismatch, &units(&[("x", "m"), ("f", "N")]));
+        assert_eq!(report.warnings.len(), 1, "{:?}", report.warnings);
+        assert!(
+            report.warnings[0].contains("der(x) = F"),
+            "{:?}",
+            report.warnings
+        );
+    }
+
+    #[test]
+    fn if_carries_its_branch_units() {
+        let report = check_units(
+            &eqs("thrust = If(t, t_burn, F0, F0, 0)\nq = If(c, F0, 0)"),
+            &units(&[("t_burn", "s"), ("f0", "N"), ("thrust", "N"), ("q", "N")]),
+        );
+        assert!(report.warnings.is_empty(), "{:?}", report.warnings);
     }
 
     #[test]

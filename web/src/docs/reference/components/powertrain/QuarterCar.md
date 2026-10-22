@@ -69,7 +69,7 @@ function [port] = RoadShaker(amp, w)
 port(port)
   port.vel = amp * sin(w * time)
 end
-RoadShaker ROAD(amp=0.1, w=6.2832)
+RoadShaker ROAD(amp=0.1 [m/s], w=6.2832 [rad/s])
 QuarterCar QC(ms=300 [kg], mu=40 [kg], ks=20000 [N/m], cs=1500 [kg/s], kt=180000 [N/m])
 connect(ROAD.port, QC.road)
 DYNAMIC shake(method = ode23s, time = 0 .. 2, points = 21)

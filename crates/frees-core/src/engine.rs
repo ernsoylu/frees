@@ -1807,6 +1807,9 @@ pub fn check_with_tables_complex(
     check_diagnostics.extend(identity_advisories(&doc, source));
     let mut member_units: BTreeMap<String, String> = BTreeMap::new();
     let mut layer_connections: Vec<crate::components::expander::Connection> = Vec::new();
+    // The DYNAMIC bodies after the component layer rewrote their dotted
+    // references, for the unit check below.
+    let mut dynamics = doc.dynamics.clone();
     let expanded = (|| {
         let mut doc = doc.clone();
         // Stage 1b — the component layer, at the Java position (see
@@ -1816,6 +1819,7 @@ pub fn check_with_tables_complex(
         let components = expand_component_layer(&mut doc, &mut check_diagnostics)?;
         member_units = components.member_units;
         layer_connections = components.connections.clone();
+        dynamics.clone_from(&doc.dynamics);
         parsed_names = doc.display_names.clone();
         let statements = std::mem::take(&mut doc.statements);
         let (flattened, module_count) =
@@ -1893,6 +1897,7 @@ pub fn check_with_tables_complex(
             .iter()
             .map(|ds| ds.body_equations.len() + ds.initials.len())
             .sum();
+        let (_, unit_report) = unit_check(&[], &dynamics, overrides, &member_units, &doc.defs);
         return Ok(CheckReport {
             registered_calls: doc.registered_calls.clone(),
             solvable: true,
@@ -1905,8 +1910,8 @@ pub fn check_with_tables_complex(
             ),
             error_line: None,
             errors: Vec::new(),
-            inferred_units: BTreeMap::new(),
-            unit_warnings: Vec::new(),
+            inferred_units: unit_report.inferred,
+            unit_warnings: merge_advisory_warnings(unit_report.warnings, &check_diagnostics),
             diagnostics: check_diagnostics,
             plots: doc.blocks.plots.clone(),
             connections: layer_connections.clone(),
@@ -1943,14 +1948,7 @@ pub fn check_with_tables_complex(
     // `CheckController.addComponentMemberUnits` puts them back into the
     // *reported* map too (`putIfAbsent`), because a port member's unit comes
     // from its physical domain and nothing else can derive it.
-    let declared = declared_units(&equations, overrides, &member_units);
-    let (function_units, function_input_units) = declared_function_units(&doc.defs);
-    let unit_report = crate::units::checker::check_units_full(
-        &equations,
-        &declared,
-        &function_units,
-        &function_input_units,
-    );
+    let (_, unit_report) = unit_check(&equations, &dynamics, overrides, &member_units, &doc.defs);
     let mut inferred_units = unit_report.inferred;
     inferred_units.extend(literal_units(&equations));
     for (name, unit) in &member_units {
@@ -2865,6 +2863,79 @@ fn declared_units(
         }
     }
     units
+}
+
+/// Declared units and the dimensional check over the algebraic system **plus
+/// every `DYNAMIC` body** — the one place `check`, the prepared solve and the
+/// ODE-only shortcut build their unit report, so the three cannot disagree.
+///
+/// A body enters as written (`der(X)` carries X's units per second, see
+/// [`crate::units::checker`]). A scalar initial condition `X(t0) = v` enters
+/// as `X = v` so `x(0) = 3 [m]` declares x, unless `v` is a bare number:
+/// `x(0) = 0` means zero in whatever unit x has, not a dimensionless x. The
+/// time variable stays a wildcard, so `sin(w*t)` with a bare `w` is not
+/// refused. Bodies are checked, never solved here: they stay out of the
+/// blocker and the equation balance.
+///
+/// ponytail: array-state initials and method-of-lines `FOR` blocks are not
+/// checked; expand them here when a transient PDE example needs it.
+pub(crate) fn unit_check(
+    algebraic: &[Equation],
+    dynamics: &[crate::ode::dynamic::DynamicSystem],
+    overrides: &[VariableOverride],
+    member_units: &BTreeMap<String, String>,
+    defs: &Definitions,
+) -> (BTreeMap<String, String>, crate::units::checker::UnitReport) {
+    let combined;
+    let equations = if dynamics.is_empty() {
+        algebraic
+    } else {
+        let mut all = algebraic.to_vec();
+        for ds in dynamics {
+            all.extend(ds.body_equations.iter().cloned());
+            all.extend(
+                ds.initials
+                    .iter()
+                    .filter(|ic| ic.indices.is_empty() && !is_bare_number(&ic.value))
+                    .map(|ic| {
+                        let source = ds
+                            .source_text
+                            .lines()
+                            .map(str::trim)
+                            .find(|line| {
+                                line.to_ascii_lowercase()
+                                    .starts_with(&format!("{}(", ic.state))
+                            })
+                            .map_or_else(
+                                || format!("{}({})", ic.state, ds.options.t0),
+                                str::to_string,
+                            );
+                        Equation::new(Expr::var(&ic.state), ic.value.clone(), source)
+                    }),
+            );
+        }
+        combined = all;
+        &combined
+    };
+    let declared = declared_units(equations, overrides, member_units);
+    let (function_units, function_input_units) = declared_function_units(defs);
+    let report = crate::units::checker::check_units_full(
+        equations,
+        &declared,
+        &function_units,
+        &function_input_units,
+    );
+    (declared, report)
+}
+
+/// A number with no unit and no variable in it (`0`, `-1.5`, `2*3`).
+fn is_bare_number(e: &Expr) -> bool {
+    match e {
+        Expr::Num { unit, .. } => unit.is_none(),
+        Expr::Neg(inner) => is_bare_number(inner),
+        Expr::BinOp { left, right, .. } => is_bare_number(left) && is_bare_number(right),
+        _ => false,
+    }
 }
 
 /// Output unit and per-argument units of each TABLE/FUNCTION, by name.
@@ -5460,6 +5531,44 @@ mod tests {
         let (index, relative) = check(3.5).expect("y = 3 is off by 0.5");
         assert_eq!(index, 0);
         assert!((relative - 0.5 / 6.5).abs() < 1e-12, "got {relative}");
+    }
+
+    #[test]
+    fn dynamic_bodies_are_unit_checked_on_check_and_solve() {
+        // `5 [kg]` added to `k*x` (m/s) is wrong whether or not the document
+        // has algebraic equations beside the block; the fix makes both quiet.
+        let mixed = |rhs: &str| {
+            format!(
+                "k = 2 [1/s]\nx0 = 3 [m]\nDYNAMIC d(t = 0 .. 1, method = ode45)\n  \
+                 der(x) = -k*x + {rhs}\n  x(0) = x0\nEND\n"
+            )
+        };
+        let only = |rhs: &str| {
+            format!(
+                "DYNAMIC d(t = 0 .. 1, method = ode45)\n  der(x) = -2 [1/s]*x + {rhs}\n  \
+                 x(0) = 3 [m]\nEND\n"
+            )
+        };
+        for build in [&mixed as &dyn Fn(&str) -> String, &only] {
+            let bad = build("5 [kg]");
+            let report = check(&bad).expect("check");
+            assert!(
+                report.unit_warnings.iter().any(|w| w.contains("der(x)")),
+                "check missed the body: {:?}\n{bad}",
+                report.unit_warnings
+            );
+            assert!(
+                !solved(&bad).unit_warnings.is_empty(),
+                "solve missed the body\n{bad}"
+            );
+
+            let good = build("5 [m/s]");
+            assert_eq!(
+                check(&good).expect("check").unit_warnings,
+                Vec::<String>::new()
+            );
+            assert_eq!(solved(&good).unit_warnings, Vec::<String>::new());
+        }
     }
 
     #[test]

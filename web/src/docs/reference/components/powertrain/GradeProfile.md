@@ -65,13 +65,13 @@ function [port] = VelSource(v)
 port(port)
   port.vel = v
 end
-TABLE gprof(s)
+TABLE gprof(s [m]) [rad]
   0    0
   30   0.05
   60   0.05
   100  0
 END
-VelSource    CRUISE(v=15)
+VelSource    CRUISE(v=15 [m/s])
 GradeProfile GP(m=1500 [kg], g=9.80665 [m/s^2], map$=gprof, s0=0 [m])
 connect(CRUISE.port, GP.port)
 DYNAMIC climb(method = ode45, time = 0 .. 4, points = 21)

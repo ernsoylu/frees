@@ -219,7 +219,9 @@ end
 // PID controller on the (sp − pv) error with an integrator state and a
 // realizable filtered derivative (filter τ). The `clamped` variant saturates
 // the output to [umin, umax] and back-calculates the integrator (anti-windup
-// reset time Taw) so the integral unwinds while the output is pinned.
+// reset time Taw [s], scaled by Ki because ie integrates the error, not the
+// integral term) so the integral unwinds while the output is pinned. Needs
+// Ki ≠ 0.
 function [sp, pv, out] = SigPID(Kp, Ki, Kd, tau, i0, d0, model$ = basic)
 port(sp)
 port(pv)
@@ -236,7 +238,7 @@ port(out)
   END
   VARIANT clamped REQUIRE umin, umax, Taw
     out.sig = min(max(u_raw, umin), umax)
-    der(ie) = e + (out.sig - u_raw) / Taw
+    der(ie) = e + (out.sig - u_raw) / (Ki * Taw)
   END
 end
 

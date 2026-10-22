@@ -79,9 +79,9 @@ ThermalMass STEEL(C=750 [J/K], T0=293.15 [K])      { 750 J/K steel thermal mass 
 Convection  S2W(htc=333.33 [W/m^2-K], area=1 [m^2])      { steel -> water link, 333 W/K }
 
 { ---- Rigid 5 L two-phase water vessel + lifting relief valve to air ---- }
-BoilingVessel   COOK(fluid$=Water, V=0.005, m0=2.994, T0=293.15)
-ProportionalReliefValve PRV(fluid$=Water, Pcrack=202600, grad=6e-7, eps=2000)
-TwoPhasePressureSink ATM(P=101300)
+BoilingVessel   COOK(fluid$=Water, V=0.005 [m^3], m0=2.994 [kg], T0=293.15 [K])
+ProportionalReliefValve PRV(fluid$=Water, Pcrack=202600 [Pa], grad=6e-7 [kg/s-Pa], eps=2000 [Pa])
+TwoPhasePressureSink ATM(P=101300 [Pa])
 
 connect(SUP.p, HTR.p)
 connect(SUP.n, HTR.n, GND.port)          { circuit return tied to ground }
@@ -1389,15 +1389,15 @@ LHV     = HeatingValue('CH4', 'LHV')`,
 // state) -> liquid (coolant loop) -> twophase (R134a chiller) -> signal (PID).
 // The PID modulates the electronic expansion valve to hold the pack at 303 K;
 // with Ki > 0 the steady error vanishes.
-TABLE ocv(soc)
+TABLE ocv(soc) [V]
   0   3.0
   1   4.2
 END
-TABLE dudt(soc)
+TABLE dudt(soc) [V/K]
   0   -5e-5
   1   -5e-5
 END
-BatteryPack   BP(Ns=96, Np=2, ocv$=ocv, dudt$=dudt, R0ref=0.002, Tref=298.15, Ea=0, Q0=60, C_th=50000, SOC0=0.9, T0=306)
+BatteryPack   BP(Ns=96, Np=2, ocv$=ocv, dudt$=dudt, R0ref=0.002 [ohm], Tref=298.15 [K], Ea=0 [J/mol], Q0=60, C_th=50000 [J/K], SOC0=0.9, T0=306 [K])
 CurrentSource LOAD(I=-60)
 Ground        G()
 connect(BP.p, LOAD.p)
@@ -1419,15 +1419,15 @@ function [out] = PHSupply(P, h, domain$ = twophase)
 end
 hliq = Enthalpy(R134a, P=1200000, x=0)
 PHSupply             RSRC(P=1200000, h=hliq)
-EXVCmd               EXV(fluid$=R134a, CdA_max=2e-7)
+EXVCmd               EXV(fluid$=R134a, CdA_max=2e-7 [m^2])
 TwoPhasePressureSink RSNK(P=350000)
 connect(RSRC.out, EXV.in)
 connect(EXV.out, CH.ref_in)
 connect(CH.ref_out, RSNK.in)
 
-SigConstant     SP(k=303)
+SigConstant     SP(k=303 [K])
 SigThermalProbe TB()
-SigPID          PID(model$=clamped, Kp=0.05, Ki=0.005, Kd=0, tau=1, i0=0.2, d0=0, umin=0.02, umax=1, Taw=10)
+SigPID          PID(model$=clamped, Kp=0.05 [1/K], Ki=0.005 [1/K-s], Kd=0 [s/K], tau=1 [s], i0=0.2 [K-s], d0=0 [K], umin=0.02, umax=1, Taw=2000 [s])
 // Reverse-acting: opening the EXV COOLS, so the measurement drives sp and
 // the setpoint drives pv (equivalent to negating the gains).
 connect(TB.out, PID.sp)

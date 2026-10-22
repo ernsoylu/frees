@@ -40,7 +40,7 @@ connect(CH.ref_out, RSNK.in)
 
 SigConstant     SP(k=303)
 SigThermalProbe TB()
-SigPID          PID(model$=clamped, Kp=0.05, Ki=0.005, Kd=0, tau=1, i0=0.2, d0=0, umin=0.02, umax=1, Taw=10)
+SigPID          PID(model$=clamped, Kp=0.05, Ki=0.005, Kd=0, tau=1, i0=0.2, d0=0, umin=0.02, umax=1, Taw=2000 [s])
 // Reverse-acting: opening the EXV COOLS, so the measurement drives sp and
 // the setpoint drives pv (equivalent to negating the gains).
 connect(TB.out, PID.sp)

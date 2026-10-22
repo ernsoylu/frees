@@ -98,12 +98,12 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // BatteryCellMap (static variant): OCV(SOC) and dU/dT maps, Arrhenius R0,
 // a 2 A discharge for 10 s from SOC0 = 0.8, heat convected to 298 K ambient.
 // SOC and T are states, so the document is a short transient.
-TABLE ocv(soc)
+TABLE ocv(soc) [V]
   0     3.0
   0.5   3.6
   1     4.1
 END
-TABLE dudt(soc)
+TABLE dudt(soc) [V/K]
   0    -0.0001
   1     0.0001
 END
