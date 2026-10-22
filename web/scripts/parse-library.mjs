@@ -1,8 +1,9 @@
 // Structural inventory of this port's embedded component library.
 //
 // Parses crates/frees-core/src/components/library-data/*.frees for names, ports,
-// PARAM defaults, and VARIANT REQUIRE lists. Descriptions and units stay in
-// Markdown; this file is the engine's structural facts.
+// PARAM defaults and declared units (`R [ohm]`), and VARIANT REQUIRE lists.
+// Descriptions stay in Markdown, which also supplies a unit the header does not
+// declare; this file is the engine's structural facts.
 //
 // Used by compile-docs, build-doc-manifest, scaffold-reference-pages, and the
 // catalog name-set check. A standalone checkout is enough — no Java sibling.
@@ -21,8 +22,11 @@ function parseParamPiece(piece) {
   const s = piece.trim();
   if (!s) return null;
   const eq = s.indexOf('=');
-  if (eq < 0) return { name: s, defaultValue: '', fromRequire: false };
-  return { name: s.slice(0, eq).trim(), defaultValue: s.slice(eq + 1).trim(), fromRequire: false };
+  const head = (eq < 0 ? s : s.slice(0, eq)).trim();
+  const defaultValue = eq < 0 ? '' : s.slice(eq + 1).trim();
+  const unit = head.match(/\[([^\]]*)\]\s*$/);
+  const name = unit ? head.slice(0, unit.index).trim() : head;
+  return { name, unit: unit ? unit[1].trim() : '', defaultValue, fromRequire: false };
 }
 
 function parseParamLine(line) {

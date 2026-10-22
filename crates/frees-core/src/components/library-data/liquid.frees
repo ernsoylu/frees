@@ -6,7 +6,7 @@
 // exchanger, never a direct connect. Working fluid for property calls is fluid$
 // (e.g. water, MEG[50%]); domain$ only types the connector.
 
-function [out] = LiquidSource(fluid$, mdot, P, T, domain$ = liquid)
+function [out] = LiquidSource(fluid$, mdot [kg/s], P [Pa], T [K], domain$ = liquid)
 port(out)
   out.mdot = mdot
   out.P    = P
@@ -36,7 +36,7 @@ port(out)
   END
 end
 
-function [in, out] = LiquidPipe(fluid$, L, D, rough, domain$ = liquid)
+function [in, out] = LiquidPipe(fluid$, L [m], D [m], rough [m], domain$ = liquid)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -52,7 +52,7 @@ end
 
 // Single-phase heat addition to the coolant — a battery cold plate / cold-plate
 // loop load. Duty Q is an input; the coolant warms isobarically (out.P = in.P).
-function [in, out] = LiquidColdPlate(Q, domain$ = liquid)
+function [in, out] = LiquidColdPlate(Q [W], domain$ = liquid)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -62,7 +62,7 @@ end
 
 // Lumped liquid volume / compliance: a pressure node with bulk-modulus storage
 // (der(P) from net mass flow). Steady limit recovers in.mdot = out.mdot.
-function [in, out] = LiquidVolume(C, P0, domain$ = liquid)
+function [in, out] = LiquidVolume(C [kg/Pa], P0 [Pa], domain$ = liquid)
 port(in)
 port(out)
   out.h       = in.h
@@ -77,7 +77,7 @@ end
 // Exact isothermal-wall effectiveness ε = 1 − exp(−UA/ṁc_p): the outlet
 // approaches the wall temperature but never crosses it at any NTU, and the
 // form stays evaluable as the flow shuts (ṁ → 0, ε → 1).
-function [in, out, wall] = LiquidWallHX(fluid$, UA, domain$ = liquid)
+function [in, out, wall] = LiquidWallHX(fluid$, UA [W/K], domain$ = liquid)
 port(in)
 port(out)
 port(wall)
@@ -110,7 +110,7 @@ end
 // model is the THH pressure-driven effect: when the downstream pressure falls
 // below the fluid vapour pressure Pvap the throat flashes and the flow chokes on
 // (in.P - Pvap) rather than the full (in.P - out.P).
-function [in, out] = LiquidOrifice(CdA, rho, domain$ = liquid, model$ = incompressible)
+function [in, out] = LiquidOrifice(CdA [m^2], rho [kg/m^3], domain$ = liquid, model$ = incompressible)
 port(in)
 port(out)
   out.mdot = in.mdot

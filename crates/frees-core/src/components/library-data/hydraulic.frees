@@ -1,11 +1,11 @@
 // frees-language: 2
-function [out] = HydraulicSupply(P, domain$ = oil)
+function [out] = HydraulicSupply(P [Pa], domain$ = oil)
 port(out)
   out.P = P
   out.h = 0
 end
 
-function [port] = HydraulicTank(P, domain$ = oil)
+function [port] = HydraulicTank(P [Pa], domain$ = oil)
 port(port)
   port.P = P
 end
@@ -16,7 +16,7 @@ end
 // LINEAR in ΔP in the laminar regime and square-law when fully turbulent, with
 // a C∞ transition — no Reynolds branch switch. epsP [Pa] smooths the flow
 // direction through ΔP = 0.
-function [in, out] = HydraulicOrifice(CdA, rho, A, D, nu, Cqmax, lamc, epsP, domain$ = oil, model$ = turbulent)
+function [in, out] = HydraulicOrifice(CdA [m^2], rho [kg/m^3], A, D, nu, Cqmax, lamc, epsP, domain$ = oil, model$ = turbulent)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -32,7 +32,7 @@ port(out)
   END
 end
 
-function [in, out] = HydraulicValve(CdA_max, rho, u, domain$ = oil)
+function [in, out] = HydraulicValve(CdA_max [m^2], rho [kg/m^3], u [-], domain$ = oil)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -40,7 +40,7 @@ port(out)
   in.mdot * abs(in.mdot) = (u * CdA_max)^2 * 2 * rho * (in.P - out.P)
 end
 
-function [in, out] = ReliefValve(Pcrack, K, eps, domain$ = oil)
+function [in, out] = ReliefValve(Pcrack [Pa], K [kg/s-Pa], eps, domain$ = oil)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -49,7 +49,7 @@ port(out)
   in.mdot  = K * open * (in.P - out.P)
 end
 
-function [in, rod] = HydraulicCylinder(rho, beta, V0, area, Patm, P0, domain$ = oil)
+function [in, rod] = HydraulicCylinder(rho [kg/m^3], beta [Pa], V0 [m^3], area [m^2], Patm [Pa], P0 [Pa], domain$ = oil)
 port(in)
 port(rod)
   rod.f      = -(in.P - Patm) * area
@@ -57,7 +57,7 @@ port(rod)
   init(in.P) = P0
 end
 
-function [in, out, shaft] = HydraulicPump(disp, rho, eta_v, eta_m, domain$ = oil)
+function [in, out, shaft] = HydraulicPump(disp [m^3], rho [kg/m^3], eta_v, eta_m, domain$ = oil)
 port(in)
 port(out)
 port(shaft)

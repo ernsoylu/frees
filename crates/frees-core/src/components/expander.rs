@@ -958,7 +958,7 @@ fn resolve<'d>(
         if p.is_string {
             string_params.push((p.name.clone(), string_token(&inst.name, &p.name, value)?));
         } else {
-            numeric_params.push((p.name.clone(), value.clone()));
+            numeric_params.push((p.name.clone(), typed(value, p.unit.as_deref())));
         }
     }
 
@@ -970,6 +970,33 @@ fn resolve<'d>(
         string_params,
         variant,
     })
+}
+
+/// A parameter value with its declared unit stamped on, when the value is a
+/// bare number (`R=2.2` under `Resistor(R [ohm])`), so the unit checker sees
+/// the body's `2.2` as ohms. An annotated, variable or computed value is left
+/// as written: its own units speak for it.
+///
+/// ponytail: `C=C_rotor` does not ground the document variable from the
+/// declaration; add a synthetic `C_rotor = 1 [J/K]` unit equation the way
+/// `check_units_full` grounds TABLE arguments if that is wanted.
+fn typed(value: &Expr, unit: Option<&str>) -> Expr {
+    match (value, unit) {
+        (
+            Expr::Num {
+                value,
+                unit: None,
+                is_imaginary,
+            },
+            Some(unit),
+        ) => Expr::Num {
+            value: *value,
+            unit: Some(unit.to_string()),
+            is_imaginary: *is_imaginary,
+        },
+        (Expr::Neg(inner), Some(_)) => Expr::Neg(Box::new(typed(inner, unit))),
+        _ => value.clone(),
+    }
 }
 
 /// Records, per stream, the member names its components reference in their

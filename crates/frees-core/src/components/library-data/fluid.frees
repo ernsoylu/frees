@@ -65,7 +65,7 @@ port(out)
   out.h    = in.h
 end
 
-function [in, out] = Pipe(fluid$, L, D, rough)
+function [in, out] = Pipe(fluid$, L [m], D [m], rough [m])
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -79,7 +79,7 @@ port(out)
   out.P    = in.P - f * (L / D) * rho * V * abs(V) / 2
 end
 
-function [in, out] = Fan(fluid$, dP0, Q0, eta)
+function [in, out] = Fan(fluid$, dP0 [Pa], Q0 [m^3/s], eta)
 port(in)
 port(out)
   rho      = Density(fluid$, P=in.P, h=in.h)
@@ -90,7 +90,7 @@ port(out)
   out.h    = in.h + dP / (rho * eta)
 end
 
-function [in, out] = Duct(rho, mu, L, D, rough)
+function [in, out] = Duct(rho [kg/m^3], mu [Pa-s], L [m], D [m], rough [m])
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -101,7 +101,7 @@ port(out)
   out.P    = in.P - f * (L / D) * rho * V * abs(V) / 2
 end
 
-function [in, out] = FanCurve(rho, dP0, Q0)
+function [in, out] = FanCurve(rho [kg/m^3], dP0 [Pa], Q0 [m^3/s])
 port(in)
 port(out)
   Q        = in.mdot / rho
@@ -112,7 +112,7 @@ end
 
 // Fan driven by a tabulated pressure-rise curve. `map$` names a TABLE/FUNCTION
 // declared in the document: dP = map$(Q), Q the volumetric flow [m^3/s].
-function [in, out] = FanMap(rho, map$)
+function [in, out] = FanMap(rho [kg/m^3], map$)
 port(in)
 port(out)
   Q        = in.mdot / rho
@@ -123,7 +123,7 @@ end
 
 // Pump driven by a tabulated head curve. `map$` names a TABLE/FUNCTION giving
 // head [m] vs volumetric flow [m^3/s]; the pressure rise is rho*g*head.
-function [in, out] = PumpMap(rho, map$)
+function [in, out] = PumpMap(rho [kg/m^3], map$)
 port(in)
 port(out)
   Q        = in.mdot / rho
@@ -171,7 +171,7 @@ port(out)
   out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
 end
 
-function [hot_in, hot_out, cold_in, cold_out] = HeatExchanger(UA, hot$, cold$, arr$)
+function [hot_in, hot_out, cold_in, cold_out] = HeatExchanger(UA [W/K], hot$, cold$, arr$)
 port(hot_in)
 port(hot_out)
 port(cold_in)
@@ -192,7 +192,7 @@ port(cold_out)
   cold_out.h = cold_in.h + Q / cold_in.mdot
 end
 
-function [out] = Source(fluid$, mdot, P, T)
+function [out] = Source(fluid$, mdot [kg/s], P [Pa], T [K])
 port(out)
   out.mdot = mdot
   out.P    = P
@@ -206,7 +206,7 @@ port(in)
   h    = in.h
 end
 
-function [in, out] = Nozzle(k, R, A_throat, A_exit, P_amb, T0)
+function [in, out] = Nozzle(k, R [J/kg-K], A_throat [m^2], A_exit [m^2], P_amb [Pa], T0 [K])
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -218,7 +218,7 @@ port(out)
   thrust   = in.mdot * V_exit + (out.P - P_amb) * A_exit
 end
 
-function [in, out] = Accumulator(C, P0)
+function [in, out] = Accumulator(C [kg/Pa], P0 [Pa])
 port(in)
 port(out)
   out.P       = in.P
@@ -230,7 +230,7 @@ end
 // Valve with an installed-characteristic ladder: fixed Cv (the original law) →
 // linear opening u·Cv → equal-percentage Cv·R^(u−1) (rangeability R), the two
 // standard trims.
-function [in, out] = Valve(Cv, rho, u, R, model$ = fixed)
+function [in, out] = Valve(Cv, rho [kg/m^3], u, R, model$ = fixed)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -247,7 +247,7 @@ port(out)
   END
 end
 
-function [hot_in, hot_out, cold_in, cold_out] = TwoZoneHX(UA, hot$, cold$, arr$)
+function [hot_in, hot_out, cold_in, cold_out] = TwoZoneHX(UA [W/K], hot$, cold$, arr$)
 port(hot_in)
 port(hot_out)
 port(cold_in)
@@ -262,7 +262,7 @@ port(cold_out)
   connect(C1.cold_out, cold_out)
 end
 
-function [t_in, t_out, c_in, c_out] = Turbocharger(cp, eta_t, eta_c, gam)
+function [t_in, t_out, c_in, c_out] = Turbocharger(cp [J/kg-K], eta_t, eta_c, gam)
 port(t_in)
 port(t_out)
 port(c_in)
@@ -278,7 +278,7 @@ port(c_out)
   Wt         = Wc
 end
 
-function [in, out] = ExpansionValve(CdA, rho_in)
+function [in, out] = ExpansionValve(CdA [m^2], rho_in [kg/m^3])
 port(in)
 port(out)
   out.mdot = in.mdot

@@ -1,12 +1,12 @@
 // frees-language: 2
-function [p, n] = VoltageSource(E)
+function [p, n] = VoltageSource(E [V])
 port(p)
 port(n)
   p.V - n.V = E
   p.I + n.I = 0
 end
 
-function [a, b] = Resistor(R)
+function [a, b] = Resistor(R [ohm])
 port(a)
 port(b)
   a.V - b.V = R * a.I
@@ -18,7 +18,7 @@ port(port)
   port.V = 0
 end
 
-function [p, n] = Battery(Voc, R0)
+function [p, n] = Battery(Voc [V], R0 [ohm])
 port(p)
 port(n)
   p.V - n.V = Voc + R0 * p.I
@@ -26,7 +26,7 @@ port(n)
   W = (p.V - n.V) * (0 - p.I)
 end
 
-function [p, n, heat] = HeatingResistor(R)
+function [p, n, heat] = HeatingResistor(R [ohm])
 port(p)
 port(n)
 port(heat)
@@ -36,7 +36,7 @@ port(heat)
   heat.Qdot = -Q
 end
 
-function [p, n, heat] = BatteryThermal(Voc, R0)
+function [p, n, heat] = BatteryThermal(Voc [V], R0 [ohm])
 port(p)
 port(n)
 port(heat)
@@ -47,7 +47,7 @@ port(heat)
   W         = (p.V - n.V) * (0 - p.I)
 end
 
-function [p, n] = Capacitor(C, V0)
+function [p, n] = Capacitor(C [farad], V0 [V])
 port(p)
 port(n)
   Vc       = p.V - n.V
@@ -56,7 +56,7 @@ port(n)
   p.I + n.I = 0
 end
 
-function [p, n] = Inductor(L, I0)
+function [p, n] = Inductor(L [henry], I0 [A])
 port(p)
 port(n)
   der(IL)  = (p.V - n.V) / L
@@ -65,7 +65,7 @@ port(n)
   p.I + n.I = 0
 end
 
-function [p, n, heat] = BatteryTransient(Voc, R0, Q0, C_th, SOC0, T0)
+function [p, n, heat] = BatteryTransient(Voc [V], R0 [ohm], Q0 [-], C_th [J/K], SOC0, T0 [K])
 port(p)
 port(n)
 port(heat)
@@ -79,7 +79,7 @@ port(heat)
   init(SOC) = SOC0
 end
 
-function [p, n, shaft] = DCMotor(Kt, Ke, R)
+function [p, n, shaft] = DCMotor(Kt [N-m/A], Ke [V-s/rad], R [ohm])
 port(p)
 port(n)
 port(shaft)
@@ -88,7 +88,7 @@ port(shaft)
   shaft.tau  = -Kt * p.I
 end
 
-function [p, n] = BatteryRC(Voc, R0, R1, C1, Vrc0)
+function [p, n] = BatteryRC(Voc [V], R0 [ohm], R1 [ohm], C1 [farad], Vrc0 [V])
 port(p)
 port(n)
   p.V - n.V = Voc + R0 * p.I - Vrc
@@ -97,7 +97,7 @@ port(n)
   p.I + n.I = 0
 end
 
-function [p, n] = Diode(Gon, eps)
+function [p, n] = Diode(Gon [siemens], eps)
 port(p)
 port(n)
   vd  = p.V - n.V
@@ -105,7 +105,7 @@ port(n)
   p.I + n.I = 0
 end
 
-function [p, n, shaft] = PMSM(Rs, lambda_pm, poles)
+function [p, n, shaft] = PMSM(Rs [ohm], lambda_pm [Wb], poles)
 port(p)
 port(n)
 port(shaft)
@@ -115,14 +115,14 @@ port(shaft)
   shaft.tau = -Kt * p.I
 end
 
-function [p, n] = CurrentSource(I)
+function [p, n] = CurrentSource(I [A])
 port(p)
 port(n)
   p.I = -I
   p.I + n.I = 0
 end
 
-function [p, n] = Battery2RC(Voc, R0, R1, C1, R2, C2, Vrc1_0, Vrc2_0)
+function [p, n] = Battery2RC(Voc [V], R0 [ohm], R1 [ohm], C1 [farad], R2 [ohm], C2 [farad], Vrc1_0 [V], Vrc2_0 [V])
 port(p)
 port(n)
   p.V - n.V  = Voc + R0 * p.I - Vrc1 - Vrc2
@@ -133,7 +133,7 @@ port(n)
   p.I + n.I  = 0
 end
 
-function [p, n, heat] = FuelCellStack(ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T)
+function [p, n, heat] = FuelCellStack(ncells, area [m^2], i0 [A/m^2], ilim [A/m^2], Rohm [ohm-m^2], E0 [V], alpha, Eth [V], T [K])
 port(p)
 port(n)
 port(heat)

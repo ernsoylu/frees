@@ -53,6 +53,10 @@ pub struct Param {
     pub default_value: Option<Expr>,
     /// `name.ends_with('$')`, stored because `ComponentExpander` branches on it.
     pub is_string: bool,
+    /// The declared unit (`Resistor(R [ohm])`) as its SI display name, `None`
+    /// when the header carried none. It types a bare value for the unit checker
+    /// and never scales it: a bare number is SI, as everywhere in frees.
+    pub unit: Option<String>,
 }
 
 impl Param {
@@ -64,6 +68,7 @@ impl Param {
             is_string: name.ends_with('$'),
             name,
             default_value,
+            unit: None,
         }
     }
 }

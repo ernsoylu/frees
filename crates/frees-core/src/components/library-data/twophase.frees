@@ -5,7 +5,7 @@
 // and subcooling are DERIVED LOCALLY from (P, h) via CoolProp inside each
 // component (x = (h - hf(P)) / (hg(P) - hf(P))), never transported (todo.md §2.2).
 
-function [out] = TwoPhaseSource(fluid$, mdot, P, x, domain$ = twophase)
+function [out] = TwoPhaseSource(fluid$, mdot [kg/s], P [Pa], x, domain$ = twophase)
 port(out)
   out.mdot = mdot
   out.P    = P
@@ -21,7 +21,7 @@ end
 
 // General (P, h) boundary — sets any state (subcooled / two-phase / superheated)
 // directly, the most general two-phase inlet.
-function [out] = TwoPhaseSourcePH(mdot, P, h, domain$ = twophase)
+function [out] = TwoPhaseSourcePH(mdot [kg/s], P [Pa], h [J/kg], domain$ = twophase)
 port(out)
   out.mdot = mdot
   out.P    = P
@@ -51,7 +51,7 @@ end
 // Resistive two-phase line (R element): Friedel frictional drop on the
 // liquid-only ΔP. Adiabatic (h conserved); because T = Tsat(P) inside the dome,
 // the pressure drop GLIDES the saturation temperature downstream.
-function [in, out] = TwoPhaseFlowRes(fluid$, L, D, domain$ = twophase)
+function [in, out] = TwoPhaseFlowRes(fluid$, L [m], D [m], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -89,7 +89,7 @@ end
 
 // Two-phase inlet → superheated vapor outlet. Zones: two-phase (Tsat, U_tp) +
 // superheat (gliding vapor, U_sh). wall.T is the hot-side (secondary) temperature.
-function [in, out, wall] = MovingBoundaryEvaporator(fluid$, U_tp, U_sh, D, L, eps_zone, domain$ = twophase)
+function [in, out, wall] = MovingBoundaryEvaporator(fluid$, U_tp [W/m^2-K], U_sh [W/m^2-K], D [m], L [m], eps_zone [m], domain$ = twophase)
 port(in)
 port(out)
 port(wall)
@@ -118,7 +118,7 @@ end
 
 // Vapor inlet → subcooled liquid outlet. Zones: condensing (Tsat, U_cond) +
 // subcool (gliding liquid, U_sc). wall.T is the cold-side (secondary) temperature.
-function [in, out, wall] = MovingBoundaryCondenser(fluid$, U_cond, U_sc, D, L, eps_zone, domain$ = twophase)
+function [in, out, wall] = MovingBoundaryCondenser(fluid$, U_cond [W/m^2-K], U_sc [W/m^2-K], D [m], L [m], eps_zone [m], domain$ = twophase)
 port(in)
 port(out)
 port(wall)
@@ -149,7 +149,7 @@ end
 // distributed model; storage der()/init() route into a DYNAMIC block and
 // integrate on the S1 SUNDIALS-IDA path (method = ida). The never-C-C rule keeps
 // the DAE index-1.
-function [in, out] = TwoPhaseVolume(fluid$, V, C, P0, domain$ = twophase)
+function [in, out] = TwoPhaseVolume(fluid$, V [m^3], C [kg/Pa], P0 [Pa], domain$ = twophase)
 port(in)
 port(out)
   out.P       = in.P
@@ -178,7 +178,7 @@ end
 // heat into the refrigerant (so the SAME component is an evaporator when the wall
 // is warmer and a condenser when cooler). Alternate with a resistive flow element
 // (never C-C); storage der()/init() route into a DYNAMIC block (method = ida).
-function [in, out, wall] = TwoPhaseChamber(fluid$, V, C, UA, P0, h0, domain$ = twophase)
+function [in, out, wall] = TwoPhaseChamber(fluid$, V [m^3], C [kg/Pa], UA [W/K], P0 [Pa], h0 [J/kg], domain$ = twophase)
 port(in)
 port(out)
 port(wall)
@@ -198,14 +198,14 @@ end
 // Pressure reservoir: fixes pressure (and inlet enthalpy via quality), mass flow
 // FREE — the boundary a C-R-C network needs (a fixed-ṁ source would clash with a
 // volume's pressure state).
-function [out] = TwoPhasePressureSource(fluid$, P, x, domain$ = twophase)
+function [out] = TwoPhasePressureSource(fluid$, P [Pa], x, domain$ = twophase)
 port(out)
   out.P = P
   out.h = Enthalpy(fluid$, P=P, x=x)
 end
 
 // Fixed-pressure outlet reservoir (mass flow / enthalpy free).
-function [in] = TwoPhasePressureSink(P, domain$ = twophase)
+function [in] = TwoPhasePressureSink(P [Pa], domain$ = twophase)
 port(in)
   in.P = P
 end
@@ -225,7 +225,7 @@ end
 
 // A boundary that fixes mass flow and specific enthalpy but leaves the pressure
 // FREE — so a downstream charge/UA balance can set the high-side pressure.
-function [out] = TwoPhaseEnthalpySource(mdot, h, domain$ = twophase)
+function [out] = TwoPhaseEnthalpySource(mdot [kg/s], h [J/kg], domain$ = twophase)
 port(out)
   out.mdot = mdot
   out.h    = h
@@ -233,7 +233,7 @@ end
 
 // Pass-through charge-accounting volume: reports the stored refrigerant mass m
 // using the void-weighted density. Sprinkle through a circuit to inventory it.
-function [in, out] = TwoPhaseInventory(fluid$, V, domain$ = twophase)
+function [in, out] = TwoPhaseInventory(fluid$, V [m^3], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -253,7 +253,7 @@ end
 // SATURATED LIQUID downstream, and buffers charge in its liquid level LL (a
 // solved DOF set by the charge balance). Within 0<LL<1 the cycle is insensitive
 // to charge — the receiver absorbs it.
-function [in, out] = TwoPhaseReceiver(fluid$, V, domain$ = twophase)
+function [in, out] = TwoPhaseReceiver(fluid$, V [m^3], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -268,7 +268,7 @@ end
 // (= in.P) is FREE and is set by the charge balance (the high-side tear). More
 // charge ⇒ more mass at fixed volume ⇒ higher density ⇒ higher condensing
 // pressure and more subcooling. Q = UA·(T_cond − T_amb) = ṁ·(h_in − h_out).
-function [in, out] = TwoPhaseCondenserUA(fluid$, UA, T_amb, V, domain$ = twophase)
+function [in, out] = TwoPhaseCondenserUA(fluid$, UA [W/K], T_amb [K], V [m^3], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -286,7 +286,7 @@ end
 // the condensing pressure (= in.P) floats so the exit is exactly saturated
 // liquid (x=0), with Q = UA·(T_cond − T_amb) = ṁ·(h_in − h_out). Use
 // TwoPhaseCondenserUA instead when the high side is closed by a charge inventory.
-function [in, out] = TwoPhaseCondenserFloat(fluid$, UA, T_amb, domain$ = twophase)
+function [in, out] = TwoPhaseCondenserFloat(fluid$, UA [W/K], T_amb [K], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -336,7 +336,7 @@ end
 
 // Unified Boiler ≡ Evaporator: two-phase/liquid inlet boils to a superheated
 // vapor outlet at a set exit superheat. Non-isobaric. Heat duty Q is an output.
-function [in, out] = TwoPhaseEvaporator(fluid$, SH_set, dP, domain$ = twophase)
+function [in, out] = TwoPhaseEvaporator(fluid$, SH_set [K], dP [Pa], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -350,7 +350,7 @@ end
 // thermal `wall` port and sizes its own flow to leave at a set superheat SH.
 // `frac` is a free capacity-command input — set inst.frac externally (1 for full
 // load, or a time ramp for a pull-down). Non-isobaric (out.P = in.P − dP).
-function [in, out, wall] = TwoPhaseEvaporatorUA(fluid$, UA, dP, SH, domain$ = twophase)
+function [in, out, wall] = TwoPhaseEvaporatorUA(fluid$, UA [W/K], dP [Pa], SH [K], domain$ = twophase)
 port(in)
 port(out)
 port(wall)
@@ -379,7 +379,7 @@ end
 
 // Condenser: superheated vapor inlet rejects heat to a subcooled-liquid outlet
 // at a set exit subcooling. Non-isobaric. Heat duty Q is an output.
-function [in, out] = TwoPhaseCondenser(fluid$, SC_set, dP, domain$ = twophase)
+function [in, out] = TwoPhaseCondenser(fluid$, SC_set [K], dP [Pa], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -401,7 +401,7 @@ port(out)
   in.mdot * abs(in.mdot) = Cv^2 * 2 * rho_in * (in.P - out.P)
 end
 
-function [in, out] = TwoPhasePipe(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g)
+function [in, out] = TwoPhasePipe(fluid$, L [m], D [m], rough [m], x, rho_l [kg/m^3], rho_g [kg/m^3], mu_l [Pa-s], mu_g [Pa-s])
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -416,7 +416,7 @@ port(out)
   out.P    = in.P - phi2 * dP_l
 end
 
-function [in, out, bulb] = TXVSuperheat(fluid$, Kv, SH_set, domain$ = twophase)
+function [in, out, bulb] = TXVSuperheat(fluid$, Kv [kg/s-K], SH_set [K], domain$ = twophase)
 port(in)
 port(out)
 port(bulb)
@@ -428,7 +428,7 @@ port(bulb)
   in.mdot   = Kv * (SH - SH_set)
 end
 
-function [hot_in, hot_out, cold_in, cold_out] = ThreeZoneHX(UA, hot$, cold$, arr$)
+function [hot_in, hot_out, cold_in, cold_out] = ThreeZoneHX(UA [W/K], hot$, cold$, arr$)
 port(hot_in)
 port(hot_out)
 port(cold_in)
@@ -457,7 +457,7 @@ end
 
 // Blend boundary: sets (P, x) state and the composition rider z, and reports the
 // temperature glide (dew − bubble) of the charged blend.
-function [out] = BlendSource(fluid$, mdot, P, x, z, domain$ = twophase)
+function [out] = BlendSource(fluid$, mdot [kg/s], P [Pa], x, z [-], domain$ = twophase)
 port(out)
   out.mdot = mdot
   out.P    = P
@@ -514,7 +514,7 @@ end
 // structural switch (the standard two-phase-vessel formulation):
 //   dm/dt = -mdot_vent ,  dU/dt = Q - mdot_vent * h_g ,  rho = m/V , u = U/m.
 // Initial charge is given as mass m0 at temperature T0 (saturated-liquid u).
-function [vent, wall] = BoilingVessel(fluid$, V, m0, T0, domain$ = twophase)
+function [vent, wall] = BoilingVessel(fluid$, V [m^3], m0 [kg], T0 [K], domain$ = twophase)
 port(vent)
 port(wall)
   der(mass)  = -vent.mdot
@@ -536,7 +536,7 @@ end
 // efact=1-ratio^2 (a finite-derivative simplification of the classic quarter-ellipse
 // law — sqrt(1-ratio^2) has an infinite slope at ratio=1 that breaks the stiff
 // solver's Jacobian). k≈1.14, R=461.5 J/kg-K for saturated steam.
-function [in, out] = SteamReliefValve(fluid$, A, Pset, Cd, kgas, Rgas, eps, domain$ = twophase)
+function [in, out] = SteamReliefValve(fluid$, A [m^2], Pset [Pa], Cd, kgas, Rgas [J/kg-K], eps, domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -557,7 +557,7 @@ end
 // overpressure; it therefore HOLDS the setpoint instead of choking at a fixed
 // orifice area. Use this (not SteamReliefValve) when the valve must regulate to
 // a setpoint. The max(0, .) is smoothed by eps [Pa] for the stiff solver.
-function [in, out] = ProportionalReliefValve(fluid$, Pcrack, grad, eps, domain$ = twophase)
+function [in, out] = ProportionalReliefValve(fluid$, Pcrack [Pa], grad, eps, domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot

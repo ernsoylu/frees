@@ -1,19 +1,19 @@
 // frees-language: 2
-function [a, b] = TorqueSource(T)
+function [a, b] = TorqueSource(T [N-m])
 port(a)
 port(b)
   a.tau = -T
   a.tau + b.tau = 0
 end
 
-function [a, b] = SpeedSource(w)
+function [a, b] = SpeedSource(w [rad/s])
 port(a)
 port(b)
   a.w - b.w = w
   a.tau + b.tau = 0
 end
 
-function [a, b] = RotationalDamper(c)
+function [a, b] = RotationalDamper(c [N-m-s])
 port(a)
 port(b)
   a.tau = c * (a.w - b.w)
@@ -32,13 +32,13 @@ port(out)
   out.tau = -ratio * in.tau
 end
 
-function [port] = Inertia(J, w0)
+function [port] = Inertia(J [kg-m^2], w0 [rad/s])
 port(port)
   der(port.w)  = port.tau / J
   init(port.w) = w0
 end
 
-function [a, b] = Friction(Fc, Fs, vs, bv, eps)
+function [a, b] = Friction(Fc [N-m], Fs [N-m], vs [rad/s], bv [N-m-s], eps)
 port(a)
 port(b)
   dw    = a.w - b.w
@@ -46,7 +46,7 @@ port(b)
   a.tau + b.tau = 0
 end
 
-function [sun, ring, carrier] = Planetary(g)
+function [sun, ring, carrier] = Planetary(g [-])
 port(sun)
 port(ring)
 port(carrier)
@@ -55,7 +55,7 @@ port(carrier)
   sun.tau + ring.tau + carrier.tau = 0
 end
 
-function [a, b] = Clutch(Tmax, eng, eps)
+function [a, b] = Clutch(Tmax [N-m], eng, eps)
 port(a)
 port(b)
   dw    = a.w - b.w
@@ -63,7 +63,7 @@ port(b)
   a.tau + b.tau = 0
 end
 
-function [a, b] = RotationalSpring(k, theta0)
+function [a, b] = RotationalSpring(k [N-m], theta0 [rad])
 port(a)
 port(b)
   der(theta)  = a.w - b.w
@@ -72,14 +72,14 @@ port(b)
   a.tau + b.tau = 0
 end
 
-function [a, b] = ForceSource(F)
+function [a, b] = ForceSource(F [N])
 port(a)
 port(b)
   a.f = -F
   a.f + b.f = 0
 end
 
-function [a, b] = TransDamper(c)
+function [a, b] = TransDamper(c [kg/s])
 port(a)
 port(b)
   a.f = c * (a.vel - b.vel)
@@ -91,7 +91,7 @@ port(port)
   port.vel = 0
 end
 
-function [port] = TransMass(m, v0)
+function [port] = TransMass(m [kg], v0 [m/s])
 port(port)
   der(port.vel)  = port.f / m
   init(port.vel) = v0

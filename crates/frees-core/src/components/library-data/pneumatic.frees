@@ -1,5 +1,5 @@
 // frees-language: 2
-function [out] = GasSource(y, mdot, P, h0)
+function [out] = GasSource(y, mdot [kg/s], P [Pa], h0 [J/kg])
 port(out)
   out.y    = y
   out.mdot = mdot
@@ -26,18 +26,18 @@ port(out)
   out.mdot * out.y = in1.mdot * in1.y + in2.mdot * in2.y
 end
 
-function [out] = PneumaticSupply(fluid$, P, T, domain$ = gas)
+function [out] = PneumaticSupply(fluid$, P [Pa], T [K], domain$ = gas)
 port(out)
   out.P = P
   out.h = Enthalpy(fluid$, P=P, T=T)
 end
 
-function [port] = PneumaticAtmosphere(P, domain$ = gas)
+function [port] = PneumaticAtmosphere(P [Pa], domain$ = gas)
 port(port)
   port.P = P
 end
 
-function [in, out] = PneumaticOrifice(fluid$, C, b, domain$ = gas)
+function [in, out] = PneumaticOrifice(fluid$, C [m^3/s-Pa], b, domain$ = gas)
 port(in)
 port(out)
   out.h    = in.h
@@ -46,7 +46,7 @@ port(out)
   out.mdot = in.mdot
 end
 
-function [in, out] = PneumaticServoValve(fluid$, Cmax, b, u, domain$ = gas)
+function [in, out] = PneumaticServoValve(fluid$, Cmax [m^3/s-Pa], b, u [-], domain$ = gas)
 port(in)
 port(out)
   out.h    = in.h
@@ -55,7 +55,7 @@ port(out)
   out.mdot = in.mdot
 end
 
-function [in, out] = PneumaticVolume(V, T, R, P0, domain$ = gas)
+function [in, out] = PneumaticVolume(V [m^3], T [K], R [J/kg-K], P0 [Pa], domain$ = gas)
 port(in)
 port(out)
   out.P      = in.P
@@ -64,7 +64,7 @@ port(out)
   init(in.P) = P0
 end
 
-function [in, rod] = PneumaticActuator(fluid$, area, Patm, domain$ = gas)
+function [in, rod] = PneumaticActuator(fluid$, area [m^2], Patm [Pa], domain$ = gas)
 port(in)
 port(rod)
   rho     = Density(fluid$, P=in.P, h=in.h)

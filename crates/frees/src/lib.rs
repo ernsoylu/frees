@@ -2163,19 +2163,15 @@ R_load = 20
     }
 
     #[test]
-    fn the_unit_warning_of_a_component_body_matches_the_reference_engine() {
-        // Grounding the port members lets the checker see V on the left and A on
-        // the right of `a.V - b.V = R * a.I` before R has a dimension, and it
-        // warns. The reference engine emits the same single warning for this
-        // document (probed directly against the core jar); unit problems are
-        // warnings by the parent invariant and never block a solve.
+    fn a_bare_resistance_is_ohms_so_the_component_body_is_unit_consistent() {
+        // `Resistor(R [ohm])` types R1's bare `R=10`, so `a.V - b.V = R * a.I`
+        // reads V on both sides. The reference engine, whose components carry
+        // no parameter units, warns "the right side [A]" here: R was untyped,
+        // so the right side was the bare current. That warning was a false
+        // positive and this engine deliberately no longer emits it.
         let v = parsed(&solve(RESISTOR_NETWORK, "{}"));
         assert_eq!(v["success"], true, "{v}");
-        let warnings = v["unitWarnings"].as_array().unwrap();
-        assert_eq!(warnings.len(), 1, "{v}");
-        let text = warnings[0].as_str().unwrap();
-        assert!(text.contains("COMPONENT resistor r1"), "{text}");
-        assert!(text.contains("do not match the right side [A]"), "{text}");
+        assert_eq!(v["unitWarnings"], serde_json::json!([]), "{v}");
     }
 
     // ── SolveResponse.cyclePath — the property-plot overlay ────────────────
