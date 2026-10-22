@@ -175,7 +175,7 @@ pub fn check_units_full(
         let lhs = checker.dim_of(&eq.lhs);
         let rhs = checker.dim_of(&eq.rhs);
         if lhs.known && rhs.known && !lhs.quantity.same_dimensions_as(&rhs.quantity) {
-            checker.warnings.push(format!(
+            checker.warn(format!(
                 "{}: the units of the left side [{}] do not match the right side [{}].",
                 eq.source_text,
                 lhs.quantity.dimension_string(),
@@ -377,8 +377,9 @@ struct Checker {
 }
 
 impl Checker {
-    fn warn(&mut self, message: String) {
+    fn warn(&mut self, mut message: String) {
         if self.collect_warnings {
+            message.push_str(&case_hint(&self.current_equation));
             self.warnings.push(message);
         }
     }
@@ -976,6 +977,24 @@ impl Checker {
     }
 }
 
+/// Unit names are case-insensitive, so `[F]`, `[C]` and `[S]` are °F, °C and
+/// seconds — never farad, coulomb or siemens. When an equation written with one
+/// of them already warns, say so; a clean °C equation is never nagged.
+fn case_hint(equation: &str) -> String {
+    [
+        ("[F]", "[F] is degrees Fahrenheit; for farads write [farad]"),
+        (
+            "[C]",
+            "[C] is degrees Celsius; for coulombs write [coulomb]",
+        ),
+        ("[S]", "[S] is seconds; for siemens write [siemens]"),
+    ]
+    .iter()
+    .filter(|(literal, _)| equation.contains(literal))
+    .map(|(_, hint)| format!(" Note: {hint}."))
+    .collect()
+}
+
 /// `dims` divided by seconds — the units of a time derivative.
 fn per_second(mut dims: Dims) -> Dims {
     dims[2] -= 1.0;
@@ -1263,6 +1282,28 @@ mod tests {
         assert_eq!(report.warnings.len(), 1, "{:?}", report.warnings);
         assert!(
             report.warnings[0].contains("der(x) = F"),
+            "{:?}",
+            report.warnings
+        );
+    }
+
+    #[test]
+    fn a_warning_on_a_bare_f_c_or_s_names_the_unit_it_was_read_as() {
+        // `1e-6 [F]` meant farads; frees reads °F, so the charge equation
+        // warns, and the warning says why.
+        let report = check_units(&eqs("q = 1e-6 [F] * 12 [V]"), &units(&[("q", "coulomb")]));
+        assert_eq!(report.warnings.len(), 1, "{:?}", report.warnings);
+        assert!(
+            report.warnings[0]
+                .ends_with("Note: [F] is degrees Fahrenheit; for farads write [farad]."),
+            "{:?}",
+            report.warnings
+        );
+        // Lowercase `[s]` is seconds on purpose and gets no note.
+        let report = check_units(&eqs("q = 3 [s]"), &units(&[("q", "m")]));
+        assert_eq!(report.warnings.len(), 1, "{:?}", report.warnings);
+        assert!(
+            !report.warnings[0].contains("Note:"),
             "{:?}",
             report.warnings
         );

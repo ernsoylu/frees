@@ -56,6 +56,7 @@ const MASS: Dims = dims_from(&[1.0]);
 const LENGTH: Dims = dims_from(&[0.0, 1.0]);
 const AREA: Dims = dims_from(&[0.0, 2.0]);
 const VOLUME: Dims = dims_from(&[0.0, 3.0]);
+const VOLUME_FLOW: Dims = dims_from(&[0.0, 3.0, -1.0]);
 const TIME: Dims = dims_from(&[0.0, 0.0, 1.0]);
 const TEMPERATURE: Dims = dims_from(&[0.0, 0.0, 0.0, 1.0]);
 const AMOUNT: Dims = dims_from(&[0.0, 0.0, 0.0, 0.0, 1.0]);
@@ -197,6 +198,10 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("liter", 1e-3, VOLUME),
     ("ml", 1e-6, VOLUME),
     ("gal", 0.003785411784, VOLUME),
+    // ---- Volume flow: US HVAC airflow and pump ratings ----------------------
+    // cfm = ft^3/min = 0.3048^3 / 60; gpm = US gal/min = 0.003785411784 / 60.
+    ("cfm", 0.028316846592 / 60.0, VOLUME_FLOW),
+    ("gpm", 0.003785411784 / 60.0, VOLUME_FLOW),
     // ---- Frequency: Hz = s⁻¹ ----------------------------------------------
     ("hz", 1.0, FREQUENCY),
     ("hertz", 1.0, FREQUENCY),
@@ -945,6 +950,10 @@ mod tests {
         assert_eq!(factor("yd"), 0.9144);
         assert_eq!(factor("mile"), 1609.344);
         assert_eq!(factor("gal"), 0.003785411784);
+        assert_close(factor("cfm"), factor("ft^3/min"));
+        assert_close(factor("gpm"), factor("gal/min"));
+        assert_dims("cfm", VOLUME_FLOW);
+        assert_dims("gpm", VOLUME_FLOW);
         assert_eq!(factor("lbf"), 4.4482216152605);
         assert_dims("lbf", FORCE);
         assert_eq!(factor("psi"), 6894.757293168);
