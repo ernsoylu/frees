@@ -10,9 +10,10 @@ use crate::engine::{
     complete_display_names, declared_function_units, declared_units, dense_export, dense_plan,
     initial_guess, merge_advisory_warnings, override_uncertainties, pinned_block_cache,
     relaxed_ode_settings, residuals_at, run_blocks, seed_property_argument_guesses,
-    solve_dynamic_systems, solve_equation_list, surfaced_count, unknowns, variable_specs,
-    BlockLoopFailure, DensePlan, DenseRun, Missing, PartialDiagnostics, PinnedBlockCache, Solution,
-    SolveFailure, SolveStats, VarSpec, VariableOverride,
+    solve_dynamic_systems, solve_equation_list, surfaced_count, unconverged_equation, unknowns,
+    variable_specs, BlockLoopFailure, DensePlan, DenseRun, Missing, PartialDiagnostics,
+    PinnedBlockCache, Solution, SolveFailure, SolveStats, VarSpec, VariableOverride,
+    RESIDUAL_GUARD,
 };
 use crate::eval::{EvalContext, Scope};
 use crate::ode::accessors::OdeTableAccessors;
@@ -617,6 +618,35 @@ impl PreparedDocument {
             // must read the cached DYNAMIC table, or its residual reports the value.
             residuals_at(&prep.subsystem, &prep.report.blocks, &scope_mut, ctx);
         let block_equations = block_equation_texts(&prep.report.blocks, &prep.subsystem);
+
+        let limit = RESIDUAL_GUARD.max(100.0 * solve_settings.rel_tolerance);
+        if let Some((index, relative)) =
+            unconverged_equation(&prep.subsystem, &residuals, &scope_mut, ctx, limit)
+        {
+            let r = &residuals[index];
+            return Err(SolveFailure {
+                error: FreesError::solver(format!(
+                    "Block {} reported convergence, but this equation is not satisfied at the \
+                     returned values: residual {:e} ({relative:e} of its terms, limit {limit:e})\n  {}",
+                    r.block + 1,
+                    r.residual,
+                    r.equation
+                )),
+                failed_block_index: Some(r.block),
+                partial: Some(Box::new(PartialDiagnostics {
+                    blocks: prep.report.blocks.clone(),
+                    block_equations,
+                    display_names: prep.display_names.clone(),
+                    unknown_count: surfaced_count(prep.specs.keys().map(String::as_str)),
+                    residuals,
+                    stats: SolveStats {
+                        iterations,
+                        max_residual,
+                        elapsed_ms: None,
+                    },
+                })),
+            });
+        }
 
         let mut inferred_units = prep.unit_report.inferred.clone();
         inferred_units.extend(prep.declared_units.clone());
