@@ -30,9 +30,19 @@ history keeps the detailed narrative of every closed item.
     - **Multi-domain component audit:** 20 coupled models, `tests/multidomain_fixes.rs`.
     - **`LiquidWallHX`:** exact isothermal-wall effectiveness law.
     - **Unit-consistent examples:** 955 documents at zero unit warnings, enforced in CI.
-    - **Final-residual guard:** see the paragraph below.
+    - **Final-residual guard:** see the first paragraph below.
+    - **DYNAMIC unit check and SigPID anti-windup law:** see the second paragraph below.
 
     **Final-residual guard.** A solve whose assembled solution leaves any equation's residual above `max(1e-6, 100·rel_tolerance)`, relative to that equation's own top-level terms, now fails with the equation quoted instead of reporting `ok` (`engine::unconverged_equation`, applied in `PreparedDocument::assemble_solution` for solve, sweep rows and all-roots). This is the path by which the merge rescue once returned a 1.2e4 residual as success. Across the 843 converged corpus solves the worst relative residual is 1.3e-7, so no golden changes.
+
+    **DYNAMIC unit check (2026-10-22).** `DYNAMIC` bodies and their scalar initial conditions now reach the unit checker in `check`, the prepared solve and the ODE-only shortcut, through one helper (`engine::unit_check`).
+    - `der(X)` carries X's units per second when X has real units. For a dimensionless state, whose model is unitless, it stays a wildcard.
+    - A bare-number initial value (`x(0) = 0`) declares nothing.
+    - The time variable is a wildcard.
+    - `If(...)` now carries its branch units instead of reading as dimensionless.
+    - Method-of-lines `FOR` blocks and array-state initials are not checked yet.
+
+    The check exposed one library defect. SigPID's clamped anti-windup was `der(ie) = e + (out.sig - u_raw)/Taw`, which balances only with Taw in output-per-measurement units. It is now `/(Ki·Taw)`, so Taw is a reset time in seconds (owner decision 2026-10-22). Every affected example states `Taw = old/Ki`, so results are unchanged. `ev-battery-cooling-pid`'s input changed with provenance, and its expected output did not. It also exposed bare component parameters in 2 Help examples, 4 reference pages and 2 gallery models, which now carry units.
 
 ---
 
@@ -46,19 +56,14 @@ Cards, answer key, thresholds and the pinned build are in [`R15_PILOT.md`](R15_P
 
 Rechecked on `8366ca7`, 2026-10-22. Order is the recommended execution order.
 
-1. **`DYNAMIC` bodies are never unit-checked**, in DYNAMIC-only *and* mixed documents: `der(x) = -k*x + 5 [kg]` with `k [1/s]`, `x0 [m]` warns nowhere. The cause is that `check_units_full` receives only the algebraic equations, and `der(·)` has no dimension. **Plan:**
-   - In `checker::dim_of_call`, `der(X)` gets X's units divided by seconds.
-   - Feed the body equations, and initials as `X = expr`, to the unit check only (not the blocker), through one helper shared by `check` (`engine.rs`, the DYNAMIC-only early return) and the prepared solve.
-   - Method-of-lines `FOR` blocks are left for later.
-   - Expect a `check-examples` fallout pass on transient examples.
-2. **Component parameter units are parsed, then dropped.** `component_function_params` reads `Resistor(R [ohm])`; `toplevel.rs` discards the unit because `components::def::Param` has no field for it. A bare `R=2.2` is therefore checked as dimensionless. **Plan:**
+1. **Component parameter units are parsed, then dropped.** `component_function_params` reads `Resistor(R [ohm])`; `toplevel.rs` discards the unit because `components::def::Param` has no field for it. A bare `R=2.2` is therefore checked as dimensionless. **Plan:**
    - Add the unit to `Param`.
    - Have the expander emit `inst$param` into `member_units`.
    - Annotate `library-data/*.frees` with the units the audit derived.
    - That source then supplies the unit column of the 162 parameter tables that lack one. Their *meaning* text stays documentation work.
-3. **`F`, `S`, `C` are °F, seconds and °C, never farad/siemens/coulomb.** Units are case-insensitive except `CASE_SENSITIVE_UNITS` (`h`/`H`), and remapping `F` would break °F users. **Plan:** append "`[F]` is °F; write `[farad]`" (likewise `[C]`, `[S]`) only to unit warnings that already fire on such a literal.
-4. **`cfm` and `gpm` are not registered.** Add them to `units/registry.rs`.
-5. **Stale tutorial fixtures.** `fixtures/corpus/docs_tutorials_10/13` freeze the old `[F]` tutorial text. Regenerate them from the current pages, stating that provenance.
+2. **`F`, `S`, `C` are °F, seconds and °C, never farad/siemens/coulomb.** Units are case-insensitive except `CASE_SENSITIVE_UNITS` (`h`/`H`), and remapping `F` would break °F users. **Plan:** append "`[F]` is °F; write `[farad]`" (likewise `[C]`, `[S]`) only to unit warnings that already fire on such a literal.
+3. **`cfm` and `gpm` are not registered.** Add them to `units/registry.rs`.
+4. **Stale tutorial fixtures.** `fixtures/corpus/docs_tutorials_10/13` freeze the old `[F]` tutorial text. Regenerate them from the current pages, stating that provenance.
 
 ### Table and plot checklists — per-item audit
 

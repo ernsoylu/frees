@@ -7,13 +7,12 @@ use crate::ast::{Equation, Expr};
 use crate::diag::Diagnostic;
 use crate::engine::{
     block_equation_texts, block_system, builtin_constants, check_bounds, collect_unit_warnings,
-    complete_display_names, declared_function_units, declared_units, dense_export, dense_plan,
-    initial_guess, merge_advisory_warnings, override_uncertainties, pinned_block_cache,
-    relaxed_ode_settings, residuals_at, run_blocks, seed_property_argument_guesses,
-    solve_dynamic_systems, solve_equation_list, surfaced_count, unconverged_equation, unknowns,
-    variable_specs, BlockLoopFailure, DensePlan, DenseRun, Missing, PartialDiagnostics,
-    PinnedBlockCache, Solution, SolveFailure, SolveStats, VarSpec, VariableOverride,
-    RESIDUAL_GUARD,
+    complete_display_names, dense_export, dense_plan, initial_guess, merge_advisory_warnings,
+    override_uncertainties, pinned_block_cache, relaxed_ode_settings, residuals_at, run_blocks,
+    seed_property_argument_guesses, solve_dynamic_systems, solve_equation_list, surfaced_count,
+    unconverged_equation, unit_check, unknowns, variable_specs, BlockLoopFailure, DensePlan,
+    DenseRun, Missing, PartialDiagnostics, PinnedBlockCache, Solution, SolveFailure, SolveStats,
+    VarSpec, VariableOverride, RESIDUAL_GUARD,
 };
 use crate::eval::{EvalContext, Scope};
 use crate::ode::accessors::OdeTableAccessors;
@@ -292,17 +291,12 @@ impl PreparedDocument {
             }
             let display_names = complete_display_names(&names, &subsystem);
             let unit_equations = self.unaugmented.as_deref().unwrap_or(&subsystem);
-            let declared = declared_units(
+            let (declared, unit_report) = unit_check(
                 unit_equations,
+                &self.doc.dynamics,
                 &self.overrides,
                 &self.component_member_units,
-            );
-            let (function_units, function_input_units) = declared_function_units(&self.doc.defs);
-            let unit_report = crate::units::checker::check_units_full(
-                unit_equations,
-                &declared,
-                &function_units,
-                &function_input_units,
+                &self.doc.defs,
             );
 
             self.prep = Some(DocumentPrep {
@@ -382,6 +376,13 @@ impl PreparedDocument {
                 base_ctx,
                 None,
             )?;
+            let (_, unit_report) = unit_check(
+                &[],
+                &self.doc.dynamics,
+                &self.overrides,
+                &self.component_member_units,
+                &self.doc.defs,
+            );
             return Ok(Solution {
                 registered_calls: self.doc.registered_calls.clone(),
                 values: BTreeMap::new(),
@@ -397,8 +398,8 @@ impl PreparedDocument {
                     max_residual: 0.0,
                     elapsed_ms: None,
                 },
-                inferred_units: BTreeMap::new(),
-                unit_warnings: Vec::new(),
+                inferred_units: unit_report.inferred,
+                unit_warnings: merge_advisory_warnings(unit_report.warnings, &self.diagnostics),
                 diagnostics: self.diagnostics.clone(),
                 iterations: 0,
                 component_instances: self.component_instances.clone(),

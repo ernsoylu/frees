@@ -3552,12 +3552,12 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // BatteryCellMap (static variant): OCV(SOC) and dU/dT maps, Arrhenius R0,
 // a 2 A discharge for 10 s from SOC0 = 0.8, heat convected to 298 K ambient.
 // SOC and T are states, so the document is a short transient.
-TABLE ocv(soc)
+TABLE ocv(soc) [V]
   0     3.0
   0.5   3.6
   1     4.1
 END
-TABLE dudt(soc)
+TABLE dudt(soc) [V/K]
   0    -0.0001
   1     0.0001
 END
@@ -3662,12 +3662,12 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // BatteryCellMap (static variant): OCV(SOC) and dU/dT maps, Arrhenius R0,
 // a 2 A discharge for 10 s from SOC0 = 0.8, heat convected to 298 K ambient.
 // SOC and T are states, so the document is a short transient.
-TABLE ocv(soc)
+TABLE ocv(soc) [V]
   0     3.0
   0.5   3.6
   1     4.1
 END
-TABLE dudt(soc)
+TABLE dudt(soc) [V/K]
   0    -0.0001
   1     0.0001
 END
@@ -23068,13 +23068,13 @@ function [port] = VelSource(v)
 port(port)
   port.vel = v
 end
-TABLE gprof(s)
+TABLE gprof(s [m]) [rad]
   0    0
   30   0.05
   60   0.05
   100  0
 END
-VelSource    CRUISE(v=15)
+VelSource    CRUISE(v=15 [m/s])
 GradeProfile GP(m=1500 [kg], g=9.80665 [m/s^2], map$=gprof, s0=0 [m])
 connect(CRUISE.port, GP.port)
 DYNAMIC climb(method = ode45, time = 0 .. 4, points = 21)
@@ -23445,7 +23445,7 @@ function [port] = RoadShaker(amp, w)
 port(port)
   port.vel = amp * sin(w * time)
 end
-RoadShaker ROAD(amp=0.1, w=6.2832)
+RoadShaker ROAD(amp=0.1 [m/s], w=6.2832 [rad/s])
 QuarterCar QC(ms=300 [kg], mu=40 [kg], ks=20000 [N/m], cs=1500 [kg/s], kt=180000 [N/m])
 connect(ROAD.port, QC.road)
 DYNAMIC shake(method = ode23s, time = 0 .. 2, points = 21)
@@ -25388,7 +25388,7 @@ s3.sig = 7
     guides: [],
     body: `PID controller on the (sp − pv) error with an integrator state and a realizable filtered derivative (filter τ).
 
-The \`clamped\` variant saturates the output to [umin, umax] and back-calculates the integrator (anti-windup reset time Taw) so the integral unwinds while the output is pinned.
+The \`clamped\` variant saturates the output to [umin, umax] and back-calculates the integrator (anti-windup reset time Taw [s], scaled by Ki because \`ie\` integrates the error, not the integral term) so the integral unwinds while the output is pinned. It needs Ki ≠ 0.
 
 Reusable acausal **signal-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
@@ -25449,7 +25449,7 @@ $$
 $$
 \\begin{aligned}
 out.sig &= \\text{min}\\left(\\text{max}\\left(u_{raw}, umin\\right), umax\\right) \\\\
-\\text{der}\\left(ie\\right) &= e + \\frac{out.sig - u_{raw}}{taw}
+\\text{der}\\left(ie\\right) &= e + \\frac{out.sig - u_{raw}}{ki\\cdot taw}
 \\end{aligned}
 $$
 
