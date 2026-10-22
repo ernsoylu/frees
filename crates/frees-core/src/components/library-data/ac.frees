@@ -9,7 +9,7 @@
 
 // EV chiller: refrigerant evaporates against a liquid coolant loop (battery
 // chiller). ref_in/ref_out are twophase; cool_in/cool_out are liquid.
-function [ref_in, ref_out, cool_in, cool_out] = Chiller(ref$, cool$, U_tp, U_sh, D, L, eps_zone, UA_cool)
+function [ref_in, ref_out, cool_in, cool_out] = Chiller(ref$, cool$, U_tp [W/m^2-K], U_sh [W/m^2-K], D [m], L [m], eps_zone [m], UA_cool [W/K])
 port(ref_in)
 port(ref_out)
 port(cool_in)
@@ -26,7 +26,7 @@ end
 // Electronic expansion valve: a signal-controlled opening fraction u∈[0,1] scales
 // the orifice CdA. Isenthalpic, flashing-valid, odd-symmetric through zero — the
 // controllable counterpart of the passive TwoPhaseExpansionValve.
-function [in, out] = EXV(fluid$, CdA_max, u, domain$ = twophase)
+function [in, out] = EXV(fluid$, CdA_max [m^2], u [-], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -39,7 +39,7 @@ end
 // (dehumidification) duty. ref_in/ref_out are twophase; air_in/air_out are
 // moist air. Wet-coil moist-air half coupled to the refrigerant evaporator
 // through a shared wall node.
-function [ref_in, ref_out, air_in, air_out] = AirCoil(ref$, U_tp, U_sh, D, L, eps_zone, eps_air)
+function [ref_in, ref_out, air_in, air_out] = AirCoil(ref$, U_tp [W/m^2-K], U_sh [W/m^2-K], D [m], L [m], eps_zone [m], eps_air)
 port(ref_in)
 port(ref_out)
 port(air_in)
@@ -59,7 +59,7 @@ end
 // lag (the area relaxes toward the quasi-static target through tau_valve). A
 // static map alone cannot produce hunting/hysteresis; these two lags capture the
 // dominant dynamics at the frEES band (§4.4). bulb is a heat (sensing) port.
-function [in, out, bulb] = TXV(fluid$, Kv, SH_set, CdA0, tau_valve, tau_bulb, domain$ = twophase)
+function [in, out, bulb] = TXV(fluid$, Kv [m^2/K], SH_set [K], CdA0 [m^2], tau_valve [s], tau_bulb [s], domain$ = twophase)
 port(in)
 port(out)
 port(bulb)

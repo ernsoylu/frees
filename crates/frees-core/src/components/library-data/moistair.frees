@@ -1,5 +1,5 @@
 // frees-language: 2
-function [out] = MoistAirSource(P, T, W, mdot, domain$ = moistair)
+function [out] = MoistAirSource(P [Pa], T [K], W [-], mdot [kg/s], domain$ = moistair)
 port(out)
   out.P    = P
   out.mdot = mdot
@@ -15,7 +15,7 @@ port(in)
   W    = in.W
 end
 
-function [in, out] = HeatingCoil(Q, domain$ = moistair)
+function [in, out] = HeatingCoil(Q [W], domain$ = moistair)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -24,7 +24,7 @@ port(out)
   out.h    = in.h + Q / in.mdot
 end
 
-function [in, out] = Humidifier(mdot_w, h_w, domain$ = moistair)
+function [in, out] = Humidifier(mdot_w [kg/s], h_w [J/kg], domain$ = moistair)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -43,7 +43,7 @@ port(out)
   out.mdot * out.h = in1.mdot * in1.h + in2.mdot * in2.h
 end
 
-function [in, out] = CoolingCoil(Tout, domain$ = moistair)
+function [in, out] = CoolingCoil(Tout [K], domain$ = moistair)
 port(in)
 port(out)
   out.mdot = in.mdot

@@ -1,17 +1,17 @@
 // frees-language: 2
-function [port] = ThermalSource(T)
+function [port] = ThermalSource(T [K])
 port(port)
   port.T = T
 end
 
 // Heat-flow source: injects a fixed thermal power Q into the connected node
 // (port.Qdot = -Q, so the network receives +Q). The Qdot dual of ThermalSource.
-function [port] = HeatSource(Q)
+function [port] = HeatSource(Q [W])
 port(port)
   port.Qdot = -Q
 end
 
-function [a, b] = Conduction(k, area, L)
+function [a, b] = Conduction(k [W/m-K], area [m^2], L [m])
 port(a)
 port(b)
   Q      = k * area / L * (a.T - b.T)
@@ -19,7 +19,7 @@ port(b)
   b.Qdot = -Q
 end
 
-function [a, b] = Convection(htc, area)
+function [a, b] = Convection(htc [W/m^2-K], area [m^2])
 port(a)
 port(b)
   Q      = htc * area * (a.T - b.T)
@@ -27,7 +27,7 @@ port(b)
   b.Qdot = -Q
 end
 
-function [a, b] = Radiation(emis, area)
+function [a, b] = Radiation(emis, area [m^2])
 port(a)
 port(b)
   Q      = emis * 5.670374419e-8 [W/m^2-K^4] * area * (a.T^4 - b.T^4)
@@ -35,7 +35,7 @@ port(b)
   b.Qdot = -Q
 end
 
-function [port] = ThermalMass(C, T0)
+function [port] = ThermalMass(C [J/K], T0 [K])
 port(port)
   der(port.T)  = port.Qdot / C
   init(port.T) = T0
@@ -43,13 +43,13 @@ end
 
 // Thermal mass with internal heat generation: der(T) = (Qgen + Qdot)/C. Models a
 // self-heating lump (battery pack, e-motor, cabin load) tied to a heat port.
-function [port] = MassGen(C, Qgen, T0)
+function [port] = MassGen(C [J/K], Qgen [W], T0 [K])
 port(port)
   der(port.T)  = (Qgen + port.Qdot) / C
   init(port.T) = T0
 end
 
-function [a, b] = ContactResistance(Rth)
+function [a, b] = ContactResistance(Rth [K/W])
 port(a)
 port(b)
   Q      = (a.T - b.T) / Rth

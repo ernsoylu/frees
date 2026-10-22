@@ -372,7 +372,7 @@ function compileComponents() {
         isString,
         isSelector,
         isMap: isString && /map.*\$$/.test(p.name),
-        unit: info.unit || '',
+        unit: p.unit || info.unit || '',
         description: info.description || '',
         required: !isSelector && p.name !== 'domain$',
         values: isSelector ? variantNames : [],

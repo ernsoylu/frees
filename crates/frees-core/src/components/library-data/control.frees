@@ -1,5 +1,5 @@
 // frees-language: 2
-function [port] = PIThermostat(Kp, Ki, Tref)
+function [port] = PIThermostat(Kp [W/K], Ki [W/K-s], Tref [K])
 port(port)
   err         = Tref - port.T
   der(integ)  = err

@@ -847,7 +847,11 @@ impl<'a> Parser<'a> {
                 let params = params
                     .into_iter()
                     .zip(param_defaults)
-                    .map(|(name, default)| Param::new(name, default))
+                    .zip(param_units)
+                    .map(|((name, default), unit)| Param {
+                        unit,
+                        ..Param::new(name, default)
+                    })
                     .collect();
                 return Ok(ParsedDef::Component(ComponentDef::new(
                     name,

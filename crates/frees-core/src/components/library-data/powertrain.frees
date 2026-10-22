@@ -1,17 +1,17 @@
 // frees-language: 2
-function [shaft] = Engine(Tmax, throttle, bf)
+function [shaft] = Engine(Tmax [N-m], throttle, bf [N-m-s])
 port(shaft)
   shaft.tau = -(throttle * Tmax - bf * shaft.w)
 end
 
-function [shaft] = RoadLoad(Crr, Caero)
+function [shaft] = RoadLoad(Crr [N-m], Caero [kg-m^2])
 port(shaft)
   shaft.tau = Crr + Caero * shaft.w^2
 end
 
 // Mean-value engine with a WOT-torque fidelity ladder: the original parabolic
 // wide-open-throttle curve, or a tabulated WOT map (dyno data) via map_wot$.
-function [shaft] = MeanValueEngine(throttle, Tpeak, w_peak, FMEP_a, FMEP_b, FMEP_c, map_wot$, bsfc$, model$ = parabolic)
+function [shaft] = MeanValueEngine(throttle, Tpeak [N-m], w_peak [rad/s], FMEP_a [N-m], FMEP_b [N-m-s], FMEP_c, map_wot$, bsfc$, model$ = parabolic)
 port(shaft)
   T_ind     = throttle * T_wot
   shaft.tau = -(T_ind - T_fric)
@@ -43,7 +43,7 @@ port(out)
 end
 
 // The grade force m*g*sin(grade) is referred to the shaft at a 1 m wheel radius.
-function [shaft] = GradeRoadLoad(Crr, Caero, m, g, grade)
+function [shaft] = GradeRoadLoad(Crr [N-m], Caero [kg-m^2], m [kg], g [m/s^2], grade)
 port(shaft)
   shaft.tau = Crr + Caero * shaft.w^2 + m * g * sin(grade) * 1 [m]
 end

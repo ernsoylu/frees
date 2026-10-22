@@ -5534,6 +5534,38 @@ mod tests {
     }
 
     #[test]
+    fn a_declared_parameter_unit_types_a_bare_instance_value() {
+        // `m=2` under `Weight(m [kg])` is 2 kg, so it cannot be a force; under
+        // `[N]` the same document is consistent.
+        let doc = |unit: &str| {
+            format!(
+                "function [port] = Weight(m [{unit}])\nport(port)\n  port.f = m\nend\n\
+                 function [port] = Fix()\nport(port)\n  port.vel = 0\nend\n\
+                 Weight W(m=2)\nFix F()\nconnect(W.port, F.port)\n"
+            )
+        };
+        let warnings = check(&doc("kg")).expect("check").unit_warnings;
+        assert!(
+            warnings.iter().any(|w| w.contains("port.f = m")),
+            "{warnings:?}"
+        );
+        assert_eq!(
+            check(&doc("N")).expect("check").unit_warnings,
+            Vec::<String>::new()
+        );
+
+        // The standard library declares its units too: `R1.R` reads `R=10` as
+        // ohms.
+        let report = check(
+            "Resistor R1(R=10)\nVoltageSource V1(E=12)\nGround G1()\n\
+             connect(V1.p, R1.a)\nconnect(R1.b, V1.n, G1.port)\nx = R1.R\n",
+        )
+        .expect("check");
+        let ohm = UnitRegistry::si_name(&UnitRegistry::parse("ohm").unwrap().dims);
+        assert_eq!(report.inferred_units.get("x"), Some(&ohm), "{report:?}");
+    }
+
+    #[test]
     fn dynamic_bodies_are_unit_checked_on_check_and_solve() {
         // `5 [kg]` added to `k*x` (m/s) is wrong whether or not the document
         // has algebraic equations beside the block; the fix makes both quiet.
