@@ -1,7 +1,7 @@
 { Series RLC low-pass filter -- Tutorial 3 }
 R = 220 [ohm]
 L = 0.1 [H]
-C = 1e-6 [F]
+C = 1e-6 [farad]
 
 w0 = 1 / sqrt(L * C)
 Q  = w0 * L / R
