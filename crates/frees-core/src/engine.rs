@@ -85,7 +85,7 @@
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use crate::ast::{Equation, Expr, Statement};
+use crate::ast::{BinOp, Equation, Expr, Statement};
 use crate::diag::{Diagnostic, FreesError, Result};
 use crate::differentiator::differentiate;
 use crate::eval::{eval_with, lookup_constant, EvalContext, Scope};
@@ -2944,6 +2944,60 @@ fn residuals_at(
     (residuals, max_residual)
 }
 
+/// Floor of the final-residual guard: the largest residual, relative to the
+/// magnitude of its equation's terms, that a solve may report as converged.
+///
+/// Every block already met the Newton stop criterion, so a residual above this
+/// at the assembled solution means a solver path accepted values the equations
+/// reject — the merge rescue once returned a 1.2e4 residual as `ok`. Measured
+/// on the golden corpus at 1e-9 tolerance, the worst converged equation sits
+/// at 1.3e-7. A looser `rel_tolerance` loosens the guard with it
+/// ([`unconverged_equation`]), so ODE-accessor solves at 1e-4 are not refused.
+pub(crate) const RESIDUAL_GUARD: f64 = 1e-6;
+
+/// The first equation whose residual exceeds `limit` relative to the size of
+/// its own top-level additive terms, with that relative residual.
+///
+/// The scale is `max(1, Σ|term|)` over both sides, the Newton row scale's
+/// stand-in: `P1 - P2 = dP` at `1e8` Pa is converged at a `1e-4` residual. A
+/// non-finite residual is skipped — it was recorded as `NaN` because the
+/// equation cannot be evaluated there, which the guard cannot judge.
+pub(crate) fn unconverged_equation(
+    equations: &[Equation],
+    residuals: &[EquationResidual],
+    values: &Scope,
+    ctx: EvalContext<'_>,
+    limit: f64,
+) -> Option<(usize, f64)> {
+    fn term_magnitude(expr: &Expr, values: &Scope, ctx: EvalContext<'_>) -> f64 {
+        match expr {
+            Expr::BinOp {
+                op: BinOp::Add | BinOp::Sub,
+                left,
+                right,
+            } => term_magnitude(left, values, ctx) + term_magnitude(right, values, ctx),
+            Expr::Neg(inner) => term_magnitude(inner, values, ctx),
+            _ => eval_with(expr, values, ctx)
+                .map(f64::abs)
+                .ok()
+                .filter(|m| m.is_finite())
+                .unwrap_or(0.0),
+        }
+    }
+    equations
+        .iter()
+        .zip(residuals)
+        .enumerate()
+        // The scale is at least 1, so a residual within `limit` never needs it.
+        .filter(|(_, (_, r))| r.residual.is_finite() && r.residual.abs() > limit)
+        .find_map(|(index, (equation, r))| {
+            let scale = term_magnitude(&equation.lhs, values, ctx)
+                + term_magnitude(&equation.rhs, values, ctx);
+            let relative = r.residual.abs() / scale.max(1.0);
+            (relative > limit).then_some((index, relative))
+        })
+}
+
 /// Per block, the source text of its equations — first occurrence of a
 /// repeated text kept, as the Java `toBlockDto`'s `.distinct()` does, so a
 /// future component expansion never lists one user line twice.
@@ -5367,6 +5421,45 @@ mod tests {
             (actual - expected).abs() <= tolerance,
             "expected {expected}, got {actual}"
         );
+    }
+
+    #[test]
+    fn the_residual_guard_scales_by_the_equations_own_terms() {
+        let eqs = [
+            // y = 3 at y = 3.5: a unit-scale equation off by 0.5.
+            Equation::new(Expr::var("y"), Expr::num(3.0), "y = 3"),
+            // p1 - p2 = dp with 1e8 Pa terms, off by 1e-4: converged.
+            Equation::new(
+                Expr::bin(BinOp::Sub, Expr::var("p1"), Expr::var("p2")),
+                Expr::var("dp"),
+                "p1 - p2 = dp",
+            ),
+        ];
+        let scope = |y: f64| -> Scope {
+            [
+                ("y", y),
+                ("p1", 2.0e8),
+                ("p2", 1.0e8),
+                ("dp", 1.0e8 - 1.0e-4),
+            ]
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect()
+        };
+        let ctx = EvalContext::default();
+        let check = |y: f64| {
+            let values = scope(y);
+            let (residuals, _) = residuals_at(&eqs, &[], &values, ctx);
+            unconverged_equation(&eqs, &residuals, &values, ctx, RESIDUAL_GUARD)
+        };
+        assert_eq!(
+            check(3.0),
+            None,
+            "the cancelling 1e8 terms must not trip it"
+        );
+        let (index, relative) = check(3.5).expect("y = 3 is off by 0.5");
+        assert_eq!(index, 0);
+        assert!((relative - 0.5 / 6.5).abs() < 1e-12, "got {relative}");
     }
 
     #[test]
