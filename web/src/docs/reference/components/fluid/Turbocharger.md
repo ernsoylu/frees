@@ -62,7 +62,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-Turbocharger TC(t1, t2, c1, c2, cp=1005, eta_t=0.8, eta_c=0.78, gam=1.4)
+Turbocharger TC(t1, t2, c1, c2, cp=1005 [J/kg-K], eta_t=0.8, eta_c=0.78, gam=1.4)
 t1.T = 900
 t1.P = 200000
 t1.mdot = 0.1

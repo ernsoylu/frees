@@ -71,8 +71,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT rv2.i.h = 450000
 // EXPECT rv2.i.p = 2000000
 // EXPECT rv2.s.h = 410000
-TwoPhaseSourcePH D1(mdot=0.1, P=2000000, h=450000)
-TwoPhaseSourcePH I1(mdot=0.1, P=400000, h=410000)
+TwoPhaseSourcePH D1(mdot=0.1 [kg/s], P=2000000 [Pa], h=450000 [J/kg])
+TwoPhaseSourcePH I1(mdot=0.1 [kg/s], P=400000 [Pa], h=410000 [J/kg])
 ReversingValve   RV1(mode=0)
 TwoPhaseSink     O1()
 TwoPhaseSink     S1()
@@ -80,8 +80,8 @@ connect(D1.out, RV1.d)
 connect(I1.out, RV1.i)
 connect(RV1.o, O1.in)
 connect(RV1.s, S1.in)
-TwoPhaseSourcePH D2(mdot=0.1, P=2000000, h=450000)
-TwoPhaseSourcePH O2S(mdot=0.1, P=400000, h=410000)
+TwoPhaseSourcePH D2(mdot=0.1 [kg/s], P=2000000 [Pa], h=450000 [J/kg])
+TwoPhaseSourcePH O2S(mdot=0.1 [kg/s], P=400000 [Pa], h=410000 [J/kg])
 ReversingValve   RV2(mode=1)
 TwoPhaseSink     I2()
 TwoPhaseSink     S2()

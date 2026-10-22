@@ -30,7 +30,7 @@ TwoPhaseExpansionValve inst(fluid$, Cv, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
-| `Cv` | Number | Flow coefficient. |
+| `Cv` | Number | Flow coefficient: ṁ|ṁ| = 2·Cv²·ρ·ΔP, an effective area [m²]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
@@ -56,11 +56,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R1234yf, mdot=0.025, P=350000, x=0.2)
-TwoPhaseEvaporator EVP(fluid$=R1234yf, SH_set=8, dP=0)
+TwoPhaseSource SRC(fluid$=R1234yf, mdot=0.025 [kg/s], P=350000 [Pa], x=0.2)
+TwoPhaseEvaporator EVP(fluid$=R1234yf, SH_set=8 [K], dP=0 [Pa])
 TwoPhaseCompressor CMP(fluid$=R1234yf, eta=0.7)
-TwoPhaseCondenser CND(fluid$=R1234yf, SC_set=5, dP=0)
-TwoPhaseExpansionValve EXV(fluid$=R1234yf, Cv=5e-7)
+TwoPhaseCondenser CND(fluid$=R1234yf, SC_set=5 [K], dP=0 [Pa])
+TwoPhaseExpansionValve EXV(fluid$=R1234yf, Cv=5e-7 [m^2])
 TwoPhaseSink SNK()
 connect(SRC.out, EVP.in)
 connect(EVP.out, CMP.in)

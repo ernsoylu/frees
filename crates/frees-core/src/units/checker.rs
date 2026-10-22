@@ -30,7 +30,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use crate::ast::{BinOp, Equation, Expr};
+use crate::ast::{BinOp, Equation, Expr, STEADY_DER_SUFFIX};
 use crate::diag::FreesError;
 use crate::units::quantity::{Dims, Quantity, DIMENSIONS};
 use crate::units::UnitRegistry;
@@ -390,6 +390,13 @@ impl Checker {
     /// `None` when the unknown does not appear purely multiplicatively or the
     /// other dimensions cannot be determined.
     fn solve_dims_for(&mut self, eq: &Equation, unknown: &str) -> Option<Quantity> {
+        // A steady `der(X) = rhs` became `rhs = 0`: that zero stands for
+        // der(X), whose units the rewrite dropped, so it cannot fix the units
+        // of rhs (`vs = 0` must not make vs dimensionless, nor `Q/C = 0` make
+        // C a power). Additive homogeneity inside rhs still applies.
+        if eq.source_text.ends_with(STEADY_DER_SUFFIX) {
+            return None;
+        }
         let lhs = self.analyze(&eq.lhs, unknown)?;
         let rhs = self.analyze(&eq.rhs, unknown)?;
         let exponent = lhs.unknown_exponent - rhs.unknown_exponent;
@@ -444,11 +451,11 @@ impl Checker {
                     combine(a, b, -1.0)
                 }
                 BinOp::Pow => {
-                    if let Expr::Num { value, .. } = right.as_ref() {
+                    if let Some(value) = constant_exponent(right) {
                         let base = self.analyze(left, unknown)?;
                         let mut scaled = base.dims;
                         for d in scaled.iter_mut() {
-                            *d *= *value;
+                            *d *= value;
                         }
                         Some(DimTerm {
                             dims: scaled,
@@ -641,8 +648,8 @@ impl Checker {
         if base.quantity.is_dimensionless() {
             return Dim::of(Quantity::dimensionless(1.0));
         }
-        if let Expr::Num { value, .. } = exponent {
-            return Dim::of(base.quantity.powf(*value));
+        if let Some(value) = constant_exponent(exponent) {
+            return Dim::of(base.quantity.powf(value));
         }
         let message = format!(
             "{}: a dimensional quantity [{}] is raised to a non-constant exponent.",
@@ -954,6 +961,31 @@ fn combine(a: Option<DimTerm>, b: Option<DimTerm>, sign: f64) -> Option<DimTerm>
     })
 }
 
+/// The value of an exponent built only from bare numbers — `2`, `-0.5`,
+/// `1/3`, `(k - 1)/2` is not one — so `x^(1/3)` scales dimensions like
+/// `x^0.333…` instead of being reported as a non-constant exponent.
+fn constant_exponent(e: &Expr) -> Option<f64> {
+    match e {
+        Expr::Num {
+            value,
+            unit: None,
+            is_imaginary: false,
+        } => Some(*value),
+        Expr::Neg(operand) => constant_exponent(operand).map(|v| -v),
+        Expr::BinOp { op, left, right } => {
+            let (l, r) = (constant_exponent(left)?, constant_exponent(right)?);
+            match op {
+                BinOp::Add => Some(l + r),
+                BinOp::Sub => Some(l - r),
+                BinOp::Mul => Some(l * r),
+                BinOp::Div => Some(l / r),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
 /// Treats an unresolved bare numeric literal as dimensionless when it appears
 /// as a multiplicative factor. Other wildcards (unit-less variables) stay
 /// unknown so genuine ambiguity is not masked. Port of `UnitChecker.asFactor`.
@@ -1152,6 +1184,36 @@ mod tests {
             vec!["y = x ^ n: a dimensional quantity [m] is raised to a non-constant exponent."]
         );
         assert!(report.inferred.is_empty());
+    }
+
+    #[test]
+    fn a_steady_der_zero_does_not_fix_the_other_sides_units() {
+        // Steady `der(xs) = vs` becomes `vs = 0`; the zero must not pin vs
+        // dimensionless, which would contradict the 1/s damping term.
+        let mut equations = eqs("acc = wn^2 * x - 2 * wn * vs");
+        equations.insert(
+            0,
+            Equation::new(
+                Expr::var("vs"),
+                Expr::num(0.0),
+                format!("der(xs) = vs{STEADY_DER_SUFFIX}"),
+            ),
+        );
+        let report = check_units(
+            &equations,
+            &units(&[("wn", "1/s"), ("x", "-"), ("acc", "1/s^2")]),
+        );
+        assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+        assert_ne!(report.inferred.get("vs").map(String::as_str), Some("-"));
+    }
+
+    #[test]
+    fn constant_exponent_expressions_scale_dimensions() {
+        // A cube root written as a fraction is a constant exponent: no warning,
+        // and the root's dimensions are derived (m^3 -> m).
+        let report = check_units(&eqs("y = x ^ (1/3)"), &units(&[("x", "m^3")]));
+        assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+        assert_eq!(report.inferred.get("y").map(String::as_str), Some("m"));
     }
 
     #[test]

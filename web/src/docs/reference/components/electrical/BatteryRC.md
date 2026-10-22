@@ -32,7 +32,7 @@ BatteryRC inst(Voc, R0, R1, C1, Vrc0)
 | `Voc` | Number | Open-circuit voltage [V]. |
 | `R0` | Number | Series (ohmic) resistance [Ω]. |
 | `R1` | Number | First RC-branch resistance [Ω]. |
-| `C1` | Number | First RC-branch capacitance [F]. |
+| `C1` | Number | First RC-branch capacitance [farad]. |
 | `Vrc0` | Number | Initial RC-branch voltage [V]. |
 
 ## Constitutive Equations
@@ -58,8 +58,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-BatteryRC B(Voc=48, R0=0.1, R1=0.2, C1=1000, Vrc0=0)
-Resistor  RL(R=4.7)
+BatteryRC B(Voc=48 [V], R0=0.1 [ohm], R1=0.2 [ohm], C1=1000 [farad], Vrc0=0 [V])
+Resistor  RL(R=4.7 [ohm])
 Ground    G()
 connect(B.p, RL.a)
 connect(B.n, RL.b, G.port)

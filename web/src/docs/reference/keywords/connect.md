@@ -56,7 +56,7 @@ function [in, out] = MyFan(fluid$=Air, model$=simple)
   END
 end
 Source SUP(fluid$=Air, mdot=0.1 [kg/s], P=101325 [Pa], T=293.15 [K])
-MyFan  F1(fluid$=Air, model$=curve, dP0=300, kQ=1.5e4)
+MyFan  F1(fluid$=Air, model$=curve, dP0=300 [Pa], kQ=1.5e4 [Pa-s^2/kg^2])
 Sink   RET()
 connect(SUP.out, F1.in)
 connect(F1.out, RET.in)

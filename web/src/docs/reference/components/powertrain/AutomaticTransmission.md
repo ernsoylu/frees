@@ -69,22 +69,22 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // source, so the probe reads -351.
 // EXPECT tq_hold = -351 tol 1e-6
 
-TABLE kmap(sr)
+TABLE kmap(sr) [rad-N^-0.5-m^-0.5/s]
   0   25
   1   25
 END
-TABLE trmap(sr)
+TABLE trmap(sr) [-]
   0    2.0
   0.5  1.6
   1    1.0
 END
 SigConstant GEAR(k=3)
 SigConstant LOCK(k=0)
-SpeedSource SI(w=250)
+SpeedSource SI(w=250 [rad/s])
 MechGround  GI()
-SpeedSource SO(w=62.5)
+SpeedSource SO(w=62.5 [rad/s])
 MechGround  GO()
-AutomaticTransmission AT(Kmap$=kmap, TRmap$=trmap, eta=0.9, Tlock=5000, eps=0.5)
+AutomaticTransmission AT(Kmap$=kmap, TRmap$=trmap, eta=0.9, Tlock=5000 [N-m], eps=0.5 [rad/s])
 connect(SI.a, AT.in)
 connect(SI.b, GI.port)
 connect(AT.out, SO.a)

@@ -31,7 +31,7 @@ TwoPhaseSourcePH inst(mdot, P, h, domain$)
 | --- | --- | --- |
 | `mdot` | Number | Mass flow rate [kg/s]. |
 | `P` | Number | Pressure [Pa]. |
-| `h` | Number | Heat-transfer coefficient [W/m²·K]. |
+| `h` | Number | Specific enthalpy [J/kg]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
@@ -56,10 +56,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-MovingBoundaryCondenser CD(fluid$=R134a, U_cond=2500, U_sc=300, D=0.01, L=8, eps_zone=0.01)
-TwoPhaseSourcePH SRC(mdot=0.02, P=900000, h=445000)
+MovingBoundaryCondenser CD(fluid$=R134a, U_cond=2500 [W/m^2-K], U_sc=300 [W/m^2-K], D=0.01 [m], L=8 [m], eps_zone=0.01 [m])
+TwoPhaseSourcePH SRC(mdot=0.02 [kg/s], P=900000 [Pa], h=445000 [J/kg])
 TwoPhaseSink SNK()
-ThermalSource WALL(T=300)
+ThermalSource WALL(T=300 [K])
 connect(SRC.out, CD.in)
 connect(CD.out, SNK.in)
 connect(CD.wall, WALL.port)

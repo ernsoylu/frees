@@ -50,7 +50,7 @@ t_{out} &= \text{Temperature}\left(\mathrm{airh2o}, h=out.h, p=in.p, w=out.w\rig
 t_{dp_in} &= \text{Dewpoint}\left(\mathrm{airh2o}, h=in.h, p=in.p, w=in.w\right) \\
 margin_{adp} &= t_{dp_in} - t_{adp} \\
 mdot_{w} &= in.mdot\cdot \left(in.w - out.w\right) \\
-h_{f} &= 4186\,\left(t_{out} - 273.15\right) \\
+h_{f} &= 4186\,\left[J/kg-K\right]\,\left(t_{out} - 273.15\,\left[K\right]\right) \\
 q_{air} &= in.mdot\cdot \left(in.h - out.h\right) \\
 q &= q_{air} - mdot_{w}\cdot h_{f} \\
 q_{sens} &= in.mdot\cdot \text{Cp}\left(\mathrm{airh2o}, t=t_{in}, p=in.p, w=in.w\right)\cdot \left(t_{in} - t_{out}\right) \\
@@ -91,7 +91,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-ApparatusDewPointCoil C(T_adp=283.15, BF=0.15)
+ApparatusDewPointCoil C(T_adp=283.15 [K], BF=0.15)
 C.in.mdot = 1 [kg/s]
 C.in.P = 101325 [Pa]
 C.in.W = 0.012

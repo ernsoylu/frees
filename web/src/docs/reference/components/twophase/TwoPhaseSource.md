@@ -57,8 +57,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=500000, x=0.5)
-TwoPhaseInventory INV(fluid$=R134a, V=0.001)
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=500000 [Pa], x=0.5)
+TwoPhaseInventory INV(fluid$=R134a, V=0.001 [m^3])
 TwoPhaseSink SNK()
 connect(SRC.out, INV.in)
 connect(INV.out, SNK.in)

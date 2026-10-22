@@ -65,11 +65,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // 1/(25*2) + 0.05 + 1/(10*2) = 0.12 K/W, so Q = (380 - 293.15)/0.12 = 723.75 W.
 // The WallRC faces are states (never T-pinned); the films decouple them from
 // the temperature boundaries. der -> 0 without a DYNAMIC block.
-ThermalSource HOT(T=380)
-Convection    CVA(htc=25, area=2)
-WallRC        WALL(C1=50000, C2=50000, R=0.05, T10=320, T20=310)
-Convection    CVB(htc=10, area=2)
-ThermalSource AMB(T=293.15)
+ThermalSource HOT(T=380 [K])
+Convection    CVA(htc=25 [W/m^2-K], area=2 [m^2])
+WallRC        WALL(C1=50000 [J/K], C2=50000 [J/K], R=0.05 [K/W], T10=320 [K], T20=310 [K])
+Convection    CVB(htc=10 [W/m^2-K], area=2 [m^2])
+ThermalSource AMB(T=293.15 [K])
 connect(HOT.port, CVA.a)
 connect(CVA.b, WALL.a)
 connect(WALL.b, CVB.a)

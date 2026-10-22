@@ -64,10 +64,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // 3 bar fresh supply entrains ER = 1.2 times its own flow from the 1.6 bar,
 // 330 K stack return; the mixed stream feeds the 1.5 bar stack inlet with the
 // flow-weighted enthalpy.
-PneumaticSupply     FRESH(fluid$=Air, P=300000, T=310)
-PneumaticSupply     RET(fluid$=Air, P=160000, T=330)
-AnodeRecirc         AR(fluid$=Air, C=1.5e-8, b=0.3, ER=1.2)
-PneumaticAtmosphere STACK(P=150000)
+PneumaticSupply     FRESH(fluid$=Air, P=300000 [Pa], T=310 [K])
+PneumaticSupply     RET(fluid$=Air, P=160000 [Pa], T=330 [K])
+AnodeRecirc         AR(fluid$=Air, C=1.5e-8 [m^3/s-Pa], b=0.3, ER=1.2)
+PneumaticAtmosphere STACK(P=150000 [Pa])
 connect(FRESH.out, AR.sup_in)
 connect(RET.out, AR.ret_in)
 connect(AR.out, STACK.port)

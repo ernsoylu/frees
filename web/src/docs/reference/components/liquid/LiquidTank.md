@@ -68,9 +68,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // LiquidTank at its steady point: 0.3 kg/s of 350 K water through a mixed
 // 25 kg tank losing UA = 40 W/K to a 290 K wall; der(Tt) = 0 pins Tt just
 // under the feed temperature.
-LiquidSource  LS(l1, fluid$ = Water, mdot = 0.3, P = 200000, T = 350)
-LiquidTank    TK(l1, l2, wl, fluid$ = Water, m = 25, UA = 40, T0 = 330)
-ThermalSource AMB(wl, T = 290)
+LiquidSource  LS(l1, fluid$ = Water, mdot = 0.3 [kg/s], P = 200000 [Pa], T = 350 [K])
+LiquidTank    TK(l1, l2, wl, fluid$ = Water, m = 25 [kg], UA = 40 [W/K], T0 = 330 [K])
+ThermalSource AMB(wl, T = 290 [K])
 LiquidSink    SK(l2)
 
 t_tank = TK.Tt

@@ -29,7 +29,7 @@ Conduction inst(k, area, L)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `k` | Number | Stiffness / conductivity. |
+| `k` | Number | Thermal conductivity [W/m·K]. |
 | `area` | Number | Area [m²]. |
 | `L` | Number | Length [m]. |
 
@@ -55,9 +55,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-ThermalSource SH(T=400)
-Conduction   WALL(k=50, area=0.1, L=0.02)
-ThermalSource SC(T=300)
+ThermalSource SH(T=400 [K])
+Conduction   WALL(k=50 [W/m-K], area=0.1 [m^2], L=0.02 [m])
+ThermalSource SC(T=300 [K])
 connect(SH.port, WALL.a)
 connect(WALL.b, SC.port)
 

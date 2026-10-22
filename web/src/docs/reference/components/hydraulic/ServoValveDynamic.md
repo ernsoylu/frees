@@ -67,9 +67,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // gives vs = 0 and xs = u.sig): 50% command on CdA_max = 4e-6 across
 // 100 -> 1 bar. mdot = 0.5*4e-6*sqrt(2*870*9.9e6) = 0.26254 kg/s.
 SigConstant       CMD(k=0.5)
-HydraulicSupply   SUP(P=10000000)
-ServoValveDynamic SV(CdA_max=4e-6, rho=870, wn=300, zeta=0.8, xs0=0)
-HydraulicTank     TNK(P=100000)
+HydraulicSupply   SUP(P=10000000 [Pa])
+ServoValveDynamic SV(CdA_max=4e-6 [m^2], rho=870 [kg/m^3], wn=300 [rad/s], zeta=0.8, xs0=0)
+HydraulicTank     TNK(P=100000 [Pa])
 connect(SUP.out, SV.in)
 connect(SV.out, TNK.port)
 connect(CMD.out, SV.u)

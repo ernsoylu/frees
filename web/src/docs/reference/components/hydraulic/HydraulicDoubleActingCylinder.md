@@ -70,10 +70,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // supply (Aa = 20 cm2), rod side vented to a 2 bar tank (Ab = 12 cm2), rod on
 // a 50 kN.s/m damper. F = 8e6*0.002 - 2e5*0.0012 = 15760 N -> vel = 0.3152 m/s;
 // der(P) -> 0 gives the chamber flows rho*A*vel.
-HydraulicSupply SUP(P=8000000)
-HydraulicSupply RODLN(P=200000)
-HydraulicDoubleActingCylinder CYL(Aa=0.002, Ab=0.0012, rho=870, beta=1.4e9, Va0=0.001, Vb0=0.0006, Pa0=8000000, Pb0=200000)
-TransDamper     DMP(c=50000)
+HydraulicSupply SUP(P=8000000 [Pa])
+HydraulicSupply RODLN(P=200000 [Pa])
+HydraulicDoubleActingCylinder CYL(Aa=0.002 [m^2], Ab=0.0012 [m^2], rho=870 [kg/m^3], beta=1.4e9 [Pa], Va0=0.001 [m^3], Vb0=0.0006 [m^3], Pa0=8000000 [Pa], Pb0=200000 [Pa])
+TransDamper     DMP(c=50000 [kg/s])
 TransGround     GND()
 connect(SUP.out, CYL.a)
 connect(RODLN.out, CYL.b)

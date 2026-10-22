@@ -50,8 +50,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // SigVelProbe: force-free velocity pickup. 10 N through a 2 N.s/m damper to
 // ground -> the probed node moves at 5 m/s and the probe draws no force.
 // EXPECT y = 5 tol 1e-9
-ForceSource FS(F = 10)
-TransDamper TD(c = 2)
+ForceSource FS(F = 10 [N])
+TransDamper TD(c = 2 [kg/s])
 TransGround G1()
 TransGround G2()
 SigVelProbe PR()

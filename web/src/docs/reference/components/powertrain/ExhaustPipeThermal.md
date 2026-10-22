@@ -48,7 +48,7 @@ The acausal equations this component expands into (over its port members and par
 ```
 HeatedDuct D(fluid$=fluid$, UA=UA)
 WallRC     W(C1=C1, C2=C2, R=R, T10=T10, T20=T20)
-Convection CV(htc=hA, area=1)
+Convection CV(htc=hA / 1 [m^2], area=1 [m^2])
 connect(in, D.in)
 connect(D.out, out)
 connect(D.wall, W.a)
@@ -77,10 +77,10 @@ port(out)
   out.mdot = mdot
   out.h    = Enthalpy(Air, P=P, T=T)
 end
-ExhaustSource     EXH(P=101325, T=750, mdot=0.05)
-ExhaustPipeThermal PIPE(fluid$=Air, UA=15, hA=8, C1=4000, C2=4000, R=0.08, T10=400, T20=350)
+ExhaustSource     EXH(P=101325 [Pa], T=750 [K], mdot=0.05 [kg/s])
+ExhaustPipeThermal PIPE(fluid$=Air, UA=15 [W/K], hA=8 [W/K], C1=4000 [J/K], C2=4000 [J/K], R=0.08 [K/W], T10=400 [K], T20=350 [K])
 Sink              TAIL()
-ThermalSource     AMB(T=300)
+ThermalSource     AMB(T=300 [K])
 connect(EXH.out, PIPE.in)
 connect(PIPE.out, TAIL.in)
 connect(PIPE.amb, AMB.port)

@@ -46,7 +46,7 @@ The acausal equations this component expands into (over its port members and par
 $$
 \begin{aligned}
 dt &= zone.t - wall.t \\
-q_{flux} &= c\cdot dt\cdot \left(dt^{2} + eps_{dt}^{2}\right)^{\frac{n - 1}{2}} \\
+q_{flux} &= c\cdot dt\cdot \left(\frac{dt^{2} + eps_{dt}^{2}}{1\,\left[K^2\right]}\right)^{\frac{n - 1}{2}} \\
 q &= a\cdot q_{flux} \\
 zone.qdot &= q \\
 wall.qdot &= -q \\
@@ -64,7 +64,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-RadiantPanel C(A=10, C=8, n=1.1, eps_dT=0.1, W_room=0.008, P_room=101325)
+RadiantPanel C(A=10 [m^2], C=8 [W/m^2-K], n=1.1, eps_dT=0.1 [K], W_room=0.008, P_room=101325 [Pa])
 C.zone.T = 298.15 [K]
 C.wall.T = 289.15 [K]
 

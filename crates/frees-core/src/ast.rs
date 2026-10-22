@@ -283,6 +283,11 @@ impl Expr {
     }
 }
 
+/// Appended to the source text of a `der(X) = rhs` equation that a steady
+/// solve rewrote to `rhs = 0`, so the block listing shows the rewrite and the
+/// unit checker knows the zero stands in for `der(X)`, not a dimensionless 0.
+pub const STEADY_DER_SUFFIX: &str = " [steady: der=0]";
+
 /// A single equation `lhs = rhs`. The solver works with the residual `lhs - rhs`.
 ///
 /// Port of `Equation.java`. `source_text` is retained verbatim so diagnostics

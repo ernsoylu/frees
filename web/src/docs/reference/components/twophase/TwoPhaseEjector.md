@@ -63,23 +63,23 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // energy balance (replicated).
 // EXPECT os.bleed.mdot = 0.002 tol 1e-9
 // EXPECT d_os = 0 tol 1e-6
-TwoPhaseSourcePH M1(mdot=0.1, P=800000, h=430000)
-TwoPhaseSourcePH S1(mdot=0.05, P=300000, h=410000)
+TwoPhaseSourcePH M1(mdot=0.1 [kg/s], P=800000 [Pa], h=430000 [J/kg])
+TwoPhaseSourcePH S1(mdot=0.05 [kg/s], P=300000 [Pa], h=410000 [J/kg])
 TwoPhaseEjector  EJ(PLR=1.3)
 TwoPhaseSink     KE()
 connect(M1.out, EJ.m)
 connect(S1.out, EJ.s)
 connect(EJ.out, KE.in)
 
-TwoPhaseSourcePH DIS(mdot=0.1, P=1500000, h=440000)
+TwoPhaseSourcePH DIS(mdot=0.1 [kg/s], P=1500000 [Pa], h=440000 [J/kg])
 OilSeparator     OS(fluid$=R134a, f=0.02)
 TwoPhaseSink     KO()
 TwoPhaseSink     KB()
 connect(DIS.out, OS.in)
 connect(OS.out, KO.in)
 connect(OS.bleed, KB.in)
-hf_chk = Enthalpy(R134a, P=1500000, x=0)
-d_os   = 0.098 * OS.out.h - (0.1 * 440000 - 0.002 * hf_chk)
+hf_chk = Enthalpy(R134a, P=1500000 [Pa], x=0)
+d_os   = 0.098 [kg/s] * OS.out.h - (0.1 [kg/s] * 440000 [J/kg] - 0.002 [kg/s] * hf_chk)
 
 { CHECK d_os 0 1e-8 }
 { CHECK dis.out.h 440000 0.44 }

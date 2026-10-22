@@ -67,8 +67,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // TwoPhaseInternalHX: suction-line heat exchanger — the 1.2 MPa liquid line
 // subcools against the 350 kPa suction vapor at eps = 0.6 on the vapor side.
-TwoPhaseSourcePH   LIQ(mdot = 0.03, P = 1200000, h = 260000)
-TwoPhaseSourcePH   VAP(mdot = 0.03, P = 350000, h = 405000)
+TwoPhaseSourcePH   LIQ(mdot = 0.03 [kg/s], P = 1200000 [Pa], h = 260000 [J/kg])
+TwoPhaseSourcePH   VAP(mdot = 0.03 [kg/s], P = 350000 [Pa], h = 405000 [J/kg])
 TwoPhaseInternalHX IHX(fluid$ = R134a, eps = 0.6)
 TwoPhaseSink       LSNK()
 TwoPhaseSink       VSNK()

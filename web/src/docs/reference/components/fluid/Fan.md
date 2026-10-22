@@ -31,7 +31,7 @@ Fan inst(fluid$, dP0, Q0, eta)
 | --- | --- | --- |
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
 | `dP0` | Number | Reference pressure drop [Pa]. |
-| `Q0` | Number | Reference heat [W]. |
+| `Q0` | Number | Free-delivery volume flow, where the pressure rise falls to zero [m³/s]. |
 | `eta` | Number | Efficiency (0–1). |
 
 ## Constitutive Equations
@@ -58,7 +58,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-Fan C(fluid$=Air, dP0=500, Q0=2, eta=0.7)
+Fan C(fluid$=Air, dP0=500 [Pa], Q0=2 [m^3/s], eta=0.7)
 C.in.P = 101325
 C.in.h = Enthalpy(Air, T=300, P=101325)
 C.in.mdot = 1

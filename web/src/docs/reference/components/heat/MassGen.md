@@ -29,7 +29,7 @@ MassGen inst(C, Qgen, T0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `C` | Number | Capacitance [F]. |
+| `C` | Number | Heat capacity [J/K]. |
 | `Qgen` | Number | Generated heat [W]. |
 | `T0` | Number | Reference/initial temperature [K]. |
 
@@ -55,27 +55,27 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 // frees-language: 2
 // Coolant loop: pump -> two parallel cold-plate branches -> LiquidMixer -> sink
-LiquidSource  PIN(fluid$=EG50, mdot=0.3, P=200000 [Pa], T=305 [K])
-LiquidOrifice O1(CdA=1.5e-5, rho=1050)
-LiquidOrifice O2(CdA=1.2e-5, rho=1050)
-LiquidWallHX  CP1(fluid$=EG50, UA=300)
-LiquidWallHX  CP2(fluid$=EG50, UA=300)
-LiquidWallHX  CHL(fluid$=EG50, UA=400)
+LiquidSource  PIN(fluid$=EG50, mdot=0.3 [kg/s], P=200000 [Pa], T=305 [K])
+LiquidOrifice O1(CdA=1.5e-5 [m^2], rho=1050 [kg/m^3])
+LiquidOrifice O2(CdA=1.2e-5 [m^2], rho=1050 [kg/m^3])
+LiquidWallHX  CP1(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CP2(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CHL(fluid$=EG50, UA=400 [W/K])
 LiquidMixer   MIX()
 LiquidSink    POUT()
-MassGen       BATT(C=60000, Qgen=4000 [W], T0=305 [K])
-MassGen       MOTOR(C=40000, Qgen=5000 [W], T0=305 [K])
+MassGen       BATT(C=60000 [J/K], Qgen=4000 [W], T0=305 [K])
+MassGen       MOTOR(C=40000 [J/K], Qgen=5000 [W], T0=305 [K])
 
 // Refrigerant loop: feed -> chiller evaporator (wall-coupled) + a second
 // evaporator -> TwoPhaseMixer -> compressor -> floating-head condenser.
 TwoPhasePressureSource FEED(fluid$=R1234yf, P=350000 [Pa], x=0.2)
-TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600, dP=20000, SH=5)
-TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200, dP=20000, SH=8)
+TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600 [W/K], dP=20000 [Pa], SH=5 [K])
+TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200 [W/K], dP=20000 [Pa], SH=8 [K])
 TwoPhaseMixer          SUC()
 TwoPhaseCompressor     CMP(fluid$=R1234yf, eta=0.7)
-TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000, T_amb=313)
+TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000 [W/K], T_amb=313 [K])
 TwoPhaseSink           LIQ()
-MassGen                CABIN(C=8000, Qgen=2500 [W], T0=305 [K])
+MassGen                CABIN(C=8000 [J/K], Qgen=2500 [W], T0=305 [K])
 
 connect(PIN.out, O1.in, O2.in)
 connect(O1.out, CP1.in)

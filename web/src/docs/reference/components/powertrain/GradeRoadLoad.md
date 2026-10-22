@@ -29,11 +29,13 @@ GradeRoadLoad inst(Crr, Caero, m, g, grade)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `Crr` | Number | Rolling-resistance coefficient. |
-| `Caero` | Number | Aerodynamic drag term ½ρCdA [kg/m]. |
+| `Crr` | Number | Rolling-resistance coefficient [N·m]. |
+| `Caero` | Number | Aerodynamic drag term ½ρCdA [kg·m²]. |
 | `m` | Number | Mass [kg]. |
 | `g` | Number | Gravitational acceleration [m/s²]. |
 | `grade` | Number | Road grade (rise/run). |
+
+The grade force $m g \sin(\text{grade})$ acts on the shaft at a 1 m wheel radius; put a `Gear` or `Transmission` between the wheel and this load to refer it to another radius.
 
 ## Constitutive Equations
 
@@ -41,7 +43,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \begin{aligned}
-shaft.tau &= crr + caero\cdot shaft.w^{2} + m\cdot g\cdot \sin\left(grade\right)
+shaft.tau &= crr + caero\cdot shaft.w^{2} + m\cdot g\cdot \sin\left(grade\right)\cdot 1\,\left[m\right]
 \end{aligned}
 $$
 
@@ -55,8 +57,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-GradeRoadLoad ROAD(Crr=50, Caero=2, m=1500, g=9.81, grade=0.05)
-SpeedSource   SS(w=30)
+GradeRoadLoad ROAD(Crr=50 [N-m], Caero=2 [kg-m^2], m=1500 [kg], g=9.81 [m/s^2], grade=0.05)
+SpeedSource   SS(w=30 [rad/s])
 MechGround    G()
 connect(SS.a, ROAD.shaft)
 connect(SS.b, G.port)

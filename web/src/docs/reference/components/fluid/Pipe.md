@@ -62,8 +62,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-Source SUP(s1, fluid$=Water, mdot=2, P=300000, T=298)
-Pipe   LINE(s1, s2, fluid$=Water, L=50, D=0.05, rough=0.0001)
+Source SUP(s1, fluid$=Water, mdot=2 [kg/s], P=300000 [Pa], T=298 [K])
+Pipe   LINE(s1, s2, fluid$=Water, L=50 [m], D=0.05 [m], rough=0.0001 [m])
 Sink   RET(s2)
 
 { CHECK line.a 0.001963495408 1e-8 }

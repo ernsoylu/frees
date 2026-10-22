@@ -61,7 +61,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-BlendSource SRC(fluid$=R134a, mdot=0.02, P=400000, x=0.3, z=0.35)
+BlendSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=400000 [Pa], x=0.3, z=0.35)
 BlendSensor SEN(fluid$=R134a)
 BlendSink SNK()
 connect(SRC.out, SEN.in)

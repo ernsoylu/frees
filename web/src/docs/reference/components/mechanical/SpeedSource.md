@@ -52,8 +52,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-GradeRoadLoad ROAD(Crr=50, Caero=2, m=1500, g=9.81, grade=0.05)
-SpeedSource   SS(w=30)
+GradeRoadLoad ROAD(Crr=50 [N-m], Caero=2 [kg-m^2], m=1500 [kg], g=9.81 [m/s^2], grade=0.05)
+SpeedSource   SS(w=30 [rad/s])
 MechGround    G()
 connect(SS.a, ROAD.shaft)
 connect(SS.b, G.port)

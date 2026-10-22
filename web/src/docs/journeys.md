@@ -29,7 +29,7 @@ P * Vol = m * R * T
 
 ```run
 Source SUP(fluid$='Water', mdot=2 [kg/s], P=300000 [Pa], T=298 [K])
-Pipe   LINE(fluid$='Water', L=50 [m], D=0.05 [m], rough=0.0001)
+Pipe   LINE(fluid$='Water', L=50 [m], D=0.05 [m], rough=0.0001 [m])
 Sink   RET()
 connect(SUP.out, LINE.in)
 connect(LINE.out, RET.in)

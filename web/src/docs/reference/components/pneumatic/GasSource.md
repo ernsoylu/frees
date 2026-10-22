@@ -63,7 +63,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-GasSource S(a, y=0.21, mdot=1.5, P=120000, h0=305000)
+GasSource S(a, y=0.21, mdot=1.5 [kg/s], P=120000 [Pa], h0=305000 [J/kg])
 GasPipe   P(a, b)
 
 { CHECK a.h 305000 0.305 }

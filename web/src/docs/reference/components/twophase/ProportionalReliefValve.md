@@ -31,7 +31,7 @@ ProportionalReliefValve inst(fluid$, Pcrack, grad, eps, domain$)
 | --- | --- | --- |
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
 | `Pcrack` | Number | Cracking (relief) pressure [Pa]. |
-| `grad` | Number | Flow gain above the set pressure [kg/s per Pa]: ṁ ≈ grad · (P − Pcrack). |
+| `grad` | Number | Flow gain above the set pressure [kg/s·Pa]: ṁ ≈ grad · (P − Pcrack). |
 | `eps` | Number | Smoothing width [Pa] of the max(0, P − Pcrack) regularization. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
@@ -83,19 +83,19 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
     (4) vapour fraction   (cook.x_cv)  - the cooker stays almost all liquid. }
 
 { ---- Electrical heater: 220 V across a 32.27 ohm element = 1.5 kW ---- }
-VoltageSource   SUP(E=220)
-HeatingResistor HTR(R=32.2667)
+VoltageSource   SUP(E=220 [V])
+HeatingResistor HTR(R=32.2667 [ohm])
 Ground          GND()
 I_heater = 220 / 32.2667                 { heater current by Ohm's law, A }
 
 { ---- Steel body heated by the element, passing heat to the water ---- }
-ThermalMass STEEL(C=750, T0=293.15)      { 750 J/K steel thermal mass }
-Convection  S2W(htc=333.33, area=1)      { steel -> water link, 333 W/K }
+ThermalMass STEEL(C=750 [J/K], T0=293.15 [K])      { 750 J/K steel thermal mass }
+Convection  S2W(htc=333.33 [W/m^2-K], area=1 [m^2])      { steel -> water link, 333 W/K }
 
 { ---- Rigid 5 L two-phase water vessel + lifting relief valve to air ---- }
-BoilingVessel   COOK(fluid$=Water, V=0.005, m0=2.994, T0=293.15)
-ProportionalReliefValve PRV(fluid$=Water, Pcrack=202600, grad=6e-7, eps=2000)
-TwoPhasePressureSink ATM(P=101300)
+BoilingVessel   COOK(fluid$=Water, V=0.005 [m^3], m0=2.994 [kg], T0=293.15 [K])
+ProportionalReliefValve PRV(fluid$=Water, Pcrack=202600 [Pa], grad=6e-7 [kg/s-Pa], eps=2000 [Pa])
+TwoPhasePressureSink ATM(P=101300 [Pa])
 
 connect(SUP.p, HTR.p)
 connect(SUP.n, HTR.n, GND.port)          { circuit return tied to ground }

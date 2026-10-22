@@ -61,18 +61,18 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT fw_eng = 500 tol 1e-3
 // EXPECT fw_ovr = 0 tol 1e-3
 
-SpeedSource FA(w=5)
+SpeedSource FA(w=5 [rad/s])
 MechGround  FGA()
-Freewheel   FW1(k=100, eps=1e-3)
+Freewheel   FW1(k=100 [N-m-s], eps=1e-3 [rad/s])
 MechGround  FGB()
 connect(FA.a, FW1.a)
 connect(FA.b, FGA.port)
 connect(FW1.b, FGB.port)
 fw_eng = FW1.a.tau
 
-SpeedSource FC(w=-5)
+SpeedSource FC(w=-5 [rad/s])
 MechGround  FGC()
-Freewheel   FW2(k=100, eps=1e-3)
+Freewheel   FW2(k=100 [N-m-s], eps=1e-3 [rad/s])
 MechGround  FGD()
 connect(FC.a, FW2.a)
 connect(FC.b, FGC.port)

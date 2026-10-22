@@ -64,7 +64,7 @@ port(in)
   in.P = P
 end
 PSource       SRC(P=1200000, h0=250000)
-ExpansionValve TXV(CdA=1e-6, rho_in=1200)
+ExpansionValve TXV(CdA=1e-6 [m^2], rho_in=1200 [kg/m^3])
 PSink         SNK(P=300000)
 connect(SRC.out, TXV.in)
 connect(TXV.out, SNK.in)

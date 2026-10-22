@@ -71,30 +71,30 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT fx_e = 3695.175 tol 0.01
 
 time = 0
-TABLE flat10(t)
+TABLE flat10(t [s]) [m/s]
   0    10
   100  10
 END
-SpeedSource       W1(w=40)
+SpeedSource       W1(w=40 [rad/s])
 MechGround        WG1()
-TirePacejka       TP0(r=0.3, Fz=4000, B=10, C=1.5, D=1, E=0, epsv=0.1)
+TirePacejka       TP0(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, E=0, epsv=0.1 [m/s])
 DriveCycleSource  V1(map$=flat10)
 connect(W1.a, TP0.wheel)
 connect(W1.b, WG1.port)
 connect(TP0.veh, V1.port)
 
-SpeedSource       W2(w=40)
+SpeedSource       W2(w=40 [rad/s])
 MechGround        WG2()
-TireLongitudinal  TL(r=0.3, Fz=4000, B=10, C=1.5, D=1, epsv=0.1)
+TireLongitudinal  TL(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, epsv=0.1 [m/s])
 DriveCycleSource  V2(map$=flat10)
 connect(W2.a, TL.wheel)
 connect(W2.b, WG2.port)
 connect(TL.veh, V2.port)
 d_fx = TP0.Fx - TL.Fx
 
-SpeedSource       W3(w=40)
+SpeedSource       W3(w=40 [rad/s])
 MechGround        WG3()
-TirePacejka       TPE(r=0.3, Fz=4000, B=10, C=1.5, D=1, E=-2, epsv=0.1)
+TirePacejka       TPE(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, E=-2, epsv=0.1 [m/s])
 DriveCycleSource  V3(map$=flat10)
 connect(W3.a, TPE.wheel)
 connect(TPE.veh, V3.port)

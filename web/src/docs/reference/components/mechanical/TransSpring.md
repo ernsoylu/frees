@@ -59,8 +59,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // TransSpring steady: der(x) -> 0 locks both ends (b grounded), and the 50 N
 // source compresses the 2000 N/m spring to x = 0.025 m.
 // EXPECT x_s = 0.025 tol 1e-9
-ForceSource FS(F = 50)
-TransSpring SP(k = 2000, x0 = 0)
+ForceSource FS(F = 50 [N])
+TransSpring SP(k = 2000 [N/m], x0 = 0 [m])
 TransGround G1()
 TransGround G2()
 connect(FS.a, SP.a)

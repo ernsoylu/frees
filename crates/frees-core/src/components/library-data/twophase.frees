@@ -319,7 +319,7 @@ port(out)
   VARIANT volumetric REQUIRE eta, eta_v, disp, rpm
     out.h   = in.h + (h_s - in.h) / eta
     rho_in  = Density(fluid$, P=in.P, h=in.h)
-    in.mdot = eta_v * disp * (rpm / 60) * rho_in
+    in.mdot = eta_v * disp * (rpm / 60 [s]) * rho_in
   END
   // Suction-corrected 2-D map rung: isentropic AND volumetric efficiencies from
   // curve-family TABLEs over (pressure ratio, rpm), a map-based compressor
@@ -329,7 +329,7 @@ port(out)
     etas    = map_etas$(PRr, rpm)
     etav    = map_etav$(PRr, rpm)
     rho_in  = Density(fluid$, P=in.P, h=in.h)
-    in.mdot = etav * disp * (rpm / 60) * rho_in
+    in.mdot = etav * disp * (rpm / 60 [s]) * rho_in
     out.h   = in.h + (h_s - in.h) / etas
   END
 end
@@ -597,7 +597,7 @@ port(out)
   T_in     = Temperature(fluid$, P=in.P, h=in.h)
   Pf       = P_sat(fluid$, T=T_in)
   dP_eff   = in.P - max(out.P, Pf)
-  in.mdot  = C * dP_eff^n
+  in.mdot  = C * (dP_eff / 1 [Pa])^n
 end
 
 // Internal (suction-line) heat exchanger: subcools the liquid line against the

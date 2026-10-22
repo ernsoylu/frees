@@ -62,9 +62,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // HeaterCore: the cabin-heating radiator — 85 C engine coolant warms a cold
 // ventilation air stream (278 K, W = 0.003) through the shared wall node.
-LiquidSource   CLNT(fluid$ = Water, mdot = 0.15, P = 250000, T = 358)
-MoistAirSource AIR(P = 101325, T = 278, W = 0.003, mdot = 0.12)
-HeaterCore     HC(cool$ = Water, UA_cool = 300, eps_air = 0.75)
+LiquidSource   CLNT(fluid$ = Water, mdot = 0.15 [kg/s], P = 250000 [Pa], T = 358 [K])
+MoistAirSource AIR(P = 101325 [Pa], T = 278 [K], W = 0.003, mdot = 0.12 [kg/s])
+HeaterCore     HC(cool$ = Water, UA_cool = 300 [W/K], eps_air = 0.75)
 LiquidSink     CSNK()
 MoistAirSink   ASNK()
 connect(CLNT.out, HC.cool_in)

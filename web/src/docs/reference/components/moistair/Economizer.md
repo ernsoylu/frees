@@ -88,7 +88,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-Economizer C(mdot_sup=2, f_min=0.2, lim=298.15, band=1)
+Economizer C(mdot_sup=2 [kg/s], f_min=0.2, lim=298.15 [K], band=1 [K])
 C.oa_in.P = 101325 [Pa]
 C.oa_in.W = 0.006
 C.oa_in.h = Enthalpy(AirH2O, T=288.15, P=101325, W=0.006)

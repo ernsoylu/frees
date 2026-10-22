@@ -53,9 +53,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-ThermalSource HOT(T=400)
-ContactResistance CR(Rth=0.05)
-ThermalSource COLD(T=300)
+ThermalSource HOT(T=400 [K])
+ContactResistance CR(Rth=0.05 [K/W])
+ThermalSource COLD(T=300 [K])
 connect(HOT.port, CR.a)
 connect(CR.b, COLD.port)
 

@@ -62,11 +62,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Bulk-modulus node between two equal orifices at steady state (der(P) -> 0
 // so in.mdot = out.mdot): with matched CdA the node pressure sits at the
 // midpoint (101e5 + 1e5)/2 = 51e5 Pa, and mdot = 1e-6*sqrt(2*870*50e5) = 0.09327 kg/s.
-HydraulicSupply  SUP(P=10100000)
-HydraulicOrifice OUP(CdA=1e-6, rho=870)
-HydraulicVolume  VOL(V=0.002, beta=1.4e9, rho=870, P0=5100000)
-HydraulicOrifice ODN(CdA=1e-6, rho=870)
-HydraulicTank    TNK(P=100000)
+HydraulicSupply  SUP(P=10100000 [Pa])
+HydraulicOrifice OUP(CdA=1e-6 [m^2], rho=870 [kg/m^3])
+HydraulicVolume  VOL(V=0.002 [m^3], beta=1.4e9 [Pa], rho=870 [kg/m^3], P0=5100000 [Pa])
+HydraulicOrifice ODN(CdA=1e-6 [m^2], rho=870 [kg/m^3])
+HydraulicTank    TNK(P=100000 [Pa])
 connect(SUP.out, OUP.in)
 connect(OUP.out, VOL.in)
 connect(VOL.out, ODN.in)

@@ -65,20 +65,20 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT mot_cmd = 40 tol 1e-9
 // EXPECT eng_cmd = 40 tol 1e-9
 
-TABLE effm(w : tau = -100, 100)
+TABLE effm(w [rad/s] : tau = -100, 100) [-]
   0    0.9  0.9
   400  0.9  0.9
 END
-SpeedSource   SE(w=100)
+SpeedSource   SE(w=100 [rad/s])
 MechGround    GE()
-SpeedSource   SR(w=50)
+SpeedSource   SR(w=50 [rad/s])
 MechGround    GR2()
-SigConstant   Z1(k=0)
-SigConstant   Z2(k=0)
-VoltageSource BUS(E=350)
+SigConstant   Z1(k=0 [N-m])
+SigConstant   Z2(k=0 [N-m])
+VoltageSource BUS(E=350 [V])
 Ground        GND()
-ThermalSource COOL(T=300)
-HybridPowerSplit HPS(g=2, eff1$=effm, eff2$=effm, epsP=10)
+ThermalSource COOL(T=300 [K])
+HybridPowerSplit HPS(g=2, eff1$=effm, eff2$=effm, epsP=10 [W])
 connect(SE.a, HPS.eng)
 connect(SE.b, GE.port)
 connect(SR.a, HPS.out)
@@ -88,7 +88,7 @@ connect(BUS.n, HPS.n, GND.port)
 connect(Z1.out, HPS.u1)
 connect(Z2.out, HPS.u2)
 connect(HPS.heat, COOL.port)
-HPS.sun.tau = 0
+HPS.sun.tau = 0 [N-m]
 w_sun = HPS.sun.w
 
 SigConstant     SOC(k=0.6)

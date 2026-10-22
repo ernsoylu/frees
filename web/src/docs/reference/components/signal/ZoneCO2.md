@@ -64,7 +64,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT c_z = 800 tol 1e-6
 SigConstant VENT(k = 0.025)
 SigConstant OCC(k = 2)
-ZoneCO2     Z(Vz = 75, c_amb = 400, gen_occ = 5, c0 = 400)
+ZoneCO2     Z(Vz = 75 [m^3], c_amb = 400, gen_occ = 5 [m^3/s], c0 = 400)
 connect(VENT.out, Z.vent)
 connect(OCC.out, Z.occ)
 c_z = Z.out.sig

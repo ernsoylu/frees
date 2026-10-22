@@ -2237,6 +2237,29 @@ P2 = 101325 [Pa]
         );
     }
 
+    #[test]
+    fn declared_table_units_reach_the_unit_checker() {
+        // A TABLE's declared argument and output units ground its calls: the
+        // lookup is a pressure, not a dimensionless number.
+        let table = "TABLE pump(Q [m^3/s]) [Pa]\n  0 500000\n  0.02 470000\nEND\n\
+                     V = 0.01 [m^3/s]\ndP = pump(V)\n";
+        // Both paths: Check, and Solve's prepared document.
+        let source = format!("{table}x = dP + 1 [Pa]\n");
+        for out in [check(&source, "{}"), solve(&source, "{}")] {
+            let v = parsed(&out);
+            assert_eq!(v["unitWarnings"].as_array().unwrap().len(), 0, "{v}");
+        }
+        let v = parsed(&check(&format!("{table}x = dP + 1 [m]\n"), "{}"));
+        assert!(
+            v["unitWarnings"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|w| w.as_str().unwrap().contains("x = dP + 1 [m]")),
+            "{v}"
+        );
+    }
+
     // ── SolveResponse: a parse error ───────────────────────────────────────
 
     #[test]

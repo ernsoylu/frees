@@ -29,8 +29,8 @@ Capacitor inst(C, V0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `C` | Number | Capacitance [F]. |
-| `V0` | Number | Initial voltage / volume. |
+| `C` | Number | Capacitance [farad]. |
+| `V0` | Number | Initial voltage [V]. |
 
 ## Constitutive Equations
 
@@ -55,9 +55,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-VoltageSource VS(E=10)
-Resistor      R(R=1000)
-Capacitor     CAP(C=0.001, V0=0)
+VoltageSource VS(E=10 [V])
+Resistor      R(R=1000 [ohm])
+Capacitor     CAP(C=0.001 [farad], V0=0 [V])
 Ground        G()
 connect(VS.p, R.a)
 connect(R.b, CAP.p)

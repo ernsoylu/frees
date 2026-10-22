@@ -62,9 +62,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // sonic conductance scaled to 0.6 * Cmax, blowing 7 bar supply down to
 // atmosphere (choked: P_atm/P_sup = 0.143 < b = 0.3).
 SigConstant           CMD(k=0.6)
-PneumaticSupply       SUP(fluid$=Air, P=700000, T=300)
-PneumaticServoValveCmd SVC(fluid$=Air, Cmax=1e-8, b=0.3)
-PneumaticAtmosphere   ATM(P=100000)
+PneumaticSupply       SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticServoValveCmd SVC(fluid$=Air, Cmax=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere   ATM(P=100000 [Pa])
 connect(SUP.out, SVC.in)
 connect(SVC.out, ATM.port)
 connect(CMD.out, SVC.u)

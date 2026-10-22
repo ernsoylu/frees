@@ -60,8 +60,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Supercapacitor steady across an ideal 2.5 V source: der(Vc) -> 0 forces
 // p.I = 0, so the ESR drops nothing and Vc sits at the source voltage.
 // EXPECT vc = 2.5 tol 1e-9
-Supercapacitor SC(C = 100, R_esr = 0.01, V0 = 0)
-VoltageSource  SRC(E = 2.5)
+Supercapacitor SC(C = 100 [farad], R_esr = 0.01 [ohm], V0 = 0 [V])
+VoltageSource  SRC(E = 2.5 [V])
 Ground         G()
 connect(SRC.p, SC.p)
 connect(SC.n, SRC.n, G.port)

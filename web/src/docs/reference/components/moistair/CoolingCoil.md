@@ -43,7 +43,7 @@ out.p &= in.p \\
 out.w &= \text{Humrat}\left(\mathrm{airh2o}, t=tout, p=in.p, r=1\right) \\
 out.h &= \text{Enthalpy}\left(\mathrm{airh2o}, t=tout, p=in.p, w=out.w\right) \\
 q &= in.mdot\cdot \left(in.h - out.h\right) \\
-q_{lat} &= in.mdot\cdot 2501000\cdot \left(in.w - out.w\right)
+q_{lat} &= in.mdot\cdot 2501000\,\left[J/kg\right]\cdot \left(in.w - out.w\right)
 \end{aligned}
 $$
 
@@ -57,8 +57,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-MoistAirSource SRC(P=101325, T=303.15, W=0.012, mdot=1)
-CoolingCoil    CC(Tout=283.15)
+MoistAirSource SRC(P=101325 [Pa], T=303.15 [K], W=0.012, mdot=1 [kg/s])
+CoolingCoil    CC(Tout=283.15 [K])
 MoistAirSink   SNK()
 connect(SRC.out, CC.in)
 connect(CC.out, SNK.in)

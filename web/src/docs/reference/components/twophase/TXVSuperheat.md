@@ -30,7 +30,7 @@ TXVSuperheat inst(fluid$, Kv, SH_set, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
-| `Kv` | Number | Flow coefficient. |
+| `Kv` | Number | Mass-flow gain per kelvin of superheat above SH_set [kg/s·K]. |
 | `SH_set` | Number | Target superheat [K]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
@@ -59,10 +59,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TwoPhasePressureSource HI(fluid$=R134a, P=900000, x=0)
-TXVSuperheat V(fluid$=R134a, Kv=5e-7, SH_set=5)
-TwoPhasePressureSink LO(P=350000)
-ThermalSource BULB(T=288)
+TwoPhasePressureSource HI(fluid$=R134a, P=900000 [Pa], x=0)
+TXVSuperheat V(fluid$=R134a, Kv=5e-7 [kg/s-K], SH_set=5 [K])
+TwoPhasePressureSink LO(P=350000 [Pa])
+ThermalSource BULB(T=288 [K])
 connect(HI.out, V.in)
 connect(V.out, LO.in)
 connect(V.bulb, BULB.port)

@@ -66,9 +66,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-Vol_vessel = 0.080
-m = 4
-P_ves = 160000
+Vol_vessel = 0.080 [m^3]
+m = 4 [kg]
+P_ves = 160000 [Pa]
 v_avg = Vol_vessel / m
 T_sat = Temperature(R134a, P=P_ves, x=0)
 x = Quality(R134a, P=P_ves, v=v_avg)

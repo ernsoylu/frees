@@ -38,7 +38,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \begin{aligned}
-q &= emis\cdot 5.670374419E-8\cdot area\cdot \left(a.t^{4} - b.t^{4}\right) \\
+q &= emis\cdot 5.670374419E-8\,\left[kg/s^3-K^4\right]\cdot area\cdot \left(a.t^{4} - b.t^{4}\right) \\
 a.qdot &= q \\
 b.qdot &= -q
 \end{aligned}
@@ -54,11 +54,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-ThermalSource SURF(T=350)
-Convection CV(htc=10, area=2)
-Radiation  RD(emis=0.9, area=2)
-ThermalSource AIR(T=300)
-ThermalSource SUR(T=300)
+ThermalSource SURF(T=350 [K])
+Convection CV(htc=10 [W/m^2-K], area=2 [m^2])
+Radiation  RD(emis=0.9, area=2 [m^2])
+ThermalSource AIR(T=300 [K])
+ThermalSource SUR(T=300 [K])
 connect(SURF.port, CV.a, RD.a)
 connect(CV.b, AIR.port)
 connect(RD.b, SUR.port)

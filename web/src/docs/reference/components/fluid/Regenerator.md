@@ -66,8 +66,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // Regenerator: effectiveness-rated recuperator (eps given directly), hot
 // exhaust preheating compressor-discharge air, balanced 0.5 kg/s streams.
-Source      HS(h1, fluid$ = Air, mdot = 0.5, P = 110000, T = 700)
-Source      CS(c1, fluid$ = Air, mdot = 0.5, P = 300000, T = 450)
+Source      HS(h1, fluid$ = Air, mdot = 0.5 [kg/s], P = 110000 [Pa], T = 700 [K])
+Source      CS(c1, fluid$ = Air, mdot = 0.5 [kg/s], P = 300000 [Pa], T = 450 [K])
 Regenerator RG(h1, h2, c1, c2, hot$ = Air, cold$ = Air, eps = 0.8)
 Sink        SKH(h2)
 Sink        SKC(c2)

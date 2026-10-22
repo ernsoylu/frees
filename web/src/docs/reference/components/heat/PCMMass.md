@@ -63,8 +63,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // paraffin-like PCM (cp = 2 kJ/kg.K, L = 200 kJ/kg, Tm = 331 K, dTm = 2 K)
 // starting 2 K below the melt point. The latent Gaussian slows the ramp near
 // Tm; 40 s at 20 kW supplies 800 kJ, enough to cross the zone.
-HeatSource HTR(Q=20000)
-PCMMass    PCM(m=2, cp=2000, L=200000, Tm=331, dTm=2, T0=329)
+HeatSource HTR(Q=20000 [W])
+PCMMass    PCM(m=2 [kg], cp=2000 [J/kg-K], L=200000 [J/kg], Tm=331 [K], dTm=2 [K], T0=329 [K])
 connect(HTR.port, PCM.port)
 DYNAMIC melt(method = ode23s, time = 0 .. 40, points = 21)
 END

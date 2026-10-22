@@ -59,12 +59,12 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-HydraulicSupply  SUC(P=0)
-SpeedSource      SS(w=100)
+HydraulicSupply  SUC(P=0 [Pa])
+SpeedSource      SS(w=100 [rad/s])
 MechGround       G()
-HydraulicPump    PMP(disp=1e-5, rho=850, eta_v=0.95, eta_m=0.9)
-HydraulicOrifice ORI(CdA=1e-5, rho=850)
-HydraulicTank    DIS(P=0)
+HydraulicPump    PMP(disp=1e-5 [m^3], rho=850 [kg/m^3], eta_v=0.95, eta_m=0.9)
+HydraulicOrifice ORI(CdA=1e-5 [m^2], rho=850 [kg/m^3])
+HydraulicTank    DIS(P=0 [Pa])
 connect(SUC.out, PMP.in)
 connect(SS.a, PMP.shaft)
 connect(SS.b, G.port)

@@ -72,7 +72,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT d_th = 0 tol 1e-4
 // EXPECT d_pp = 0 tol 1e-3
 // EXPECT d_ph = 0 tol 1e-4
-LiquidSource  LS(fluid$=Water, mdot=2, P=200000, T=300)
+LiquidSource  LS(fluid$=Water, mdot=2 [kg/s], P=200000 [Pa], T=300 [K])
 LiquidThreeWayValve TW(u=0.3)
 LiquidSink KA()
 LiquidSink KB()
@@ -89,41 +89,41 @@ function [in] = LPout(P, domain$ = liquid)
 port(in)
   in.P = P
 end
-LPin  CS1(fluid$=Water, P=300000, T=300)
-LiquidCheckValve CVF(CdA=1e-5, rho=997, eps=100)
-LPout CK1(P=100000)
+LPin  CS1(fluid$=Water, P=300000 [Pa], T=300 [K])
+LiquidCheckValve CVF(CdA=1e-5 [m^2], rho=997 [kg/m^3], eps=100 [Pa])
+LPout CK1(P=100000 [Pa])
 connect(CS1.out, CVF.in)
 connect(CVF.out, CK1.in)
-d_cv = CVF.in.mdot - 1e-5 * sqrt(2 * 997 * 200000)
-LPin  CS2(fluid$=Water, P=100000, T=300)
-LiquidCheckValve CVR(CdA=1e-5, rho=997, eps=100)
-LPout CK2(P=300000)
+d_cv = CVF.in.mdot - 1e-5 [m^2] * sqrt(2 * 997 [kg/m^3] * 200000 [Pa])
+LPin  CS2(fluid$=Water, P=100000 [Pa], T=300 [K])
+LiquidCheckValve CVR(CdA=1e-5 [m^2], rho=997 [kg/m^3], eps=100 [Pa])
+LPout CK2(P=300000 [Pa])
 connect(CS2.out, CVR.in)
 connect(CVR.out, CK2.in)
 
-LPin  TS1(fluid$=Water, P=300000, T=300)
-LiquidThermostat THS(fluid$=Water, CdA=1e-5, rho=997, Topen=360, Tband=2)
-LPout TK1(P=100000)
+LPin  TS1(fluid$=Water, P=300000 [Pa], T=300 [K])
+LiquidThermostat THS(fluid$=Water, CdA=1e-5 [m^2], rho=997 [kg/m^3], Topen=360 [K], Tband=2 [K])
+LPout TK1(P=100000 [Pa])
 connect(TS1.out, THS.in)
 connect(THS.out, TK1.in)
-LPin  TS2(fluid$=Water, P=300000, T=400)
-LiquidThermostat THO(fluid$=Water, CdA=1e-5, rho=997, Topen=360, Tband=2)
-LPout TK2(P=100000)
+LPin  TS2(fluid$=Water, P=300000 [Pa], T=400 [K])
+LiquidThermostat THO(fluid$=Water, CdA=1e-5 [m^2], rho=997 [kg/m^3], Topen=360 [K], Tband=2 [K])
+LPout TK2(P=100000 [Pa])
 connect(TS2.out, THO.in)
 connect(THO.out, TK2.in)
-d_th = THO.in.mdot - 1e-5 * sqrt(2 * 997 * 200000)
+d_th = THO.in.mdot - 1e-5 [m^2] * sqrt(2 * 997 [kg/m^3] * 200000 [Pa])
 
-TABLE headmap(Q)
+TABLE headmap(Q [m^3/s]) [m]
   0      10
   0.01   10
 END
-LiquidSource  PS(fluid$=Water, mdot=1, P=100000, T=300)
-LiquidPumpMap PM(rho=997, eta=0.7, map$=headmap)
+LiquidSource  PS(fluid$=Water, mdot=1 [kg/s], P=100000 [Pa], T=300 [K])
+LiquidPumpMap PM(rho=997 [kg/m^3], eta=0.7, map$=headmap)
 LiquidSink    PK()
 connect(PS.out, PM.in)
 connect(PM.out, PK.in)
-d_pp = (PM.out.P - PM.in.P) - 97772.3005
-d_ph = (PM.out.h - PM.in.h) - 140.095
+d_pp = (PM.out.P - PM.in.P) - 97772.3005 [Pa]
+d_ph = (PM.out.h - PM.in.h) - 140.095 [J/kg]
 
 { CHECK ck1.in.h 112837.8113 0.1128378113292524 }
 { CHECK ck1.in.mdot 0.1996997747 1.9969977466186585e-7 }

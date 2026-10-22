@@ -54,8 +54,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-MoistAirSource SRC(P=101325, T=295, W=0.005, mdot=2)
-Humidifier     HUM(mdot_w=0.002, h_w=2.5e6)
+MoistAirSource SRC(P=101325 [Pa], T=295 [K], W=0.005, mdot=2 [kg/s])
+Humidifier     HUM(mdot_w=0.002 [kg/s], h_w=2.5e6 [J/kg])
 MoistAirSink   SNK()
 connect(SRC.out, HUM.in)
 connect(HUM.out, SNK.in)

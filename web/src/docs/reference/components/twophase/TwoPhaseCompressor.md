@@ -61,7 +61,7 @@ _No additional equations (uses the shared body)._
 $$
 \begin{aligned}
 rho_{in} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
-in.mdot &= eta_{v}\cdot disp\cdot \frac{rpm}{60}\cdot rho_{in}
+in.mdot &= eta_{v}\cdot disp\cdot \frac{rpm}{60\,\left[s\right]}\cdot rho_{in}
 \end{aligned}
 $$
 
@@ -75,8 +75,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TwoPhasePressureSource SUC(fluid$=R134a, P=350000, x=1)
-TwoPhaseCompressor CMP(fluid$=R134a, eta=0.7, model$=volumetric, eta_v=0.9, disp=2e-5, rpm=2500.000000)
+TwoPhasePressureSource SUC(fluid$=R134a, P=350000 [Pa], x=1)
+TwoPhaseCompressor CMP(fluid$=R134a, eta=0.7, model$=volumetric, eta_v=0.9, disp=2e-5 [m^3], rpm=2500.000000)
 TwoPhaseSink DIS()
 connect(SUC.out, CMP.in)
 connect(CMP.out, DIS.in)

@@ -71,9 +71,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // mixes with 1 kg/s outdoor air at 308.15 K, is filtered (K = 50, 20% fouled),
 // cooled to a 285.15 K saturated coil outlet, reheated 3 kW, and delivered by
 // a 600 Pa fan at 65% efficiency.
-MoistAirSource RA(P=101325, T=297.15, W=0.009, mdot=2)
-MoistAirSource OA(P=101325, T=308.15, W=0.016, mdot=1)
-AHU            UNIT(Kf=50, foul=1.2, Tc=285.15, Qh=3000, dPfan=600, eta_fan=0.65)
+MoistAirSource RA(P=101325 [Pa], T=297.15 [K], W=0.009, mdot=2 [kg/s])
+MoistAirSource OA(P=101325 [Pa], T=308.15 [K], W=0.016, mdot=1 [kg/s])
+AHU            UNIT(Kf=50 [Pa-s^2/kg^2], foul=1.2, Tc=285.15 [K], Qh=3000 [W], dPfan=600 [Pa], eta_fan=0.65)
 MoistAirSink   SUP()
 connect(RA.out, UNIT.ret_in)
 connect(OA.out, UNIT.oa_in)

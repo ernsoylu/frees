@@ -63,8 +63,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Supply blower: 500 Pa rise at 60% efficiency on 1.2 kg/s of room air.
 // All shaft power ends up in the stream: W_el = mdot * v_in * dP / eta,
 // and the outlet enthalpy carries the same specific work.
-MoistAirSource RA(P=101325, T=293.15, W=0.008, mdot=1.2)
-MoistAirFan    FAN(dP=500, eta=0.6)
+MoistAirSource RA(P=101325 [Pa], T=293.15 [K], W=0.008, mdot=1.2 [kg/s])
+MoistAirFan    FAN(dP=500 [Pa], eta=0.6)
 MoistAirSink   SNK()
 connect(RA.out, FAN.in)
 connect(FAN.out, SNK.in)

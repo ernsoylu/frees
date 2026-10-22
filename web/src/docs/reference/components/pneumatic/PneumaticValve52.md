@@ -75,12 +75,12 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // and bled through 0.7 C — four ISO 6358 paths with complementary commands,
 // each work port carrying its net flow.
 SigConstant         CMD(k=0.7)
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticValve52    V52(fluid$=Air, C=1e-8, b=0.3)
-PneumaticAtmosphere WA(P=500000)
-PneumaticAtmosphere WB(P=250000)
-PneumaticAtmosphere EXA(P=100000)
-PneumaticAtmosphere EXB(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticValve52    V52(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere WA(P=500000 [Pa])
+PneumaticAtmosphere WB(P=250000 [Pa])
+PneumaticAtmosphere EXA(P=100000 [Pa])
+PneumaticAtmosphere EXB(P=100000 [Pa])
 connect(SUP.out, V52.sup_in)
 connect(V52.wa, WA.port)
 connect(V52.wb, WB.port)

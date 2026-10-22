@@ -14,7 +14,8 @@
 // What it grades:
 //
 //   1. ```run fences in src/docs/*.md — the blocks Help renders with a Run
-//      button. Each must Check (structurally solvable) and Solve (converge).
+//      button. Each must Check (structurally solvable, with no unit warnings)
+//      and Solve (converge).
 //      A fence carrying `vary=` is a PARAMETRIC document, deliberately
 //      underspecified by its swept column and run from the Tables tab; those
 //      are checked for structure and not solved standalone.
@@ -157,6 +158,14 @@ function near(actual, expected, tolerance, what) {
   assertions++
 }
 
+// A teaching example must be dimensionally consistent: frees is a units-first
+// tool, and a warning the page shows its reader is a defect in the page (a
+// bare component parameter, a TABLE without units, `[F]` meant as farads).
+function assertUnitClean(chk) {
+  if (chk.unitWarnings?.length) throw new Error(`unit warnings:\n${chk.unitWarnings.join('\n')}`)
+  assertions++
+}
+
 function runDocument(c) {
   const payload = JSON.stringify(c.request)
   if (c.expectedError) {
@@ -167,6 +176,7 @@ function runDocument(c) {
   }
   const chk = JSON.parse(engine.check(c.code, payload))
   if (chk.errors?.length) throw new Error(`check: ${chk.errors.join('; ')}`)
+  assertUnitClean(chk)
   if (c.parametric) {
     // Structure only. `solvable` is false by design here — the swept column is
     // the missing equation — so the assertion is that it PARSED, not that it
@@ -200,6 +210,7 @@ function runAnalysis(c) {
     assertions++
     return 'REPL, exact output verified'
   }
+  if (typeof c.text === 'string') assertUnitClean(JSON.parse(engine.check(c.text, '{}')))
   const payload = JSON.stringify(c.request)
   const raw = c.operation === 'parameter_fit'
     ? engine.parameter_fit(payload)

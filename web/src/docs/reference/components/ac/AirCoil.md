@@ -34,7 +34,7 @@ AirCoil inst(ref$, U_tp, U_sh, D, L, eps_zone, eps_air)
 | `U_sh` | Number | Superheat-zone overall coefficient [W/m²·K]. |
 | `D` | Number | Diameter [m]. |
 | `L` | Number | Length [m]. |
-| `eps_zone` | Number | Zone-collapse smoothing width. |
+| `eps_zone` | Number | Zone-collapse smoothing width [m]. |
 | `eps_air` | Number | Air-side effectiveness. |
 
 ## Constitutive Equations
@@ -61,11 +61,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TwoPhaseSource RSRC(fluid$=R134a, mdot=0.01, P=300000, x=0.2)
+TwoPhaseSource RSRC(fluid$=R134a, mdot=0.01 [kg/s], P=300000 [Pa], x=0.2)
 TwoPhaseSink RSNK()
-MoistAirSource ASRC(P=101325, T=300, W=0.012, mdot=0.05)
+MoistAirSource ASRC(P=101325 [Pa], T=300 [K], W=0.012, mdot=0.05 [kg/s])
 MoistAirSink ASNK()
-AirCoil COIL(ref$=R134a, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.1, eps_air=0.8)
+AirCoil COIL(ref$=R134a, U_tp=2000 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=5 [m], eps_zone=0.1 [m], eps_air=0.8)
 connect(RSRC.out, COIL.ref_in)
 connect(COIL.ref_out, RSNK.in)
 connect(ASRC.out, COIL.air_in)

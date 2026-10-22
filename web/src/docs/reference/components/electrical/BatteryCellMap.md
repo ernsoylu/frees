@@ -51,11 +51,11 @@ The acausal equations this component expands into (over its port members and par
 $$
 \begin{aligned}
 i &= -p.i \\
-r0 &= r0ref\cdot e^{\frac{ea}{8.314}\cdot \left(\frac{1}{t} - \frac{1}{tref}\right)} \\
+r0 &= r0ref\cdot e^{\frac{ea}{8.314\,\left[kg m^2/s^2-K-mol\right]}\cdot \left(\frac{1}{t} - \frac{1}{tref}\right)} \\
 voc &= \text{ocv\$}\left(soc\right) \\
 p.v - n.v &= voc - r0\cdot i \\
 p.i + n.i &= 0 \\
-\text{der}\left(soc\right) &= \frac{-i}{3600\,qcap} \\
+\text{der}\left(soc\right) &= \frac{-i}{3600\,\left[Coulomb\right]\,qcap} \\
 \text{init}\left(soc\right) &= soc0 \\
 qgen &= r0\cdot i^{2} - i\cdot t\cdot \text{dudt\$}\left(soc\right) \\
 heat.t &= t \\
@@ -80,7 +80,7 @@ $$
 
 $$
 \begin{aligned}
-\text{der}\left(ah\right) &= \frac{\left|i\right|}{3600} \\
+\text{der}\left(ah\right) &= \frac{\left|i\right|}{3600\,\left[Coulomb\right]} \\
 \text{init}\left(ah\right) &= 0 \\
 qcap &= q0\cdot \left(1 - k_{age}\cdot ah\right)
 \end{aligned}
@@ -107,11 +107,11 @@ TABLE dudt(soc)
   0    -0.0001
   1     0.0001
 END
-BatteryCellMap B(ocv$ = ocv, dudt$ = dudt, R0ref = 0.01, Tref = 298, Ea = 20000, Q0 = 5, C_th = 50, SOC0 = 0.8, T0 = 298)
-CurrentSource  CS(I = -2)
+BatteryCellMap B(ocv$ = ocv, dudt$ = dudt, R0ref = 0.01 [ohm], Tref = 298 [K], Ea = 20000 [J/mol], Q0 = 5, C_th = 50 [J/K], SOC0 = 0.8, T0 = 298 [K])
+CurrentSource  CS(I = -2 [A])
 Ground         G()
-Convection     CV(htc = 5, area = 0.1)
-ThermalSource  AMB(T = 298)
+Convection     CV(htc = 5 [W/m^2-K], area = 0.1 [m^2])
+ThermalSource  AMB(T = 298 [K])
 connect(B.p, CS.p)
 connect(CS.n, B.n, G.port)
 connect(B.heat, CV.a)

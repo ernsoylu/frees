@@ -62,7 +62,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // saturated vapor, 0.6 kg/s saturated liquid.
 // EXPECT d_v = 0 tol 1e-9
 // EXPECT d_l = 0 tol 1e-9
-TwoPhaseSource SRC(fluid$=R134a, mdot=1, P=400000, x=0.4)
+TwoPhaseSource SRC(fluid$=R134a, mdot=1 [kg/s], P=400000 [Pa], x=0.4)
 FlashTank      FT(fluid$=R134a)
 TwoPhaseSink   SL()
 TwoPhaseSink   SV()

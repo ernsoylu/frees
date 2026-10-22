@@ -56,11 +56,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-BatteryThermal B(Voc=400, R0=0.1)
-Resistor       MOT(R=3.9)
+BatteryThermal B(Voc=400 [V], R0=0.1 [ohm])
+Resistor       MOT(R=3.9 [ohm])
 Ground         G()
-Conduction     PLATE(k=10, area=1, L=0.1)
-ThermalSource  COOL(T=298)
+Conduction     PLATE(k=10 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource  COOL(T=298 [K])
 connect(B.p, MOT.a)
 connect(B.n, MOT.b, G.port)
 connect(B.heat, PLATE.a)

@@ -69,10 +69,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // bus (V_cell ~ 1.984 -> i ~ 2000 A/m2, ~20 A, ~100 W of heat), the jacket
 // heat carried away by a 0.05 kg/s water loop at 325 K through a UA = 200
 // wall.
-ElectrolyzerThermal EL(ncells = 10, area = 0.01, i0 = 10, Rohm = 1e-4, E0 = 1.48, alpha = 0.5, Eth = 1.48, T = 333, fluid$ = Water, UA = 200)
-VoltageSource BUS(E = 19.84)
+ElectrolyzerThermal EL(ncells = 10, area = 0.01 [m^2], i0 = 10 [A/m^2], Rohm = 1e-4 [ohm-m^2], E0 = 1.48 [V], alpha = 0.5, Eth = 1.48 [V], T = 333 [K], fluid$ = Water, UA = 200 [W/K])
+VoltageSource BUS(E = 19.84 [V])
 Ground        G()
-LiquidSource  SRC(fluid$ = Water, mdot = 0.05, P = 150000, T = 325)
+LiquidSource  SRC(fluid$ = Water, mdot = 0.05 [kg/s], P = 150000 [Pa], T = 325 [K])
 LiquidSink    SNK()
 connect(EL.p, BUS.p)
 connect(BUS.n, EL.n, G.port)

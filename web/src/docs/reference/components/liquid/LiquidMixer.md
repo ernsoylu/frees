@@ -62,10 +62,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // mixer's `in2.P = in1.P` closes the loop and the solver sizes the orifice
 // that balances the two legs. That is the acausal property the component layer
 // exists for - nothing here says which way the computation runs.
-LiquidSource        LS(l1, fluid$ = Water, mdot = 0.8, P = 200000, T = 310)
+LiquidSource        LS(l1, fluid$ = Water, mdot = 0.8 [kg/s], P = 200000 [Pa], T = 310 [K])
 LiquidThreeWayValve TW(l1, l2, l3, u = 0.65)
-LiquidOrifice       OA(l2, l4, CdA = 4e-5, rho = 993, model$ = incompressible)
-LiquidOrifice       OB(l3, l5, CdA = cda_b, rho = 993, model$ = incompressible)
+LiquidOrifice       OA(l2, l4, CdA = 4e-5 [m^2], rho = 993 [kg/m^3], model$ = incompressible)
+LiquidOrifice       OB(l3, l5, CdA = cda_b, rho = 993 [kg/m^3], model$ = incompressible)
 LiquidMixer         LM(l4, l5, l6)
 LiquidSink          LK(l6)
 

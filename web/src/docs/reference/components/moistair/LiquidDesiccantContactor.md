@@ -63,7 +63,7 @@ $$
 \begin{aligned}
 t_{out} &= t_{in} - eps_{t}\cdot \left(t_{in} - wall.t\right) \\
 out.h &= \text{Enthalpy}\left(\mathrm{airh2o}, t=t_{out}, p=in.p, w=out.w\right) \\
-h_{f} &= 4186\,\left(wall.t - 273.15\right) \\
+h_{f} &= 4186\,\left[J/kg-K\right]\,\left(wall.t - 273.15\,\left[K\right]\right) \\
 q &= in.mdot\cdot \left(in.h - out.h\right) - mdot_{w}\cdot h_{f} \\
 wall.qdot &= -q
 \end{aligned}
@@ -73,7 +73,7 @@ $$
 
 $$
 \begin{aligned}
-h_{f} &= 4186\,\left(t_{in} - 273.15\right) \\
+h_{f} &= 4186\,\left[J/kg-K\right]\,\left(t_{in} - 273.15\,\left[K\right]\right) \\
 h_{pure} &= in.h - \frac{mdot_{w}\cdot h_{f}}{in.mdot} \\
 t_{pure} &= \text{Temperature}\left(\mathrm{airh2o}, h=h_{pure}, p=in.p, w=out.w\right) \\
 t_{out} &= t_{in} + \left(1 + f_{excess}\right)\cdot \left(t_{pure} - t_{in}\right) \\

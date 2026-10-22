@@ -60,8 +60,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // TwoPhaseCondenser: lumped non-isobaric condenser — superheated R134a at
 // 1.21 MPa leaves 10 kPa lower as liquid with a set 5 K exit subcooling.
-TwoPhaseSourcePH  SRC(mdot = 0.03, P = 1210000, h = 430000)
-TwoPhaseCondenser CND(fluid$ = R134a, SC_set = 5, dP = 10000)
+TwoPhaseSourcePH  SRC(mdot = 0.03 [kg/s], P = 1210000 [Pa], h = 430000 [J/kg])
+TwoPhaseCondenser CND(fluid$ = R134a, SC_set = 5 [K], dP = 10000 [Pa])
 TwoPhaseSink      SNK()
 connect(SRC.out, CND.in)
 connect(CND.out, SNK.in)

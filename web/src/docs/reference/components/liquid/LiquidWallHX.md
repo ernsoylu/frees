@@ -61,11 +61,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-LiquidSource    SRC(fluid$=EG50, mdot=0.3, P=200000, T=315)
+LiquidSource    SRC(fluid$=EG50, mdot=0.3 [kg/s], P=200000 [Pa], T=315 [K])
 LiquidPump      PUMP(fluid$=EG50, eta=0.6)
-LiquidColdPlate CP(Q=5000)
-LiquidWallHX    RAD(fluid$=EG50, UA=800)
-ThermalSource   AMB(T=298)
+LiquidColdPlate CP(Q=5000 [W])
+LiquidWallHX    RAD(fluid$=EG50, UA=800 [W/K])
+ThermalSource   AMB(T=298 [K])
 LiquidSink      OUT()
 connect(SRC.out, PUMP.in)
 connect(PUMP.out, CP.in)

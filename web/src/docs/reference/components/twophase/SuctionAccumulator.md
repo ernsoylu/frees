@@ -64,8 +64,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // SuctionAccumulator: a wet suction stream (x = 0.95) feeds the accumulator,
 // which delivers saturated vapor and traps the liquid carryover — the stored
 // mass m grows at mdot*(1 - x_in) = 2.5 g/s over the 60 s run.
-TwoPhaseSource     SRC(fluid$ = R134a, mdot = 0.05, P = 350000, x = 0.95)
-SuctionAccumulator ACC(fluid$ = R134a, m0 = 0.5)
+TwoPhaseSource     SRC(fluid$ = R134a, mdot = 0.05 [kg/s], P = 350000 [Pa], x = 0.95)
+SuctionAccumulator ACC(fluid$ = R134a, m0 = 0.5 [kg])
 TwoPhaseSink       SNK()
 connect(SRC.out, ACC.in)
 connect(ACC.out, SNK.in)

@@ -67,8 +67,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Humid-air supply duct: 10 m of 0.3 m round duct at 1 kg/s dry-air flow.
 // Darcy friction on the total (moist) mass flow; composition and enthalpy
 // pass through, only pressure drops.
-MoistAirSource SUP(P=101325, T=293.15, W=0.008, mdot=1)
-MoistAirDuct   DCT(L=10, D=0.3, rough=1e-4, mu_a=1.85e-5)
+MoistAirSource SUP(P=101325 [Pa], T=293.15 [K], W=0.008, mdot=1 [kg/s])
+MoistAirDuct   DCT(L=10 [m], D=0.3 [m], rough=1e-4 [m], mu_a=1.85e-5 [Pa-s])
 MoistAirSink   SNK()
 connect(SUP.out, DCT.in)
 connect(DCT.out, SNK.in)

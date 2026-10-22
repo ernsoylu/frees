@@ -51,15 +51,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-function [port] = HeatSource(Q)
-port(port)
-  port.Qdot = -Q
-end
-Q_in = 1000
+Q_in = 1000 [W]
 HeatSource    HS(Q=Q_in)
-ThermalMass   M(C=5000, T0=300)
-Conduction    wall(k=2, area=1, L=0.1)
-ThermalSource amb(T=300)
+ThermalMass   M(C=5000 [J/K], T0=300 [K])
+Conduction    wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource amb(T=300 [K])
 connect(HS.port, M.port, wall.a)
 connect(wall.b, amb.port)
 DYNAMIC warmup(time = 0 .. 1)

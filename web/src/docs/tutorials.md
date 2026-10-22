@@ -151,7 +151,7 @@ h_out = Enthalpy(AirH2O, T=T_out, P=P_atm, R=1)
 
 Q_total  = mdot * (h_in - h_out)              { total coil duty, W }
 mdot_w   = mdot * (w_in - w_out)              { condensate, kg/s }
-Q_latent = mdot * 2.501e6 * (w_in - w_out)    { latent share, W }
+Q_latent = mdot * 2.501e6 [J/kg] * (w_in - w_out)    { latent share, W }
 Q_sens   = Q_total - Q_latent
 SHR      = Q_sens / Q_total                   { sensible heat ratio }
 ```
@@ -203,7 +203,7 @@ h_out = Enthalpy(AirH2O, T=T_out, P=P_atm, R=1)
 
 Q_total  = mdot * (h_in - h_out)
 mdot_w   = mdot * (w_in - w_out)
-Q_latent = mdot * 2.501e6 * (w_in - w_out)
+Q_latent = mdot * 2.501e6 [J/kg] * (w_in - w_out)
 Q_sens   = Q_total - Q_latent
 SHR      = Q_sens / Q_total
 
@@ -238,7 +238,7 @@ Q_coil_lat = COIL.Q_lat
 ```run
 R = 220 [ohm]
 L = 0.1 [H]
-C = 1e-6 [F]
+C = 1e-6 [farad]
 
 w0 = 1 / sqrt(L * C)         { resonance -> 3162 rad/s (~503 Hz) }
 Q  = w0 * L / R              { quality factor -> ~1.44 }
@@ -294,7 +294,7 @@ Solve and open the **Plots** panel: flat passband, the modest `Q` peak near 3162
 { Series RLC low-pass filter -- Tutorial 3 }
 R = 220 [ohm]
 L = 0.1 [H]
-C = 1e-6 [F]
+C = 1e-6 [farad]
 
 w0 = 1 / sqrt(L * C)
 Q  = w0 * L / R
@@ -470,7 +470,7 @@ rho = 998 [kg/m^3]
 g   = 9.81 [m/s^2]
 H_static  = 18 [m]
 dP_static = rho * g * H_static     { ~176 kPa of static lift }
-K = 1.1e8                          { friction coefficient, Pa/(m^3/s)^2 }
+K = 1.1e8 [Pa-s^2/m^6]            { friction coefficient, Pa/(m^3/s)^2 }
 ```
 
 (`K` comes from your piping model — the Darcy losses of *Your First Component Network*, or a measured pressure drop at a known flow.)
@@ -510,7 +510,7 @@ rho = 998 [kg/m^3]
 g   = 9.81 [m/s^2]
 H_static  = 18 [m]
 dP_static = rho * g * H_static
-K = 1.1e8
+K = 1.1e8 [Pa-s^2/m^6]
 
 pump_curve(V_op) = dP_static + K * V_op^2
 

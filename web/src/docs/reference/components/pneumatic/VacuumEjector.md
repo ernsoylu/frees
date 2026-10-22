@@ -63,10 +63,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Vacuum ejector picking a load: 7 bar motive air (choked ISO 6358) entrains
 // ER = 0.6 times its mass flow from a 0.6 bar suction vessel; mass and energy
 // mix exactly at the 1 bar exhaust.
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticSupply     VAC(fluid$=Air, P=60000, T=295)
-VacuumEjector       EJ(fluid$=Air, C=2e-8, b=0.3, ER=0.6)
-PneumaticAtmosphere ATM(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticSupply     VAC(fluid$=Air, P=60000 [Pa], T=295 [K])
+VacuumEjector       EJ(fluid$=Air, C=2e-8 [m^3/s-Pa], b=0.3, ER=0.6)
+PneumaticAtmosphere ATM(P=100000 [Pa])
 connect(SUP.out, EJ.sup_in)
 connect(VAC.out, EJ.suc_in)
 connect(EJ.exh_out, ATM.port)

@@ -46,7 +46,7 @@ w_{sat} &= \text{Humrat}\left(\mathrm{airh2o}, t=t_{out}, p=in.p, r=1\right) \\
 out.w &= 0.5\,\left(in.w + w_{sat} - \sqrt{\left(in.w - w_{sat}\right)^{2} + 1.0E-12}\right) \\
 out.h &= \text{Enthalpy}\left(\mathrm{airh2o}, t=t_{out}, p=in.p, w=out.w\right) \\
 q &= in.mdot\cdot \left(in.h - out.h\right) \\
-q_{lat} &= in.mdot\cdot 2501000\cdot \left(in.w - out.w\right) \\
+q_{lat} &= in.mdot\cdot 2501000\,\left[J/kg\right]\cdot \left(in.w - out.w\right) \\
 wall.qdot &= -q
 \end{aligned}
 $$
@@ -65,10 +65,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // (305.15 K, W = 0.012) approaches a 283.15 K wall with effectiveness 0.8.
 // The outlet W is smooth-clamped at saturation, so the coil dehumidifies and
 // the wall receives sensible + latent duty (wall.Qdot = -Q).
-MoistAirSource SRC(P=101325, T=305.15, W=0.012, mdot=1)
+MoistAirSource SRC(P=101325 [Pa], T=305.15 [K], W=0.012, mdot=1 [kg/s])
 MoistAirWallHX COIL(eps=0.8)
 MoistAirSink   SNK()
-ThermalSource  WALLT(T=283.15)
+ThermalSource  WALLT(T=283.15 [K])
 connect(SRC.out, COIL.in)
 connect(COIL.out, SNK.in)
 connect(COIL.wall, WALLT.port)

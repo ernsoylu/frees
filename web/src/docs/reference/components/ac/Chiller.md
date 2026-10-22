@@ -35,7 +35,7 @@ Chiller inst(ref$, cool$, U_tp, U_sh, D, L, eps_zone, UA_cool)
 | `U_sh` | Number | Superheat-zone overall coefficient [W/m²·K]. |
 | `D` | Number | Diameter [m]. |
 | `L` | Number | Length [m]. |
-| `eps_zone` | Number | Zone-collapse smoothing width. |
+| `eps_zone` | Number | Zone-collapse smoothing width [m]. |
 | `UA_cool` | Number | Coolant-side conductance [W/K]. |
 
 ## Constitutive Equations
@@ -62,11 +62,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TwoPhaseSource RSRC(fluid$=R134a, mdot=0.020000, P=350000, x=0.25)
+TwoPhaseSource RSRC(fluid$=R134a, mdot=0.020000 [kg/s], P=350000 [Pa], x=0.25)
 TwoPhaseSink RSNK()
-LiquidSource CSRC(fluid$=Water, mdot=0.1, P=200000, T=300)
+LiquidSource CSRC(fluid$=Water, mdot=0.1 [kg/s], P=200000 [Pa], T=300 [K])
 LiquidSink CSNK()
-Chiller CH(ref$=R134a, cool$=Water, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.1, UA_cool=600)
+Chiller CH(ref$=R134a, cool$=Water, U_tp=2000 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=5 [m], eps_zone=0.1 [m], UA_cool=600 [W/K])
 connect(RSRC.out, CH.ref_in)
 connect(CH.ref_out, RSNK.in)
 connect(CSRC.out, CH.cool_in)

@@ -65,7 +65,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // opens the sigmoid to precisely one half. Steady.
 // EXPECT x_o = 0.5 tol 1e-9
 
-CounterbalanceValve CB(c1, c2, cp1, CdA_max=3e-6, rho=870, P_set=3e6, R_p=3, eps_o=5e4)
+CounterbalanceValve CB(c1, c2, cp1, CdA_max=3e-6 [m^2], rho=870 [kg/m^3], P_set=3e6 [Pa], R_p=3, eps_o=5e4 [Pa])
 c1.P  = 1.5e6
 c1.h  = 0
 c2.P  = 1e5

@@ -64,10 +64,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // 0.1424018 kg/s; torque = -disp*dP*eta_m/(2pi) = -28.5047 N·m.
 // EXPECT d_mm = 0 tol 1e-8
 // EXPECT d_mt = 0 tol 1e-6
-HydraulicSupply SM(P=20000000)
-HydraulicMotor  HM(disp=1e-5, rho=850, eta_v=0.95, eta_m=0.9)
-HydraulicTank   TM(P=100000)
-SpeedSource     WS(w=100)
+HydraulicSupply SM(P=20000000 [Pa])
+HydraulicMotor  HM(disp=1e-5 [m^3], rho=850 [kg/m^3], eta_v=0.95, eta_m=0.9)
+HydraulicTank   TM(P=100000 [Pa])
+SpeedSource     WS(w=100 [rad/s])
 MechGround      MG()
 connect(SM.out, HM.in)
 connect(HM.out, TM.port)

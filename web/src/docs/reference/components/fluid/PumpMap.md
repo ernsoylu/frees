@@ -41,7 +41,7 @@ $$
 q &= \frac{in.mdot}{rho} \\
 head &= \text{map\$}\left(q\right) \\
 out.mdot &= in.mdot \\
-out.p &= in.p + rho\cdot 9.80665\cdot head
+out.p &= in.p + rho\cdot 9.80665\,\left[m/s^2\right]\cdot head
 \end{aligned}
 $$
 
@@ -57,12 +57,12 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // PumpMap: head-curve pump, dP = rho*g*map$(Q). Water-like density; the
 // head map droops 25 m -> 15 m over 0..0.02 m^3/s, Q = 0.01 gives 20 m.
-TABLE hmap(q)
+TABLE hmap(q [m^3/s]) [m]
   0      25
   0.02   15
 END
 
-PumpMap PM(w1, w2, rho = 998, map$ = hmap)
+PumpMap PM(w1, w2, rho = 998 [kg/m^3], map$ = hmap)
 
 w1.P    = 150000
 w1.mdot = 9.98

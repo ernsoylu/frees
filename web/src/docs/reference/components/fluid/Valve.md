@@ -29,7 +29,7 @@ Valve inst(Cv, rho)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `Cv` | Number | Flow coefficient. |
+| `Cv` | Number | Flow coefficient: ṁ|ṁ| = Cv²·ρ·ΔP, an effective area [m²]. |
 | `rho` | Number | Density [kg/m³]. |
 
 ## Constitutive Equations
@@ -64,7 +64,7 @@ port(in)
   in.P = P
 end
 PSource SRC(P=200000, h0=0)
-Valve   VLV(Cv=0.001, rho=1000)
+Valve   VLV(Cv=0.001 [m^2], rho=1000 [kg/m^3])
 PSink   SNK(P=100000)
 connect(SRC.out, VLV.in)
 connect(VLV.out, SNK.in)

@@ -374,7 +374,7 @@ connect(SUP.out, LINE.in)
 \`\`\`run
 { Supply -> pipe -> return: what pressure is lost to friction? }
 Source  SUP(fluid$='Water', mdot=2 [kg/s], P=300000 [Pa], T=298 [K])
-Pipe    LINE(fluid$='Water', L=50 [m], D=0.05 [m], rough=0.0001)
+Pipe    LINE(fluid$='Water', L=50 [m], D=0.05 [m], rough=0.0001 [m])
 Sink    RET()
 
 connect(SUP.out, LINE.in)
@@ -1255,7 +1255,7 @@ For system problems — loops, circuits, networks — frees has a library of 312
 \`\`\`run
 { What pressure does 50 m of pipe cost? }
 Source  SUP(fluid$=Water, mdot=2 [kg/s], P=300000 [Pa], T=298 [K])
-Pipe    LINE(fluid$=Water, L=50 [m], D=0.05 [m], rough=0.0001)
+Pipe    LINE(fluid$=Water, L=50 [m], D=0.05 [m], rough=0.0001 [m])
 Sink    RET()
 
 connect(SUP.out, LINE.in)
@@ -1461,7 +1461,7 @@ P * Vol = m * R * T
 
 \`\`\`run
 Source SUP(fluid$='Water', mdot=2 [kg/s], P=300000 [Pa], T=298 [K])
-Pipe   LINE(fluid$='Water', L=50 [m], D=0.05 [m], rough=0.0001)
+Pipe   LINE(fluid$='Water', L=50 [m], D=0.05 [m], rough=0.0001 [m])
 Sink   RET()
 connect(SUP.out, LINE.in)
 connect(LINE.out, RET.in)
@@ -1999,21 +1999,21 @@ mdot_c = 0.15 [kg/s]            { coolant flow - the design variable }
 T_cin  = 288.15 [K]             { coolant inlet, 15 C }
 
 { ---- electrical: 96s pack, 3.7 V / 1.2 mOhm cells, resistive drive load ---- }
-BatteryThermal PACK(Voc=96*3.7, R0=96*0.0012)
-Resistor       LOAD(R=2.2)
+BatteryThermal PACK(Voc=96*3.7 [V], R0=96*0.0012 [ohm])
+Resistor       LOAD(R=2.2 [ohm])
 Ground         GND()
 connect(PACK.p, LOAD.a)
 connect(PACK.n, LOAD.b, GND.port)
 
 { ---- heat: lumped cell stack -> thermal pad -> cold-plate wall ---- }
-ContactResistance PAD(Rth=0.004)
+ContactResistance PAD(Rth=0.004 [K/W])
 connect(PACK.heat, PAD.a)
 
 { ---- liquid: pump -> supply pipe -> cold-plate channel -> return ---- }
 LiquidSource SRC(fluid$=EG50, mdot=mdot_c, P=150000 [Pa], T=T_cin)
 LiquidPump   PMP(fluid$=EG50, eta=0.45)
-LiquidPipe   SUP(fluid$=EG50, L=3, D=0.012, rough=1.5e-6)
-LiquidWallHX CP(fluid$=EG50, UA=350)
+LiquidPipe   SUP(fluid$=EG50, L=3 [m], D=0.012 [m], rough=1.5e-6 [m])
+LiquidWallHX CP(fluid$=EG50, UA=350 [W/K])
 LiquidSink   RET()
 connect(SRC.out, PMP.in)
 connect(PMP.out, SUP.in)
@@ -2065,7 +2065,7 @@ In the app: delete (or comment out) the \`mdot_c = …\` line so \`mdot_c\` is f
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Battery module electro-thermal with a liquid cold plate (steady)\\n{ Domains: electrical (96s pack + load) -> heat (cell-to-plate path) ->\\n  liquid (EG50 pump, pipe and cold-plate channel).\\n  The pack's ohmic heat R0*I^2 crosses a pack-to-plate thermal resistance\\n  into the cold-plate wall; the coolant picks it up with the exact\\n  isothermal-wall effectiveness built into LiquidWallHX. The pump head\\n  closes the loop pressure drop, so pump power follows from the coolant flow. }\\n\\nT_cin  = 288.15 [K]             { coolant inlet, 15 C }\\n\\n{ ---- electrical: 96s pack, 3.7 V / 1.2 mOhm cells, resistive drive load ---- }\\nBatteryThermal PACK(Voc=96*3.7, R0=96*0.0012)\\nResistor       LOAD(R=2.2)\\nGround         GND()\\nconnect(PACK.p, LOAD.a)\\nconnect(PACK.n, LOAD.b, GND.port)\\n\\n{ ---- heat: lumped cell stack -> thermal pad -> cold-plate wall ---- }\\nContactResistance PAD(Rth=0.004)\\nconnect(PACK.heat, PAD.a)\\n\\n{ ---- liquid: pump -> supply pipe -> cold-plate channel -> return ---- }\\nLiquidSource SRC(fluid$=EG50, mdot=mdot_c, P=150000 [Pa], T=T_cin)\\nLiquidPump   PMP(fluid$=EG50, eta=0.45)\\nLiquidPipe   SUP(fluid$=EG50, L=3, D=0.012, rough=1.5e-6)\\nLiquidWallHX CP(fluid$=EG50, UA=350)\\nLiquidSink   RET()\\nconnect(SRC.out, PMP.in)\\nconnect(PMP.out, SUP.in)\\nconnect(SUP.out, CP.in)\\nconnect(CP.out, RET.in)\\nconnect(CP.wall, PAD.b)\\nRET.in.P = 150000 [Pa]          { closed loop: the pump returns to its suction }\\n\\nI_pack  = -PACK.p.I             { discharge current, A }\\nV_pack  = PACK.p.V - PACK.n.V   { terminal voltage, V }\\nQ_gen   = PACK.Q                { ohmic heat, W }\\nT_cell  = PACK.heat.T           { pack temperature, K }\\nT_plate = CP.wall.T\\nT_cout  = Temperature(EG50, P=CP.out.P, h=CP.out.h)\\ndP_loop = PMP.out.P - PMP.in.P\\nW_pump  = PMP.W\\neta_pack = V_pack*I_pack / (PACK.Voc*I_pack)   { electrical efficiency }\\n",
+  "text": "// Battery module electro-thermal with a liquid cold plate (steady)\\n{ Domains: electrical (96s pack + load) -> heat (cell-to-plate path) ->\\n  liquid (EG50 pump, pipe and cold-plate channel).\\n  The pack's ohmic heat R0*I^2 crosses a pack-to-plate thermal resistance\\n  into the cold-plate wall; the coolant picks it up with the exact\\n  isothermal-wall effectiveness built into LiquidWallHX. The pump head\\n  closes the loop pressure drop, so pump power follows from the coolant flow. }\\n\\nT_cin  = 288.15 [K]             { coolant inlet, 15 C }\\n\\n{ ---- electrical: 96s pack, 3.7 V / 1.2 mOhm cells, resistive drive load ---- }\\nBatteryThermal PACK(Voc=96*3.7 [V], R0=96*0.0012 [ohm])\\nResistor       LOAD(R=2.2 [ohm])\\nGround         GND()\\nconnect(PACK.p, LOAD.a)\\nconnect(PACK.n, LOAD.b, GND.port)\\n\\n{ ---- heat: lumped cell stack -> thermal pad -> cold-plate wall ---- }\\nContactResistance PAD(Rth=0.004 [K/W])\\nconnect(PACK.heat, PAD.a)\\n\\n{ ---- liquid: pump -> supply pipe -> cold-plate channel -> return ---- }\\nLiquidSource SRC(fluid$=EG50, mdot=mdot_c, P=150000 [Pa], T=T_cin)\\nLiquidPump   PMP(fluid$=EG50, eta=0.45)\\nLiquidPipe   SUP(fluid$=EG50, L=3 [m], D=0.012 [m], rough=1.5e-6 [m])\\nLiquidWallHX CP(fluid$=EG50, UA=350 [W/K])\\nLiquidSink   RET()\\nconnect(SRC.out, PMP.in)\\nconnect(PMP.out, SUP.in)\\nconnect(SUP.out, CP.in)\\nconnect(CP.out, RET.in)\\nconnect(CP.wall, PAD.b)\\nRET.in.P = 150000 [Pa]          { closed loop: the pump returns to its suction }\\n\\nI_pack  = -PACK.p.I             { discharge current, A }\\nV_pack  = PACK.p.V - PACK.n.V   { terminal voltage, V }\\nQ_gen   = PACK.Q                { ohmic heat, W }\\nT_cell  = PACK.heat.T           { pack temperature, K }\\nT_plate = CP.wall.T\\nT_cout  = Temperature(EG50, P=CP.out.P, h=CP.out.h)\\ndP_loop = PMP.out.P - PMP.in.P\\nW_pump  = PMP.W\\neta_pack = V_pack*I_pack / (PACK.Voc*I_pack)   { electrical efficiency }\\n",
   "request": {
     "objective": "W_pump",
     "decisions": [
@@ -2128,10 +2128,10 @@ rpm   = 2000                     { compressor speed - the design variable }
 T_amb = 308.15 [K]               { 35 C ambient at the condenser }
 
 { ---- refrigerant loop ---- }
-TwoPhaseCompressor     CMP(fluid$=R134a, model$=volumetric, eta=0.65, eta_v=0.85, disp=1.2e-4, rpm=rpm)
-TwoPhaseCondenserFloat COND(fluid$=R134a, UA=650, T_amb=T_amb)
+TwoPhaseCompressor     CMP(fluid$=R134a, model$=volumetric, eta=0.65, eta_v=0.85, disp=1.2e-4 [m^3], rpm=rpm)
+TwoPhaseCondenserFloat COND(fluid$=R134a, UA=650 [W/K], T_amb=T_amb)
 IdealTXV               TXV()
-TwoPhaseEvaporatorUA   EVAP(fluid$=R134a, UA=900, dP=5000 [Pa], SH=5)
+TwoPhaseEvaporatorUA   EVAP(fluid$=R134a, UA=900 [W/K], dP=5000 [Pa], SH=5 [K])
 connect(CMP.out, COND.in)
 connect(COND.out, TXV.in)
 connect(TXV.out, EVAP.in)
@@ -2204,7 +2204,7 @@ In the app: delete (or comment out) the \`rpm = …\` line so \`rpm\` is free, t
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Automotive R134a A/C loop cooling and dehumidifying cabin air\\n{ Domains: two-phase refrigerant (closed vapour-compression loop) +\\n  moist air (psychrometric wet coil) + heat (the shared coil wall).\\n\\n  A fixed-displacement compressor sets the refrigerant flow from the suction\\n  density; the condenser head pressure floats against ambient through its UA.\\n  A thermostatic expansion valve holds the evaporator superheat: modelled as\\n  an ideal isenthalpic throttle whose opening is whatever the set superheat\\n  demands (a user-defined component below). The evaporator's refrigerant side\\n  and the cabin-air wet coil share one wall node, so the evaporating pressure,\\n  the sensible AND latent load and the supply-air state come out of one solve. }\\n\\n{ ---- a user-defined component: ideal TXV (no flow law of its own) ---- }\\nfunction [in, out] = IdealTXV(domain$ = twophase)\\nport(in)\\nport(out)\\n  out.mdot = in.mdot\\n  out.h    = in.h\\nend\\n\\nT_amb = 308.15 [K]               { 35 C ambient at the condenser }\\n\\n{ ---- refrigerant loop ---- }\\nTwoPhaseCompressor     CMP(fluid$=R134a, model$=volumetric, eta=0.65, eta_v=0.85, disp=1.2e-4, rpm=rpm)\\nTwoPhaseCondenserFloat COND(fluid$=R134a, UA=650, T_amb=T_amb)\\nIdealTXV               TXV()\\nTwoPhaseEvaporatorUA   EVAP(fluid$=R134a, UA=900, dP=5000 [Pa], SH=5)\\nconnect(CMP.out, COND.in)\\nconnect(COND.out, TXV.in)\\nconnect(TXV.out, EVAP.in)\\nconnect(EVAP.out, CMP.in)\\nEVAP.frac = 1                    { evaporator fully wetted (steady point) }\\n\\n{ ---- cabin air: 27 C, W = 0.0135 (60 % RH) drawn over the coil ---- }\\nMoistAirSource CABIN(P=101325 [Pa], T=300.15 [K], W=0.0135, mdot=0.25 [kg/s])\\nMoistAirWallHX COIL(eps=0.8)\\nMoistAirSink   VENT()\\nconnect(CABIN.out, COIL.in)\\nconnect(COIL.out, VENT.in)\\nconnect(COIL.wall, EVAP.wall)    { the cross-domain bridge }\\n\\n{ A closed loop has no source to start Newton from: seed one value per node\\n  (each guess spreads across every connect and pass-through equality). }\\nGUESS CMP.in.P   = 3.0e5 [1.2e5, 8e5]\\nGUESS CMP.out.P  = 1.3e6 [7e5, 3e6]\\nGUESS CMP.in.h   = 4.0e5\\nGUESS CMP.out.h  = 4.4e5\\nGUESS COND.out.h = 2.6e5\\nGUESS EVAP.wall.T = 282\\nGUESS COIL.T_out  = 285\\n\\nP_evap    = CMP.in.P\\nP_cond    = CMP.out.P\\nT_evap    = EVAP.Tevap\\nmdot_ref  = CMP.in.mdot\\nQ_cool    = EVAP.Q                        { refrigeration capacity, W }\\nQ_lat     = COIL.Q_lat                    { latent (dehumidification) part, W }\\nSHR       = 1 - Q_lat / Q_cool            { sensible heat ratio }\\nW_comp    = CMP.W\\nCOP       = Q_cool / W_comp\\nT_supply  = COIL.T_out\\nRH_supply = RelHum(AirH2O, h=VENT.h, P=VENT.P, W=VENT.W)\\nm_cond    = 0.25 * (0.0135 - VENT.W) * 3600   { condensate drained, kg/h }\\n",
+  "text": "// Automotive R134a A/C loop cooling and dehumidifying cabin air\\n{ Domains: two-phase refrigerant (closed vapour-compression loop) +\\n  moist air (psychrometric wet coil) + heat (the shared coil wall).\\n\\n  A fixed-displacement compressor sets the refrigerant flow from the suction\\n  density; the condenser head pressure floats against ambient through its UA.\\n  A thermostatic expansion valve holds the evaporator superheat: modelled as\\n  an ideal isenthalpic throttle whose opening is whatever the set superheat\\n  demands (a user-defined component below). The evaporator's refrigerant side\\n  and the cabin-air wet coil share one wall node, so the evaporating pressure,\\n  the sensible AND latent load and the supply-air state come out of one solve. }\\n\\n{ ---- a user-defined component: ideal TXV (no flow law of its own) ---- }\\nfunction [in, out] = IdealTXV(domain$ = twophase)\\nport(in)\\nport(out)\\n  out.mdot = in.mdot\\n  out.h    = in.h\\nend\\n\\nT_amb = 308.15 [K]               { 35 C ambient at the condenser }\\n\\n{ ---- refrigerant loop ---- }\\nTwoPhaseCompressor     CMP(fluid$=R134a, model$=volumetric, eta=0.65, eta_v=0.85, disp=1.2e-4 [m^3], rpm=rpm)\\nTwoPhaseCondenserFloat COND(fluid$=R134a, UA=650 [W/K], T_amb=T_amb)\\nIdealTXV               TXV()\\nTwoPhaseEvaporatorUA   EVAP(fluid$=R134a, UA=900 [W/K], dP=5000 [Pa], SH=5 [K])\\nconnect(CMP.out, COND.in)\\nconnect(COND.out, TXV.in)\\nconnect(TXV.out, EVAP.in)\\nconnect(EVAP.out, CMP.in)\\nEVAP.frac = 1                    { evaporator fully wetted (steady point) }\\n\\n{ ---- cabin air: 27 C, W = 0.0135 (60 % RH) drawn over the coil ---- }\\nMoistAirSource CABIN(P=101325 [Pa], T=300.15 [K], W=0.0135, mdot=0.25 [kg/s])\\nMoistAirWallHX COIL(eps=0.8)\\nMoistAirSink   VENT()\\nconnect(CABIN.out, COIL.in)\\nconnect(COIL.out, VENT.in)\\nconnect(COIL.wall, EVAP.wall)    { the cross-domain bridge }\\n\\n{ A closed loop has no source to start Newton from: seed one value per node\\n  (each guess spreads across every connect and pass-through equality). }\\nGUESS CMP.in.P   = 3.0e5 [1.2e5, 8e5]\\nGUESS CMP.out.P  = 1.3e6 [7e5, 3e6]\\nGUESS CMP.in.h   = 4.0e5\\nGUESS CMP.out.h  = 4.4e5\\nGUESS COND.out.h = 2.6e5\\nGUESS EVAP.wall.T = 282\\nGUESS COIL.T_out  = 285\\n\\nP_evap    = CMP.in.P\\nP_cond    = CMP.out.P\\nT_evap    = EVAP.Tevap\\nmdot_ref  = CMP.in.mdot\\nQ_cool    = EVAP.Q                        { refrigeration capacity, W }\\nQ_lat     = COIL.Q_lat                    { latent (dehumidification) part, W }\\nSHR       = 1 - Q_lat / Q_cool            { sensible heat ratio }\\nW_comp    = CMP.W\\nCOP       = Q_cool / W_comp\\nT_supply  = COIL.T_out\\nRH_supply = RelHum(AirH2O, h=VENT.h, P=VENT.P, W=VENT.W)\\nm_cond    = 0.25 * (0.0135 - VENT.W) * 3600   { condensate drained, kg/h }\\n",
   "request": {
     "objective": "W_comp",
     "decisions": [
@@ -2258,7 +2258,7 @@ Domains: electrical (stack polarization curve under a current load) + liquid (cl
 
 I_st = 300 [A]                     { stack current - the design variable }
 
-TABLE pumphead(Q)                  { pump head curve: Q [m3/s] -> head [m] }
+TABLE pumphead(Q [m^3/s]) [m]      { pump head curve: volume flow -> head }
   0        25
   0.0008   23
   0.0016   18
@@ -2267,16 +2267,16 @@ TABLE pumphead(Q)                  { pump head curve: Q [m3/s] -> head [m] }
 END
 
 { ---- electrical: 300 cells x 300 cm2 under an electronic load ---- }
-FuelCellStackCooled STACK(ncells=300, area=0.03, i0=1, ilim=20000, Rohm=1e-5, E0=1.2, alpha=0.7, Eth=1.25, T=353, fluid$=EG50, UA=9000)
+FuelCellStackCooled STACK(ncells=300, area=0.03 [m^2], i0=1 [A/m^2], ilim=20000 [A/m^2], Rohm=1e-5 [ohm-m^2], E0=1.2 [V], alpha=0.7, Eth=1.25 [V], T=353 [K], fluid$=EG50, UA=9000 [W/K])
 CurrentSource       LOAD(I=I_st)
 Ground              GND()
 connect(STACK.p, LOAD.n)
 connect(STACK.n, LOAD.p, GND.port)
 
 { ---- closed coolant loop ---- }
-LiquidPumpMap       PUMP(rho=1060, eta=0.55, map$=pumphead)
-LiquidWallHX        RADL(fluid$=EG50, UA=5000)    { radiator tubes }
-LiquidOrifice       BAL(CdA=8e-5, rho=1060)                   { loop resistance }
+LiquidPumpMap       PUMP(rho=1060 [kg/m^3], eta=0.55, map$=pumphead)
+LiquidWallHX        RADL(fluid$=EG50, UA=5000 [W/K])    { radiator tubes }
+LiquidOrifice       BAL(CdA=8e-5 [m^2], rho=1060 [kg/m^3])                   { loop resistance }
 LiquidExpansionTank ET(P=150000 [Pa])
 connect(PUMP.out, STACK.cool_in)
 connect(STACK.cool_out, RADL.in)
@@ -2342,7 +2342,7 @@ In the app: delete (or comment out) the \`I_st = …\` line so \`I_st\` is free,
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// PEM fuel-cell stack with a closed coolant loop and an air-cooled radiator\\n{ Domains: electrical (stack polarization curve under a current load) +\\n  liquid (closed EG50 loop: head-curve pump, stack cooling channels,\\n  radiator tubes, balancing orifice, expansion tank) + heat (the two\\n  exchanger walls) + moist air (radiator air side).\\n\\n  FuelCellStackCooled computes the cell voltage from activation (Tafel),\\n  ohmic and concentration losses and dumps the waste heat\\n  I*ncells*(E_th - V_cell) into its coolant channels. The coolant loop is\\n  CLOSED: the pump operating point is where its head curve meets the loop\\n  resistance, the expansion tank fixes the pressure datum, and the coolant\\n  temperatures float until the radiator rejects exactly the stack heat. }\\n\\n\\nTABLE pumphead(Q)                  { pump head curve: Q [m3/s] -> head [m] }\\n  0        25\\n  0.0008   23\\n  0.0016   18\\n  0.0024   10\\n  0.0030   2\\nEND\\n\\n{ ---- electrical: 300 cells x 300 cm2 under an electronic load ---- }\\nFuelCellStackCooled STACK(ncells=300, area=0.03, i0=1, ilim=20000, Rohm=1e-5, E0=1.2, alpha=0.7, Eth=1.25, T=353, fluid$=EG50, UA=9000)\\nCurrentSource       LOAD(I=I_st)\\nGround              GND()\\nconnect(STACK.p, LOAD.n)\\nconnect(STACK.n, LOAD.p, GND.port)\\n\\n{ ---- closed coolant loop ---- }\\nLiquidPumpMap       PUMP(rho=1060, eta=0.55, map$=pumphead)\\nLiquidWallHX        RADL(fluid$=EG50, UA=5000)    { radiator tubes }\\nLiquidOrifice       BAL(CdA=8e-5, rho=1060)                   { loop resistance }\\nLiquidExpansionTank ET(P=150000 [Pa])\\nconnect(PUMP.out, STACK.cool_in)\\nconnect(STACK.cool_out, RADL.in)\\nconnect(RADL.out, BAL.in)\\nconnect(BAL.out, PUMP.in, ET.port)\\n\\n{ ---- radiator air side: 2.5 kg/s of 35 C air ---- }\\nMoistAirSource AIR(P=101325 [Pa], T=308.15 [K], W=0.010, mdot=2.5 [kg/s])\\nMoistAirWallHX RADA(eps=0.65)\\nMoistAirSink   EXH()\\nconnect(AIR.out, RADA.in)\\nconnect(RADA.out, EXH.in)\\nconnect(RADL.wall, RADA.wall)\\n\\nGUESS PUMP.in.h    = 1.9e5\\nGUESS PUMP.in.mdot = 1.5\\nGUESS RADL.wall.T  = 342\\nGUESS RADA.T_out   = 330\\n\\nV_stack = STACK.p.V - STACK.n.V\\nV_cell  = V_stack / 300\\nP_el    = V_stack * I_st                     { electrical output, W }\\nQ_stack = STACK.FC.Q                          { waste heat into coolant, W }\\neta_LHV = V_cell / 1.25                       { stack efficiency on LHV }\\nmdot_c  = PUMP.in.mdot\\nT_c_in  = Temperature(EG50, P=STACK.cool_in.P, h=STACK.cool_in.h)\\nT_c_out = Temperature(EG50, P=STACK.cool_out.P, h=STACK.cool_out.h)\\nW_pump  = PUMP.W\\nT_air_out = RADA.T_out\\n",
+  "text": "// PEM fuel-cell stack with a closed coolant loop and an air-cooled radiator\\n{ Domains: electrical (stack polarization curve under a current load) +\\n  liquid (closed EG50 loop: head-curve pump, stack cooling channels,\\n  radiator tubes, balancing orifice, expansion tank) + heat (the two\\n  exchanger walls) + moist air (radiator air side).\\n\\n  FuelCellStackCooled computes the cell voltage from activation (Tafel),\\n  ohmic and concentration losses and dumps the waste heat\\n  I*ncells*(E_th - V_cell) into its coolant channels. The coolant loop is\\n  CLOSED: the pump operating point is where its head curve meets the loop\\n  resistance, the expansion tank fixes the pressure datum, and the coolant\\n  temperatures float until the radiator rejects exactly the stack heat. }\\n\\n\\nTABLE pumphead(Q [m^3/s]) [m]      { pump head curve: volume flow -> head }\\n  0        25\\n  0.0008   23\\n  0.0016   18\\n  0.0024   10\\n  0.0030   2\\nEND\\n\\n{ ---- electrical: 300 cells x 300 cm2 under an electronic load ---- }\\nFuelCellStackCooled STACK(ncells=300, area=0.03 [m^2], i0=1 [A/m^2], ilim=20000 [A/m^2], Rohm=1e-5 [ohm-m^2], E0=1.2 [V], alpha=0.7, Eth=1.25 [V], T=353 [K], fluid$=EG50, UA=9000 [W/K])\\nCurrentSource       LOAD(I=I_st)\\nGround              GND()\\nconnect(STACK.p, LOAD.n)\\nconnect(STACK.n, LOAD.p, GND.port)\\n\\n{ ---- closed coolant loop ---- }\\nLiquidPumpMap       PUMP(rho=1060 [kg/m^3], eta=0.55, map$=pumphead)\\nLiquidWallHX        RADL(fluid$=EG50, UA=5000 [W/K])    { radiator tubes }\\nLiquidOrifice       BAL(CdA=8e-5 [m^2], rho=1060 [kg/m^3])                   { loop resistance }\\nLiquidExpansionTank ET(P=150000 [Pa])\\nconnect(PUMP.out, STACK.cool_in)\\nconnect(STACK.cool_out, RADL.in)\\nconnect(RADL.out, BAL.in)\\nconnect(BAL.out, PUMP.in, ET.port)\\n\\n{ ---- radiator air side: 2.5 kg/s of 35 C air ---- }\\nMoistAirSource AIR(P=101325 [Pa], T=308.15 [K], W=0.010, mdot=2.5 [kg/s])\\nMoistAirWallHX RADA(eps=0.65)\\nMoistAirSink   EXH()\\nconnect(AIR.out, RADA.in)\\nconnect(RADA.out, EXH.in)\\nconnect(RADL.wall, RADA.wall)\\n\\nGUESS PUMP.in.h    = 1.9e5\\nGUESS PUMP.in.mdot = 1.5\\nGUESS RADL.wall.T  = 342\\nGUESS RADA.T_out   = 330\\n\\nV_stack = STACK.p.V - STACK.n.V\\nV_cell  = V_stack / 300\\nP_el    = V_stack * I_st                     { electrical output, W }\\nQ_stack = STACK.FC.Q                          { waste heat into coolant, W }\\neta_LHV = V_cell / 1.25                       { stack efficiency on LHV }\\nmdot_c  = PUMP.in.mdot\\nT_c_in  = Temperature(EG50, P=STACK.cool_in.P, h=STACK.cool_in.h)\\nT_c_out = Temperature(EG50, P=STACK.cool_out.P, h=STACK.cool_out.h)\\nW_pump  = PUMP.W\\nT_air_out = RADA.T_out\\n",
   "request": {
     "objective": "P_el",
     "maximize": true,
@@ -2396,14 +2396,14 @@ T_amb    = 298.15 [K]
 
 VoltageSource PSU(E=V_supply)
 Ground        GND()
-PeltierTEC    TEC(Sab=0.053, Rel=1.9, Kth=0.55)
+PeltierTEC    TEC(Sab=0.053 [V/K], Rel=1.9 [ohm], Kth=0.55 [W/K])
 connect(PSU.p, TEC.p)
 connect(PSU.n, TEC.n, GND.port)
 
 HeatSource        CHIP(Q=Q_load)
-ContactResistance TIM_C(Rth=0.08)     { cold plate -> module (grease) }
-ContactResistance TIM_H(Rth=0.05)     { module -> heat-sink base }
-Convection        SINK(htc=45, area=0.09)   { finned sink: hA = 4.05 W/K }
+ContactResistance TIM_C(Rth=0.08 [K/W])     { cold plate -> module (grease) }
+ContactResistance TIM_H(Rth=0.05 [K/W])     { module -> heat-sink base }
+Convection        SINK(htc=45 [W/m^2-K], area=0.09 [m^2])   { finned sink: hA = 4.05 W/K }
 ThermalSource     AMB(T=T_amb)
 connect(CHIP.port, TIM_C.a)
 connect(TIM_C.b, TEC.cold)
@@ -2452,7 +2452,7 @@ In the app: delete (or comment out) the \`V_supply = …\` line so \`V_supply\` 
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Thermoelectric (Peltier) cooler for an electronics cold plate\\n{ Domains: electrical (DC supply driving the module) + solid thermal network\\n  (cold plate, thermal interface, module, finned heat sink, ambient).\\n  PeltierTEC couples the two exactly: Seebeck back-EMF and ohmic drop on the\\n  electrical side; Peltier pumping, half-Joule heating and back-conduction on\\n  the thermal side, so Q_hot - Q_cold = V*I holds identically.\\n  Module data: 127 couples, Seebeck 0.053 V/K, R = 1.9 Ohm, K = 0.55 W/K. }\\n\\nQ_load   = 18 [W]                 { heat the electronics dump into the cold plate }\\nT_amb    = 298.15 [K]\\n\\nVoltageSource PSU(E=V_supply)\\nGround        GND()\\nPeltierTEC    TEC(Sab=0.053, Rel=1.9, Kth=0.55)\\nconnect(PSU.p, TEC.p)\\nconnect(PSU.n, TEC.n, GND.port)\\n\\nHeatSource        CHIP(Q=Q_load)\\nContactResistance TIM_C(Rth=0.08)     { cold plate -> module (grease) }\\nContactResistance TIM_H(Rth=0.05)     { module -> heat-sink base }\\nConvection        SINK(htc=45, area=0.09)   { finned sink: hA = 4.05 W/K }\\nThermalSource     AMB(T=T_amb)\\nconnect(CHIP.port, TIM_C.a)\\nconnect(TIM_C.b, TEC.cold)\\nconnect(TEC.hot, TIM_H.a)\\nconnect(TIM_H.b, SINK.a)\\nconnect(SINK.b, AMB.port)\\n\\nI_tec   = TEC.I\\nP_el    = V_supply * I_tec            { electrical input, W }\\nT_plate = CHIP.port.T                 { electronics cold-plate temperature }\\nT_cold  = TEC.cold.T\\nT_hot   = TEC.hot.T\\nCOP     = Q_load / P_el\\nQ_rej   = TEC.Qh                      { heat rejected to the sink, W }\\n",
+  "text": "// Thermoelectric (Peltier) cooler for an electronics cold plate\\n{ Domains: electrical (DC supply driving the module) + solid thermal network\\n  (cold plate, thermal interface, module, finned heat sink, ambient).\\n  PeltierTEC couples the two exactly: Seebeck back-EMF and ohmic drop on the\\n  electrical side; Peltier pumping, half-Joule heating and back-conduction on\\n  the thermal side, so Q_hot - Q_cold = V*I holds identically.\\n  Module data: 127 couples, Seebeck 0.053 V/K, R = 1.9 Ohm, K = 0.55 W/K. }\\n\\nQ_load   = 18 [W]                 { heat the electronics dump into the cold plate }\\nT_amb    = 298.15 [K]\\n\\nVoltageSource PSU(E=V_supply)\\nGround        GND()\\nPeltierTEC    TEC(Sab=0.053 [V/K], Rel=1.9 [ohm], Kth=0.55 [W/K])\\nconnect(PSU.p, TEC.p)\\nconnect(PSU.n, TEC.n, GND.port)\\n\\nHeatSource        CHIP(Q=Q_load)\\nContactResistance TIM_C(Rth=0.08 [K/W])     { cold plate -> module (grease) }\\nContactResistance TIM_H(Rth=0.05 [K/W])     { module -> heat-sink base }\\nConvection        SINK(htc=45 [W/m^2-K], area=0.09 [m^2])   { finned sink: hA = 4.05 W/K }\\nThermalSource     AMB(T=T_amb)\\nconnect(CHIP.port, TIM_C.a)\\nconnect(TIM_C.b, TEC.cold)\\nconnect(TEC.hot, TIM_H.a)\\nconnect(TIM_H.b, SINK.a)\\nconnect(SINK.b, AMB.port)\\n\\nI_tec   = TEC.I\\nP_el    = V_supply * I_tec            { electrical input, W }\\nT_plate = CHIP.port.T                 { electronics cold-plate temperature }\\nT_cold  = TEC.cold.T\\nT_hot   = TEC.hot.T\\nCOP     = Q_load / P_el\\nQ_rej   = TEC.Qh                      { heat rejected to the sink, W }\\n",
   "request": {
     "objective": "T_plate",
     "decisions": [
@@ -2485,7 +2485,7 @@ In the app: delete (or comment out) the \`V_supply = …\` line so \`V_supply\` 
 \`\`\`json
 {
   "operation": "optimize_multi",
-  "text": "// Thermoelectric (Peltier) cooler for an electronics cold plate\\n{ Domains: electrical (DC supply driving the module) + solid thermal network\\n  (cold plate, thermal interface, module, finned heat sink, ambient).\\n  PeltierTEC couples the two exactly: Seebeck back-EMF and ohmic drop on the\\n  electrical side; Peltier pumping, half-Joule heating and back-conduction on\\n  the thermal side, so Q_hot - Q_cold = V*I holds identically.\\n  Module data: 127 couples, Seebeck 0.053 V/K, R = 1.9 Ohm, K = 0.55 W/K. }\\n\\nQ_load   = 18 [W]                 { heat the electronics dump into the cold plate }\\nT_amb    = 298.15 [K]\\n\\nVoltageSource PSU(E=V_supply)\\nGround        GND()\\nPeltierTEC    TEC(Sab=0.053, Rel=1.9, Kth=0.55)\\nconnect(PSU.p, TEC.p)\\nconnect(PSU.n, TEC.n, GND.port)\\n\\nHeatSource        CHIP(Q=Q_load)\\nContactResistance TIM_C(Rth=0.08)     { cold plate -> module (grease) }\\nContactResistance TIM_H(Rth=0.05)     { module -> heat-sink base }\\nConvection        SINK(htc=45, area=0.09)   { finned sink: hA = 4.05 W/K }\\nThermalSource     AMB(T=T_amb)\\nconnect(CHIP.port, TIM_C.a)\\nconnect(TIM_C.b, TEC.cold)\\nconnect(TEC.hot, TIM_H.a)\\nconnect(TIM_H.b, SINK.a)\\nconnect(SINK.b, AMB.port)\\n\\nI_tec   = TEC.I\\nP_el    = V_supply * I_tec            { electrical input, W }\\nT_plate = CHIP.port.T                 { electronics cold-plate temperature }\\nT_cold  = TEC.cold.T\\nT_hot   = TEC.hot.T\\nCOP     = Q_load / P_el\\nQ_rej   = TEC.Qh                      { heat rejected to the sink, W }\\n",
+  "text": "// Thermoelectric (Peltier) cooler for an electronics cold plate\\n{ Domains: electrical (DC supply driving the module) + solid thermal network\\n  (cold plate, thermal interface, module, finned heat sink, ambient).\\n  PeltierTEC couples the two exactly: Seebeck back-EMF and ohmic drop on the\\n  electrical side; Peltier pumping, half-Joule heating and back-conduction on\\n  the thermal side, so Q_hot - Q_cold = V*I holds identically.\\n  Module data: 127 couples, Seebeck 0.053 V/K, R = 1.9 Ohm, K = 0.55 W/K. }\\n\\nQ_load   = 18 [W]                 { heat the electronics dump into the cold plate }\\nT_amb    = 298.15 [K]\\n\\nVoltageSource PSU(E=V_supply)\\nGround        GND()\\nPeltierTEC    TEC(Sab=0.053 [V/K], Rel=1.9 [ohm], Kth=0.55 [W/K])\\nconnect(PSU.p, TEC.p)\\nconnect(PSU.n, TEC.n, GND.port)\\n\\nHeatSource        CHIP(Q=Q_load)\\nContactResistance TIM_C(Rth=0.08 [K/W])     { cold plate -> module (grease) }\\nContactResistance TIM_H(Rth=0.05 [K/W])     { module -> heat-sink base }\\nConvection        SINK(htc=45 [W/m^2-K], area=0.09 [m^2])   { finned sink: hA = 4.05 W/K }\\nThermalSource     AMB(T=T_amb)\\nconnect(CHIP.port, TIM_C.a)\\nconnect(TIM_C.b, TEC.cold)\\nconnect(TEC.hot, TIM_H.a)\\nconnect(TIM_H.b, SINK.a)\\nconnect(SINK.b, AMB.port)\\n\\nI_tec   = TEC.I\\nP_el    = V_supply * I_tec            { electrical input, W }\\nT_plate = CHIP.port.T                 { electronics cold-plate temperature }\\nT_cold  = TEC.cold.T\\nT_hot   = TEC.hot.T\\nCOP     = Q_load / P_el\\nQ_rej   = TEC.Qh                      { heat rejected to the sink, W }\\n",
   "request": {
     "objectives": [
       "T_plate",
@@ -2561,7 +2561,7 @@ A_rad  = pi# * (D_out + 2*L_f) * H_cyl          { envelope that radiates }
 m_fins = rho_al * N_fin * t_fin * pi# / 4 * ((D_out + 2*L_f)^2 - D_out^2)
 
 HeatSource    COMB(Q=Q_comb)
-Conduction    WALL(k=k_al, area=pi# * (D_out - 0.006) * H_cyl, L=0.006)
+Conduction    WALL(k=k_al, area=pi# * (D_out - 0.006) * H_cyl, L=0.006 [m])
 Convection    FINS(htc=h_air, area=A_eff)
 Radiation     RAD(emis=0.85, area=A_rad)
 ThermalSource AMB(T=T_air)
@@ -2607,7 +2607,7 @@ In the app: delete (or comment out) the \`L_f = …\` line so \`L_f\` is free, t
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Air-cooled engine cylinder: finned barrel sized from a cross-flow correlation\\n{ Domains: solid thermal network (combustion heat -> aluminium barrel wall ->\\n  finned outer surface) + air-side convection (Zukauskas cross-flow film\\n  coefficient from the htc_extair correlation, fin efficiency from the\\n  fin parameter mL) + surface radiation to the surroundings.\\n\\n  The finned surface is one Convection element whose area is the base area\\n  plus the efficiency-weighted fin area; the fin efficiency depends on the\\n  air-side coefficient, so geometry, air flow and temperatures solve together. }\\n\\nN_fin  = 12                   { fins along the barrel }\\nt_fin  = 0.0025 [m]           { fin thickness }\\nk_al   = 160 [W/m-K]          { cast aluminium }\\nrho_al = 2700 [kg/m^3]\\nD_out  = 0.090 [m]            { barrel outer diameter }\\nH_cyl  = 0.110 [m]            { barrel height }\\nQ_comb = 3500 [W]             { heat entering the liner from combustion }\\nT_air  = 308.15 [K]\\n\\n{ air side: 0.35 kg/s of ram air across the barrel }\\nh_air  = htc_extair('Air', 101325, T_air, 0.35, D_out + 2*L_f, 0.03)\\nmL     = L_f * sqrt(2 * h_air / (k_al * t_fin))\\neta_f  = fin_efficiency(mL)\\nA_base = pi# * D_out * (H_cyl - N_fin * t_fin)\\nA_fins = N_fin * 2 * pi# / 4 * ((D_out + 2*L_f)^2 - D_out^2)\\nA_eff  = A_base + eta_f * A_fins\\nA_rad  = pi# * (D_out + 2*L_f) * H_cyl          { envelope that radiates }\\nm_fins = rho_al * N_fin * t_fin * pi# / 4 * ((D_out + 2*L_f)^2 - D_out^2)\\n\\nHeatSource    COMB(Q=Q_comb)\\nConduction    WALL(k=k_al, area=pi# * (D_out - 0.006) * H_cyl, L=0.006)\\nConvection    FINS(htc=h_air, area=A_eff)\\nRadiation     RAD(emis=0.85, area=A_rad)\\nThermalSource AMB(T=T_air)\\nconnect(COMB.port, WALL.a)\\nconnect(WALL.b, FINS.a, RAD.a)\\nconnect(FINS.b, RAD.b, AMB.port)\\n\\nT_liner = COMB.port.T            { inner liner temperature }\\nT_fin_root = WALL.b.T\\nQ_conv  = FINS.Q\\nQ_rad   = RAD.Q\\n",
+  "text": "// Air-cooled engine cylinder: finned barrel sized from a cross-flow correlation\\n{ Domains: solid thermal network (combustion heat -> aluminium barrel wall ->\\n  finned outer surface) + air-side convection (Zukauskas cross-flow film\\n  coefficient from the htc_extair correlation, fin efficiency from the\\n  fin parameter mL) + surface radiation to the surroundings.\\n\\n  The finned surface is one Convection element whose area is the base area\\n  plus the efficiency-weighted fin area; the fin efficiency depends on the\\n  air-side coefficient, so geometry, air flow and temperatures solve together. }\\n\\nN_fin  = 12                   { fins along the barrel }\\nt_fin  = 0.0025 [m]           { fin thickness }\\nk_al   = 160 [W/m-K]          { cast aluminium }\\nrho_al = 2700 [kg/m^3]\\nD_out  = 0.090 [m]            { barrel outer diameter }\\nH_cyl  = 0.110 [m]            { barrel height }\\nQ_comb = 3500 [W]             { heat entering the liner from combustion }\\nT_air  = 308.15 [K]\\n\\n{ air side: 0.35 kg/s of ram air across the barrel }\\nh_air  = htc_extair('Air', 101325, T_air, 0.35, D_out + 2*L_f, 0.03)\\nmL     = L_f * sqrt(2 * h_air / (k_al * t_fin))\\neta_f  = fin_efficiency(mL)\\nA_base = pi# * D_out * (H_cyl - N_fin * t_fin)\\nA_fins = N_fin * 2 * pi# / 4 * ((D_out + 2*L_f)^2 - D_out^2)\\nA_eff  = A_base + eta_f * A_fins\\nA_rad  = pi# * (D_out + 2*L_f) * H_cyl          { envelope that radiates }\\nm_fins = rho_al * N_fin * t_fin * pi# / 4 * ((D_out + 2*L_f)^2 - D_out^2)\\n\\nHeatSource    COMB(Q=Q_comb)\\nConduction    WALL(k=k_al, area=pi# * (D_out - 0.006) * H_cyl, L=0.006 [m])\\nConvection    FINS(htc=h_air, area=A_eff)\\nRadiation     RAD(emis=0.85, area=A_rad)\\nThermalSource AMB(T=T_air)\\nconnect(COMB.port, WALL.a)\\nconnect(WALL.b, FINS.a, RAD.a)\\nconnect(FINS.b, RAD.b, AMB.port)\\n\\nT_liner = COMB.port.T            { inner liner temperature }\\nT_fin_root = WALL.b.T\\nQ_conv  = FINS.Q\\nQ_rad   = RAD.Q\\n",
   "request": {
     "objective": "m_fins",
     "decisions": [
@@ -2665,14 +2665,14 @@ connect(PROBE.out, SENSOR.in)
 connect(SENSOR.out, PID.pv)
 
 VoltageSource   SUPPLY(E = PID.out.sig)
-HeatingResistor HEATER(R=17.63)                     { 3 kW at 230 V }
+HeatingResistor HEATER(R=17.63 [ohm])                     { 3 kW at 230 V }
 Ground          GND()
 connect(SUPPLY.p, HEATER.p)
 connect(SUPPLY.n, HEATER.n, GND.port)
 
-ThermalMass ROOM(C=4.0e5, T0=278.15)                { air + furnishings, starts at 5 C }
-Convection  ENVELOPE(htc=1, area=55)                { UA = 55 W/K }
-ThermalSource OUTSIDE(T=268.15)                     { -5 C }
+ThermalMass ROOM(C=4.0e5 [J/K], T0=278.15 [K])                { air + furnishings, starts at 5 C }
+Convection  ENVELOPE(htc=1 [W/m^2-K], area=55 [m^2])                { UA = 55 W/K }
+ThermalSource OUTSIDE(T=268.15 [K])                     { -5 C }
 connect(HEATER.heat, ROOM.port, PROBE.port, ENVELOPE.a)
 connect(ENVELOPE.b, OUTSIDE.port)
 
@@ -2717,7 +2717,7 @@ In the app: delete (or comment out) the \`Kp = …\` line so \`Kp\` is free, the
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Electric room heater under PID thermostat control with sensor lag\\n{ Domains: electrical (mains-fed resistive heater, voltage commanded by the\\n  controller) -> heat (room air + furniture thermal mass, envelope losses to\\n  winter ambient) -> sensor (thermistor with first-order lag) -> signal (PID\\n  with output clamping and anti-windup).\\n  The PID output is the heater voltage: the VoltageSource reads it straight\\n  from the signal wire, VoltageSource SUPPLY(E = PID.out.sig). }\\n\\n\\nSigConstant     SET(k=294.15)                       { 21 C setpoint }\\nSigThermalProbe PROBE()\\nSigFirstOrder   SENSOR(tau=90, y0=278.15)            { thermistor lag, 90 s }\\nSigPID          PID(model$=clamped, Kp=Kp, Ki=0.08, Kd=0, tau=1, i0=0, d0=0, umin=0, umax=230, Taw=60)\\nconnect(SET.out, PID.sp)\\nconnect(PROBE.out, SENSOR.in)\\nconnect(SENSOR.out, PID.pv)\\n\\nVoltageSource   SUPPLY(E = PID.out.sig)\\nHeatingResistor HEATER(R=17.63)                     { 3 kW at 230 V }\\nGround          GND()\\nconnect(SUPPLY.p, HEATER.p)\\nconnect(SUPPLY.n, HEATER.n, GND.port)\\n\\nThermalMass ROOM(C=4.0e5, T0=278.15)                { air + furnishings, starts at 5 C }\\nConvection  ENVELOPE(htc=1, area=55)                { UA = 55 W/K }\\nThermalSource OUTSIDE(T=268.15)                     { -5 C }\\nconnect(HEATER.heat, ROOM.port, PROBE.port, ENVELOPE.a)\\nconnect(ENVELOPE.b, OUTSIDE.port)\\n\\nDYNAMIC warmup(method = ode23s, time = 0 .. 10800, points = 1081)\\nEND\\n\\nT_final  = FinalValue('room.port.t')\\nT_peak   = MaxValue('room.port.t')\\novershoot = T_peak - 294.15\\nt_reach  = TimeAt('room.port.t', 293.15)            { first time within 1 K }\\nP_avg    = ODEAvg('heater.q')                        { mean heater power, W }\\nE_kWh    = P_avg * 10800 / 3.6e6\\n",
+  "text": "// Electric room heater under PID thermostat control with sensor lag\\n{ Domains: electrical (mains-fed resistive heater, voltage commanded by the\\n  controller) -> heat (room air + furniture thermal mass, envelope losses to\\n  winter ambient) -> sensor (thermistor with first-order lag) -> signal (PID\\n  with output clamping and anti-windup).\\n  The PID output is the heater voltage: the VoltageSource reads it straight\\n  from the signal wire, VoltageSource SUPPLY(E = PID.out.sig). }\\n\\n\\nSigConstant     SET(k=294.15)                       { 21 C setpoint }\\nSigThermalProbe PROBE()\\nSigFirstOrder   SENSOR(tau=90, y0=278.15)            { thermistor lag, 90 s }\\nSigPID          PID(model$=clamped, Kp=Kp, Ki=0.08, Kd=0, tau=1, i0=0, d0=0, umin=0, umax=230, Taw=60)\\nconnect(SET.out, PID.sp)\\nconnect(PROBE.out, SENSOR.in)\\nconnect(SENSOR.out, PID.pv)\\n\\nVoltageSource   SUPPLY(E = PID.out.sig)\\nHeatingResistor HEATER(R=17.63 [ohm])                     { 3 kW at 230 V }\\nGround          GND()\\nconnect(SUPPLY.p, HEATER.p)\\nconnect(SUPPLY.n, HEATER.n, GND.port)\\n\\nThermalMass ROOM(C=4.0e5 [J/K], T0=278.15 [K])                { air + furnishings, starts at 5 C }\\nConvection  ENVELOPE(htc=1 [W/m^2-K], area=55 [m^2])                { UA = 55 W/K }\\nThermalSource OUTSIDE(T=268.15 [K])                     { -5 C }\\nconnect(HEATER.heat, ROOM.port, PROBE.port, ENVELOPE.a)\\nconnect(ENVELOPE.b, OUTSIDE.port)\\n\\nDYNAMIC warmup(method = ode23s, time = 0 .. 10800, points = 1081)\\nEND\\n\\nT_final  = FinalValue('room.port.t')\\nT_peak   = MaxValue('room.port.t')\\novershoot = T_peak - 294.15\\nt_reach  = TimeAt('room.port.t', 293.15)            { first time within 1 K }\\nP_avg    = ODEAvg('heater.q')                        { mean heater power, W }\\nE_kWh    = P_avg * 10800 / 3.6e6\\n",
   "request": {
     "objective": "t_reach",
     "decisions": [
@@ -2769,8 +2769,8 @@ Domains: electrical (24 V battery with internal resistance, permanent- magnet DC
 
 ratio = 2.0                         { motor : pump speed ratio - the design variable }
 
-Battery       BAT(Voc=24, R0=0.02)
-DCMotor       MOT(Kt=0.06, Ke=0.06, R=0.08)
+Battery       BAT(Voc=24 [V], R0=0.02 [ohm])
+DCMotor       MOT(Kt=0.06 [N-m/A], Ke=0.06 [N-m/A], R=0.08 [ohm])
 Ground        GND()
 connect(BAT.p, MOT.p)
 connect(BAT.n, MOT.n, GND.port)
@@ -2779,8 +2779,8 @@ Gear          GB(ratio=ratio)
 connect(MOT.shaft, GB.in)
 
 HydraulicSupply  SUC(P=1.0e5 [Pa])
-HydraulicPump    PMP(disp=1.0e-5, rho=870, eta_v=0.92, eta_m=0.88)
-HydraulicOrifice LOAD(CdA=1.5e-6, rho=870)
+HydraulicPump    PMP(disp=1.0e-5 [m^3], rho=870 [kg/m^3], eta_v=0.92, eta_m=0.88)
+HydraulicOrifice LOAD(CdA=1.5e-6 [m^2], rho=870 [kg/m^3])
 HydraulicTank    TNK(P=1.0e5 [Pa])
 connect(GB.out, PMP.shaft)
 connect(SUC.out, PMP.in)
@@ -2832,7 +2832,7 @@ In the app: delete (or comment out) the \`ratio = …\` line so \`ratio\` is fre
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Battery-powered DC motor driving a hydraulic pump through a gearbox\\n{ Domains: electrical (24 V battery with internal resistance, permanent-\\n  magnet DC motor) + rotational mechanics (gear reduction, torque balance at\\n  each shaft) + oil hydraulics (fixed-displacement pump, load orifice, tank).\\n\\n  At steady state the shaft speed is where the motor torque, reflected\\n  through the gear, balances the pump torque that the orifice pressure\\n  demands. Hydraulic power P = Q*dP rises with speed while the motor's\\n  torque falls with back-EMF, so the gear ratio has a best \\"impedance\\n  match\\" - the one that extracts the most hydraulic power. }\\n\\n\\nBattery       BAT(Voc=24, R0=0.02)\\nDCMotor       MOT(Kt=0.06, Ke=0.06, R=0.08)\\nGround        GND()\\nconnect(BAT.p, MOT.p)\\nconnect(BAT.n, MOT.n, GND.port)\\n\\nGear          GB(ratio=ratio)\\nconnect(MOT.shaft, GB.in)\\n\\nHydraulicSupply  SUC(P=1.0e5 [Pa])\\nHydraulicPump    PMP(disp=1.0e-5, rho=870, eta_v=0.92, eta_m=0.88)\\nHydraulicOrifice LOAD(CdA=1.5e-6, rho=870)\\nHydraulicTank    TNK(P=1.0e5 [Pa])\\nconnect(GB.out, PMP.shaft)\\nconnect(SUC.out, PMP.in)\\nconnect(PMP.out, LOAD.in)\\nconnect(LOAD.out, TNK.port)\\n\\nI_mot   = MOT.p.I                          { motor current, A }\\nV_mot   = MOT.p.V - MOT.n.V\\nP_el    = V_mot * I_mot                    { electrical input to the motor, W }\\nw_mot   = MOT.shaft.w * 60 / (2*pi#)       { motor speed, rpm }\\nw_pump  = GB.out.w * 60 / (2*pi#)          { pump speed, rpm }\\nQ_lpm   = PMP.out.mdot / 870 * 60000       { delivered flow, L/min }\\ndP_bar  = (PMP.out.P - PMP.in.P) / 1e5\\nP_hyd   = PMP.out.mdot / 870 * (PMP.out.P - PMP.in.P)   { hydraulic power, W }\\neta_sys = P_hyd / P_el\\n",
+  "text": "// Battery-powered DC motor driving a hydraulic pump through a gearbox\\n{ Domains: electrical (24 V battery with internal resistance, permanent-\\n  magnet DC motor) + rotational mechanics (gear reduction, torque balance at\\n  each shaft) + oil hydraulics (fixed-displacement pump, load orifice, tank).\\n\\n  At steady state the shaft speed is where the motor torque, reflected\\n  through the gear, balances the pump torque that the orifice pressure\\n  demands. Hydraulic power P = Q*dP rises with speed while the motor's\\n  torque falls with back-EMF, so the gear ratio has a best \\"impedance\\n  match\\" - the one that extracts the most hydraulic power. }\\n\\n\\nBattery       BAT(Voc=24 [V], R0=0.02 [ohm])\\nDCMotor       MOT(Kt=0.06 [N-m/A], Ke=0.06 [N-m/A], R=0.08 [ohm])\\nGround        GND()\\nconnect(BAT.p, MOT.p)\\nconnect(BAT.n, MOT.n, GND.port)\\n\\nGear          GB(ratio=ratio)\\nconnect(MOT.shaft, GB.in)\\n\\nHydraulicSupply  SUC(P=1.0e5 [Pa])\\nHydraulicPump    PMP(disp=1.0e-5 [m^3], rho=870 [kg/m^3], eta_v=0.92, eta_m=0.88)\\nHydraulicOrifice LOAD(CdA=1.5e-6 [m^2], rho=870 [kg/m^3])\\nHydraulicTank    TNK(P=1.0e5 [Pa])\\nconnect(GB.out, PMP.shaft)\\nconnect(SUC.out, PMP.in)\\nconnect(PMP.out, LOAD.in)\\nconnect(LOAD.out, TNK.port)\\n\\nI_mot   = MOT.p.I                          { motor current, A }\\nV_mot   = MOT.p.V - MOT.n.V\\nP_el    = V_mot * I_mot                    { electrical input to the motor, W }\\nw_mot   = MOT.shaft.w * 60 / (2*pi#)       { motor speed, rpm }\\nw_pump  = GB.out.w * 60 / (2*pi#)          { pump speed, rpm }\\nQ_lpm   = PMP.out.mdot / 870 * 60000       { delivered flow, L/min }\\ndP_bar  = (PMP.out.P - PMP.in.P) / 1e5\\nP_hyd   = PMP.out.mdot / 870 * (PMP.out.P - PMP.in.P)   { hydraulic power, W }\\neta_sys = P_hyd / P_el\\n",
   "request": {
     "objective": "P_hyd",
     "maximize": true,
@@ -3001,10 +3001,10 @@ end
 mdot_w = 0.025 [kg/s]               { water flow - the design variable }
 
 { ---- refrigerant loop ---- }
-TwoPhaseCompressor      CMP(fluid$=R134a, model$=volumetric, eta=0.68, eta_v=0.88, disp=2.4e-5, rpm=2900)
-MovingBoundaryCondenser COND(fluid$=R134a, U_cond=1800, U_sc=500, D=0.009, L=14, eps_zone=0.05)
+TwoPhaseCompressor      CMP(fluid$=R134a, model$=volumetric, eta=0.68, eta_v=0.88, disp=2.4e-5 [m^3], rpm=2900)
+MovingBoundaryCondenser COND(fluid$=R134a, U_cond=1800 [W/m^2-K], U_sc=500 [W/m^2-K], D=0.009 [m], L=14 [m], eps_zone=0.05 [m])
 IdealTXV                TXV()
-TwoPhaseEvaporatorUA    EVAP(fluid$=R134a, UA=320, dP=3000 [Pa], SH=5)
+TwoPhaseEvaporatorUA    EVAP(fluid$=R134a, UA=320 [W/K], dP=3000 [Pa], SH=5 [K])
 connect(CMP.out, COND.in)
 connect(COND.out, TXV.in)
 connect(TXV.out, EVAP.in)
@@ -3015,7 +3015,7 @@ COND.SC   = 4            { charge closure: the refrigerant inventory sets the
 
 { ---- water side of the condenser ---- }
 LiquidSource  CITY(fluid$=Water, mdot=mdot_w, P=300000 [Pa], T=288.15 [K])
-LiquidWallHX  WCH(fluid$=Water, UA=180)
+LiquidWallHX  WCH(fluid$=Water, UA=180 [W/K])
 LiquidSink    TAP()
 connect(CITY.out, WCH.in)
 connect(WCH.out, TAP.in)
@@ -3081,7 +3081,7 @@ In the app: delete (or comment out) the \`mdot_w = …\` line so \`mdot_w\` is f
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Air-source heat-pump water heater (closed R134a loop)\\n{ Domains: two-phase refrigerant (closed loop: compressor, moving-boundary\\n  condenser, thermostatic expansion, superheat-controlled evaporator) +\\n  liquid (city water heated in the condenser's water channel) + moist air\\n  (outdoor air cooled on the evaporator coil) + heat (the two shared walls).\\n\\n  The condensing pressure floats until the water side absorbs the condenser\\n  duty; the evaporating pressure floats until the coil air supplies the\\n  evaporator duty at the compressor's volumetric flow. The water flow sets\\n  the delivery temperature - and the COP pays for every kelvin of it. }\\n\\nfunction [in, out] = IdealTXV(domain$ = twophase)\\nport(in)\\nport(out)\\n  out.mdot = in.mdot\\n  out.h    = in.h\\nend\\n\\n\\n{ ---- refrigerant loop ---- }\\nTwoPhaseCompressor      CMP(fluid$=R134a, model$=volumetric, eta=0.68, eta_v=0.88, disp=2.4e-5, rpm=2900)\\nMovingBoundaryCondenser COND(fluid$=R134a, U_cond=1800, U_sc=500, D=0.009, L=14, eps_zone=0.05)\\nIdealTXV                TXV()\\nTwoPhaseEvaporatorUA    EVAP(fluid$=R134a, UA=320, dP=3000 [Pa], SH=5)\\nconnect(CMP.out, COND.in)\\nconnect(COND.out, TXV.in)\\nconnect(TXV.out, EVAP.in)\\nconnect(EVAP.out, CMP.in)\\nEVAP.frac = 1\\nCOND.SC   = 4            { charge closure: the refrigerant inventory sets the\\n                           high side; a design subcooling stands in for it }\\n\\n{ ---- water side of the condenser ---- }\\nLiquidSource  CITY(fluid$=Water, mdot=mdot_w, P=300000 [Pa], T=288.15 [K])\\nLiquidWallHX  WCH(fluid$=Water, UA=180)\\nLiquidSink    TAP()\\nconnect(CITY.out, WCH.in)\\nconnect(WCH.out, TAP.in)\\nconnect(COND.wall, WCH.wall)\\n\\n{ ---- outdoor air over the evaporator coil: 12 C, 70 % RH ---- }\\nMoistAirSource OUTA(P=101325 [Pa], T=285.15 [K], W=HumRat(AirH2O, T=285.15, P=101325, R=0.7), mdot=0.35 [kg/s])\\nMoistAirWallHX COIL(eps=0.7)\\nMoistAirSink   EXH()\\nconnect(OUTA.out, COIL.in)\\nconnect(COIL.out, EXH.in)\\nconnect(COIL.wall, EVAP.wall)\\n\\nGUESS CMP.in.P    = 3.0e5\\nGUESS CMP.out.P   = 1.35e6\\nGUESS CMP.in.h    = 4.0e5\\nGUESS CMP.out.h   = 4.45e5\\nGUESS COND.out.h  = 2.6e5\\nGUESS COND.wall.T = 321\\nGUESS EVAP.wall.T = 280\\nGUESS COIL.T_out  = 281\\nGUESS CMP.in.mdot = 0.015\\nGUESS COND.T_out  = 321\\n\\nT_hot    = Temperature(Water, P=TAP.P, h=TAP.h)     { delivered water }\\nQ_heat   = COND.Q                                    { heating duty, W }\\nW_comp   = CMP.W\\nCOP_h    = Q_heat / W_comp\\nP_cond   = CMP.out.P\\nT_cond   = COND.Tsat\\nP_evap   = CMP.in.P\\n",
+  "text": "// Air-source heat-pump water heater (closed R134a loop)\\n{ Domains: two-phase refrigerant (closed loop: compressor, moving-boundary\\n  condenser, thermostatic expansion, superheat-controlled evaporator) +\\n  liquid (city water heated in the condenser's water channel) + moist air\\n  (outdoor air cooled on the evaporator coil) + heat (the two shared walls).\\n\\n  The condensing pressure floats until the water side absorbs the condenser\\n  duty; the evaporating pressure floats until the coil air supplies the\\n  evaporator duty at the compressor's volumetric flow. The water flow sets\\n  the delivery temperature - and the COP pays for every kelvin of it. }\\n\\nfunction [in, out] = IdealTXV(domain$ = twophase)\\nport(in)\\nport(out)\\n  out.mdot = in.mdot\\n  out.h    = in.h\\nend\\n\\n\\n{ ---- refrigerant loop ---- }\\nTwoPhaseCompressor      CMP(fluid$=R134a, model$=volumetric, eta=0.68, eta_v=0.88, disp=2.4e-5 [m^3], rpm=2900)\\nMovingBoundaryCondenser COND(fluid$=R134a, U_cond=1800 [W/m^2-K], U_sc=500 [W/m^2-K], D=0.009 [m], L=14 [m], eps_zone=0.05 [m])\\nIdealTXV                TXV()\\nTwoPhaseEvaporatorUA    EVAP(fluid$=R134a, UA=320 [W/K], dP=3000 [Pa], SH=5 [K])\\nconnect(CMP.out, COND.in)\\nconnect(COND.out, TXV.in)\\nconnect(TXV.out, EVAP.in)\\nconnect(EVAP.out, CMP.in)\\nEVAP.frac = 1\\nCOND.SC   = 4            { charge closure: the refrigerant inventory sets the\\n                           high side; a design subcooling stands in for it }\\n\\n{ ---- water side of the condenser ---- }\\nLiquidSource  CITY(fluid$=Water, mdot=mdot_w, P=300000 [Pa], T=288.15 [K])\\nLiquidWallHX  WCH(fluid$=Water, UA=180 [W/K])\\nLiquidSink    TAP()\\nconnect(CITY.out, WCH.in)\\nconnect(WCH.out, TAP.in)\\nconnect(COND.wall, WCH.wall)\\n\\n{ ---- outdoor air over the evaporator coil: 12 C, 70 % RH ---- }\\nMoistAirSource OUTA(P=101325 [Pa], T=285.15 [K], W=HumRat(AirH2O, T=285.15, P=101325, R=0.7), mdot=0.35 [kg/s])\\nMoistAirWallHX COIL(eps=0.7)\\nMoistAirSink   EXH()\\nconnect(OUTA.out, COIL.in)\\nconnect(COIL.out, EXH.in)\\nconnect(COIL.wall, EVAP.wall)\\n\\nGUESS CMP.in.P    = 3.0e5\\nGUESS CMP.out.P   = 1.35e6\\nGUESS CMP.in.h    = 4.0e5\\nGUESS CMP.out.h   = 4.45e5\\nGUESS COND.out.h  = 2.6e5\\nGUESS COND.wall.T = 321\\nGUESS EVAP.wall.T = 280\\nGUESS COIL.T_out  = 281\\nGUESS CMP.in.mdot = 0.015\\nGUESS COND.T_out  = 321\\n\\nT_hot    = Temperature(Water, P=TAP.P, h=TAP.h)     { delivered water }\\nQ_heat   = COND.Q                                    { heating duty, W }\\nW_comp   = CMP.W\\nCOP_h    = Q_heat / W_comp\\nP_cond   = CMP.out.P\\nT_cond   = COND.Tsat\\nP_evap   = CMP.in.P\\n",
   "request": {
     "objective": "COP_h",
     "maximize": true,
@@ -3143,7 +3143,7 @@ mdot   = 0.05 [kg/s]
 
 TwoPhaseSource SUC(fluid$=R744, mdot=mdot, P=P_ev, x=1)
 TwoPhaseCompressor CMP(fluid$=R744, eta=0.70)
-GasCooler      GC(fluid$=R744, UA=300, dP=0)
+GasCooler      GC(fluid$=R744, UA=300 [W/K], dP=0 [Pa])
 ThermalSource  AMB(T=308.15 [K])                 { 35 C heat sink }
 Throttle2P     EXV()
 TwoPhaseSink   EVAP_IN()
@@ -3197,7 +3197,7 @@ In the app: delete (or comment out) the \`P_gc = …\` line so \`P_gc\` is free,
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Transcritical CO2 (R744) cycle: optimum gas-cooler pressure\\n{ Domains: two-phase/supercritical refrigerant + heat (gas-cooler wall to the\\n  ambient heat sink).\\n  Above the critical point (73.8 bar) the gas-cooler pressure is no longer tied\\n  to a saturation temperature, so it is a free design variable: raising it\\n  costs compressor work but lowers the gas-cooler exit enthalpy and raises the\\n  refrigerating effect. The COP therefore has a maximum - the classic optimum\\n  high-side pressure of a transcritical cycle. }\\n\\nfunction [in, out] = Throttle2P(domain$ = twophase)\\nport(in)\\nport(out)\\n  out.mdot = in.mdot\\n  out.h    = in.h\\nend\\n\\nP_ev   = 3.5e6 [Pa]           { evaporating pressure, ~0 C }\\nmdot   = 0.05 [kg/s]\\n\\nTwoPhaseSource SUC(fluid$=R744, mdot=mdot, P=P_ev, x=1)\\nTwoPhaseCompressor CMP(fluid$=R744, eta=0.70)\\nGasCooler      GC(fluid$=R744, UA=300, dP=0)\\nThermalSource  AMB(T=308.15 [K])                 { 35 C heat sink }\\nThrottle2P     EXV()\\nTwoPhaseSink   EVAP_IN()\\nconnect(SUC.out, CMP.in)\\nconnect(CMP.out, GC.in)\\nconnect(GC.wall, AMB.port)\\nconnect(GC.out, EXV.in)\\nconnect(EXV.out, EVAP_IN.in)\\nCMP.out.P = P_gc\\nEXV.out.P = P_ev\\n\\nh_suc   = Enthalpy(R744, P=P_ev, x=1)\\nW_comp  = CMP.W\\nT_dis   = Temperature(R744, P=P_gc, h=CMP.out.h)\\nT_gc_out = Temperature(R744, P=P_gc, h=GC.out.h)\\nQ_gc    = GC.Q                                    { heat rejected, W }\\nQ_evap  = mdot * (h_suc - EXV.out.h)              { refrigerating effect, W }\\nCOP     = Q_evap / W_comp\\nx_in    = Quality(R744, P=P_ev, h=EXV.out.h)       { evaporator inlet quality }\\n",
+  "text": "// Transcritical CO2 (R744) cycle: optimum gas-cooler pressure\\n{ Domains: two-phase/supercritical refrigerant + heat (gas-cooler wall to the\\n  ambient heat sink).\\n  Above the critical point (73.8 bar) the gas-cooler pressure is no longer tied\\n  to a saturation temperature, so it is a free design variable: raising it\\n  costs compressor work but lowers the gas-cooler exit enthalpy and raises the\\n  refrigerating effect. The COP therefore has a maximum - the classic optimum\\n  high-side pressure of a transcritical cycle. }\\n\\nfunction [in, out] = Throttle2P(domain$ = twophase)\\nport(in)\\nport(out)\\n  out.mdot = in.mdot\\n  out.h    = in.h\\nend\\n\\nP_ev   = 3.5e6 [Pa]           { evaporating pressure, ~0 C }\\nmdot   = 0.05 [kg/s]\\n\\nTwoPhaseSource SUC(fluid$=R744, mdot=mdot, P=P_ev, x=1)\\nTwoPhaseCompressor CMP(fluid$=R744, eta=0.70)\\nGasCooler      GC(fluid$=R744, UA=300 [W/K], dP=0 [Pa])\\nThermalSource  AMB(T=308.15 [K])                 { 35 C heat sink }\\nThrottle2P     EXV()\\nTwoPhaseSink   EVAP_IN()\\nconnect(SUC.out, CMP.in)\\nconnect(CMP.out, GC.in)\\nconnect(GC.wall, AMB.port)\\nconnect(GC.out, EXV.in)\\nconnect(EXV.out, EVAP_IN.in)\\nCMP.out.P = P_gc\\nEXV.out.P = P_ev\\n\\nh_suc   = Enthalpy(R744, P=P_ev, x=1)\\nW_comp  = CMP.W\\nT_dis   = Temperature(R744, P=P_gc, h=CMP.out.h)\\nT_gc_out = Temperature(R744, P=P_gc, h=GC.out.h)\\nQ_gc    = GC.Q                                    { heat rejected, W }\\nQ_evap  = mdot * (h_suc - EXV.out.h)              { refrigerating effect, W }\\nCOP     = Q_evap / W_comp\\nx_in    = Quality(R744, P=P_ev, h=EXV.out.h)       { evaporator inlet quality }\\n",
   "request": {
     "objective": "COP",
     "maximize": true,
@@ -3249,7 +3249,7 @@ Domains: heat (engine block thermal mass with combustion waste heat) + liquid (c
 
 T_open = 361.15 [K]                   { thermostat opening temperature, 88 C }
 
-TABLE wpump(Q)
+TABLE wpump(Q [m^3/s]) [m]
   0        14
   0.0010   13
   0.0020   10
@@ -3257,15 +3257,15 @@ TABLE wpump(Q)
   0.0035   2
 END
 
-MassGen       ENGINE(C=5.5e4, Qgen=22000, T0=268.15)       { -5 C cold start }
-LiquidPumpMap PUMP(rho=1065, eta=0.5, map$=wpump)
-LiquidWallHX  JACKET(fluid$=EG50, UA=1500)
-LiquidThermostat THERMO(fluid$=EG50, CdA=1.2e-4, rho=1065, Topen=T_open, Tband=3)
-LiquidWallHX  RAD(fluid$=EG50, UA=1100)
+MassGen       ENGINE(C=5.5e4 [J/K], Qgen=22000 [W], T0=268.15 [K])       { -5 C cold start }
+LiquidPumpMap PUMP(rho=1065 [kg/m^3], eta=0.5, map$=wpump)
+LiquidWallHX  JACKET(fluid$=EG50, UA=1500 [W/K])
+LiquidThermostat THERMO(fluid$=EG50, CdA=1.2e-4 [m^2], rho=1065 [kg/m^3], Topen=T_open, Tband=3 [K])
+LiquidWallHX  RAD(fluid$=EG50, UA=1100 [W/K])
 ThermalSource AIR(T=268.15 [K])
-LiquidOrifice BYPASS(CdA=1.5e-5, rho=1065)
+LiquidOrifice BYPASS(CdA=1.5e-5 [m^2], rho=1065 [kg/m^3])
 LiquidMixer   MIX()
-LiquidTank    COOLANT(fluid$=EG50, m=6, UA=0, T0=268.15)
+LiquidTank    COOLANT(fluid$=EG50, m=6 [kg], UA=0 [W/K], T0=268.15 [K])
 LiquidExpansionTank ET(P=140000 [Pa])
 connect(PUMP.out, JACKET.in)
 connect(JACKET.wall, ENGINE.port)
@@ -3452,9 +3452,9 @@ connect(ERR.out, ABSE.in)
 connect(ABSE.out, IAE.in)
 
 MoistAirSource SUP(P=101325 [Pa], T=286.15 [K], W=0.0085, mdot = PID.out.sig)   { 13 C supply }
-CabinZone      ZONE(Vz=180, T0=303.15, W0=0.0125, n_occ=10, q_sens=75, mw_occ=1.6e-5, Q_aux=1800)
+CabinZone      ZONE(Vz=180 [m^3], T0=303.15 [K], W0=0.0125, n_occ=10, q_sens=75 [W], mw_occ=1.6e-5 [kg/s], Q_aux=1800 [W])
 MoistAirSink   RET()
-Convection     ENVELOPE(htc=1, area=70)                { UA = 70 W/K }
+Convection     ENVELOPE(htc=1 [W/m^2-K], area=70 [m^2])                { UA = 70 W/K }
 ThermalSource  OUTDOOR(T=307.15 [K])
 connect(SUP.out, ZONE.in)
 connect(ZONE.out, RET.in)
@@ -3506,9 +3506,9 @@ Domains: signal (solar irradiance) + electrical (single-diode PV array, permanen
 
 ratio = 3.0                        { motor : pump speed ratio - the design variable }
 
-SigConstant   SUN(k=850)                            { irradiance, W/m2 }
-PVSingleDiode PV(Isc_ref=8.6, Gref=1000, I0d=4e-8, n_d=1.3, Vt=0.0257*36, Rs=0.35, Rsh=300)
-DCMotor       MOT(Kt=0.11, Ke=0.11, R=0.6)
+SigConstant   SUN(k=850 [W/m^2])                            { irradiance, W/m2 }
+PVSingleDiode PV(Isc_ref=8.6 [A], Gref=1000 [W/m^2], I0d=4e-8 [A], n_d=1.3, Vt=0.0257*36 [V], Rs=0.35 [ohm], Rsh=300 [ohm])
+DCMotor       MOT(Kt=0.11 [N-m/A], Ke=0.11 [N-m/A], R=0.6 [ohm])
 Ground        GND()
 connect(SUN.out, PV.G)
 connect(PV.p, MOT.p)
@@ -3516,8 +3516,8 @@ connect(PV.n, MOT.n, GND.port)
 
 Gear             GB(ratio=ratio)
 HydraulicSupply  WELL(P=1.0e5 [Pa])
-HydraulicPump    PMP(disp=1.2e-5, rho=998, eta_v=0.9, eta_m=0.85)
-HydraulicOrifice HEAD(CdA=4.0e-6, rho=998)                { delivery line + lift }
+HydraulicPump    PMP(disp=1.2e-5 [m^3], rho=998 [kg/m^3], eta_v=0.9, eta_m=0.85)
+HydraulicOrifice HEAD(CdA=4.0e-6 [m^2], rho=998 [kg/m^3])                { delivery line + lift }
 HydraulicTank    TANK(P=1.0e5 [Pa])
 connect(MOT.shaft, GB.in)
 connect(GB.out, PMP.shaft)
@@ -3568,7 +3568,7 @@ In the app: delete (or comment out) the \`ratio = …\` line so \`ratio\` is fre
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Direct-coupled photovoltaic water pump (no MPPT)\\n{ Domains: signal (solar irradiance) + electrical (single-diode PV array,\\n  permanent-magnet DC motor) + rotational mechanics (gear) + hydraulics\\n  (positive-displacement pump lifting water through a delivery orifice).\\n\\n  With no maximum-power-point tracker the operating point is wherever the\\n  PV I-V curve crosses the motor's load line - set by the pump's pressure\\n  torque reflected through the gear. The gear ratio decides how close that\\n  crossing sits to the array's maximum-power knee. }\\n\\n\\nSigConstant   SUN(k=850)                            { irradiance, W/m2 }\\nPVSingleDiode PV(Isc_ref=8.6, Gref=1000, I0d=4e-8, n_d=1.3, Vt=0.0257*36, Rs=0.35, Rsh=300)\\nDCMotor       MOT(Kt=0.11, Ke=0.11, R=0.6)\\nGround        GND()\\nconnect(SUN.out, PV.G)\\nconnect(PV.p, MOT.p)\\nconnect(PV.n, MOT.n, GND.port)\\n\\nGear             GB(ratio=ratio)\\nHydraulicSupply  WELL(P=1.0e5 [Pa])\\nHydraulicPump    PMP(disp=1.2e-5, rho=998, eta_v=0.9, eta_m=0.85)\\nHydraulicOrifice HEAD(CdA=4.0e-6, rho=998)                { delivery line + lift }\\nHydraulicTank    TANK(P=1.0e5 [Pa])\\nconnect(MOT.shaft, GB.in)\\nconnect(GB.out, PMP.shaft)\\nconnect(WELL.out, PMP.in)\\nconnect(PMP.out, HEAD.in)\\nconnect(HEAD.out, TANK.port)\\n\\nGUESS PV.p.V = 25\\n\\nV_pv    = PV.p.V - PV.n.V\\nI_pv    = -PV.p.I\\nP_pv    = V_pv * I_pv                                    { array output, W }\\nQ_lph   = PMP.out.mdot / 998 * 3.6e6                     { water delivered, L/h }\\nH_m     = (PMP.out.P - PMP.in.P) / (998 * 9.80665)       { pump head, m }\\nP_hyd   = PMP.out.mdot / 998 * (PMP.out.P - PMP.in.P)\\neta_sys = P_hyd / (850 * 1.6)                             { sun-to-water, 1.6 m2 array }\\n",
+  "text": "// Direct-coupled photovoltaic water pump (no MPPT)\\n{ Domains: signal (solar irradiance) + electrical (single-diode PV array,\\n  permanent-magnet DC motor) + rotational mechanics (gear) + hydraulics\\n  (positive-displacement pump lifting water through a delivery orifice).\\n\\n  With no maximum-power-point tracker the operating point is wherever the\\n  PV I-V curve crosses the motor's load line - set by the pump's pressure\\n  torque reflected through the gear. The gear ratio decides how close that\\n  crossing sits to the array's maximum-power knee. }\\n\\n\\nSigConstant   SUN(k=850 [W/m^2])                            { irradiance, W/m2 }\\nPVSingleDiode PV(Isc_ref=8.6 [A], Gref=1000 [W/m^2], I0d=4e-8 [A], n_d=1.3, Vt=0.0257*36 [V], Rs=0.35 [ohm], Rsh=300 [ohm])\\nDCMotor       MOT(Kt=0.11 [N-m/A], Ke=0.11 [N-m/A], R=0.6 [ohm])\\nGround        GND()\\nconnect(SUN.out, PV.G)\\nconnect(PV.p, MOT.p)\\nconnect(PV.n, MOT.n, GND.port)\\n\\nGear             GB(ratio=ratio)\\nHydraulicSupply  WELL(P=1.0e5 [Pa])\\nHydraulicPump    PMP(disp=1.2e-5 [m^3], rho=998 [kg/m^3], eta_v=0.9, eta_m=0.85)\\nHydraulicOrifice HEAD(CdA=4.0e-6 [m^2], rho=998 [kg/m^3])                { delivery line + lift }\\nHydraulicTank    TANK(P=1.0e5 [Pa])\\nconnect(MOT.shaft, GB.in)\\nconnect(GB.out, PMP.shaft)\\nconnect(WELL.out, PMP.in)\\nconnect(PMP.out, HEAD.in)\\nconnect(HEAD.out, TANK.port)\\n\\nGUESS PV.p.V = 25\\n\\nV_pv    = PV.p.V - PV.n.V\\nI_pv    = -PV.p.I\\nP_pv    = V_pv * I_pv                                    { array output, W }\\nQ_lph   = PMP.out.mdot / 998 * 3.6e6                     { water delivered, L/h }\\nH_m     = (PMP.out.P - PMP.in.P) / (998 * 9.80665)       { pump head, m }\\nP_hyd   = PMP.out.mdot / 998 * (PMP.out.P - PMP.in.P)\\neta_sys = P_hyd / (850 * 1.6)                             { sun-to-water, 1.6 m2 array }\\n",
   "request": {
     "objective": "Q_lph",
     "maximize": true,
@@ -3619,19 +3619,19 @@ Domains: electrical (battery pack with internal resistance, inverter with conduc
 
 mdot_c = 0.12 [kg/s]                   { coolant flow - the design variable }
 
-TABLE effmap(w : tau = 20, 120, 240)    { motor efficiency map }
+TABLE effmap(w [rad/s] : tau = 20, 120, 240) [-]    { motor efficiency map }
   100    0.86   0.90   0.88
   400    0.92   0.95   0.93
   800    0.90   0.94   0.92
 END
 
-SigConstant   TQ(k=180)                              { torque command, N.m }
-SpeedSource   ROAD(w=520)                            { ~ 130 km/h }
+SigConstant   TQ(k=180 [N-m])                              { torque command, N.m }
+SpeedSource   ROAD(w=520 [rad/s])                            { ~ 130 km/h }
 MechGround    MG()
-BatteryThermal PACK(Voc=400, R0=0.06)
-ThermalSource  CABIN(T=303.15)
-InverterLoss  INV(V0=1.1, r=0.0035, Esw=0.018, fsw=10000, Iref=400, Vref=400, Vnom=400, epsI=1)
-MotorMap      MOT(eff$=effmap, epsP=1)
+BatteryThermal PACK(Voc=400 [V], R0=0.06 [ohm])
+ThermalSource  CABIN(T=303.15 [K])
+InverterLoss  INV(V0=1.1 [V], r=0.0035 [ohm], Esw=0.018 [J], fsw=10000 [Hz], Iref=400 [A], Vref=400 [V], Vnom=400 [V], epsI=1 [A])
+MotorMap      MOT(eff$=effmap, epsP=1 [W])
 Ground        GND()
 connect(PACK.p, INV.in_p)
 connect(INV.out_p, MOT.p)
@@ -3642,8 +3642,8 @@ connect(ROAD.a, MOT.shaft)
 connect(ROAD.b, MG.port)
 
 LiquidSource  CSRC(fluid$=EG50, mdot=mdot_c, P=180000 [Pa], T=323.15 [K])   { 50 C inlet }
-LiquidWallHX  INVCP(fluid$=EG50, UA=260)      { inverter cold plate }
-LiquidWallHX  JACKET(fluid$=EG50, UA=420)     { stator water jacket }
+LiquidWallHX  INVCP(fluid$=EG50, UA=260 [W/K])      { inverter cold plate }
+LiquidWallHX  JACKET(fluid$=EG50, UA=420 [W/K])     { stator water jacket }
 LiquidSink    CSNK()
 connect(CSRC.out, INVCP.in)
 connect(INVCP.out, JACKET.in)
@@ -3697,7 +3697,7 @@ In the app: delete (or comment out) the \`mdot_c = …\` line so \`mdot_c\` is f
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// EV drive unit: battery -> inverter -> traction motor, liquid-cooled\\n{ Domains: electrical (battery pack with internal resistance, inverter with\\n  conduction + switching losses, DC bus) + rotational mechanics (motor\\n  torque at a set road speed) + signal (driver torque command) + heat (the\\n  inverter and motor loss ports) + liquid (one EG50 cooling line running the\\n  inverter cold plate, then the motor jacket).\\n\\n  MotorMap draws the electrical power that delivers the commanded shaft\\n  power at the map efficiency; the inverter drops voltage in its switches;\\n  both losses land in the coolant. The coolant flow is minimised subject to\\n  an inverter base-plate limit. }\\n\\n\\nTABLE effmap(w : tau = 20, 120, 240)    { motor efficiency map }\\n  100    0.86   0.90   0.88\\n  400    0.92   0.95   0.93\\n  800    0.90   0.94   0.92\\nEND\\n\\nSigConstant   TQ(k=180)                              { torque command, N.m }\\nSpeedSource   ROAD(w=520)                            { ~ 130 km/h }\\nMechGround    MG()\\nBatteryThermal PACK(Voc=400, R0=0.06)\\nThermalSource  CABIN(T=303.15)\\nInverterLoss  INV(V0=1.1, r=0.0035, Esw=0.018, fsw=10000, Iref=400, Vref=400, Vnom=400, epsI=1)\\nMotorMap      MOT(eff$=effmap, epsP=1)\\nGround        GND()\\nconnect(PACK.p, INV.in_p)\\nconnect(INV.out_p, MOT.p)\\nconnect(PACK.n, MOT.n, GND.port)\\nconnect(PACK.heat, CABIN.port)\\nconnect(TQ.out, MOT.u)\\nconnect(ROAD.a, MOT.shaft)\\nconnect(ROAD.b, MG.port)\\n\\nLiquidSource  CSRC(fluid$=EG50, mdot=mdot_c, P=180000 [Pa], T=323.15 [K])   { 50 C inlet }\\nLiquidWallHX  INVCP(fluid$=EG50, UA=260)      { inverter cold plate }\\nLiquidWallHX  JACKET(fluid$=EG50, UA=420)     { stator water jacket }\\nLiquidSink    CSNK()\\nconnect(CSRC.out, INVCP.in)\\nconnect(INVCP.out, JACKET.in)\\nconnect(JACKET.out, CSNK.in)\\nconnect(INV.heat, INVCP.wall)\\nconnect(MOT.heat, JACKET.wall)\\n\\nP_shaft  = 180 * 520                                 { mechanical output, W }\\nP_batt   = PACK.W                                    { delivered by the pack, W }\\nI_bus    = -PACK.p.I\\nQ_inv    = INV.Q\\nQ_mot    = MOT.Q\\neta_drive = P_shaft / P_batt\\nT_inv    = INVCP.wall.T                              { inverter base plate }\\nT_stator = JACKET.wall.T\\nT_c_out  = Temperature(EG50, P=CSNK.P, h=CSNK.h)\\nW_cpump  = mdot_c / 1060 * 60000 / 0.5            { coolant pump power at a 60 kPa loop drop, W }\\n",
+  "text": "// EV drive unit: battery -> inverter -> traction motor, liquid-cooled\\n{ Domains: electrical (battery pack with internal resistance, inverter with\\n  conduction + switching losses, DC bus) + rotational mechanics (motor\\n  torque at a set road speed) + signal (driver torque command) + heat (the\\n  inverter and motor loss ports) + liquid (one EG50 cooling line running the\\n  inverter cold plate, then the motor jacket).\\n\\n  MotorMap draws the electrical power that delivers the commanded shaft\\n  power at the map efficiency; the inverter drops voltage in its switches;\\n  both losses land in the coolant. The coolant flow is minimised subject to\\n  an inverter base-plate limit. }\\n\\n\\nTABLE effmap(w [rad/s] : tau = 20, 120, 240) [-]    { motor efficiency map }\\n  100    0.86   0.90   0.88\\n  400    0.92   0.95   0.93\\n  800    0.90   0.94   0.92\\nEND\\n\\nSigConstant   TQ(k=180 [N-m])                              { torque command, N.m }\\nSpeedSource   ROAD(w=520 [rad/s])                            { ~ 130 km/h }\\nMechGround    MG()\\nBatteryThermal PACK(Voc=400 [V], R0=0.06 [ohm])\\nThermalSource  CABIN(T=303.15 [K])\\nInverterLoss  INV(V0=1.1 [V], r=0.0035 [ohm], Esw=0.018 [J], fsw=10000 [Hz], Iref=400 [A], Vref=400 [V], Vnom=400 [V], epsI=1 [A])\\nMotorMap      MOT(eff$=effmap, epsP=1 [W])\\nGround        GND()\\nconnect(PACK.p, INV.in_p)\\nconnect(INV.out_p, MOT.p)\\nconnect(PACK.n, MOT.n, GND.port)\\nconnect(PACK.heat, CABIN.port)\\nconnect(TQ.out, MOT.u)\\nconnect(ROAD.a, MOT.shaft)\\nconnect(ROAD.b, MG.port)\\n\\nLiquidSource  CSRC(fluid$=EG50, mdot=mdot_c, P=180000 [Pa], T=323.15 [K])   { 50 C inlet }\\nLiquidWallHX  INVCP(fluid$=EG50, UA=260 [W/K])      { inverter cold plate }\\nLiquidWallHX  JACKET(fluid$=EG50, UA=420 [W/K])     { stator water jacket }\\nLiquidSink    CSNK()\\nconnect(CSRC.out, INVCP.in)\\nconnect(INVCP.out, JACKET.in)\\nconnect(JACKET.out, CSNK.in)\\nconnect(INV.heat, INVCP.wall)\\nconnect(MOT.heat, JACKET.wall)\\n\\nP_shaft  = 180 * 520                                 { mechanical output, W }\\nP_batt   = PACK.W                                    { delivered by the pack, W }\\nI_bus    = -PACK.p.I\\nQ_inv    = INV.Q\\nQ_mot    = MOT.Q\\neta_drive = P_shaft / P_batt\\nT_inv    = INVCP.wall.T                              { inverter base plate }\\nT_stator = JACKET.wall.T\\nT_c_out  = Temperature(EG50, P=CSNK.P, h=CSNK.h)\\nW_cpump  = mdot_c / 1060 * 60000 / 0.5            { coolant pump power at a 60 kPa loop drop, W }\\n",
   "request": {
     "objective": "W_cpump",
     "decisions": [
@@ -3748,15 +3748,15 @@ Domains: electrical (transient cell model: open-circuit voltage, ohmic heat, sta
 
 m_pcm = 2.5 [kg]                  { PCM mass - the design variable }
 
-BatteryTransient CELLS(Voc=48, R0=0.045, Q0=50, C_th=9000, SOC0=1.0, T0=298.15)
-Resistor         LOAD(R=0.42)                       { ~100 A, 2C at 50 Ah }
+BatteryTransient CELLS(Voc=48 [V], R0=0.045 [ohm], Q0=50, C_th=9000 [J/K], SOC0=1.0, T0=298.15 [K])
+Resistor         LOAD(R=0.42 [ohm])                       { ~100 A, 2C at 50 Ah }
 Ground           GND()
 connect(CELLS.p, LOAD.a)
 connect(CELLS.n, LOAD.b, GND.port)
 
-ContactResistance PAD(Rth=0.005)
-PCMMass           PCM(m=m_pcm, cp=2100, L=200000, Tm=313.15, dTm=1.5, T0=298.15)
-Convection        SKIN(htc=6, area=0.35)
+ContactResistance PAD(Rth=0.005 [K/W])
+PCMMass           PCM(m=m_pcm, cp=2100 [J/kg-K], L=200000 [J/kg], Tm=313.15 [K], dTm=1.5 [K], T0=298.15 [K])
+Convection        SKIN(htc=6 [W/m^2-K], area=0.35 [m^2])
 ThermalSource     CABIN(T=298.15 [K])
 connect(CELLS.heat, PAD.a)
 connect(PAD.b, PCM.port, SKIN.a)
@@ -3800,7 +3800,7 @@ In the app: delete (or comment out) the \`m_pcm = …\` line so \`m_pcm\` is fre
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Battery module with phase-change-material (PCM) passive cooling\\n{ Domains: electrical (transient cell model: open-circuit voltage, ohmic\\n  heat, state of charge) + heat (battery lump -> conductive pad -> PCM\\n  latent store -> natural convection to the cabin).\\n\\n  A 2C discharge pushes the cells' ohmic heat into a paraffin PCM block that\\n  melts over a narrow band around 40 C, clipping the temperature rise; the\\n  heat that the PCM cannot absorb leaks to the ambient by convection. The\\n  design question is the smallest PCM mass that keeps the cells below 45 C. }\\n\\n\\nBatteryTransient CELLS(Voc=48, R0=0.045, Q0=50, C_th=9000, SOC0=1.0, T0=298.15)\\nResistor         LOAD(R=0.42)                       { ~100 A, 2C at 50 Ah }\\nGround           GND()\\nconnect(CELLS.p, LOAD.a)\\nconnect(CELLS.n, LOAD.b, GND.port)\\n\\nContactResistance PAD(Rth=0.005)\\nPCMMass           PCM(m=m_pcm, cp=2100, L=200000, Tm=313.15, dTm=1.5, T0=298.15)\\nConvection        SKIN(htc=6, area=0.35)\\nThermalSource     CABIN(T=298.15 [K])\\nconnect(CELLS.heat, PAD.a)\\nconnect(PAD.b, PCM.port, SKIN.a)\\nconnect(SKIN.b, CABIN.port)\\n\\nDYNAMIC discharge(method = ode23s, time = 0 .. 1500, points = 301)\\nEND\\n\\nT_max    = MaxValue('cells.t')                       { peak cell temperature, K }\\nT_pcm_end = FinalValue('pcm.port.t')\\nSOC_end  = FinalValue('cells.soc')\\nQ_avg    = ODEAvg('cells.qgen')                      { mean ohmic heat, W }\\nm_module = 14 + 1.15 * m_pcm                         { module mass incl. PCM housing, kg }\\n",
+  "text": "// Battery module with phase-change-material (PCM) passive cooling\\n{ Domains: electrical (transient cell model: open-circuit voltage, ohmic\\n  heat, state of charge) + heat (battery lump -> conductive pad -> PCM\\n  latent store -> natural convection to the cabin).\\n\\n  A 2C discharge pushes the cells' ohmic heat into a paraffin PCM block that\\n  melts over a narrow band around 40 C, clipping the temperature rise; the\\n  heat that the PCM cannot absorb leaks to the ambient by convection. The\\n  design question is the smallest PCM mass that keeps the cells below 45 C. }\\n\\n\\nBatteryTransient CELLS(Voc=48 [V], R0=0.045 [ohm], Q0=50, C_th=9000 [J/K], SOC0=1.0, T0=298.15 [K])\\nResistor         LOAD(R=0.42 [ohm])                       { ~100 A, 2C at 50 Ah }\\nGround           GND()\\nconnect(CELLS.p, LOAD.a)\\nconnect(CELLS.n, LOAD.b, GND.port)\\n\\nContactResistance PAD(Rth=0.005 [K/W])\\nPCMMass           PCM(m=m_pcm, cp=2100 [J/kg-K], L=200000 [J/kg], Tm=313.15 [K], dTm=1.5 [K], T0=298.15 [K])\\nConvection        SKIN(htc=6 [W/m^2-K], area=0.35 [m^2])\\nThermalSource     CABIN(T=298.15 [K])\\nconnect(CELLS.heat, PAD.a)\\nconnect(PAD.b, PCM.port, SKIN.a)\\nconnect(SKIN.b, CABIN.port)\\n\\nDYNAMIC discharge(method = ode23s, time = 0 .. 1500, points = 301)\\nEND\\n\\nT_max    = MaxValue('cells.t')                       { peak cell temperature, K }\\nT_pcm_end = FinalValue('pcm.port.t')\\nSOC_end  = FinalValue('cells.soc')\\nQ_avg    = ODEAvg('cells.qgen')                      { mean ohmic heat, W }\\nm_module = 14 + 1.15 * m_pcm                         { module mass incl. PCM housing, kg }\\n",
   "request": {
     "objective": "m_module",
     "decisions": [
@@ -3859,9 +3859,9 @@ T_wb    = WetBulb(AirH2O, T=306.15, P=101325, R=0.40)    { 33 C / 40 % RH day }
 COP     = eta_II * (T_chw - 3) / (T_cw_hot + 2 - (T_chw - 3))
 W_chill = Q_evap / COP
 Q_rej   = Q_evap + W_chill
-W_fan   = 9000 * (mdot_a / 15)^3     { 9 kW at the rated 15 kg/s }
+W_fan   = 9000 [W] * (mdot_a / 15 [kg/s])^3     { 9 kW at the rated 15 kg/s }
 
-TABLE cwpump(Q)
+TABLE cwpump(Q [m^3/s]) [m]
   0       32
   0.010   30
   0.020   25
@@ -3870,10 +3870,10 @@ TABLE cwpump(Q)
 END
 
 SigConstant         WB(k=T_wb)
-LiquidPumpMap       PUMP(rho=996, eta=0.7, map$=cwpump)
+LiquidPumpMap       PUMP(rho=996 [kg/m^3], eta=0.7, map$=cwpump)
 LiquidColdPlate     COND(Q=Q_rej)                     { chiller condenser }
-CoolingTower        TOWER(fluid$=Water, eps_t=0.55, mdot_a=mdot_a, Patm=101325)
-LiquidOrifice       PIPING(CdA=1.4e-3, rho=996)
+CoolingTower        TOWER(fluid$=Water, eps_t=0.55, mdot_a=mdot_a, Patm=101325 [Pa])
+LiquidOrifice       PIPING(CdA=1.4e-3 [m^2], rho=996 [kg/m^3])
 LiquidExpansionTank ET(P=180000 [Pa])
 connect(PUMP.out, COND.in)
 connect(COND.out, TOWER.in)
@@ -3924,7 +3924,7 @@ In the app: delete (or comment out) the \`mdot_a = …\` line so \`mdot_a\` is f
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Chiller condenser-water loop with a cooling tower: fan vs compressor energy\\n{ Domains: liquid (closed condenser-water loop: pump curve, chiller condenser\\n  as a heat load, tower fill, expansion tank) + moist air (the tower rejects\\n  heat on the enthalpy potential between saturated air at the water\\n  temperature and ambient air at its wet bulb) + signal (wet-bulb feed) +\\n  electrical (fan and compressor power).\\n\\n  More tower air lowers the condenser-water temperature, which raises the\\n  chiller COP - but fan power grows with the cube of the air flow. The air\\n  flow that minimises total plant power is the classic tower optimisation. }\\n\\nQ_evap  = 300000 [W]                { chilled-water load, 300 kW }\\nT_chw   = 280.15 [K]                { chilled-water supply, 7 C }\\neta_II  = 0.55                      { chiller second-law efficiency }\\n\\nT_wb    = WetBulb(AirH2O, T=306.15, P=101325, R=0.40)    { 33 C / 40 % RH day }\\nCOP     = eta_II * (T_chw - 3) / (T_cw_hot + 2 - (T_chw - 3))\\nW_chill = Q_evap / COP\\nQ_rej   = Q_evap + W_chill\\nW_fan   = 9000 * (mdot_a / 15)^3     { 9 kW at the rated 15 kg/s }\\n\\nTABLE cwpump(Q)\\n  0       32\\n  0.010   30\\n  0.020   25\\n  0.030   16\\n  0.040   4\\nEND\\n\\nSigConstant         WB(k=T_wb)\\nLiquidPumpMap       PUMP(rho=996, eta=0.7, map$=cwpump)\\nLiquidColdPlate     COND(Q=Q_rej)                     { chiller condenser }\\nCoolingTower        TOWER(fluid$=Water, eps_t=0.55, mdot_a=mdot_a, Patm=101325)\\nLiquidOrifice       PIPING(CdA=1.4e-3, rho=996)\\nLiquidExpansionTank ET(P=180000 [Pa])\\nconnect(PUMP.out, COND.in)\\nconnect(COND.out, TOWER.in)\\nconnect(TOWER.out, PIPING.in)\\nconnect(PIPING.out, PUMP.in, ET.port)\\nconnect(WB.out, TOWER.wb)\\n\\nGUESS PUMP.in.h = 1.3e5\\nGUESS T_cw_hot  = 307\\nGUESS COND.out.h = 1.42e5\\nT_cw_hot  = Temperature(Water, P=TOWER.in.P, h=TOWER.in.h)    { condenser leaving }\\nT_cw_cold = Temperature(Water, P=PUMP.in.P, h=PUMP.in.h)      { tower leaving }\\napproach  = T_cw_cold - T_wb\\nmdot_cw   = PUMP.in.mdot\\nW_pump    = PUMP.W\\nW_plant   = W_chill + W_fan + W_pump\\n",
+  "text": "// Chiller condenser-water loop with a cooling tower: fan vs compressor energy\\n{ Domains: liquid (closed condenser-water loop: pump curve, chiller condenser\\n  as a heat load, tower fill, expansion tank) + moist air (the tower rejects\\n  heat on the enthalpy potential between saturated air at the water\\n  temperature and ambient air at its wet bulb) + signal (wet-bulb feed) +\\n  electrical (fan and compressor power).\\n\\n  More tower air lowers the condenser-water temperature, which raises the\\n  chiller COP - but fan power grows with the cube of the air flow. The air\\n  flow that minimises total plant power is the classic tower optimisation. }\\n\\nQ_evap  = 300000 [W]                { chilled-water load, 300 kW }\\nT_chw   = 280.15 [K]                { chilled-water supply, 7 C }\\neta_II  = 0.55                      { chiller second-law efficiency }\\n\\nT_wb    = WetBulb(AirH2O, T=306.15, P=101325, R=0.40)    { 33 C / 40 % RH day }\\nCOP     = eta_II * (T_chw - 3) / (T_cw_hot + 2 - (T_chw - 3))\\nW_chill = Q_evap / COP\\nQ_rej   = Q_evap + W_chill\\nW_fan   = 9000 [W] * (mdot_a / 15 [kg/s])^3     { 9 kW at the rated 15 kg/s }\\n\\nTABLE cwpump(Q [m^3/s]) [m]\\n  0       32\\n  0.010   30\\n  0.020   25\\n  0.030   16\\n  0.040   4\\nEND\\n\\nSigConstant         WB(k=T_wb)\\nLiquidPumpMap       PUMP(rho=996 [kg/m^3], eta=0.7, map$=cwpump)\\nLiquidColdPlate     COND(Q=Q_rej)                     { chiller condenser }\\nCoolingTower        TOWER(fluid$=Water, eps_t=0.55, mdot_a=mdot_a, Patm=101325 [Pa])\\nLiquidOrifice       PIPING(CdA=1.4e-3 [m^2], rho=996 [kg/m^3])\\nLiquidExpansionTank ET(P=180000 [Pa])\\nconnect(PUMP.out, COND.in)\\nconnect(COND.out, TOWER.in)\\nconnect(TOWER.out, PIPING.in)\\nconnect(PIPING.out, PUMP.in, ET.port)\\nconnect(WB.out, TOWER.wb)\\n\\nGUESS PUMP.in.h = 1.3e5\\nGUESS T_cw_hot  = 307\\nGUESS COND.out.h = 1.42e5\\nT_cw_hot  = Temperature(Water, P=TOWER.in.P, h=TOWER.in.h)    { condenser leaving }\\nT_cw_cold = Temperature(Water, P=PUMP.in.P, h=PUMP.in.h)      { tower leaving }\\napproach  = T_cw_cold - T_wb\\nmdot_cw   = PUMP.in.mdot\\nW_pump    = PUMP.W\\nW_plant   = W_chill + W_fan + W_pump\\n",
   "request": {
     "objective": "W_plant",
     "decisions": [
@@ -3973,10 +3973,10 @@ Domains: rotational mechanics (vehicle mass reflected to the wheel as an inertia
 C_rotor = 5500 [J/K]                { rotor thermal mass (~11 kg cast iron) }
 
 { 1500 kg car on 0.31 m wheels, all four brakes lumped: J = m*r^2 }
-Inertia     CAR(J=1500*0.31^2, w0=100/3.6/0.31)       { from 100 km/h }
-RoadLoad    ROAD(Crr=14, Caero=0.0042)                  { N.m at the wheel }
+Inertia     CAR(J=1500*0.31^2, w0=100/3.6/0.31 [rad/s])       { from 100 km/h }
+RoadLoad    ROAD(Crr=14 [N-m], Caero=0.0042 [kg-m^2])                  { N.m at the wheel }
 MechGround  GND()
-WheelBrakeThermal BRK(Tmax=2600, eps=0.5, C=C_rotor, hA=35, T_amb=303.15, T_fade=673.15, k_fade=0.45, eps_f=40, T0=573.15)
+WheelBrakeThermal BRK(Tmax=2600 [N-m], eps=0.5 [rad/s], C=C_rotor, hA=35 [W/K], T_amb=303.15 [K], T_fade=673.15 [K], k_fade=0.45, eps_f=40 [K], T0=573.15 [K])
 SigStep     PEDAL(t0=0.5, before=0, after=0.9, eps=0.1)
 connect(CAR.port, ROAD.shaft, BRK.a)
 connect(BRK.b, GND.port)
@@ -4020,7 +4020,7 @@ In the app: delete (or comment out) the \`C_rotor = …\` line so \`C_rotor\` is
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Repeated hard stop: brake heating and thermal fade\\n{ Domains: rotational mechanics (vehicle mass reflected to the wheel as an\\n  inertia, aerodynamic/rolling road load) + heat (brake rotor thermal mass\\n  with convective cooling, friction power as its heat input) + signal (the\\n  driver's brake-pedal command).\\n\\n  WheelBrakeThermal makes the friction torque fall once the rotor passes its\\n  fade temperature, so the stop lengthens as the rotor heats - a two-way\\n  mechanical/thermal coupling. Rotor heat capacity C is the design lever. }\\n\\n\\n{ 1500 kg car on 0.31 m wheels, all four brakes lumped: J = m*r^2 }\\nInertia     CAR(J=1500*0.31^2, w0=100/3.6/0.31)       { from 100 km/h }\\nRoadLoad    ROAD(Crr=14, Caero=0.0042)                  { N.m at the wheel }\\nMechGround  GND()\\nWheelBrakeThermal BRK(Tmax=2600, eps=0.5, C=C_rotor, hA=35, T_amb=303.15, T_fade=673.15, k_fade=0.45, eps_f=40, T0=573.15)\\nSigStep     PEDAL(t0=0.5, before=0, after=0.9, eps=0.1)\\nconnect(CAR.port, ROAD.shaft, BRK.a)\\nconnect(BRK.b, GND.port)\\nconnect(PEDAL.out, BRK.u)\\n\\nDYNAMIC stop(method = ode23s, time = 0 .. 8, points = 401)\\nEND\\n\\nv_end    = FinalValue('car.port.w') * 0.31 * 3.6   { km/h after 8 s }\\nT_peak   = MaxValue('brk.tr')                      { peak rotor temperature, K }\\nt_stop   = TimeAt('car.port.w', 0.5)               { time to ~0.6 km/h }\\nE_brake  = 0.5 * 1500 * (100/3.6)^2               { kinetic energy, J }\\nm_rotor  = C_rotor / 500                            { rotor mass at c = 500 J/kg-K, kg }\\n",
+  "text": "// Repeated hard stop: brake heating and thermal fade\\n{ Domains: rotational mechanics (vehicle mass reflected to the wheel as an\\n  inertia, aerodynamic/rolling road load) + heat (brake rotor thermal mass\\n  with convective cooling, friction power as its heat input) + signal (the\\n  driver's brake-pedal command).\\n\\n  WheelBrakeThermal makes the friction torque fall once the rotor passes its\\n  fade temperature, so the stop lengthens as the rotor heats - a two-way\\n  mechanical/thermal coupling. Rotor heat capacity C is the design lever. }\\n\\n\\n{ 1500 kg car on 0.31 m wheels, all four brakes lumped: J = m*r^2 }\\nInertia     CAR(J=1500*0.31^2, w0=100/3.6/0.31 [rad/s])       { from 100 km/h }\\nRoadLoad    ROAD(Crr=14 [N-m], Caero=0.0042 [kg-m^2])                  { N.m at the wheel }\\nMechGround  GND()\\nWheelBrakeThermal BRK(Tmax=2600 [N-m], eps=0.5 [rad/s], C=C_rotor, hA=35 [W/K], T_amb=303.15 [K], T_fade=673.15 [K], k_fade=0.45, eps_f=40 [K], T0=573.15 [K])\\nSigStep     PEDAL(t0=0.5, before=0, after=0.9, eps=0.1)\\nconnect(CAR.port, ROAD.shaft, BRK.a)\\nconnect(BRK.b, GND.port)\\nconnect(PEDAL.out, BRK.u)\\n\\nDYNAMIC stop(method = ode23s, time = 0 .. 8, points = 401)\\nEND\\n\\nv_end    = FinalValue('car.port.w') * 0.31 * 3.6   { km/h after 8 s }\\nT_peak   = MaxValue('brk.tr')                      { peak rotor temperature, K }\\nt_stop   = TimeAt('car.port.w', 0.5)               { time to ~0.6 km/h }\\nE_brake  = 0.5 * 1500 * (100/3.6)^2               { kinetic energy, J }\\nm_rotor  = C_rotor / 500                            { rotor mass at c = 500 J/kg-K, kg }\\n",
   "request": {
     "objective": "m_rotor",
     "decisions": [
@@ -4073,21 +4073,21 @@ Domains: electrical (bridge excitation, three precision resistors, the RTD as a 
 V_ex    = 2.0 [V]               { bridge excitation - the design variable }
 T_fluid = 353.15 [K]            { true process temperature, 80 C }
 G_amp   = 50                    { instrumentation-amplifier gain }
-LSB     = 10 / 2^12             { 12-bit ADC on a 10 V span, V per count }
+LSB     = 10 [V] / 2^12             { 12-bit ADC on a 10 V span, V per count }
 
 VoltageSource     EXC(E=V_ex)
 Ground            GND()
-Resistor          R1(R=100)
-Resistor          R2(R=100)
-Resistor          R3(R=130.9)       { bridge balanced near the mid-range }
-HarnessResistance RTD(R20=107.79, alphaT=0.00385)   { Pt100 referred to 20 C }
+Resistor          R1(R=100 [ohm])
+Resistor          R2(R=100 [ohm])
+Resistor          R3(R=130.9 [ohm])       { bridge balanced near the mid-range }
+HarnessResistance RTD(R20=107.79 [ohm], alphaT=0.00385 [1/K])   { Pt100 referred to 20 C }
 connect(EXC.p, R1.a, R3.a)
 connect(R1.b, R2.a)
 connect(R3.b, RTD.a)
 connect(R2.b, RTD.b, EXC.n, GND.port)
 
 { thermal: RTD film -> process fluid (dissipation constant 2.5 mW/K) }
-ContactResistance FILM(Rth=400)
+ContactResistance FILM(Rth=400 [K/W])
 ThermalSource     FLUID(T=T_fluid)
 connect(RTD.heat, FILM.a)
 connect(FILM.b, FLUID.port)
@@ -4097,10 +4097,10 @@ V_bridge = R1.b.V - R3.b.V
 V_out    = G_amp * V_bridge
 
 { the indicator assumes a cold (non-self-heated) RTD and inverts the bridge }
-R_meas   = 130.9 * (V_ex/2 - V_bridge) / (V_ex/2 + V_bridge)
-T_ind    = 293.15 + (R_meas / 107.79 - 1) / 0.00385
+R_meas   = 130.9 [ohm] * (V_ex/2 - V_bridge) / (V_ex/2 + V_bridge)
+T_ind    = 293.15 [K] + (R_meas / 107.79 [ohm] - 1) / 0.00385 [1/K]
 e_self   = T_ind - T_fluid                         { self-heating error, K }
-S_T      = G_amp * V_ex * 0.00385 * 107.79 * 130.9 / (130.9 + 136.7)^2  { V/K near balance }
+S_T      = G_amp * V_ex * 0.00385 [1/K] * 107.79 [ohm] * 130.9 [ohm] / (130.9 [ohm] + 136.7 [ohm])^2  { V/K near balance }
 e_adc    = LSB / S_T                               { one ADC count in kelvin }
 e_total  = sqrt(e_self^2 + e_adc^2)
 P_rtd    = RTD.Q                                   { power dissipated in the RTD, W }
@@ -4138,7 +4138,7 @@ In the app: delete (or comment out) the \`V_ex = …\` line so \`V_ex\` is free,
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Pt100 RTD in a Wheatstone bridge: self-heating versus resolution\\n{ Domains: electrical (bridge excitation, three precision resistors, the RTD\\n  as a temperature-dependent resistor) + heat (the RTD's own I^2 R heat\\n  through its film to the measured fluid) + sensor signal chain (bridge\\n  output amplified and quantized by an ADC).\\n\\n  The RTD reads its OWN temperature, which self-heating lifts above the\\n  fluid's: raising the excitation raises that error with V^2. Lowering it\\n  shrinks the bridge signal until one ADC count spans a large temperature\\n  step. The best excitation balances the two error sources. }\\n\\nT_fluid = 353.15 [K]            { true process temperature, 80 C }\\nG_amp   = 50                    { instrumentation-amplifier gain }\\nLSB     = 10 / 2^12             { 12-bit ADC on a 10 V span, V per count }\\n\\nVoltageSource     EXC(E=V_ex)\\nGround            GND()\\nResistor          R1(R=100)\\nResistor          R2(R=100)\\nResistor          R3(R=130.9)       { bridge balanced near the mid-range }\\nHarnessResistance RTD(R20=107.79, alphaT=0.00385)   { Pt100 referred to 20 C }\\nconnect(EXC.p, R1.a, R3.a)\\nconnect(R1.b, R2.a)\\nconnect(R3.b, RTD.a)\\nconnect(R2.b, RTD.b, EXC.n, GND.port)\\n\\n{ thermal: RTD film -> process fluid (dissipation constant 2.5 mW/K) }\\nContactResistance FILM(Rth=400)\\nThermalSource     FLUID(T=T_fluid)\\nconnect(RTD.heat, FILM.a)\\nconnect(FILM.b, FLUID.port)\\n\\n{ signal chain: bridge differential voltage -> amplifier -> ADC counts }\\nV_bridge = R1.b.V - R3.b.V\\nV_out    = G_amp * V_bridge\\n\\n{ the indicator assumes a cold (non-self-heated) RTD and inverts the bridge }\\nR_meas   = 130.9 * (V_ex/2 - V_bridge) / (V_ex/2 + V_bridge)\\nT_ind    = 293.15 + (R_meas / 107.79 - 1) / 0.00385\\ne_self   = T_ind - T_fluid                         { self-heating error, K }\\nS_T      = G_amp * V_ex * 0.00385 * 107.79 * 130.9 / (130.9 + 136.7)^2  { V/K near balance }\\ne_adc    = LSB / S_T                               { one ADC count in kelvin }\\ne_total  = sqrt(e_self^2 + e_adc^2)\\nP_rtd    = RTD.Q                                   { power dissipated in the RTD, W }\\n",
+  "text": "// Pt100 RTD in a Wheatstone bridge: self-heating versus resolution\\n{ Domains: electrical (bridge excitation, three precision resistors, the RTD\\n  as a temperature-dependent resistor) + heat (the RTD's own I^2 R heat\\n  through its film to the measured fluid) + sensor signal chain (bridge\\n  output amplified and quantized by an ADC).\\n\\n  The RTD reads its OWN temperature, which self-heating lifts above the\\n  fluid's: raising the excitation raises that error with V^2. Lowering it\\n  shrinks the bridge signal until one ADC count spans a large temperature\\n  step. The best excitation balances the two error sources. }\\n\\nT_fluid = 353.15 [K]            { true process temperature, 80 C }\\nG_amp   = 50                    { instrumentation-amplifier gain }\\nLSB     = 10 [V] / 2^12             { 12-bit ADC on a 10 V span, V per count }\\n\\nVoltageSource     EXC(E=V_ex)\\nGround            GND()\\nResistor          R1(R=100 [ohm])\\nResistor          R2(R=100 [ohm])\\nResistor          R3(R=130.9 [ohm])       { bridge balanced near the mid-range }\\nHarnessResistance RTD(R20=107.79 [ohm], alphaT=0.00385 [1/K])   { Pt100 referred to 20 C }\\nconnect(EXC.p, R1.a, R3.a)\\nconnect(R1.b, R2.a)\\nconnect(R3.b, RTD.a)\\nconnect(R2.b, RTD.b, EXC.n, GND.port)\\n\\n{ thermal: RTD film -> process fluid (dissipation constant 2.5 mW/K) }\\nContactResistance FILM(Rth=400 [K/W])\\nThermalSource     FLUID(T=T_fluid)\\nconnect(RTD.heat, FILM.a)\\nconnect(FILM.b, FLUID.port)\\n\\n{ signal chain: bridge differential voltage -> amplifier -> ADC counts }\\nV_bridge = R1.b.V - R3.b.V\\nV_out    = G_amp * V_bridge\\n\\n{ the indicator assumes a cold (non-self-heated) RTD and inverts the bridge }\\nR_meas   = 130.9 [ohm] * (V_ex/2 - V_bridge) / (V_ex/2 + V_bridge)\\nT_ind    = 293.15 [K] + (R_meas / 107.79 [ohm] - 1) / 0.00385 [1/K]\\ne_self   = T_ind - T_fluid                         { self-heating error, K }\\nS_T      = G_amp * V_ex * 0.00385 [1/K] * 107.79 [ohm] * 130.9 [ohm] / (130.9 [ohm] + 136.7 [ohm])^2  { V/K near balance }\\ne_adc    = LSB / S_T                               { one ADC count in kelvin }\\ne_total  = sqrt(e_self^2 + e_adc^2)\\nP_rtd    = RTD.Q                                   { power dissipated in the RTD, W }\\n",
   "request": {
     "objective": "e_total",
     "decisions": [
@@ -4188,10 +4188,10 @@ Domains: liquid (chilled-water circuit through the panel tubes) + heat (tube wal
 T_sup  = 289.15 [K]                 { chilled-water supply - the design variable }
 W_room = 0.0105                     { room humidity ratio (~26 C, 50 % RH) }
 
-LiquidSource  CHW(fluid$=Water, mdot=0.18, P=200000 [Pa], T=T_sup)
-LiquidWallHX  TUBES(fluid$=Water, UA=420)
+LiquidSource  CHW(fluid$=Water, mdot=0.18 [kg/s], P=200000 [Pa], T=T_sup)
+LiquidWallHX  TUBES(fluid$=Water, UA=420 [W/K])
 LiquidSink    RET()
-RadiantPanel  PANEL(A=24, C=8.9, n=1.08, eps_dT=0.05, W_room=W_room, P_room=101325)
+RadiantPanel  PANEL(A=24 [m^2], C=8.9 [W/m^2-K], n=1.08, eps_dT=0.05 [K], W_room=W_room, P_room=101325 [Pa])
 ThermalSource ROOM(T=299.15 [K])
 connect(CHW.out, TUBES.in)
 connect(TUBES.out, RET.in)
@@ -4238,7 +4238,7 @@ In the app: delete (or comment out) the \`T_sup = …\` line so \`T_sup\` is fre
 \`\`\`json
 {
   "operation": "optimize",
-  "text": "// Chilled radiant ceiling with a condensation (dew-point) guard\\n{ Domains: liquid (chilled-water circuit through the panel tubes) + heat\\n  (tube wall -> panel surface -> room by combined radiation/convection) +\\n  moist air (the room's dew point decides how cold the panel may run).\\n\\n  RadiantPanel uses the EN 14240-style characteristic q = C*dT^n between the\\n  room and the panel surface and reports the margin between the surface and\\n  the room dew point. Colder water cools more, but the panel must stay above\\n  the dew point or it drips: the supply temperature is optimised against\\n  that constraint. }\\n\\nW_room = 0.0105                     { room humidity ratio (~26 C, 50 % RH) }\\n\\nLiquidSource  CHW(fluid$=Water, mdot=0.18, P=200000 [Pa], T=T_sup)\\nLiquidWallHX  TUBES(fluid$=Water, UA=420)\\nLiquidSink    RET()\\nRadiantPanel  PANEL(A=24, C=8.9, n=1.08, eps_dT=0.05, W_room=W_room, P_room=101325)\\nThermalSource ROOM(T=299.15 [K])\\nconnect(CHW.out, TUBES.in)\\nconnect(TUBES.out, RET.in)\\nconnect(TUBES.wall, PANEL.wall)\\nconnect(PANEL.zone, ROOM.port)\\n\\nQ_cool  = PANEL.Q                                  { room cooling, W }\\nT_surf  = PANEL.wall.T\\nT_dew   = PANEL.T_dp_room\\nmargin  = PANEL.margin_dp                          { must stay >= 2 K }\\nT_ret   = Temperature(Water, P=RET.P, h=RET.h)\\nq_flux  = Q_cool / 24                               { W/m2 }\\n",
+  "text": "// Chilled radiant ceiling with a condensation (dew-point) guard\\n{ Domains: liquid (chilled-water circuit through the panel tubes) + heat\\n  (tube wall -> panel surface -> room by combined radiation/convection) +\\n  moist air (the room's dew point decides how cold the panel may run).\\n\\n  RadiantPanel uses the EN 14240-style characteristic q = C*dT^n between the\\n  room and the panel surface and reports the margin between the surface and\\n  the room dew point. Colder water cools more, but the panel must stay above\\n  the dew point or it drips: the supply temperature is optimised against\\n  that constraint. }\\n\\nW_room = 0.0105                     { room humidity ratio (~26 C, 50 % RH) }\\n\\nLiquidSource  CHW(fluid$=Water, mdot=0.18 [kg/s], P=200000 [Pa], T=T_sup)\\nLiquidWallHX  TUBES(fluid$=Water, UA=420 [W/K])\\nLiquidSink    RET()\\nRadiantPanel  PANEL(A=24 [m^2], C=8.9 [W/m^2-K], n=1.08, eps_dT=0.05 [K], W_room=W_room, P_room=101325 [Pa])\\nThermalSource ROOM(T=299.15 [K])\\nconnect(CHW.out, TUBES.in)\\nconnect(TUBES.out, RET.in)\\nconnect(TUBES.wall, PANEL.wall)\\nconnect(PANEL.zone, ROOM.port)\\n\\nQ_cool  = PANEL.Q                                  { room cooling, W }\\nT_surf  = PANEL.wall.T\\nT_dew   = PANEL.T_dp_room\\nmargin  = PANEL.margin_dp                          { must stay >= 2 K }\\nT_ret   = Temperature(Water, P=RET.P, h=RET.h)\\nq_flux  = Q_cool / 24                               { W/m2 }\\n",
   "request": {
     "objective": "Q_cool",
     "maximize": true,
@@ -4988,7 +4988,7 @@ h_out = Enthalpy(AirH2O, T=T_out, P=P_atm, R=1)
 
 Q_total  = mdot * (h_in - h_out)              { total coil duty, W }
 mdot_w   = mdot * (w_in - w_out)              { condensate, kg/s }
-Q_latent = mdot * 2.501e6 * (w_in - w_out)    { latent share, W }
+Q_latent = mdot * 2.501e6 [J/kg] * (w_in - w_out)    { latent share, W }
 Q_sens   = Q_total - Q_latent
 SHR      = Q_sens / Q_total                   { sensible heat ratio }
 \`\`\`
@@ -5040,7 +5040,7 @@ h_out = Enthalpy(AirH2O, T=T_out, P=P_atm, R=1)
 
 Q_total  = mdot * (h_in - h_out)
 mdot_w   = mdot * (w_in - w_out)
-Q_latent = mdot * 2.501e6 * (w_in - w_out)
+Q_latent = mdot * 2.501e6 [J/kg] * (w_in - w_out)
 Q_sens   = Q_total - Q_latent
 SHR      = Q_sens / Q_total
 
@@ -5073,7 +5073,7 @@ Q_coil_lat = COIL.Q_lat
 \`\`\`run
 R = 220 [ohm]
 L = 0.1 [H]
-C = 1e-6 [F]
+C = 1e-6 [farad]
 
 w0 = 1 / sqrt(L * C)         { resonance -> 3162 rad/s (~503 Hz) }
 Q  = w0 * L / R              { quality factor -> ~1.44 }
@@ -5129,7 +5129,7 @@ Solve and open the **Plots** panel: flat passband, the modest \`Q\` peak near 31
 { Series RLC low-pass filter -- Tutorial 3 }
 R = 220 [ohm]
 L = 0.1 [H]
-C = 1e-6 [F]
+C = 1e-6 [farad]
 
 w0 = 1 / sqrt(L * C)
 Q  = w0 * L / R
@@ -5301,7 +5301,7 @@ rho = 998 [kg/m^3]
 g   = 9.81 [m/s^2]
 H_static  = 18 [m]
 dP_static = rho * g * H_static     { ~176 kPa of static lift }
-K = 1.1e8                          { friction coefficient, Pa/(m^3/s)^2 }
+K = 1.1e8 [Pa-s^2/m^6]            { friction coefficient, Pa/(m^3/s)^2 }
 \`\`\`
 
 (\`K\` comes from your piping model — the Darcy losses of *Your First Component Network*, or a measured pressure drop at a known flow.)
@@ -5341,7 +5341,7 @@ rho = 998 [kg/m^3]
 g   = 9.81 [m/s^2]
 H_static  = 18 [m]
 dP_static = rho * g * H_static
-K = 1.1e8
+K = 1.1e8 [Pa-s^2/m^6]
 
 pump_curve(V_op) = dP_static + K * V_op^2
 

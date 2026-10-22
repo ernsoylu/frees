@@ -71,10 +71,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // crossing the internal UA = 500 wall into a 0.2 kg/s water loop at 330 K.
 // (Voltage-clamped on purpose: a current-source load makes the solver's
 // matching solve the ln law backwards and the retry ladder stalls.)
-FuelCellStackCooled FC(ncells = 10, area = 0.01, i0 = 10, ilim = 20000, Rohm = 1e-5, E0 = 1.18, alpha = 0.5, Eth = 1.48, T = 343, fluid$ = Water, UA = 500)
-VoltageSource BUS(E = 7.5)
+FuelCellStackCooled FC(ncells = 10, area = 0.01 [m^2], i0 = 10 [A/m^2], ilim = 20000 [A/m^2], Rohm = 1e-5 [ohm-m^2], E0 = 1.18 [V], alpha = 0.5, Eth = 1.48 [V], T = 343 [K], fluid$ = Water, UA = 500 [W/K])
+VoltageSource BUS(E = 7.5 [V])
 Ground        G()
-LiquidSource  SRC(fluid$ = Water, mdot = 0.2, P = 200000, T = 330)
+LiquidSource  SRC(fluid$ = Water, mdot = 0.2 [kg/s], P = 200000 [Pa], T = 330 [K])
 LiquidSink    SNK()
 connect(FC.p, BUS.p)
 connect(FC.n, BUS.n, G.port)

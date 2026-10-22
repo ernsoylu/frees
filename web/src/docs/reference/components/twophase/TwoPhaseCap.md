@@ -52,7 +52,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 // frees-language: 2
 // TwoPhaseCap: dead-end cap on a pressure reservoir — zero through-flow.
-TwoPhasePressureSource PS(fluid$ = R134a, P = 500000, x = 0.2)
+TwoPhasePressureSource PS(fluid$ = R134a, P = 500000 [Pa], x = 0.2)
 TwoPhaseCap            CAP()
 connect(PS.out, CAP.in)
 m_dead = CAP.in.mdot

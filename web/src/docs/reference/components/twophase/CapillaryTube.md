@@ -46,7 +46,7 @@ out.h &= in.h \\
 t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
 pf &= \text{P\_sat}\left(\mathrm{fluid\$}, t=t_{in}\right) \\
 dp_{eff} &= in.p - \text{max}\left(out.p, pf\right) \\
-in.mdot &= c\cdot dp_{eff}^{n}
+in.mdot &= c\cdot \left(\frac{dp_{eff}}{1\,\left[Pa\right]}\right)^{n}
 \end{aligned}
 $$
 
@@ -70,8 +70,8 @@ port(out)
 end
 hsub = Enthalpy(R134a, P=1000000, x=0)
 PHSupply2            SC(P=1200000, h=hsub)
-CapillaryTube        CT(fluid$=R134a, C=1e-7, n=0.5)
-TwoPhasePressureSink KC(P=300000)
+CapillaryTube        CT(fluid$=R134a, C=1e-7 [kg/s], n=0.5)
+TwoPhasePressureSink KC(P=300000 [Pa])
 connect(SC.out, CT.in)
 connect(CT.out, KC.in)
 T_chk  = Temperature(R134a, P=1200000, h=hsub)

@@ -54,8 +54,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-Battery  B(Voc=12, R0=0.1)
-Resistor RL(R=2.0)
+Battery  B(Voc=12 [V], R0=0.1 [ohm])
+Resistor RL(R=2.0 [ohm])
 Ground   G()
 connect(B.p, RL.a)
 connect(B.n, RL.b, G.port)

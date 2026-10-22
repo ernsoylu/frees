@@ -67,14 +67,14 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT tau_h = -1416.667 tol 0.01
 // EXPECT dh_h = -425 tol 0.01
 
-TABLE etamap(m)
+TABLE etamap(m [kg/s]) [-]
   0    0.85
   200  0.85
 END
-LiquidSource HIN(fluid$=Water, mdot=100, P=600000, T=300)
-HydroTurbine HT(fluid$=Water, rho=1000, eta$=etamap, epsw=1e-6)
+LiquidSource HIN(fluid$=Water, mdot=100 [kg/s], P=600000 [Pa], T=300 [K])
+HydroTurbine HT(fluid$=Water, rho=1000 [kg/m^3], eta$=etamap, epsw=1e-6 [rad/s])
 LiquidSink   HOUT()
-SpeedSource  HS(w=30)
+SpeedSource  HS(w=30 [rad/s])
 MechGround   HG()
 connect(HIN.out, HT.in)
 connect(HT.out, HOUT.in)

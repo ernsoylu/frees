@@ -51,7 +51,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-ThermalSource SRC(T=350)
+ThermalSource SRC(T=350 [K])
 ThermalSensor SENS()
 connect(SRC.port, SENS.port)
 

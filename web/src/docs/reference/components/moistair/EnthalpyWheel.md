@@ -67,8 +67,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // (305.15 K, W = 0.016) exchanges with cool dry building exhaust (297.15 K,
 // W = 0.009) at eff_h = 0.75, eff_w = 0.7. Balanced 1 kg/s streams; moisture
 // and energy close exactly on the dry-air basis.
-MoistAirSource OA(P=101325, T=305.15, W=0.016, mdot=1)
-MoistAirSource EX(P=101325, T=297.15, W=0.009, mdot=1)
+MoistAirSource OA(P=101325 [Pa], T=305.15 [K], W=0.016, mdot=1 [kg/s])
+MoistAirSource EX(P=101325 [Pa], T=297.15 [K], W=0.009, mdot=1 [kg/s])
 EnthalpyWheel  WHL(eff_h=0.75, eff_w=0.7)
 MoistAirSink   SUP()
 MoistAirSink   REJ()

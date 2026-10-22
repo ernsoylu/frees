@@ -80,7 +80,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT n2_mix_res = 0 tol 1e-12
 
 time = 0
-CombustorSpecies CMB(a1, a2, mdot_f=0.01, LHV=44.4e6, eta_b=0.98, dP=3000, xC=8, yH=18)
+CombustorSpecies CMB(a1, a2, mdot_f=0.01 [kg/s], LHV=44.4e6 [J/kg], eta_b=0.98, dP=3000 [Pa], xC=8, yH=18)
 a1.P = 400000
 a1.h = 420000
 a1.mdot = 0.5
@@ -99,10 +99,10 @@ d1.yh2o = 0
 d1.yn2 = 0.768
 
 yco2_cmb    = a2.yco2
-o2_mix_res  = m1.mdot * m1.yo2  - (a2.mdot * a2.yo2  + 0.3 * 0.232)
+o2_mix_res  = m1.mdot * m1.yo2  - (a2.mdot * a2.yo2  + 0.3 [kg/s] * 0.232)
 co2_mix_res = m1.mdot * m1.yco2 - (a2.mdot * a2.yco2 + 0)
 h2o_mix_res = m1.mdot * m1.yh2o - (a2.mdot * a2.yh2o + 0)
-n2_mix_res  = m1.mdot * m1.yn2  - (a2.mdot * a2.yn2  + 0.3 * 0.768)
+n2_mix_res  = m1.mdot * m1.yn2  - (a2.mdot * a2.yn2  + 0.3 [kg/s] * 0.768)
 
 { CHECK a2.h 1264941.176 1.2649411764705882 }
 { CHECK a2.mdot 0.51 5.1e-7 }

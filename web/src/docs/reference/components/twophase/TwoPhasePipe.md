@@ -79,7 +79,7 @@ port(in)
   in.P = P
 end
 RSrc        SRC(P=500000, h0=250000, mdot=0.05)
-TwoPhasePipe TP(fluid$=R134a, L=2, D=0.01, rough=1e-5, x=0.3, rho_l=1200, rho_g=20, mu_l=2e-4, mu_g=1e-5)
+TwoPhasePipe TP(fluid$=R134a, L=2 [m], D=0.01 [m], rough=1e-5 [m], x=0.3, rho_l=1200 [kg/m^3], rho_g=20 [kg/m^3], mu_l=2e-4 [Pa-s], mu_g=1e-5 [Pa-s])
 Sink        SNK()
 connect(SRC.out, TP.in)
 connect(TP.out, SNK.in)

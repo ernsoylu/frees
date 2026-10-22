@@ -60,7 +60,7 @@ _No additional equations (uses the shared body)._
 $$
 \begin{aligned}
 rho_{in} &= \text{Density}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
-in.mdot &= eta_{v}\cdot disp\cdot \frac{rpm}{60}\cdot rho_{in}
+in.mdot &= eta_{v}\cdot disp\cdot \frac{rpm}{60\,\left[s\right]}\cdot rho_{in}
 \end{aligned}
 $$
 

@@ -65,8 +65,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // dry supply (300.15 K, W = 0.002) with effectiveness 0.75 on moisture and
 // 0.7 on enthalpy. Water and energy close exactly on the dry-air basis:
 // wet-side losses mirror the dry-side gains scaled by mdot_dry/mdot_wet.
-MoistAirSource DRY(P=101325, T=300.15, W=0.002, mdot=0.02)
-MoistAirSource WET(P=101325, T=330.15, W=0.05, mdot=0.025)
+MoistAirSource DRY(P=101325 [Pa], T=300.15 [K], W=0.002, mdot=0.02 [kg/s])
+MoistAirSource WET(P=101325 [Pa], T=330.15 [K], W=0.05, mdot=0.025 [kg/s])
 MembraneHumidifier MH(eff_h=0.7, eff_w=0.75)
 MoistAirSink   DOUT()
 MoistAirSink   WOUT()

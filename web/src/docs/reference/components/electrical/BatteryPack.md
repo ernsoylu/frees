@@ -51,10 +51,10 @@ The acausal equations this component expands into (over its port members and par
 $$
 \begin{aligned}
 i_{cell} &= \frac{-p.i}{np} \\
-r0 &= r0ref\cdot e^{\frac{ea}{8.314}\cdot \left(\frac{1}{t} - \frac{1}{tref}\right)} \\
+r0 &= r0ref\cdot e^{\frac{ea}{8.314\,\left[kg m^2/s^2-K-mol\right]}\cdot \left(\frac{1}{t} - \frac{1}{tref}\right)} \\
 p.v - n.v &= ns\cdot \left(\text{ocv\$}\left(soc\right) - r0\cdot i_{cell}\right) \\
 p.i + n.i &= 0 \\
-\text{der}\left(soc\right) &= \frac{-i_{cell}}{3600\,q0} \\
+\text{der}\left(soc\right) &= \frac{-i_{cell}}{3600\,\left[Coulomb\right]\,q0} \\
 \text{init}\left(soc\right) &= soc0 \\
 qgen &= ns\cdot np\cdot \left(r0\cdot i_{cell}^{2} - i_{cell}\cdot t\cdot \text{dudt\$}\left(soc\right)\right) \\
 heat.t &= t \\
@@ -84,11 +84,11 @@ TABLE dudt(soc)
   0    -0.0001
   1     0.0001
 END
-BatteryPack B(Ns=4, Np=2, ocv$ = ocv, dudt$ = dudt, R0ref = 0.01, Tref = 298, Ea = 20000, Q0 = 5, C_th = 50, SOC0 = 0.8, T0 = 298)
-CurrentSource  CS(I = -2)
+BatteryPack B(Ns=4, Np=2, ocv$ = ocv, dudt$ = dudt, R0ref = 0.01 [ohm], Tref = 298 [K], Ea = 20000 [J/mol], Q0 = 5, C_th = 50 [J/K], SOC0 = 0.8, T0 = 298 [K])
+CurrentSource  CS(I = -2 [A])
 Ground         G()
-Convection     CV(htc = 5, area = 0.1)
-ThermalSource  AMB(T = 298)
+Convection     CV(htc = 5 [W/m^2-K], area = 0.1 [m^2])
+ThermalSource  AMB(T = 298 [K])
 connect(B.p, CS.p)
 connect(CS.n, B.n, G.port)
 connect(B.heat, CV.a)

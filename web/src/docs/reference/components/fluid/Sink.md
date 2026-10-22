@@ -47,7 +47,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-Source S(fluid$=Water, mdot=2, P=8000000, T=773.15)
+Source S(fluid$=Water, mdot=2 [kg/s], P=8000000 [Pa], T=773.15 [K])
 Boiler B()
 Sink   K()
 connect(S.out, B.in)

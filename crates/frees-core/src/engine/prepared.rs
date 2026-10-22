@@ -7,12 +7,12 @@ use crate::ast::{Equation, Expr};
 use crate::diag::Diagnostic;
 use crate::engine::{
     block_equation_texts, block_system, builtin_constants, check_bounds, collect_unit_warnings,
-    complete_display_names, declared_units, dense_export, dense_plan, initial_guess,
-    merge_advisory_warnings, override_uncertainties, pinned_block_cache, relaxed_ode_settings,
-    residuals_at, run_blocks, seed_property_argument_guesses, solve_dynamic_systems,
-    solve_equation_list, surfaced_count, unknowns, variable_specs, BlockLoopFailure, DensePlan,
-    DenseRun, Missing, PartialDiagnostics, PinnedBlockCache, Solution, SolveFailure, SolveStats,
-    VarSpec, VariableOverride,
+    complete_display_names, declared_function_units, declared_units, dense_export, dense_plan,
+    initial_guess, merge_advisory_warnings, override_uncertainties, pinned_block_cache,
+    relaxed_ode_settings, residuals_at, run_blocks, seed_property_argument_guesses,
+    solve_dynamic_systems, solve_equation_list, surfaced_count, unknowns, variable_specs,
+    BlockLoopFailure, DensePlan, DenseRun, Missing, PartialDiagnostics, PinnedBlockCache, Solution,
+    SolveFailure, SolveStats, VarSpec, VariableOverride,
 };
 use crate::eval::{EvalContext, Scope};
 use crate::ode::accessors::OdeTableAccessors;
@@ -296,7 +296,13 @@ impl PreparedDocument {
                 &self.overrides,
                 &self.component_member_units,
             );
-            let unit_report = crate::units::checker::check_units(unit_equations, &declared);
+            let (function_units, function_input_units) = declared_function_units(&self.doc.defs);
+            let unit_report = crate::units::checker::check_units_full(
+                unit_equations,
+                &declared,
+                &function_units,
+                &function_input_units,
+            );
 
             self.prep = Some(DocumentPrep {
                 pinned_names: pinned.iter().map(|(n, _)| n.clone()).collect(),

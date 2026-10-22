@@ -52,9 +52,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-HydraulicSupply  SUP(P=10000000)
-HydraulicOrifice ORI(CdA=1e-5, rho=850)
-HydraulicTank    TNK(P=0)
+HydraulicSupply  SUP(P=10000000 [Pa])
+HydraulicOrifice ORI(CdA=1e-5 [m^2], rho=850 [kg/m^3])
+HydraulicTank    TNK(P=0 [Pa])
 connect(SUP.out, ORI.in)
 connect(ORI.out, TNK.port)
 

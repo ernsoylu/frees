@@ -29,7 +29,7 @@ Accumulator inst(C, P0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `C` | Number | Capacitance [F]. |
+| `C` | Number | Hydraulic capacitance, stored mass per unit pressure [kg/Pa]. |
 | `P0` | Number | Reference/initial pressure [Pa]. |
 
 ## Constitutive Equations
@@ -57,7 +57,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // Accumulator with no DYNAMIC block: der(in.P) takes the steady branch,
 // which recovers in.mdot = out.mdot; the node passes P and h through.
-Accumulator AC(a1, a2, C = 1e-6, P0 = 300000)
+Accumulator AC(a1, a2, C = 1e-6 [kg/Pa], P0 = 300000 [Pa])
 
 a1.P    = 300000
 a1.h    = 120000

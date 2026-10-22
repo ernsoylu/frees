@@ -53,9 +53,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-ForceSource FS(F=10)
-TransMass   M(m=2, v0=0)
-TransDamper D(c=0.5)
+ForceSource FS(F=10 [N])
+TransMass   M(m=2 [kg], v0=0 [m/s])
+TransDamper D(c=0.5 [kg/s])
 TransGround GS()
 TransGround GD()
 connect(FS.a, M.port, D.a)

@@ -29,8 +29,8 @@ PIThermostat inst(Kp, Ki, Tref)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `Kp` | Number | Proportional gain. |
-| `Ki` | Number | Integral gain. |
+| `Kp` | Number | Proportional gain [W/K]. |
+| `Ki` | Number | Integral gain [W/K·s]. |
 | `Tref` | Number | Reference (setpoint) temperature [K]. |
 
 ## Constitutive Equations
@@ -56,10 +56,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-PIThermostat  TC(Kp=100, Ki=0.5, Tref=350)
-ThermalMass   M(C=5000, T0=300)
-Conduction    wall(k=2, area=1, L=0.1)
-ThermalSource amb(T=300)
+PIThermostat  TC(Kp=100 [W/K], Ki=0.5 [W/K-s], Tref=350 [K])
+ThermalMass   M(C=5000 [J/K], T0=300 [K])
+Conduction    wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource amb(T=300 [K])
 connect(TC.port, M.port, wall.a)
 connect(wall.b, amb.port)
 DYNAMIC loop(time = 0 .. 1200, points = 120)

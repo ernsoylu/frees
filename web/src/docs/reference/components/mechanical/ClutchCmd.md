@@ -58,9 +58,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // ClutchCmd: engagement 0.5 commanded over the signal port, slipping 3 rad/s
 // -> carried torque u*Tmax = 40 N.m.
 // EXPECT tau_c = 40 tol 1e-6
-ClutchCmd   CL(Tmax = 80, eps = 0.01)
+ClutchCmd   CL(Tmax = 80 [N-m], eps = 0.01 [rad/s])
 SigConstant U(k = 0.5)
-SpeedSource SS(w = 3)
+SpeedSource SS(w = 3 [rad/s])
 MechGround  G1()
 MechGround  G2()
 connect(SS.a, CL.a)

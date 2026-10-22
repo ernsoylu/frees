@@ -38,7 +38,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 // frees-language: 2
 Re = 1e5
-eps = 0.00015
+eps = 0.00015 [m]
 D = 0.25 [m]
 { ff is unknown — set a guess of ~0.02 in Variable Info }
 1/sqrt(ff) = -2*log10(eps/(3.7*D) + 2.51/(Re*sqrt(ff)))

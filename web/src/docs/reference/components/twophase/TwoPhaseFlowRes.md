@@ -71,8 +71,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=500000, x=0.3)
-TwoPhaseFlowRes LINE(fluid$=R134a, L=2, D=0.008)
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=500000 [Pa], x=0.3)
+TwoPhaseFlowRes LINE(fluid$=R134a, L=2 [m], D=0.008 [m])
 TwoPhaseSensor SEN(fluid$=R134a)
 TwoPhaseSink SNK()
 connect(SRC.out, LINE.in)

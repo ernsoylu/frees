@@ -61,18 +61,18 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT tc.pump.tau = 100 tol 1e-6
 // EXPECT tq_turb = -160 tol 1e-6
 // EXPECT df.in.tau = 44.4444 tol 1e-3
-TABLE kmap(sr)
+TABLE kmap(sr) [rad-N^-0.5-m^-0.5/s]
   0   25
   1   25
 END
-TABLE trmap(sr)
+TABLE trmap(sr) [-]
   0    2.0
   0.5  1.6
   1    1.0
 END
-SpeedSource     SP(w=250)
+SpeedSource     SP(w=250 [rad/s])
 MechGround      GP()
-SpeedSource     ST(w=125)
+SpeedSource     ST(w=125 [rad/s])
 MechGround      GT()
 TorqueConverter TC(Kmap$=kmap, TRmap$=trmap)
 connect(SP.a, TC.pump)
@@ -81,11 +81,11 @@ connect(ST.a, TC.turb)
 connect(ST.b, GT.port)
 tq_turb = TC.turb.tau
 
-SpeedSource      SI(w=100)
+SpeedSource      SI(w=100 [rad/s])
 MechGround       GI()
 Differential     DF(ratio=3)
-RotationalDamper WL(c=2)
-RotationalDamper WR(c=2)
+RotationalDamper WL(c=2 [N-m-s])
+RotationalDamper WR(c=2 [N-m-s])
 MechGround       GL()
 MechGround       GR()
 connect(SI.a, DF.in)

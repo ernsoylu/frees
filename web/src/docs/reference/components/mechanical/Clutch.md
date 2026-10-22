@@ -29,7 +29,7 @@ Clutch inst(Tmax, eng, eps)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `Tmax` | Number | Maximum temperature [K]. |
+| `Tmax` | Number | Maximum transmissible torque [N·m]. |
 | `eng` | Number | Engagement fraction (0–1). |
 | `eps` | Number | Slip smoothing speed [rad/s] — regularizes the sign of the slip speed. |
 
@@ -55,9 +55,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TorqueSource     TS(T=30)
-Clutch           CL(Tmax=50, eng=1, eps=0.01)
-RotationalDamper LOAD(c=2)
+TorqueSource     TS(T=30 [N-m])
+Clutch           CL(Tmax=50 [N-m], eng=1, eps=0.01 [rad/s])
+RotationalDamper LOAD(c=2 [N-m-s])
 MechGround       GS()
 MechGround       GL()
 connect(TS.a, CL.a)

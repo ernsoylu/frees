@@ -70,7 +70,7 @@ port(port)
   port.vel = amp * sin(w * time)
 end
 RoadShaker ROAD(amp=0.1, w=6.2832)
-QuarterCar QC(ms=300, mu=40, ks=20000, cs=1500, kt=180000)
+QuarterCar QC(ms=300 [kg], mu=40 [kg], ks=20000 [N/m], cs=1500 [kg/s], kt=180000 [N/m])
 connect(ROAD.port, QC.road)
 DYNAMIC shake(method = ode23s, time = 0 .. 2, points = 21)
 END

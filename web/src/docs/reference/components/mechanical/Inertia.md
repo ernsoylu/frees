@@ -53,9 +53,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TorqueSource     TS(T=12)
-Inertia          J(J=3, w0=0)
-RotationalDamper D(c=0.6)
+TorqueSource     TS(T=12 [N-m])
+Inertia          J(J=3 [kg-m^2], w0=0 [rad/s])
+RotationalDamper D(c=0.6 [N-m-s])
 MechGround       G()
 connect(TS.a, J.port, D.a)
 connect(TS.b, D.b, G.port)

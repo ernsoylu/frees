@@ -52,9 +52,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TwoPhasePressureSource HI(fluid$=R134a, P=900000, x=0)
-EXV V(fluid$=R134a, CdA_max=2e-6, u=0.6)
-TwoPhasePressureSink LO(P=350000)
+TwoPhasePressureSource HI(fluid$=R134a, P=900000 [Pa], x=0)
+EXV V(fluid$=R134a, CdA_max=2e-6 [m^2], u=0.6)
+TwoPhasePressureSink LO(P=350000 [Pa])
 connect(HI.out, V.in)
 connect(V.out, LO.in)
 

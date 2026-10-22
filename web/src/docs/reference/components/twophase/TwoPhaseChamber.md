@@ -31,7 +31,7 @@ TwoPhaseChamber inst(fluid$, V, C, UA, P0, h0, domain$)
 | --- | --- | --- |
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
 | `V` | Number | Volume [m³]. |
-| `C` | Number | Capacitance [F]. |
+| `C` | Number | Capacitance, stored mass per unit pressure [kg/Pa]. |
 | `UA` | Number | Overall conductance UA [W/K]. |
 | `P0` | Number | Reference/initial pressure [Pa]. |
 | `h0` | Number | Reference enthalpy [J/kg]. |
@@ -70,9 +70,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // TwoPhaseChamber: heated capacitive control volume in its steady limit —
 // der(P)=0 gives mass balance, der(hcv)=0 gives the energy balance
 // hcv = h_in + UA*(Twall - Tcv)/mdot, an evaporating chamber at 350 kPa.
-TwoPhaseSourcePH SRC(mdot = 0.02, P = 350000, h = 280000)
-TwoPhaseChamber  CH(fluid$ = R134a, V = 0.003, C = 1e-7, UA = 50, P0 = 350000, h0 = 320000)
-ThermalSource    WALL(T = 300)
+TwoPhaseSourcePH SRC(mdot = 0.02 [kg/s], P = 350000 [Pa], h = 280000 [J/kg])
+TwoPhaseChamber  CH(fluid$ = R134a, V = 0.003 [m^3], C = 1e-7 [kg/Pa], UA = 50 [W/K], P0 = 350000 [Pa], h0 = 320000 [J/kg])
+ThermalSource    WALL(T = 300 [K])
 TwoPhaseSink     SNK()
 connect(SRC.out, CH.in)
 connect(CH.wall, WALL.port)

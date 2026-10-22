@@ -68,8 +68,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EjectorMomentum: 1.2 MPa motive vapor expands (eta_n = 0.8) to the 350 kPa
 // suction level, momentum-mixes with the entrained stream and the diffuser
 // recovers the mixed velocity head as a pressure lift on the outlet.
-TwoPhaseSourcePH MOT(mdot = 0.03, P = 1200000, h = 430000)
-TwoPhaseSourcePH SUC(mdot = 0.01, P = 350000, h = 405000)
+TwoPhaseSourcePH MOT(mdot = 0.03 [kg/s], P = 1200000 [Pa], h = 430000 [J/kg])
+TwoPhaseSourcePH SUC(mdot = 0.01 [kg/s], P = 350000 [Pa], h = 405000 [J/kg])
 EjectorMomentum  EJ(fluid$ = R134a, eta_n = 0.8, eta_m = 0.85)
 TwoPhaseSink     SNK()
 connect(MOT.out, EJ.mot_in)
