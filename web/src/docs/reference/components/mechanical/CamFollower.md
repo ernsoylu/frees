@@ -60,9 +60,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // CamFollower steady: a 50 N preload on the rod node compresses the internal
 // 5000 N/m return spring by 0.01 m; mass and node settle at zero velocity.
 // EXPECT v_rod = 0 tol 1e-9
-ForceSource FS(F = 50)
+ForceSource FS(F = 50 [N])
 TransGround G()
-CamFollower CF(m = 2, kspring = 5000, x0 = 0, v0 = 0)
+CamFollower CF(m = 2 [kg], kspring = 5000 [N/m], x0 = 0 [m], v0 = 0 [m/s])
 connect(FS.a, CF.rod)
 connect(FS.b, G.port)
 v_rod = CF.rod.vel

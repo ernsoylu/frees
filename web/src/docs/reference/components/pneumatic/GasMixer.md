@@ -54,8 +54,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-GasSource S1(a, y=1, mdot=2, P=100000, h0=300000)
-GasSource S2(b, y=0, mdot=3, P=100000, h0=290000)
+GasSource S1(a, y=1, mdot=2 [kg/s], P=100000 [Pa], h0=300000 [J/kg])
+GasSource S2(b, y=0, mdot=3 [kg/s], P=100000 [Pa], h0=290000 [J/kg])
 GasMixer  MIX(a, b, c)
 
 { CHECK a.h 300000 0.3 }

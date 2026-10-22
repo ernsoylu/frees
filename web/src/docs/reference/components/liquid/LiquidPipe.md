@@ -65,8 +65,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // LiquidPipe: Darcy drop with properties off the fluid (rho, mu from Water
 // at the inlet state). 1 kg/s through 8 m of DN20: V ~ 3.2 m/s, Re ~ 7e4.
-LiquidSource LS(l1, fluid$ = Water, mdot = 1.0, P = 300000, T = 300)
-LiquidPipe   LP(l1, l2, fluid$ = Water, L = 8, D = 0.02, rough = 1.5e-5)
+LiquidSource LS(l1, fluid$ = Water, mdot = 1.0 [kg/s], P = 300000 [Pa], T = 300 [K])
+LiquidPipe   LP(l1, l2, fluid$ = Water, L = 8 [m], D = 0.02 [m], rough = 1.5e-5 [m])
 LiquidSink   SK(l2)
 
 dp_pipe = l1.P - l2.P

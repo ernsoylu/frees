@@ -60,9 +60,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // u.sig * CdA_max between a 100 bar supply and a 1 bar tank.
 // mdot = 0.7*3e-5 * sqrt(2*870*9.9e6) = 2.7566 kg/s.
 SigConstant      CMD(k=0.7)
-HydraulicSupply  SUP(P=10000000)
-HydraulicValveCmd VLV(CdA_max=3e-5, rho=870)
-HydraulicTank    TNK(P=100000)
+HydraulicSupply  SUP(P=10000000 [Pa])
+HydraulicValveCmd VLV(CdA_max=3e-5 [m^2], rho=870 [kg/m^3])
+HydraulicTank    TNK(P=100000 [Pa])
 connect(SUP.out, VLV.in)
 connect(VLV.out, TNK.port)
 connect(CMD.out, VLV.u)

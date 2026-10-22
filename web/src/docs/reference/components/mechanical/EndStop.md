@@ -63,8 +63,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // term), and a 100 N press penetrates the 1e5 N/m contact by F/k = 1 mm past
 // the 2 mm gap: x = 0.003 m.
 // EXPECT x_e = 0.003 tol 1e-5
-ForceSource FS(F = 100)
-EndStop     ES(gap = 0.002, k = 1e5, c = 200, eps = 1e-5, x0 = 0)
+ForceSource FS(F = 100 [N])
+EndStop     ES(gap = 0.002 [m], k = 1e5 [N/m], c = 200 [kg/s], eps = 1e-5 [m], x0 = 0 [m])
 TransGround G1()
 connect(FS.a, ES.port)
 connect(FS.b, G1.port)

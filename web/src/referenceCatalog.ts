@@ -2626,7 +2626,7 @@ AirCoil inst(ref$, U_tp, U_sh, D, L, eps_zone, eps_air)
 | \`U_sh\` | Number | Superheat-zone overall coefficient [W/m²·K]. |
 | \`D\` | Number | Diameter [m]. |
 | \`L\` | Number | Length [m]. |
-| \`eps_zone\` | Number | Zone-collapse smoothing width. |
+| \`eps_zone\` | Number | Zone-collapse smoothing width [m]. |
 | \`eps_air\` | Number | Air-side effectiveness. |
 
 ## Constitutive Equations
@@ -2653,11 +2653,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseSource RSRC(fluid$=R134a, mdot=0.01, P=300000, x=0.2)
+TwoPhaseSource RSRC(fluid$=R134a, mdot=0.01 [kg/s], P=300000 [Pa], x=0.2)
 TwoPhaseSink RSNK()
-MoistAirSource ASRC(P=101325, T=300, W=0.012, mdot=0.05)
+MoistAirSource ASRC(P=101325 [Pa], T=300 [K], W=0.012, mdot=0.05 [kg/s])
 MoistAirSink ASNK()
-AirCoil COIL(ref$=R134a, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.1, eps_air=0.8)
+AirCoil COIL(ref$=R134a, U_tp=2000 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=5 [m], eps_zone=0.1 [m], eps_air=0.8)
 connect(RSRC.out, COIL.ref_in)
 connect(COIL.ref_out, RSNK.in)
 connect(ASRC.out, COIL.air_in)
@@ -2714,7 +2714,7 @@ Chiller inst(ref$, cool$, U_tp, U_sh, D, L, eps_zone, UA_cool)
 | \`U_sh\` | Number | Superheat-zone overall coefficient [W/m²·K]. |
 | \`D\` | Number | Diameter [m]. |
 | \`L\` | Number | Length [m]. |
-| \`eps_zone\` | Number | Zone-collapse smoothing width. |
+| \`eps_zone\` | Number | Zone-collapse smoothing width [m]. |
 | \`UA_cool\` | Number | Coolant-side conductance [W/K]. |
 
 ## Constitutive Equations
@@ -2741,11 +2741,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseSource RSRC(fluid$=R134a, mdot=0.020000, P=350000, x=0.25)
+TwoPhaseSource RSRC(fluid$=R134a, mdot=0.020000 [kg/s], P=350000 [Pa], x=0.25)
 TwoPhaseSink RSNK()
-LiquidSource CSRC(fluid$=Water, mdot=0.1, P=200000, T=300)
+LiquidSource CSRC(fluid$=Water, mdot=0.1 [kg/s], P=200000 [Pa], T=300 [K])
 LiquidSink CSNK()
-Chiller CH(ref$=R134a, cool$=Water, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.1, UA_cool=600)
+Chiller CH(ref$=R134a, cool$=Water, U_tp=2000 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=5 [m], eps_zone=0.1 [m], UA_cool=600 [W/K])
 connect(RSRC.out, CH.ref_in)
 connect(CH.ref_out, RSNK.in)
 connect(CSRC.out, CH.cool_in)
@@ -2798,7 +2798,7 @@ EXV inst(fluid$, CdA_max, u, domain$)
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
 | \`CdA_max\` | Number | Maximum Cd·A [m²]. |
-| \`u\` | Number | Specific internal energy [J/kg]. |
+| \`u\` | Number | Valve opening, 0 (shut) to 1 (fully open) [-]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -2824,9 +2824,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhasePressureSource HI(fluid$=R134a, P=900000, x=0)
-EXV V(fluid$=R134a, CdA_max=2e-6, u=0.6)
-TwoPhasePressureSink LO(P=350000)
+TwoPhasePressureSource HI(fluid$=R134a, P=900000 [Pa], x=0)
+EXV V(fluid$=R134a, CdA_max=2e-6 [m^2], u=0.6)
+TwoPhasePressureSink LO(P=350000 [Pa])
 connect(HI.out, V.in)
 connect(V.out, LO.in)
 
@@ -2906,13 +2906,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // are the two leaf components of that file that need no humid-air backend; the
 // signal-driven one also crosses the SIGNAL domain into the twophase bond,
 // which is exactly the multi-domain case the connect rules must keep separate.
-TwoPhaseSourcePH SA(c1, mdot = 0.04, P = 1000000, h = 260000)
-EXV              XV(c1, c2, fluid$ = R134a, CdA_max = 5e-6, u = 0.8)
+TwoPhaseSourcePH SA(c1, mdot = 0.04 [kg/s], P = 1000000 [Pa], h = 260000 [J/kg])
+EXV              XV(c1, c2, fluid$ = R134a, CdA_max = 5e-6 [m^2], u = 0.8)
 TwoPhaseSink     KA(c2)
 
-TwoPhaseSourcePH SB(d1, mdot = 0.04, P = 1000000, h = 260000)
+TwoPhaseSourcePH SB(d1, mdot = 0.04 [kg/s], P = 1000000 [Pa], h = 260000 [J/kg])
 SigConstant      CMD(u1, k = 0.8)
-EXVCmd           XC(d1, d2, u1, fluid$ = R134a, CdA_max = 5e-6)
+EXVCmd           XC(d1, d2, u1, fluid$ = R134a, CdA_max = 5e-6 [m^2])
 TwoPhaseSink     KB(d2)
 
 rho_xv = XV.rho_in
@@ -2997,9 +2997,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // HeaterCore: the cabin-heating radiator — 85 C engine coolant warms a cold
 // ventilation air stream (278 K, W = 0.003) through the shared wall node.
-LiquidSource   CLNT(fluid$ = Water, mdot = 0.15, P = 250000, T = 358)
-MoistAirSource AIR(P = 101325, T = 278, W = 0.003, mdot = 0.12)
-HeaterCore     HC(cool$ = Water, UA_cool = 300, eps_air = 0.75)
+LiquidSource   CLNT(fluid$ = Water, mdot = 0.15 [kg/s], P = 250000 [Pa], T = 358 [K])
+MoistAirSource AIR(P = 101325 [Pa], T = 278 [K], W = 0.003, mdot = 0.12 [kg/s])
+HeaterCore     HC(cool$ = Water, UA_cool = 300 [W/K], eps_air = 0.75)
 LiquidSink     CSNK()
 MoistAirSink   ASNK()
 connect(CLNT.out, HC.cool_in)
@@ -3087,9 +3087,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Radiator: hierarchical liquid/moist-air bridge — 95 C water coolant rejects
 // ~24 kW to ambient air through the shared wall node (UA_cool on the coolant
 // side, eps_t effectiveness on the air side).
-LiquidSource   CLNT(fluid$ = Water, mdot = 0.4, P = 200000, T = 368)
-MoistAirSource AIR(P = 101325, T = 305, W = 0.008, mdot = 1.2)
-Radiator       RAD(cool$ = Water, UA_cool = 800, eps_air = 0.6)
+LiquidSource   CLNT(fluid$ = Water, mdot = 0.4 [kg/s], P = 200000 [Pa], T = 368 [K])
+MoistAirSource AIR(P = 101325 [Pa], T = 305 [K], W = 0.008, mdot = 1.2 [kg/s])
+Radiator       RAD(cool$ = Water, UA_cool = 800 [W/K], eps_air = 0.6)
 LiquidSink     CSNK()
 MoistAirSink   ASNK()
 connect(CLNT.out, RAD.cool_in)
@@ -3145,7 +3145,7 @@ TXV inst(fluid$, Kv, SH_set, CdA0, tau_valve, tau_bulb, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
-| \`Kv\` | Number | Flow coefficient. |
+| \`Kv\` | Number | Opening gain: flow area added per kelvin of superheat above SH_set [m²/K]. |
 | \`SH_set\` | Number | Target superheat [K]. |
 | \`CdA0\` | Number | Reference Cd·A [m²]. |
 | \`tau_valve\` | Number | Valve time constant [s]. |
@@ -3186,9 +3186,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 { R134a thermostatic expansion valve: 12 bar liquid line to a 3 bar evaporator,
   bulb held 8 K above evaporator saturation (3 K above the 5 K set point),
   so the valve opens over its time constants. }
-TwoPhasePressureSource SRC(fluid$=R134a, P=1200000, x=0)
-TXV                    V1(fluid$=R134a, Kv=2e-8, SH_set=5, CdA0=1e-6, tau_valve=2, tau_bulb=10)
-TwoPhasePressureSink   SNK(P=300000)
+TwoPhasePressureSource SRC(fluid$=R134a, P=1200000 [Pa], x=0)
+TXV                    V1(fluid$=R134a, Kv=2e-8 [m^2/K], SH_set=5 [K], CdA0=1e-6 [m^2], tau_valve=2 [s], tau_bulb=10 [s])
+TwoPhasePressureSink   SNK(P=300000 [Pa])
 ThermalSource          BULB(T=T_sat(R134a, P=300000) + 8)
 connect(SRC.out, V1.in)
 connect(V1.out, SNK.in)
@@ -3245,8 +3245,8 @@ PIThermostat inst(Kp, Ki, Tref)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`Kp\` | Number | Proportional gain. |
-| \`Ki\` | Number | Integral gain. |
+| \`Kp\` | Number | Proportional gain [W/K]. |
+| \`Ki\` | Number | Integral gain [W/K·s]. |
 | \`Tref\` | Number | Reference (setpoint) temperature [K]. |
 
 ## Constitutive Equations
@@ -3272,10 +3272,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-PIThermostat  TC(Kp=100, Ki=0.5, Tref=350)
-ThermalMass   M(C=5000, T0=300)
-Conduction    wall(k=2, area=1, L=0.1)
-ThermalSource amb(T=300)
+PIThermostat  TC(Kp=100 [W/K], Ki=0.5 [W/K-s], Tref=350 [K])
+ThermalMass   M(C=5000 [J/K], T0=300 [K])
+Conduction    wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource amb(T=300 [K])
 connect(TC.port, M.port, wall.a)
 connect(wall.b, amb.port)
 DYNAMIC loop(time = 0 .. 1200, points = 120)
@@ -3348,8 +3348,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Battery  B(Voc=12, R0=0.1)
-Resistor RL(R=2.0)
+Battery  B(Voc=12 [V], R0=0.1 [ohm])
+Resistor RL(R=2.0 [ohm])
 Ground   G()
 connect(B.p, RL.a)
 connect(B.n, RL.b, G.port)
@@ -3402,9 +3402,9 @@ Battery2RC inst(Voc, R0, R1, C1, R2, C2, Vrc1_0, Vrc2_0)
 | \`Voc\` | Number | Open-circuit voltage [V]. |
 | \`R0\` | Number | Series (ohmic) resistance [Ω]. |
 | \`R1\` | Number | First RC-branch resistance [Ω]. |
-| \`C1\` | Number | First RC-branch capacitance [F]. |
+| \`C1\` | Number | First RC-branch capacitance [farad]. |
 | \`R2\` | Number | Second RC-branch resistance [Ω]. |
-| \`C2\` | Number | Second RC-branch capacitance [F]. |
+| \`C2\` | Number | Second RC-branch capacitance [farad]. |
 | \`Vrc1_0\` | Number | Initial first-RC voltage [V]. |
 | \`Vrc2_0\` | Number | Initial second-RC voltage [V]. |
 
@@ -3433,8 +3433,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Battery2RC B(Voc=48, R0=0.1, R1=0.2, C1=1000, R2=0.1, C2=2000, Vrc1_0=0, Vrc2_0=0)
-Resistor   RL(R=4.6)
+Battery2RC B(Voc=48 [V], R0=0.1 [ohm], R1=0.2 [ohm], C1=1000 [farad], R2=0.1 [ohm], C2=2000 [farad], Vrc1_0=0 [V], Vrc2_0=0 [V])
+Resistor   RL(R=4.6 [ohm])
 Ground     G()
 connect(B.p, RL.a)
 connect(B.n, RL.b, G.port)
@@ -3505,11 +3505,11 @@ The acausal equations this component expands into (over its port members and par
 $$
 \\begin{aligned}
 i &= -p.i \\\\
-r0 &= r0ref\\cdot e^{\\frac{ea}{8.314}\\cdot \\left(\\frac{1}{t} - \\frac{1}{tref}\\right)} \\\\
+r0 &= r0ref\\cdot e^{\\frac{ea}{8.314\\,\\left[kg m^2/s^2-K-mol\\right]}\\cdot \\left(\\frac{1}{t} - \\frac{1}{tref}\\right)} \\\\
 voc &= \\text{ocv\\$}\\left(soc\\right) \\\\
 p.v - n.v &= voc - r0\\cdot i \\\\
 p.i + n.i &= 0 \\\\
-\\text{der}\\left(soc\\right) &= \\frac{-i}{3600\\,qcap} \\\\
+\\text{der}\\left(soc\\right) &= \\frac{-i}{3600\\,\\left[Coulomb\\right]\\,qcap} \\\\
 \\text{init}\\left(soc\\right) &= soc0 \\\\
 qgen &= r0\\cdot i^{2} - i\\cdot t\\cdot \\text{dudt\\$}\\left(soc\\right) \\\\
 heat.t &= t \\\\
@@ -3534,7 +3534,7 @@ $$
 
 $$
 \\begin{aligned}
-\\text{der}\\left(ah\\right) &= \\frac{\\left|i\\right|}{3600} \\\\
+\\text{der}\\left(ah\\right) &= \\frac{\\left|i\\right|}{3600\\,\\left[Coulomb\\right]} \\\\
 \\text{init}\\left(ah\\right) &= 0 \\\\
 qcap &= q0\\cdot \\left(1 - k_{age}\\cdot ah\\right)
 \\end{aligned}
@@ -3561,11 +3561,11 @@ TABLE dudt(soc)
   0    -0.0001
   1     0.0001
 END
-BatteryCellMap B(ocv$ = ocv, dudt$ = dudt, R0ref = 0.01, Tref = 298, Ea = 20000, Q0 = 5, C_th = 50, SOC0 = 0.8, T0 = 298)
-CurrentSource  CS(I = -2)
+BatteryCellMap B(ocv$ = ocv, dudt$ = dudt, R0ref = 0.01 [ohm], Tref = 298 [K], Ea = 20000 [J/mol], Q0 = 5, C_th = 50 [J/K], SOC0 = 0.8, T0 = 298 [K])
+CurrentSource  CS(I = -2 [A])
 Ground         G()
-Convection     CV(htc = 5, area = 0.1)
-ThermalSource  AMB(T = 298)
+Convection     CV(htc = 5 [W/m^2-K], area = 0.1 [m^2])
+ThermalSource  AMB(T = 298 [K])
 connect(B.p, CS.p)
 connect(CS.n, B.n, G.port)
 connect(B.heat, CV.a)
@@ -3638,10 +3638,10 @@ The acausal equations this component expands into (over its port members and par
 $$
 \\begin{aligned}
 i_{cell} &= \\frac{-p.i}{np} \\\\
-r0 &= r0ref\\cdot e^{\\frac{ea}{8.314}\\cdot \\left(\\frac{1}{t} - \\frac{1}{tref}\\right)} \\\\
+r0 &= r0ref\\cdot e^{\\frac{ea}{8.314\\,\\left[kg m^2/s^2-K-mol\\right]}\\cdot \\left(\\frac{1}{t} - \\frac{1}{tref}\\right)} \\\\
 p.v - n.v &= ns\\cdot \\left(\\text{ocv\\$}\\left(soc\\right) - r0\\cdot i_{cell}\\right) \\\\
 p.i + n.i &= 0 \\\\
-\\text{der}\\left(soc\\right) &= \\frac{-i_{cell}}{3600\\,q0} \\\\
+\\text{der}\\left(soc\\right) &= \\frac{-i_{cell}}{3600\\,\\left[Coulomb\\right]\\,q0} \\\\
 \\text{init}\\left(soc\\right) &= soc0 \\\\
 qgen &= ns\\cdot np\\cdot \\left(r0\\cdot i_{cell}^{2} - i_{cell}\\cdot t\\cdot \\text{dudt\\$}\\left(soc\\right)\\right) \\\\
 heat.t &= t \\\\
@@ -3671,11 +3671,11 @@ TABLE dudt(soc)
   0    -0.0001
   1     0.0001
 END
-BatteryPack B(Ns=4, Np=2, ocv$ = ocv, dudt$ = dudt, R0ref = 0.01, Tref = 298, Ea = 20000, Q0 = 5, C_th = 50, SOC0 = 0.8, T0 = 298)
-CurrentSource  CS(I = -2)
+BatteryPack B(Ns=4, Np=2, ocv$ = ocv, dudt$ = dudt, R0ref = 0.01 [ohm], Tref = 298 [K], Ea = 20000 [J/mol], Q0 = 5, C_th = 50 [J/K], SOC0 = 0.8, T0 = 298 [K])
+CurrentSource  CS(I = -2 [A])
 Ground         G()
-Convection     CV(htc = 5, area = 0.1)
-ThermalSource  AMB(T = 298)
+Convection     CV(htc = 5 [W/m^2-K], area = 0.1 [m^2])
+ThermalSource  AMB(T = 298 [K])
 connect(B.p, CS.p)
 connect(CS.n, B.n, G.port)
 connect(B.heat, CV.a)
@@ -3730,7 +3730,7 @@ BatteryRC inst(Voc, R0, R1, C1, Vrc0)
 | \`Voc\` | Number | Open-circuit voltage [V]. |
 | \`R0\` | Number | Series (ohmic) resistance [Ω]. |
 | \`R1\` | Number | First RC-branch resistance [Ω]. |
-| \`C1\` | Number | First RC-branch capacitance [F]. |
+| \`C1\` | Number | First RC-branch capacitance [farad]. |
 | \`Vrc0\` | Number | Initial RC-branch voltage [V]. |
 
 ## Constitutive Equations
@@ -3756,8 +3756,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BatteryRC B(Voc=48, R0=0.1, R1=0.2, C1=1000, Vrc0=0)
-Resistor  RL(R=4.7)
+BatteryRC B(Voc=48 [V], R0=0.1 [ohm], R1=0.2 [ohm], C1=1000 [farad], Vrc0=0 [V])
+Resistor  RL(R=4.7 [ohm])
 Ground    G()
 connect(B.p, RL.a)
 connect(B.n, RL.b, G.port)
@@ -3834,11 +3834,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BatteryThermal B(Voc=400, R0=0.1)
-Resistor       MOT(R=3.9)
+BatteryThermal B(Voc=400 [V], R0=0.1 [ohm])
+Resistor       MOT(R=3.9 [ohm])
 Ground         G()
-Conduction     PLATE(k=10, area=1, L=0.1)
-ThermalSource  COOL(T=298)
+Conduction     PLATE(k=10 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource  COOL(T=298 [K])
 connect(B.p, MOT.a)
 connect(B.n, MOT.b, G.port)
 connect(B.heat, PLATE.a)
@@ -3891,7 +3891,7 @@ BatteryTransient inst(Voc, R0, Q0, C_th, SOC0, T0)
 | --- | --- | --- |
 | \`Voc\` | Number | Open-circuit voltage [V]. |
 | \`R0\` | Number | Series (ohmic) resistance [Ω]. |
-| \`Q0\` | Number | Reference heat [W]. |
+| \`Q0\` | Number | Rated capacity in ampere-hours, entered as a plain number (the model converts it with 3600 A·s per A·h) [-]. |
 | \`C_th\` | Number | Thermal capacitance [J/K]. |
 | \`SOC0\` | Number | Initial state of charge (0–1). |
 | \`T0\` | Number | Reference/initial temperature [K]. |
@@ -3908,7 +3908,7 @@ qgen &= r0\\cdot p.i^{2} \\\\
 heat.t &= t \\\\
 \\text{der}\\left(t\\right) &= \\frac{qgen + heat.qdot}{c_{th}} \\\\
 \\text{init}\\left(t\\right) &= t0 \\\\
-\\text{der}\\left(soc\\right) &= \\frac{p.i}{3600\\,q0} \\\\
+\\text{der}\\left(soc\\right) &= \\frac{p.i}{3600\\,\\left[Coulomb\\right]\\,q0} \\\\
 \\text{init}\\left(soc\\right) &= soc0
 \\end{aligned}
 $$
@@ -3923,11 +3923,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BatteryTransient B(Voc=400, R0=0.1, Q0=100, C_th=50000, SOC0=0.9, T0=298)
-Resistor      MOT(R=3.9)
+BatteryTransient B(Voc=400 [V], R0=0.1 [ohm], Q0=100, C_th=50000 [J/K], SOC0=0.9, T0=298 [K])
+Resistor      MOT(R=3.9 [ohm])
 Ground        G()
-Conduction    PLATE(k=10, area=1, L=0.1)
-ThermalSource COOL(T=298)
+Conduction    PLATE(k=10 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource COOL(T=298 [K])
 connect(B.p, MOT.a)
 connect(B.n, MOT.b, G.port)
 connect(B.heat, PLATE.a)
@@ -3980,8 +3980,8 @@ Capacitor inst(C, V0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`C\` | Number | Capacitance [F]. |
-| \`V0\` | Number | Initial voltage / volume. |
+| \`C\` | Number | Capacitance [farad]. |
+| \`V0\` | Number | Initial voltage [V]. |
 
 ## Constitutive Equations
 
@@ -4006,9 +4006,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-VoltageSource VS(E=10)
-Resistor      R(R=1000)
-Capacitor     CAP(C=0.001, V0=0)
+VoltageSource VS(E=10 [V])
+Resistor      R(R=1000 [ohm])
+Capacitor     CAP(C=0.001 [farad], V0=0 [V])
 Ground        G()
 connect(VS.p, R.a)
 connect(R.b, CAP.p)
@@ -4101,33 +4101,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT mh2 = 2.0894e-6 tol 1e-9
 // Solar array at 1000 W/m2 into 1 ohm, far from Voc: I = Isc = 8 A.
 // EXPECT isol = 8 tol 1e-3
-ChargerCCCV CH(Imax=10, Vmax=4.2, epsV=0.01)
-Battery     BT(Voc=3.6, R0=0.01)
+ChargerCCCV CH(Imax=10 [A], Vmax=4.2 [V], epsV=0.01 [V])
+Battery     BT(Voc=3.6 [V], R0=0.01 [ohm])
 Ground      GC()
 connect(CH.p, BT.p)
 connect(CH.n, BT.n, GC.port)
 icc = BT.p.I
 
-ThermalFuse   FU(R0=0.1, Iblow=50, kR=100, epsI=1)
-CurrentSource CF(I=100)
+ThermalFuse   FU(R0=0.1 [ohm], Iblow=50 [A], kR=100, epsI=1 [A])
+CurrentSource CF(I=100 [A])
 Ground        GF()
 connect(FU.p, CF.p)
 connect(FU.n, CF.n, GF.port)
 vfuse = FU.p.V - FU.n.V
 
-HarnessResistance HR(R20=0.01, alphaT=0.004)
-CurrentSource     CHR(I=10)
+HarnessResistance HR(R20=0.01 [ohm], alphaT=0.004 [1/K])
+CurrentSource     CHR(I=10 [A])
 Ground            GH()
-ThermalSource     THW(T=350)
+ThermalSource     THW(T=350 [K])
 connect(HR.a, CHR.p)
 connect(HR.b, CHR.n, GH.port)
 connect(HR.heat, THW.port)
 dvh = HR.a.V - HR.b.V
 
-Electrolyzer  EL(ncells=10, area=0.01, i0=10, Rohm=1e-4, E0=1.48, alpha=0.5, Eth=1.48, T=333)
-CurrentSource CE(I=20)
+Electrolyzer  EL(ncells=10, area=0.01 [m^2], i0=10 [A/m^2], Rohm=1e-4 [ohm-m^2], E0=1.48 [V], alpha=0.5, Eth=1.48 [V], T=333 [K])
+CurrentSource CE(I=20 [A])
 Ground        GE()
-ThermalSource TE(T=333)
+ThermalSource TE(T=333 [K])
 connect(EL.p, CE.p)
 connect(EL.n, CE.n, GE.port)
 connect(EL.heat, TE.port)
@@ -4135,9 +4135,9 @@ vel = EL.p.V - EL.n.V
 qel = EL.Q
 mh2 = EL.mdot_h2
 
-SigConstant IRR(k=1000)
-SolarArray  SA(Isc_ref=8, Gref=1000, Voc=40, epsV=0.5)
-Resistor    RS(R=1)
+SigConstant IRR(k=1000 [W/m^2])
+SolarArray  SA(Isc_ref=8 [A], Gref=1000 [W/m^2], Voc=40 [V], epsV=0.5 [V])
+Resistor    RS(R=1 [ohm])
 Ground      GA()
 connect(IRR.out, SA.G)
 connect(SA.p, RS.a)
@@ -4212,8 +4212,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-CurrentSource CS(I=2)
-Resistor      R(R=5)
+CurrentSource CS(I=2 [A])
+Resistor      R(R=5 [ohm])
 Ground        G()
 connect(CS.p, R.a)
 connect(CS.n, R.b, G.port)
@@ -4305,17 +4305,17 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // DCDC 400 V -> 12 V into 1.2 ohm: Pout = 120 W, Pin = 133.333 W at eta 0.9,
 // input current 0.33333 A.
 // EXPECT iin = 0.333333 tol 1e-4
-TABLE effm(w : tau = -100, 100)
+TABLE effm(w [rad/s] : tau = -100, 100) [-]
   0     0.9   0.9
   200   0.9   0.9
 END
-VoltageSource BUS(E=400)
+VoltageSource BUS(E=400 [V])
 Ground        GB()
-SigConstant   CMD1(k=50)
-SpeedSource   SPD1(w=100)
+SigConstant   CMD1(k=50 [N-m])
+SpeedSource   SPD1(w=100 [rad/s])
 MechGround    MG1()
-ThermalSource TS1(T=300)
-MotorMap      MOT1(eff$=effm, epsP=1)
+ThermalSource TS1(T=300 [K])
+MotorMap      MOT1(eff$=effm, epsP=1 [W])
 connect(BUS.p, MOT1.p)
 connect(BUS.n, MOT1.n, GB.port)
 connect(CMD1.out, MOT1.u)
@@ -4324,13 +4324,13 @@ connect(SPD1.b, MG1.port)
 connect(MOT1.heat, TS1.port)
 pe1 = MOT1.Pe
 i1  = MOT1.p.I
-VoltageSource BUS2(E=400)
+VoltageSource BUS2(E=400 [V])
 Ground        GB2()
-SigConstant   CMD2(k=-50)
-SpeedSource   SPD2(w=100)
+SigConstant   CMD2(k=-50 [N-m])
+SpeedSource   SPD2(w=100 [rad/s])
 MechGround    MG2()
-ThermalSource TS2(T=300)
-MotorMap      MOT2(eff$=effm, epsP=1)
+ThermalSource TS2(T=300 [K])
+MotorMap      MOT2(eff$=effm, epsP=1 [W])
 connect(BUS2.p, MOT2.p)
 connect(BUS2.n, MOT2.n, GB2.port)
 connect(CMD2.out, MOT2.u)
@@ -4339,11 +4339,11 @@ connect(SPD2.b, MG2.port)
 connect(MOT2.heat, TS2.port)
 pe2 = MOT2.Pe
 
-VoltageSource SRC(E=400)
+VoltageSource SRC(E=400 [V])
 Ground        GI()
-InverterLoss  INV(V0=1, r=1e-3, Esw=0.02, fsw=10000, Iref=200, Vref=400, Vnom=400, epsI=1)
-Resistor      RL(R=3.979)
-ThermalSource TSI(T=300)
+InverterLoss  INV(V0=1 [V], r=1e-3 [ohm], Esw=0.02 [J], fsw=10000 [Hz], Iref=200 [A], Vref=400 [V], Vnom=400 [V], epsI=1 [A])
+Resistor      RL(R=3.979 [ohm])
+ThermalSource TSI(T=300 [K])
 connect(SRC.p, INV.in_p)
 connect(INV.out_p, RL.a)
 connect(RL.b, SRC.n, GI.port)
@@ -4351,10 +4351,10 @@ connect(INV.heat, TSI.port)
 il  = INV.in_p.I
 qiv = INV.Q
 
-VoltageSource HV(E=400)
+VoltageSource HV(E=400 [V])
 Ground        GD()
-DCDCConverter DC(ratio=0.03, eta=0.9, epsP=1)
-Resistor      RLV(R=1.2)
+DCDCConverter DC(ratio=0.03, eta=0.9, epsP=1 [W])
+Resistor      RLV(R=1.2 [ohm])
 connect(HV.p, DC.in_p)
 connect(HV.n, DC.in_n, GD.port)
 Ground        GD2()
@@ -4433,12 +4433,12 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BatteryThermal   B(Voc=48, R0=0.1)
-DCMotor          MOT(Kt=0.5, Ke=0.5, R=1)
-RotationalDamper LOAD(c=0.1)
+BatteryThermal   B(Voc=48 [V], R0=0.1 [ohm])
+DCMotor          MOT(Kt=0.5 [N-m/A], Ke=0.5 [N-m/A], R=1 [ohm])
+RotationalDamper LOAD(c=0.1 [N-m-s])
 Ground           G()
 MechGround       MG()
-ThermalSource    COOL(T=300)
+ThermalSource    COOL(T=300 [K])
 connect(B.p, MOT.p)
 connect(B.n, MOT.n, G.port)
 connect(MOT.shaft, LOAD.a)
@@ -4490,7 +4490,7 @@ Diode inst(Gon, eps)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`Gon\` | Number | On-state conductance [S]. |
+| \`Gon\` | Number | On-state conductance [siemens]. |
 | \`eps\` | Number | Conduction smoothing voltage [V] — the tanh transition width around zero bias. |
 
 ## Constitutive Equations
@@ -4515,9 +4515,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-VoltageSource VS(E=5)
-Diode         D(Gon=10, eps=0.001)
-Resistor      R(R=1)
+VoltageSource VS(E=5 [V])
+Diode         D(Gon=10 [siemens], eps=0.001 [V])
+Resistor      R(R=1 [ohm])
 Ground        G()
 connect(VS.p, D.p)
 connect(D.n, R.a)
@@ -4585,10 +4585,10 @@ $$
 \\begin{aligned}
 i_{cell} &= p.i \\\\
 i &= \\frac{i_{cell}}{area} \\\\
-v_{cell} &= e0 + \\frac{8.314\\,t}{alpha\\cdot 96485}\\cdot \\ln\\left(\\frac{i}{i0} + 1\\right) + i\\cdot rohm \\\\
+v_{cell} &= e0 + \\frac{8.314\\,\\left[kg m^2/s^2-K-mol\\right]\\,t}{alpha\\cdot 96485\\,\\left[s A/mol\\right]}\\cdot \\ln\\left(\\frac{i}{i0} + 1\\right) + i\\cdot rohm \\\\
 p.v - n.v &= ncells\\cdot v_{cell} \\\\
 p.i + n.i &= 0 \\\\
-mdot_{h2} &= \\frac{ncells\\cdot i_{cell}\\cdot 0.002016}{2\\,96485} \\\\
+mdot_{h2} &= \\frac{ncells\\cdot i_{cell}\\cdot 0.002016\\,\\left[kg/mol\\right]}{2\\,96485\\,\\left[s A/mol\\right]} \\\\
 q &= i_{cell}\\cdot ncells\\cdot \\left(v_{cell} - eth\\right) \\\\
 heat.qdot &= -q
 \\end{aligned}
@@ -4618,33 +4618,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT mh2 = 2.0894e-6 tol 1e-9
 // Solar array at 1000 W/m2 into 1 ohm, far from Voc: I = Isc = 8 A.
 // EXPECT isol = 8 tol 1e-3
-ChargerCCCV CH(Imax=10, Vmax=4.2, epsV=0.01)
-Battery     BT(Voc=3.6, R0=0.01)
+ChargerCCCV CH(Imax=10 [A], Vmax=4.2 [V], epsV=0.01 [V])
+Battery     BT(Voc=3.6 [V], R0=0.01 [ohm])
 Ground      GC()
 connect(CH.p, BT.p)
 connect(CH.n, BT.n, GC.port)
 icc = BT.p.I
 
-ThermalFuse   FU(R0=0.1, Iblow=50, kR=100, epsI=1)
-CurrentSource CF(I=100)
+ThermalFuse   FU(R0=0.1 [ohm], Iblow=50 [A], kR=100, epsI=1 [A])
+CurrentSource CF(I=100 [A])
 Ground        GF()
 connect(FU.p, CF.p)
 connect(FU.n, CF.n, GF.port)
 vfuse = FU.p.V - FU.n.V
 
-HarnessResistance HR(R20=0.01, alphaT=0.004)
-CurrentSource     CHR(I=10)
+HarnessResistance HR(R20=0.01 [ohm], alphaT=0.004 [1/K])
+CurrentSource     CHR(I=10 [A])
 Ground            GH()
-ThermalSource     THW(T=350)
+ThermalSource     THW(T=350 [K])
 connect(HR.a, CHR.p)
 connect(HR.b, CHR.n, GH.port)
 connect(HR.heat, THW.port)
 dvh = HR.a.V - HR.b.V
 
-Electrolyzer  EL(ncells=10, area=0.01, i0=10, Rohm=1e-4, E0=1.48, alpha=0.5, Eth=1.48, T=333)
-CurrentSource CE(I=20)
+Electrolyzer  EL(ncells=10, area=0.01 [m^2], i0=10 [A/m^2], Rohm=1e-4 [ohm-m^2], E0=1.48 [V], alpha=0.5, Eth=1.48 [V], T=333 [K])
+CurrentSource CE(I=20 [A])
 Ground        GE()
-ThermalSource TE(T=333)
+ThermalSource TE(T=333 [K])
 connect(EL.p, CE.p)
 connect(EL.n, CE.n, GE.port)
 connect(EL.heat, TE.port)
@@ -4652,9 +4652,9 @@ vel = EL.p.V - EL.n.V
 qel = EL.Q
 mh2 = EL.mdot_h2
 
-SigConstant IRR(k=1000)
-SolarArray  SA(Isc_ref=8, Gref=1000, Voc=40, epsV=0.5)
-Resistor    RS(R=1)
+SigConstant IRR(k=1000 [W/m^2])
+SolarArray  SA(Isc_ref=8 [A], Gref=1000 [W/m^2], Voc=40 [V], epsV=0.5 [V])
+Resistor    RS(R=1 [ohm])
 Ground      GA()
 connect(IRR.out, SA.G)
 connect(SA.p, RS.a)
@@ -4745,10 +4745,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // bus (V_cell ~ 1.984 -> i ~ 2000 A/m2, ~20 A, ~100 W of heat), the jacket
 // heat carried away by a 0.05 kg/s water loop at 325 K through a UA = 200
 // wall.
-ElectrolyzerThermal EL(ncells = 10, area = 0.01, i0 = 10, Rohm = 1e-4, E0 = 1.48, alpha = 0.5, Eth = 1.48, T = 333, fluid$ = Water, UA = 200)
-VoltageSource BUS(E = 19.84)
+ElectrolyzerThermal EL(ncells = 10, area = 0.01 [m^2], i0 = 10 [A/m^2], Rohm = 1e-4 [ohm-m^2], E0 = 1.48 [V], alpha = 0.5, Eth = 1.48 [V], T = 333 [K], fluid$ = Water, UA = 200 [W/K])
+VoltageSource BUS(E = 19.84 [V])
 Ground        G()
-LiquidSource  SRC(fluid$ = Water, mdot = 0.05, P = 150000, T = 325)
+LiquidSource  SRC(fluid$ = Water, mdot = 0.05 [kg/s], P = 150000 [Pa], T = 325 [K])
 LiquidSink    SNK()
 connect(EL.p, BUS.p)
 connect(BUS.n, EL.n, G.port)
@@ -4804,12 +4804,12 @@ FuelCellStack inst(ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T)
 | --- | --- | --- |
 | \`ncells\` | Number | Number of cells. |
 | \`area\` | Number | Area [m²]. |
-| \`i0\` | Number | Initial current [A]. |
-| \`ilim\` | Number | Current limit [A]. |
-| \`Rohm\` | Number | Ohmic resistance [Ω]. |
+| \`i0\` | Number | Exchange current density [A/m²]. |
+| \`ilim\` | Number | Limiting current density [A/m²]. |
+| \`Rohm\` | Number | Area-specific ohmic resistance [Ω·m²]. |
 | \`E0\` | Number | Reference EMF [V]. |
 | \`alpha\` | Number | Void fraction / coefficient. |
-| \`Eth\` | Number | Activation/threshold energy. |
+| \`Eth\` | Number | Thermoneutral cell voltage [V]. |
 | \`T\` | Number | Temperature [K]. |
 
 ## Constitutive Equations
@@ -4820,7 +4820,7 @@ $$
 \\begin{aligned}
 i_{cell} &= -p.i \\\\
 i &= \\frac{i_{cell}}{area} \\\\
-v_{cell} &= e0 - \\frac{8.314\\,t}{alpha\\cdot 96485}\\cdot \\ln\\left(\\frac{i}{i0}\\right) - i\\cdot rohm - \\frac{8.314\\,t}{2\\,96485}\\cdot \\ln\\left(\\frac{ilim}{ilim - i}\\right) \\\\
+v_{cell} &= e0 - \\frac{8.314\\,\\left[kg m^2/s^2-K-mol\\right]\\,t}{alpha\\cdot 96485\\,\\left[s A/mol\\right]}\\cdot \\ln\\left(\\frac{i}{i0}\\right) - i\\cdot rohm - \\frac{8.314\\,\\left[kg m^2/s^2-K-mol\\right]\\,t}{2\\,96485\\,\\left[s A/mol\\right]}\\cdot \\ln\\left(\\frac{ilim}{ilim - i}\\right) \\\\
 p.v - n.v &= ncells\\cdot v_{cell} \\\\
 p.i + n.i &= 0 \\\\
 q &= i_{cell}\\cdot ncells\\cdot \\left(eth - v_{cell}\\right) \\\\
@@ -4844,10 +4844,10 @@ port(n)
   p.I = Idraw
   p.I + n.I = 0
 end
-FuelCellStack FC(ncells=10, area=0.01, i0=10, ilim=20000, Rohm=1e-5, E0=1.18, alpha=0.5, Eth=1.48, T=343)
+FuelCellStack FC(ncells=10, area=0.01 [m^2], i0=10 [A/m^2], ilim=20000 [A/m^2], Rohm=1e-5 [ohm-m^2], E0=1.18 [V], alpha=0.5, Eth=1.48 [V], T=343 [K])
 CurrentDraw   LOAD(Idraw=50)
-ThermalSource COOL(T=343)
-Convection    HS(htc=200, area=1)
+ThermalSource COOL(T=343 [K])
+Convection    HS(htc=200 [W/m^2-K], area=1 [m^2])
 Ground        G()
 connect(FC.p, LOAD.p)
 connect(FC.n, LOAD.n, G.port)
@@ -4940,10 +4940,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // crossing the internal UA = 500 wall into a 0.2 kg/s water loop at 330 K.
 // (Voltage-clamped on purpose: a current-source load makes the solver's
 // matching solve the ln law backwards and the retry ladder stalls.)
-FuelCellStackCooled FC(ncells = 10, area = 0.01, i0 = 10, ilim = 20000, Rohm = 1e-5, E0 = 1.18, alpha = 0.5, Eth = 1.48, T = 343, fluid$ = Water, UA = 500)
-VoltageSource BUS(E = 7.5)
+FuelCellStackCooled FC(ncells = 10, area = 0.01 [m^2], i0 = 10 [A/m^2], ilim = 20000 [A/m^2], Rohm = 1e-5 [ohm-m^2], E0 = 1.18 [V], alpha = 0.5, Eth = 1.48 [V], T = 343 [K], fluid$ = Water, UA = 500 [W/K])
+VoltageSource BUS(E = 7.5 [V])
 Ground        G()
-LiquidSource  SRC(fluid$ = Water, mdot = 0.2, P = 200000, T = 330)
+LiquidSource  SRC(fluid$ = Water, mdot = 0.2 [kg/s], P = 200000 [Pa], T = 330 [K])
 LiquidSink    SNK()
 connect(FC.p, BUS.p)
 connect(FC.n, BUS.n, G.port)
@@ -5013,8 +5013,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Battery  B(Voc=12, R0=0.1)
-Resistor RL(R=2.0)
+Battery  B(Voc=12 [V], R0=0.1 [ohm])
+Resistor RL(R=2.0 [ohm])
 Ground   G()
 connect(B.p, RL.a)
 connect(B.n, RL.b, G.port)
@@ -5109,33 +5109,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT mh2 = 2.0894e-6 tol 1e-9
 // Solar array at 1000 W/m2 into 1 ohm, far from Voc: I = Isc = 8 A.
 // EXPECT isol = 8 tol 1e-3
-ChargerCCCV CH(Imax=10, Vmax=4.2, epsV=0.01)
-Battery     BT(Voc=3.6, R0=0.01)
+ChargerCCCV CH(Imax=10 [A], Vmax=4.2 [V], epsV=0.01 [V])
+Battery     BT(Voc=3.6 [V], R0=0.01 [ohm])
 Ground      GC()
 connect(CH.p, BT.p)
 connect(CH.n, BT.n, GC.port)
 icc = BT.p.I
 
-ThermalFuse   FU(R0=0.1, Iblow=50, kR=100, epsI=1)
-CurrentSource CF(I=100)
+ThermalFuse   FU(R0=0.1 [ohm], Iblow=50 [A], kR=100, epsI=1 [A])
+CurrentSource CF(I=100 [A])
 Ground        GF()
 connect(FU.p, CF.p)
 connect(FU.n, CF.n, GF.port)
 vfuse = FU.p.V - FU.n.V
 
-HarnessResistance HR(R20=0.01, alphaT=0.004)
-CurrentSource     CHR(I=10)
+HarnessResistance HR(R20=0.01 [ohm], alphaT=0.004 [1/K])
+CurrentSource     CHR(I=10 [A])
 Ground            GH()
-ThermalSource     THW(T=350)
+ThermalSource     THW(T=350 [K])
 connect(HR.a, CHR.p)
 connect(HR.b, CHR.n, GH.port)
 connect(HR.heat, THW.port)
 dvh = HR.a.V - HR.b.V
 
-Electrolyzer  EL(ncells=10, area=0.01, i0=10, Rohm=1e-4, E0=1.48, alpha=0.5, Eth=1.48, T=333)
-CurrentSource CE(I=20)
+Electrolyzer  EL(ncells=10, area=0.01 [m^2], i0=10 [A/m^2], Rohm=1e-4 [ohm-m^2], E0=1.48 [V], alpha=0.5, Eth=1.48 [V], T=333 [K])
+CurrentSource CE(I=20 [A])
 Ground        GE()
-ThermalSource TE(T=333)
+ThermalSource TE(T=333 [K])
 connect(EL.p, CE.p)
 connect(EL.n, CE.n, GE.port)
 connect(EL.heat, TE.port)
@@ -5143,9 +5143,9 @@ vel = EL.p.V - EL.n.V
 qel = EL.Q
 mh2 = EL.mdot_h2
 
-SigConstant IRR(k=1000)
-SolarArray  SA(Isc_ref=8, Gref=1000, Voc=40, epsV=0.5)
-Resistor    RS(R=1)
+SigConstant IRR(k=1000 [W/m^2])
+SolarArray  SA(Isc_ref=8 [A], Gref=1000 [W/m^2], Voc=40 [V], epsV=0.5 [V])
+Resistor    RS(R=1 [ohm])
 Ground      GA()
 connect(IRR.out, SA.G)
 connect(SA.p, RS.a)
@@ -5222,11 +5222,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-VoltageSource   VS(E=10)
-HeatingResistor HR(R=5)
+VoltageSource   VS(E=10 [V])
+HeatingResistor HR(R=5 [ohm])
 Ground          G()
-Conduction      C(k=2, area=1, L=0.1)
-ThermalSource   AMB(T=300)
+Conduction      C(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource   AMB(T=300 [K])
 connect(VS.p, HR.p)
 connect(VS.n, HR.n, G.port)
 connect(HR.heat, C.a)
@@ -5281,7 +5281,7 @@ Inductor inst(L, I0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`L\` | Number | Length [m]. |
+| \`L\` | Number | Inductance [henry]. |
 | \`I0\` | Number | Saturation current [A]. |
 
 ## Constitutive Equations
@@ -5310,9 +5310,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Inductor steady: der(IL) -> 0 forces zero drop across the coil, so the loop
 // current is the resistor's: IL = 10/5 = 2 A.
 // EXPECT il = 2 tol 1e-9
-VoltageSource SRC(E = 10)
-Inductor      L1(L = 0.1, I0 = 0)
-Resistor      R1(R = 5)
+VoltageSource SRC(E = 10 [V])
+Inductor      L1(L = 0.1 [henry], I0 = 0 [A])
+Resistor      R1(R = 5 [ohm])
 Ground        G()
 connect(SRC.p, L1.p)
 connect(L1.n, R1.a)
@@ -5411,17 +5411,17 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // DCDC 400 V -> 12 V into 1.2 ohm: Pout = 120 W, Pin = 133.333 W at eta 0.9,
 // input current 0.33333 A.
 // EXPECT iin = 0.333333 tol 1e-4
-TABLE effm(w : tau = -100, 100)
+TABLE effm(w [rad/s] : tau = -100, 100) [-]
   0     0.9   0.9
   200   0.9   0.9
 END
-VoltageSource BUS(E=400)
+VoltageSource BUS(E=400 [V])
 Ground        GB()
-SigConstant   CMD1(k=50)
-SpeedSource   SPD1(w=100)
+SigConstant   CMD1(k=50 [N-m])
+SpeedSource   SPD1(w=100 [rad/s])
 MechGround    MG1()
-ThermalSource TS1(T=300)
-MotorMap      MOT1(eff$=effm, epsP=1)
+ThermalSource TS1(T=300 [K])
+MotorMap      MOT1(eff$=effm, epsP=1 [W])
 connect(BUS.p, MOT1.p)
 connect(BUS.n, MOT1.n, GB.port)
 connect(CMD1.out, MOT1.u)
@@ -5430,13 +5430,13 @@ connect(SPD1.b, MG1.port)
 connect(MOT1.heat, TS1.port)
 pe1 = MOT1.Pe
 i1  = MOT1.p.I
-VoltageSource BUS2(E=400)
+VoltageSource BUS2(E=400 [V])
 Ground        GB2()
-SigConstant   CMD2(k=-50)
-SpeedSource   SPD2(w=100)
+SigConstant   CMD2(k=-50 [N-m])
+SpeedSource   SPD2(w=100 [rad/s])
 MechGround    MG2()
-ThermalSource TS2(T=300)
-MotorMap      MOT2(eff$=effm, epsP=1)
+ThermalSource TS2(T=300 [K])
+MotorMap      MOT2(eff$=effm, epsP=1 [W])
 connect(BUS2.p, MOT2.p)
 connect(BUS2.n, MOT2.n, GB2.port)
 connect(CMD2.out, MOT2.u)
@@ -5445,11 +5445,11 @@ connect(SPD2.b, MG2.port)
 connect(MOT2.heat, TS2.port)
 pe2 = MOT2.Pe
 
-VoltageSource SRC(E=400)
+VoltageSource SRC(E=400 [V])
 Ground        GI()
-InverterLoss  INV(V0=1, r=1e-3, Esw=0.02, fsw=10000, Iref=200, Vref=400, Vnom=400, epsI=1)
-Resistor      RL(R=3.979)
-ThermalSource TSI(T=300)
+InverterLoss  INV(V0=1 [V], r=1e-3 [ohm], Esw=0.02 [J], fsw=10000 [Hz], Iref=200 [A], Vref=400 [V], Vnom=400 [V], epsI=1 [A])
+Resistor      RL(R=3.979 [ohm])
+ThermalSource TSI(T=300 [K])
 connect(SRC.p, INV.in_p)
 connect(INV.out_p, RL.a)
 connect(RL.b, SRC.n, GI.port)
@@ -5457,10 +5457,10 @@ connect(INV.heat, TSI.port)
 il  = INV.in_p.I
 qiv = INV.Q
 
-VoltageSource HV(E=400)
+VoltageSource HV(E=400 [V])
 Ground        GD()
-DCDCConverter DC(ratio=0.03, eta=0.9, epsP=1)
-Resistor      RLV(R=1.2)
+DCDCConverter DC(ratio=0.03, eta=0.9, epsP=1 [W])
+Resistor      RLV(R=1.2 [ohm])
 connect(HV.p, DC.in_p)
 connect(HV.n, DC.in_n, GD.port)
 Ground        GD2()
@@ -5559,17 +5559,17 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // DCDC 400 V -> 12 V into 1.2 ohm: Pout = 120 W, Pin = 133.333 W at eta 0.9,
 // input current 0.33333 A.
 // EXPECT iin = 0.333333 tol 1e-4
-TABLE effm(w : tau = -100, 100)
+TABLE effm(w [rad/s] : tau = -100, 100) [-]
   0     0.9   0.9
   200   0.9   0.9
 END
-VoltageSource BUS(E=400)
+VoltageSource BUS(E=400 [V])
 Ground        GB()
-SigConstant   CMD1(k=50)
-SpeedSource   SPD1(w=100)
+SigConstant   CMD1(k=50 [N-m])
+SpeedSource   SPD1(w=100 [rad/s])
 MechGround    MG1()
-ThermalSource TS1(T=300)
-MotorMap      MOT1(eff$=effm, epsP=1)
+ThermalSource TS1(T=300 [K])
+MotorMap      MOT1(eff$=effm, epsP=1 [W])
 connect(BUS.p, MOT1.p)
 connect(BUS.n, MOT1.n, GB.port)
 connect(CMD1.out, MOT1.u)
@@ -5578,13 +5578,13 @@ connect(SPD1.b, MG1.port)
 connect(MOT1.heat, TS1.port)
 pe1 = MOT1.Pe
 i1  = MOT1.p.I
-VoltageSource BUS2(E=400)
+VoltageSource BUS2(E=400 [V])
 Ground        GB2()
-SigConstant   CMD2(k=-50)
-SpeedSource   SPD2(w=100)
+SigConstant   CMD2(k=-50 [N-m])
+SpeedSource   SPD2(w=100 [rad/s])
 MechGround    MG2()
-ThermalSource TS2(T=300)
-MotorMap      MOT2(eff$=effm, epsP=1)
+ThermalSource TS2(T=300 [K])
+MotorMap      MOT2(eff$=effm, epsP=1 [W])
 connect(BUS2.p, MOT2.p)
 connect(BUS2.n, MOT2.n, GB2.port)
 connect(CMD2.out, MOT2.u)
@@ -5593,11 +5593,11 @@ connect(SPD2.b, MG2.port)
 connect(MOT2.heat, TS2.port)
 pe2 = MOT2.Pe
 
-VoltageSource SRC(E=400)
+VoltageSource SRC(E=400 [V])
 Ground        GI()
-InverterLoss  INV(V0=1, r=1e-3, Esw=0.02, fsw=10000, Iref=200, Vref=400, Vnom=400, epsI=1)
-Resistor      RL(R=3.979)
-ThermalSource TSI(T=300)
+InverterLoss  INV(V0=1 [V], r=1e-3 [ohm], Esw=0.02 [J], fsw=10000 [Hz], Iref=200 [A], Vref=400 [V], Vnom=400 [V], epsI=1 [A])
+Resistor      RL(R=3.979 [ohm])
+ThermalSource TSI(T=300 [K])
 connect(SRC.p, INV.in_p)
 connect(INV.out_p, RL.a)
 connect(RL.b, SRC.n, GI.port)
@@ -5605,10 +5605,10 @@ connect(INV.heat, TSI.port)
 il  = INV.in_p.I
 qiv = INV.Q
 
-VoltageSource HV(E=400)
+VoltageSource HV(E=400 [V])
 Ground        GD()
-DCDCConverter DC(ratio=0.03, eta=0.9, epsP=1)
-Resistor      RLV(R=1.2)
+DCDCConverter DC(ratio=0.03, eta=0.9, epsP=1 [W])
+Resistor      RLV(R=1.2 [ohm])
 connect(HV.p, DC.in_p)
 connect(HV.n, DC.in_n, GD.port)
 Ground        GD2()
@@ -5688,20 +5688,20 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT i_pv = 5.999978 tol 1e-5
 // EXPECT v_cmd = 30 tol 1e-9
 
-SigConstant   SUN(k=1000)
-VoltageSource HOLD(E=0.5)
+SigConstant   SUN(k=1000 [W/m^2])
+VoltageSource HOLD(E=0.5 [V])
 Ground        G1()
-PVSingleDiode PV(Isc_ref=6, Gref=1000, I0d=1e-9, n_d=1.934236, Vt=0.02585, Rs=1e-9, Rsh=1e9)
+PVSingleDiode PV(Isc_ref=6 [A], Gref=1000 [W/m^2], I0d=1e-9 [A], n_d=1.934236, Vt=0.02585 [V], Rs=1e-9 [ohm], Rsh=1e9 [ohm])
 connect(PV.p, HOLD.p)
 connect(PV.n, HOLD.n, G1.port)
 connect(SUN.out, PV.G)
 i_pv = -PV.p.I
 
-TABLE vmp(g)
+TABLE vmp(g [W/m^2]) [V]
   0     30
   2000  30
 END
-SigConstant SUN2(k=800)
+SigConstant SUN2(k=800 [W/m^2])
 MPPTBlock   MPPT(vmp$=vmp)
 connect(SUN2.out, MPPT.G)
 v_cmd = MPPT.out.sig
@@ -5778,9 +5778,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-VoltageSource    VS(E=48)
-PMSM             M(Rs=0.5, lambda_pm=0.1, poles=4)
-RotationalDamper LOAD(c=0.05)
+VoltageSource    VS(E=48 [V])
+PMSM             M(Rs=0.5 [ohm], lambda_pm=0.1 [Wb], poles=4)
+RotationalDamper LOAD(c=0.05 [N-m-s])
 Ground           G()
 MechGround       MG()
 connect(VS.p, M.p)
@@ -5873,20 +5873,20 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT i_pv = 5.999978 tol 1e-5
 // EXPECT v_cmd = 30 tol 1e-9
 
-SigConstant   SUN(k=1000)
-VoltageSource HOLD(E=0.5)
+SigConstant   SUN(k=1000 [W/m^2])
+VoltageSource HOLD(E=0.5 [V])
 Ground        G1()
-PVSingleDiode PV(Isc_ref=6, Gref=1000, I0d=1e-9, n_d=1.934236, Vt=0.02585, Rs=1e-9, Rsh=1e9)
+PVSingleDiode PV(Isc_ref=6 [A], Gref=1000 [W/m^2], I0d=1e-9 [A], n_d=1.934236, Vt=0.02585 [V], Rs=1e-9 [ohm], Rsh=1e9 [ohm])
 connect(PV.p, HOLD.p)
 connect(PV.n, HOLD.n, G1.port)
 connect(SUN.out, PV.G)
 i_pv = -PV.p.I
 
-TABLE vmp(g)
+TABLE vmp(g [W/m^2]) [V]
   0     30
   2000  30
 END
-SigConstant SUN2(k=800)
+SigConstant SUN2(k=800 [W/m^2])
 MPPTBlock   MPPT(vmp$=vmp)
 connect(SUN2.out, MPPT.G)
 v_cmd = MPPT.out.sig
@@ -5959,8 +5959,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Battery  B(Voc=12, R0=0.1)
-Resistor RL(R=2.0)
+Battery  B(Voc=12 [V], R0=0.1 [ohm])
+Resistor RL(R=2.0 [ohm])
 Ground   G()
 connect(B.p, RL.a)
 connect(B.n, RL.b, G.port)
@@ -6052,33 +6052,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT mh2 = 2.0894e-6 tol 1e-9
 // Solar array at 1000 W/m2 into 1 ohm, far from Voc: I = Isc = 8 A.
 // EXPECT isol = 8 tol 1e-3
-ChargerCCCV CH(Imax=10, Vmax=4.2, epsV=0.01)
-Battery     BT(Voc=3.6, R0=0.01)
+ChargerCCCV CH(Imax=10 [A], Vmax=4.2 [V], epsV=0.01 [V])
+Battery     BT(Voc=3.6 [V], R0=0.01 [ohm])
 Ground      GC()
 connect(CH.p, BT.p)
 connect(CH.n, BT.n, GC.port)
 icc = BT.p.I
 
-ThermalFuse   FU(R0=0.1, Iblow=50, kR=100, epsI=1)
-CurrentSource CF(I=100)
+ThermalFuse   FU(R0=0.1 [ohm], Iblow=50 [A], kR=100, epsI=1 [A])
+CurrentSource CF(I=100 [A])
 Ground        GF()
 connect(FU.p, CF.p)
 connect(FU.n, CF.n, GF.port)
 vfuse = FU.p.V - FU.n.V
 
-HarnessResistance HR(R20=0.01, alphaT=0.004)
-CurrentSource     CHR(I=10)
+HarnessResistance HR(R20=0.01 [ohm], alphaT=0.004 [1/K])
+CurrentSource     CHR(I=10 [A])
 Ground            GH()
-ThermalSource     THW(T=350)
+ThermalSource     THW(T=350 [K])
 connect(HR.a, CHR.p)
 connect(HR.b, CHR.n, GH.port)
 connect(HR.heat, THW.port)
 dvh = HR.a.V - HR.b.V
 
-Electrolyzer  EL(ncells=10, area=0.01, i0=10, Rohm=1e-4, E0=1.48, alpha=0.5, Eth=1.48, T=333)
-CurrentSource CE(I=20)
+Electrolyzer  EL(ncells=10, area=0.01 [m^2], i0=10 [A/m^2], Rohm=1e-4 [ohm-m^2], E0=1.48 [V], alpha=0.5, Eth=1.48 [V], T=333 [K])
+CurrentSource CE(I=20 [A])
 Ground        GE()
-ThermalSource TE(T=333)
+ThermalSource TE(T=333 [K])
 connect(EL.p, CE.p)
 connect(EL.n, CE.n, GE.port)
 connect(EL.heat, TE.port)
@@ -6086,9 +6086,9 @@ vel = EL.p.V - EL.n.V
 qel = EL.Q
 mh2 = EL.mdot_h2
 
-SigConstant IRR(k=1000)
-SolarArray  SA(Isc_ref=8, Gref=1000, Voc=40, epsV=0.5)
-Resistor    RS(R=1)
+SigConstant IRR(k=1000 [W/m^2])
+SolarArray  SA(Isc_ref=8 [A], Gref=1000 [W/m^2], Voc=40 [V], epsV=0.5 [V])
+Resistor    RS(R=1 [ohm])
 Ground      GA()
 connect(IRR.out, SA.G)
 connect(SA.p, RS.a)
@@ -6170,8 +6170,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Supercapacitor steady across an ideal 2.5 V source: der(Vc) -> 0 forces
 // p.I = 0, so the ESR drops nothing and Vc sits at the source voltage.
 // EXPECT vc = 2.5 tol 1e-9
-Supercapacitor SC(C = 100, R_esr = 0.01, V0 = 0)
-VoltageSource  SRC(E = 2.5)
+Supercapacitor SC(C = 100 [farad], R_esr = 0.01 [ohm], V0 = 0 [V])
+VoltageSource  SRC(E = 2.5 [V])
 Ground         G()
 connect(SRC.p, SC.p)
 connect(SC.n, SRC.n, G.port)
@@ -6264,33 +6264,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT mh2 = 2.0894e-6 tol 1e-9
 // Solar array at 1000 W/m2 into 1 ohm, far from Voc: I = Isc = 8 A.
 // EXPECT isol = 8 tol 1e-3
-ChargerCCCV CH(Imax=10, Vmax=4.2, epsV=0.01)
-Battery     BT(Voc=3.6, R0=0.01)
+ChargerCCCV CH(Imax=10 [A], Vmax=4.2 [V], epsV=0.01 [V])
+Battery     BT(Voc=3.6 [V], R0=0.01 [ohm])
 Ground      GC()
 connect(CH.p, BT.p)
 connect(CH.n, BT.n, GC.port)
 icc = BT.p.I
 
-ThermalFuse   FU(R0=0.1, Iblow=50, kR=100, epsI=1)
-CurrentSource CF(I=100)
+ThermalFuse   FU(R0=0.1 [ohm], Iblow=50 [A], kR=100, epsI=1 [A])
+CurrentSource CF(I=100 [A])
 Ground        GF()
 connect(FU.p, CF.p)
 connect(FU.n, CF.n, GF.port)
 vfuse = FU.p.V - FU.n.V
 
-HarnessResistance HR(R20=0.01, alphaT=0.004)
-CurrentSource     CHR(I=10)
+HarnessResistance HR(R20=0.01 [ohm], alphaT=0.004 [1/K])
+CurrentSource     CHR(I=10 [A])
 Ground            GH()
-ThermalSource     THW(T=350)
+ThermalSource     THW(T=350 [K])
 connect(HR.a, CHR.p)
 connect(HR.b, CHR.n, GH.port)
 connect(HR.heat, THW.port)
 dvh = HR.a.V - HR.b.V
 
-Electrolyzer  EL(ncells=10, area=0.01, i0=10, Rohm=1e-4, E0=1.48, alpha=0.5, Eth=1.48, T=333)
-CurrentSource CE(I=20)
+Electrolyzer  EL(ncells=10, area=0.01 [m^2], i0=10 [A/m^2], Rohm=1e-4 [ohm-m^2], E0=1.48 [V], alpha=0.5, Eth=1.48 [V], T=333 [K])
+CurrentSource CE(I=20 [A])
 Ground        GE()
-ThermalSource TE(T=333)
+ThermalSource TE(T=333 [K])
 connect(EL.p, CE.p)
 connect(EL.n, CE.n, GE.port)
 connect(EL.heat, TE.port)
@@ -6298,9 +6298,9 @@ vel = EL.p.V - EL.n.V
 qel = EL.Q
 mh2 = EL.mdot_h2
 
-SigConstant IRR(k=1000)
-SolarArray  SA(Isc_ref=8, Gref=1000, Voc=40, epsV=0.5)
-Resistor    RS(R=1)
+SigConstant IRR(k=1000 [W/m^2])
+SolarArray  SA(Isc_ref=8 [A], Gref=1000 [W/m^2], Voc=40 [V], epsV=0.5 [V])
+Resistor    RS(R=1 [ohm])
 Ground      GA()
 connect(IRR.out, SA.G)
 connect(SA.p, RS.a)
@@ -6375,9 +6375,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-VoltageSource VS(E=10)
-Resistor R1(R=3)
-Resistor R2(R=2)
+VoltageSource VS(E=10 [V])
+Resistor R1(R=3 [ohm])
+Resistor R2(R=2 [ohm])
 Ground   G()
 connect(VS.p, R1.a)
 connect(R1.b, R2.a)
@@ -6432,7 +6432,7 @@ Accumulator inst(C, P0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`C\` | Number | Capacitance [F]. |
+| \`C\` | Number | Hydraulic capacitance, stored mass per unit pressure [kg/Pa]. |
 | \`P0\` | Number | Reference/initial pressure [Pa]. |
 
 ## Constitutive Equations
@@ -6460,7 +6460,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // Accumulator with no DYNAMIC block: der(in.P) takes the steady branch,
 // which recovers in.mdot = out.mdot; the node passes P and h through.
-Accumulator AC(a1, a2, C = 1e-6, P0 = 300000)
+Accumulator AC(a1, a2, C = 1e-6 [kg/Pa], P0 = 300000 [Pa])
 
 a1.P    = 300000
 a1.h    = 120000
@@ -6540,7 +6540,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // AtmosphereSource: the ISA 1976 state at 5 km as a flow boundary —
 // P = isa_P(5000) ~ 54 kPa, h = Enthalpy(Air) at the ISA temperature.
-AtmosphereSource ATM(a1, alt = 5000, mdot = 1.0)
+AtmosphereSource ATM(a1, alt = 5000 [m], mdot = 1.0 [kg/s])
 Sink             SK(a1)
 
 p_amb = SK.P
@@ -6610,7 +6610,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Source S(fluid$=Water, mdot=2, P=8000000, T=773.15)
+Source S(fluid$=Water, mdot=2 [kg/s], P=8000000 [Pa], T=773.15 [K])
 Boiler B()
 Sink   K()
 connect(S.out, B.in)
@@ -6692,7 +6692,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // Combustor: fuel mass addition at eta_b on the LHV with a rated pressure
 // loss. Kerosene-like fuel (43 MJ/kg) at f = 0.02 into a 6 bar air stream.
-Combustor CB(g1, g2, mdot_f = 0.02, LHV = 43e6, eta_b = 0.98, dP = 20000)
+Combustor CB(g1, g2, mdot_f = 0.02 [kg/s], LHV = 43e6 [J/kg], eta_b = 0.98, dP = 20000 [Pa])
 
 g1.P     = 600000
 g1.h     = 550000
@@ -6796,7 +6796,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT n2_mix_res = 0 tol 1e-12
 
 time = 0
-CombustorSpecies CMB(a1, a2, mdot_f=0.01, LHV=44.4e6, eta_b=0.98, dP=3000, xC=8, yH=18)
+CombustorSpecies CMB(a1, a2, mdot_f=0.01 [kg/s], LHV=44.4e6 [J/kg], eta_b=0.98, dP=3000 [Pa], xC=8, yH=18)
 a1.P = 400000
 a1.h = 420000
 a1.mdot = 0.5
@@ -6815,10 +6815,10 @@ d1.yh2o = 0
 d1.yn2 = 0.768
 
 yco2_cmb    = a2.yco2
-o2_mix_res  = m1.mdot * m1.yo2  - (a2.mdot * a2.yo2  + 0.3 * 0.232)
+o2_mix_res  = m1.mdot * m1.yo2  - (a2.mdot * a2.yo2  + 0.3 [kg/s] * 0.232)
 co2_mix_res = m1.mdot * m1.yco2 - (a2.mdot * a2.yco2 + 0)
 h2o_mix_res = m1.mdot * m1.yh2o - (a2.mdot * a2.yh2o + 0)
-n2_mix_res  = m1.mdot * m1.yn2  - (a2.mdot * a2.yn2  + 0.3 * 0.768)
+n2_mix_res  = m1.mdot * m1.yn2  - (a2.mdot * a2.yn2  + 0.3 [kg/s] * 0.768)
 
 { CHECK a2.h 1264941.176 1.2649411764705882 }
 { CHECK a2.mdot 0.51 5.1e-7 }
@@ -6896,7 +6896,7 @@ _No additional equations (uses the shared body)._
 $$
 \\begin{aligned}
 rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
-in.mdot &= eta_{v}\\cdot disp\\cdot \\frac{rpm}{60}\\cdot rho_{in}
+in.mdot &= eta_{v}\\cdot disp\\cdot \\frac{rpm}{60\\,\\left[s\\right]}\\cdot rho_{in}
 \\end{aligned}
 $$
 
@@ -7021,7 +7021,7 @@ TABLE etamap(pr)
   4    0.70
 END
 
-Source        SRC(a1, fluid$ = Air, mdot = 0.15, P = 100000, T = 300)
+Source        SRC(a1, fluid$ = Air, mdot = 0.15 [kg/s], P = 100000 [Pa], T = 300 [K])
 CompressorMap CM(a1, a2, fluid$ = Air, map_eta$ = etamap)
 Sink          SK(a2)
 
@@ -7272,7 +7272,7 @@ port(in)
   in.P = P
 end
 PSource       SRC(P=1200000, h0=250000)
-ExpansionValve TXV(CdA=1e-6, rho_in=1200)
+ExpansionValve TXV(CdA=1e-6 [m^2], rho_in=1200 [kg/m^3])
 PSink         SNK(P=300000)
 connect(SRC.out, TXV.in)
 connect(TXV.out, SNK.in)
@@ -7324,7 +7324,7 @@ Fan inst(fluid$, dP0, Q0, eta)
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
 | \`dP0\` | Number | Reference pressure drop [Pa]. |
-| \`Q0\` | Number | Reference heat [W]. |
+| \`Q0\` | Number | Free-delivery volume flow, where the pressure rise falls to zero [m³/s]. |
 | \`eta\` | Number | Efficiency (0–1). |
 
 ## Constitutive Equations
@@ -7351,7 +7351,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-Fan C(fluid$=Air, dP0=500, Q0=2, eta=0.7)
+Fan C(fluid$=Air, dP0=500 [Pa], Q0=2 [m^3/s], eta=0.7)
 C.in.P = 101325
 C.in.h = Enthalpy(Air, T=300, P=101325)
 C.in.mdot = 1
@@ -7403,7 +7403,7 @@ FanCurve inst(rho, dP0, Q0)
 | --- | --- | --- |
 | \`rho\` | Number | Density [kg/m³]. |
 | \`dP0\` | Number | Reference pressure drop [Pa]. |
-| \`Q0\` | Number | Reference heat [W]. |
+| \`Q0\` | Number | Free-delivery volume flow, where the pressure rise falls to zero [m³/s]. |
 
 ## Constitutive Equations
 
@@ -7429,7 +7429,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 { Quadratic fan curve: 250 Pa shut-off rise, zero rise at 0.12 m^3/s. }
-FanCurve F1(rho=1.2, dP0=250, Q0=0.12)
+FanCurve F1(rho=1.2 [kg/m^3], dP0=250 [Pa], Q0=0.12 [m^3/s])
 F1.in.mdot = 0.06          { 0.05 m^3/s of air }
 F1.in.P    = 101325
 F1.in.h    = 300000
@@ -7509,7 +7509,7 @@ TABLE fanCurve(Q [m^3/s]) [Pa]
   0.05   180
   0.10    60
 END
-FanMap F1(rho=1.2, map$=fanCurve)
+FanMap F1(rho=1.2 [kg/m^3], map$=fanCurve)
 F1.in.mdot = 0.06
 F1.in.P    = 101325
 F1.in.h    = 300000
@@ -7669,9 +7669,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // HeatedDuct: single-stream eps-NTU pickup from a 450 K wall node
 // (eps = 1 - exp(-UA/(mdot*cp)) ~ 0.52 at UA = 150, mdot = 0.2 of Air).
 // The wall port shares stream wl with the ThermalSource positionally.
-Source        SRC(a1, fluid$ = Air, mdot = 0.2, P = 101325, T = 300)
-HeatedDuct    HD(a1, a2, wl, fluid$ = Air, UA = 150)
-ThermalSource WALL(wl, T = 450)
+Source        SRC(a1, fluid$ = Air, mdot = 0.2 [kg/s], P = 101325 [Pa], T = 300 [K])
+HeatedDuct    HD(a1, a2, wl, fluid$ = Air, UA = 150 [W/K])
+ThermalSource WALL(wl, T = 450 [K])
 Sink          SK(a2)
 
 q     = HD.Q
@@ -7880,7 +7880,7 @@ Nozzle inst(k, R, A_throat, A_exit, P_amb, T0)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`k\` | Number | Stiffness / conductivity. |
-| \`R\` | Number | Resistance [Ω]. |
+| \`R\` | Number | Specific gas constant [J/kg·K]. |
 | \`A_throat\` | Number | Throat area [m²]. |
 | \`A_exit\` | Number | Exit area [m²]. |
 | \`P_amb\` | Number | Ambient pressure [Pa]. |
@@ -7912,7 +7912,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Nozzle N(s_in, s_out, k=1.4, R=287, A_throat=0.01, A_exit=0.04, P_amb=0, T0=500)
+Nozzle N(s_in, s_out, k=1.4, R=287 [J/kg-K], A_throat=0.01 [m^2], A_exit=0.04 [m^2], P_amb=0 [Pa], T0=500 [K])
 s_in.P    = 1000000
 s_in.mdot = 2
 s_in.h    = 300000
@@ -7999,8 +7999,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Source SUP(s1, fluid$=Water, mdot=2, P=300000, T=298)
-Pipe   LINE(s1, s2, fluid$=Water, L=50, D=0.05, rough=0.0001)
+Source SUP(s1, fluid$=Water, mdot=2 [kg/s], P=300000 [Pa], T=298 [K])
+Pipe   LINE(s1, s2, fluid$=Water, L=50 [m], D=0.05 [m], rough=0.0001 [m])
 Sink   RET(s2)
 
 { CHECK line.a 0.001963495408 1e-8 }
@@ -8089,7 +8089,7 @@ TABLE cpmap(j)
   2    0.05
 END
 
-Propeller PR(sh1, vh1, Dp = 2.0, rhoA = 1.225, ct$ = ctmap, cpw$ = cpmap, epsn = 1e-6)
+Propeller PR(sh1, vh1, Dp = 2.0 [m], rhoA = 1.225 [kg/m^3], ct$ = ctmap, cpw$ = cpmap, epsn = 1e-6 [m/s])
 
 sh1.w   = 125.66370614359172
 vh1.vel = 30
@@ -8168,7 +8168,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 { Raise 2 kg/s of 20 C water from 1 bar to 6 bar with a 75 %-efficient pump. }
-Source SRC(fluid$=Water, mdot=2, P=100000, T=293.15)
+Source SRC(fluid$=Water, mdot=2 [kg/s], P=100000 [Pa], T=293.15 [K])
 Pump   P1(eta=0.75, fluid$=Water)
 Sink   SNK()
 connect(SRC.out, P1.in)
@@ -8237,7 +8237,7 @@ $$
 q &= \\frac{in.mdot}{rho} \\\\
 head &= \\text{map\\$}\\left(q\\right) \\\\
 out.mdot &= in.mdot \\\\
-out.p &= in.p + rho\\cdot 9.80665\\cdot head
+out.p &= in.p + rho\\cdot 9.80665\\,\\left[m/s^2\\right]\\cdot head
 \\end{aligned}
 $$
 
@@ -8253,12 +8253,12 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // PumpMap: head-curve pump, dP = rho*g*map$(Q). Water-like density; the
 // head map droops 25 m -> 15 m over 0..0.02 m^3/s, Q = 0.01 gives 20 m.
-TABLE hmap(q)
+TABLE hmap(q [m^3/s]) [m]
   0      25
   0.02   15
 END
 
-PumpMap PM(w1, w2, rho = 998, map$ = hmap)
+PumpMap PM(w1, w2, rho = 998 [kg/m^3], map$ = hmap)
 
 w1.P    = 150000
 w1.mdot = 9.98
@@ -8346,8 +8346,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // Regenerator: effectiveness-rated recuperator (eps given directly), hot
 // exhaust preheating compressor-discharge air, balanced 0.5 kg/s streams.
-Source      HS(h1, fluid$ = Air, mdot = 0.5, P = 110000, T = 700)
-Source      CS(c1, fluid$ = Air, mdot = 0.5, P = 300000, T = 450)
+Source      HS(h1, fluid$ = Air, mdot = 0.5 [kg/s], P = 110000 [Pa], T = 700 [K])
+Source      CS(c1, fluid$ = Air, mdot = 0.5 [kg/s], P = 300000 [Pa], T = 450 [K])
 Regenerator RG(h1, h2, c1, c2, hot$ = Air, cold$ = Air, eps = 0.8)
 Sink        SKH(h2)
 Sink        SKC(c2)
@@ -8419,7 +8419,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Source S(fluid$=Water, mdot=2, P=8000000, T=773.15)
+Source S(fluid$=Water, mdot=2 [kg/s], P=8000000 [Pa], T=773.15 [K])
 Boiler B()
 Sink   K()
 connect(S.out, B.in)
@@ -8499,7 +8499,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Source S(fluid$=Water, mdot=2, P=8000000, T=773.15)
+Source S(fluid$=Water, mdot=2 [kg/s], P=8000000 [Pa], T=773.15 [K])
 Boiler B()
 Sink   K()
 connect(S.out, B.in)
@@ -8824,7 +8824,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Turbocharger TC(t1, t2, c1, c2, cp=1005, eta_t=0.8, eta_c=0.78, gam=1.4)
+Turbocharger TC(t1, t2, c1, c2, cp=1005 [J/kg-K], eta_t=0.8, eta_c=0.78, gam=1.4)
 t1.T = 900
 t1.P = 200000
 t1.mdot = 0.1
@@ -8911,9 +8911,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // TwoZoneHX: the hierarchical two-cell counterflow exchanger (two nested
 // HeatExchangers at UA/2 each, counter-plumbed). Air on both sides — the
 // wide (P,h) surface keeps the 49-equation inner block Newton-stable.
-Source    HS(h1, fluid$ = Air, mdot = 0.4, P = 110000, T = 450)
-Source    CS(c1, fluid$ = Air, mdot = 0.5, P = 200000, T = 300)
-TwoZoneHX HX(h1, h2, c1, c2, UA = 300, hot$ = Air, cold$ = Air, arr$ = counterflow)
+Source    HS(h1, fluid$ = Air, mdot = 0.4 [kg/s], P = 110000 [Pa], T = 450 [K])
+Source    CS(c1, fluid$ = Air, mdot = 0.5 [kg/s], P = 200000 [Pa], T = 300 [K])
+TwoZoneHX HX(h1, h2, c1, c2, UA = 300 [W/K], hot$ = Air, cold$ = Air, arr$ = counterflow)
 Sink      SKH(h2)
 Sink      SKC(c2)
 
@@ -8966,7 +8966,7 @@ Valve inst(Cv, rho)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`Cv\` | Number | Flow coefficient. |
+| \`Cv\` | Number | Flow coefficient: ṁ|ṁ| = Cv²·ρ·ΔP, an effective area [m²]. |
 | \`rho\` | Number | Density [kg/m³]. |
 
 ## Constitutive Equations
@@ -9001,7 +9001,7 @@ port(in)
   in.P = P
 end
 PSource SRC(P=200000, h0=0)
-Valve   VLV(Cv=0.001, rho=1000)
+Valve   VLV(Cv=0.001 [m^2], rho=1000 [kg/m^3])
 PSink   SNK(P=100000)
 connect(SRC.out, VLV.in)
 connect(VLV.out, SNK.in)
@@ -9085,10 +9085,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Rcc = 0.5 K/W into the plate node, which convects (htc*A = 2 W/K) to a
 // 293.15 K coolant boundary. Steady: (320 - Tp)/0.5 = 2*(Tp - 293.15)
 // -> Tp = 306.575 K, Q = 26.85 W.
-ThermalSource CELL(T=320)
-CellToPackThermal CTP(Rcc=0.5, Cpl=1500, T0=300)
-Convection    CVP(htc=20, area=0.1)
-ThermalSource COOL(T=293.15)
+ThermalSource CELL(T=320 [K])
+CellToPackThermal CTP(Rcc=0.5 [K/W], Cpl=1500 [J/K], T0=300 [K])
+Convection    CVP(htc=20 [W/m^2-K], area=0.1 [m^2])
+ThermalSource COOL(T=293.15 [K])
 connect(CELL.port, CTP.cell)
 connect(CTP.plate, CVP.a)
 connect(CVP.b, COOL.port)
@@ -9140,7 +9140,7 @@ Conduction inst(k, area, L)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`k\` | Number | Stiffness / conductivity. |
+| \`k\` | Number | Thermal conductivity [W/m·K]. |
 | \`area\` | Number | Area [m²]. |
 | \`L\` | Number | Length [m]. |
 
@@ -9166,9 +9166,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-ThermalSource SH(T=400)
-Conduction   WALL(k=50, area=0.1, L=0.02)
-ThermalSource SC(T=300)
+ThermalSource SH(T=400 [K])
+Conduction   WALL(k=50 [W/m-K], area=0.1 [m^2], L=0.02 [m])
+ThermalSource SC(T=300 [K])
 connect(SH.port, WALL.a)
 connect(WALL.b, SC.port)
 
@@ -9245,9 +9245,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-ThermalSource HOT(T=400)
-ContactResistance CR(Rth=0.05)
-ThermalSource COLD(T=300)
+ThermalSource HOT(T=400 [K])
+ContactResistance CR(Rth=0.05 [K/W])
+ThermalSource COLD(T=300 [K])
 connect(HOT.port, CR.a)
 connect(CR.b, COLD.port)
 
@@ -9321,11 +9321,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-ThermalSource SURF(T=350)
-Convection CV(htc=10, area=2)
-Radiation  RD(emis=0.9, area=2)
-ThermalSource AIR(T=300)
-ThermalSource SUR(T=300)
+ThermalSource SURF(T=350 [K])
+Convection CV(htc=10 [W/m^2-K], area=2 [m^2])
+Radiation  RD(emis=0.9, area=2 [m^2])
+ThermalSource AIR(T=300 [K])
+ThermalSource SUR(T=300 [K])
 connect(SURF.port, CV.a, RD.a)
 connect(CV.b, AIR.port)
 connect(RD.b, SUR.port)
@@ -9414,38 +9414,38 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT v_tec = 11 tol 1e-6
 // EXPECT qc_tec = 40 tol 1e-6
 // EXPECT qh_tec = 95 tol 1e-6
-ThermalSource A1(T=600)
-ThermalSource B1(T=300)
-RadiationTwoSurface RD(e1=0.8, e2=0.8, A1=1, A2=1, F12=1)
+ThermalSource A1(T=600 [K])
+ThermalSource B1(T=300 [K])
+RadiationTwoSurface RD(e1=0.8, e2=0.8, A1=1 [m^2], A2=1 [m^2], F12=1)
 connect(A1.port, RD.a)
 connect(RD.b, B1.port)
 q_rad = RD.a.Qdot
 
-ThermalSource A2(T=310)
-ThermalSource B2(T=300)
-HeatPipe HP(G=100, Qmax=50)
+ThermalSource A2(T=310 [K])
+ThermalSource B2(T=300 [K])
+HeatPipe HP(G=100 [W/K], Qmax=50 [W])
 connect(A2.port, HP.a)
 connect(HP.b, B2.port)
 q_hp = HP.a.Qdot
 
-ThermalSource A3(T=340)
-ThermalSource B3(T=300)
-ThermalSwitch SW0(G=50, Ton=360, band=1)
+ThermalSource A3(T=340 [K])
+ThermalSource B3(T=300 [K])
+ThermalSwitch SW0(G=50 [W/K], Ton=360 [K], band=1 [K])
 connect(A3.port, SW0.a)
 connect(SW0.b, B3.port)
 q_sw0 = SW0.a.Qdot
-ThermalSource A4(T=380)
-ThermalSource B4(T=370)
-ThermalSwitch SW1(G=50, Ton=360, band=1)
+ThermalSource A4(T=380 [K])
+ThermalSource B4(T=370 [K])
+ThermalSwitch SW1(G=50 [W/K], Ton=360 [K], band=1 [K])
 connect(A4.port, SW1.a)
 connect(SW1.b, B4.port)
 q_sw1 = SW1.a.Qdot
 
-PeltierTEC    TEC(Sab=0.05, Rel=2, Kth=0.5)
-CurrentSource CI(I=5)
+PeltierTEC    TEC(Sab=0.05 [V/K], Rel=2 [ohm], Kth=0.5 [W/K])
+CurrentSource CI(I=5 [A])
 Ground        GT()
-ThermalSource TH(T=320)
-ThermalSource TC(T=300)
+ThermalSource TH(T=320 [K])
+ThermalSource TC(T=300 [K])
 connect(TEC.p, CI.p)
 connect(TEC.n, CI.n, GT.port)
 connect(TEC.hot, TH.port)
@@ -9521,15 +9521,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-function [port] = HeatSource(Q)
-port(port)
-  port.Qdot = -Q
-end
-Q_in = 1000
+Q_in = 1000 [W]
 HeatSource    HS(Q=Q_in)
-ThermalMass   M(C=5000, T0=300)
-Conduction    wall(k=2, area=1, L=0.1)
-ThermalSource amb(T=300)
+ThermalMass   M(C=5000 [J/K], T0=300 [K])
+Conduction    wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource amb(T=300 [K])
 connect(HS.port, M.port, wall.a)
 connect(wall.b, amb.port)
 DYNAMIC warmup(time = 0 .. 1)
@@ -9584,7 +9580,7 @@ MassGen inst(C, Qgen, T0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`C\` | Number | Capacitance [F]. |
+| \`C\` | Number | Heat capacity [J/K]. |
 | \`Qgen\` | Number | Generated heat [W]. |
 | \`T0\` | Number | Reference/initial temperature [K]. |
 
@@ -9610,27 +9606,27 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 // Coolant loop: pump -> two parallel cold-plate branches -> LiquidMixer -> sink
-LiquidSource  PIN(fluid$=EG50, mdot=0.3, P=200000 [Pa], T=305 [K])
-LiquidOrifice O1(CdA=1.5e-5, rho=1050)
-LiquidOrifice O2(CdA=1.2e-5, rho=1050)
-LiquidWallHX  CP1(fluid$=EG50, UA=300)
-LiquidWallHX  CP2(fluid$=EG50, UA=300)
-LiquidWallHX  CHL(fluid$=EG50, UA=400)
+LiquidSource  PIN(fluid$=EG50, mdot=0.3 [kg/s], P=200000 [Pa], T=305 [K])
+LiquidOrifice O1(CdA=1.5e-5 [m^2], rho=1050 [kg/m^3])
+LiquidOrifice O2(CdA=1.2e-5 [m^2], rho=1050 [kg/m^3])
+LiquidWallHX  CP1(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CP2(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CHL(fluid$=EG50, UA=400 [W/K])
 LiquidMixer   MIX()
 LiquidSink    POUT()
-MassGen       BATT(C=60000, Qgen=4000 [W], T0=305 [K])
-MassGen       MOTOR(C=40000, Qgen=5000 [W], T0=305 [K])
+MassGen       BATT(C=60000 [J/K], Qgen=4000 [W], T0=305 [K])
+MassGen       MOTOR(C=40000 [J/K], Qgen=5000 [W], T0=305 [K])
 
 // Refrigerant loop: feed -> chiller evaporator (wall-coupled) + a second
 // evaporator -> TwoPhaseMixer -> compressor -> floating-head condenser.
 TwoPhasePressureSource FEED(fluid$=R1234yf, P=350000 [Pa], x=0.2)
-TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600, dP=20000, SH=5)
-TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200, dP=20000, SH=8)
+TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600 [W/K], dP=20000 [Pa], SH=5 [K])
+TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200 [W/K], dP=20000 [Pa], SH=8 [K])
 TwoPhaseMixer          SUC()
 TwoPhaseCompressor     CMP(fluid$=R1234yf, eta=0.7)
-TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000, T_amb=313)
+TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000 [W/K], T_amb=313 [K])
 TwoPhaseSink           LIQ()
-MassGen                CABIN(C=8000, Qgen=2500 [W], T0=305 [K])
+MassGen                CABIN(C=8000 [J/K], Qgen=2500 [W], T0=305 [K])
 
 connect(PIN.out, O1.in, O2.in)
 connect(O1.out, CP1.in)
@@ -9746,9 +9742,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // (the ports are resistive by design): films h_a = h_b = 8 W/m2K, U = 2.5,
 // A = 12 m2. R_tot = 1/96 + 1/30 + 1/96 = 0.0541667 K/W,
 // Q = (298.15 - 283.15)/R_tot = 276.92 W.
-ThermalSource ZONEA(T=298.15)
-MultiZoneWall WALL(h_a=8, h_b=8, U=2.5, A=12, C1=200000, C2=200000, T10=296, T20=288)
-ThermalSource ZONEB(T=283.15)
+ThermalSource ZONEA(T=298.15 [K])
+MultiZoneWall WALL(h_a=8 [W/m^2-K], h_b=8 [W/m^2-K], U=2.5 [W/m^2-K], A=12 [m^2], C1=200000 [J/K], C2=200000 [J/K], T10=296 [K], T20=288 [K])
+ThermalSource ZONEB(T=283.15 [K])
 connect(ZONEA.port, WALL.a)
 connect(WALL.b, ZONEB.port)
 q_zone  = WALL.qa
@@ -9833,8 +9829,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // paraffin-like PCM (cp = 2 kJ/kg.K, L = 200 kJ/kg, Tm = 331 K, dTm = 2 K)
 // starting 2 K below the melt point. The latent Gaussian slows the ramp near
 // Tm; 40 s at 20 kW supplies 800 kJ, enough to cross the zone.
-HeatSource HTR(Q=20000)
-PCMMass    PCM(m=2, cp=2000, L=200000, Tm=331, dTm=2, T0=329)
+HeatSource HTR(Q=20000 [W])
+PCMMass    PCM(m=2 [kg], cp=2000 [J/kg-K], L=200000 [J/kg], Tm=331 [K], dTm=2 [K], T0=329 [K])
 connect(HTR.port, PCM.port)
 DYNAMIC melt(method = ode23s, time = 0 .. 40, points = 21)
 END
@@ -9924,38 +9920,38 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT v_tec = 11 tol 1e-6
 // EXPECT qc_tec = 40 tol 1e-6
 // EXPECT qh_tec = 95 tol 1e-6
-ThermalSource A1(T=600)
-ThermalSource B1(T=300)
-RadiationTwoSurface RD(e1=0.8, e2=0.8, A1=1, A2=1, F12=1)
+ThermalSource A1(T=600 [K])
+ThermalSource B1(T=300 [K])
+RadiationTwoSurface RD(e1=0.8, e2=0.8, A1=1 [m^2], A2=1 [m^2], F12=1)
 connect(A1.port, RD.a)
 connect(RD.b, B1.port)
 q_rad = RD.a.Qdot
 
-ThermalSource A2(T=310)
-ThermalSource B2(T=300)
-HeatPipe HP(G=100, Qmax=50)
+ThermalSource A2(T=310 [K])
+ThermalSource B2(T=300 [K])
+HeatPipe HP(G=100 [W/K], Qmax=50 [W])
 connect(A2.port, HP.a)
 connect(HP.b, B2.port)
 q_hp = HP.a.Qdot
 
-ThermalSource A3(T=340)
-ThermalSource B3(T=300)
-ThermalSwitch SW0(G=50, Ton=360, band=1)
+ThermalSource A3(T=340 [K])
+ThermalSource B3(T=300 [K])
+ThermalSwitch SW0(G=50 [W/K], Ton=360 [K], band=1 [K])
 connect(A3.port, SW0.a)
 connect(SW0.b, B3.port)
 q_sw0 = SW0.a.Qdot
-ThermalSource A4(T=380)
-ThermalSource B4(T=370)
-ThermalSwitch SW1(G=50, Ton=360, band=1)
+ThermalSource A4(T=380 [K])
+ThermalSource B4(T=370 [K])
+ThermalSwitch SW1(G=50 [W/K], Ton=360 [K], band=1 [K])
 connect(A4.port, SW1.a)
 connect(SW1.b, B4.port)
 q_sw1 = SW1.a.Qdot
 
-PeltierTEC    TEC(Sab=0.05, Rel=2, Kth=0.5)
-CurrentSource CI(I=5)
+PeltierTEC    TEC(Sab=0.05 [V/K], Rel=2 [ohm], Kth=0.5 [W/K])
+CurrentSource CI(I=5 [A])
 Ground        GT()
-ThermalSource TH(T=320)
-ThermalSource TC(T=300)
+ThermalSource TH(T=320 [K])
+ThermalSource TC(T=300 [K])
 connect(TEC.p, CI.p)
 connect(TEC.n, CI.n, GT.port)
 connect(TEC.hot, TH.port)
@@ -10018,7 +10014,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-q &= emis\\cdot 5.670374419E-8\\cdot area\\cdot \\left(a.t^{4} - b.t^{4}\\right) \\\\
+q &= emis\\cdot 5.670374419E-8\\,\\left[kg/s^3-K^4\\right]\\cdot area\\cdot \\left(a.t^{4} - b.t^{4}\\right) \\\\
 a.qdot &= q \\\\
 b.qdot &= -q
 \\end{aligned}
@@ -10034,11 +10030,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-ThermalSource SURF(T=350)
-Convection CV(htc=10, area=2)
-Radiation  RD(emis=0.9, area=2)
-ThermalSource AIR(T=300)
-ThermalSource SUR(T=300)
+ThermalSource SURF(T=350 [K])
+Convection CV(htc=10 [W/m^2-K], area=2 [m^2])
+Radiation  RD(emis=0.9, area=2 [m^2])
+ThermalSource AIR(T=300 [K])
+ThermalSource SUR(T=300 [K])
 connect(SURF.port, CV.a, RD.a)
 connect(CV.b, AIR.port)
 connect(RD.b, SUR.port)
@@ -10105,7 +10101,7 @@ The acausal equations this component expands into (over its port members and par
 $$
 \\begin{aligned}
 rrad &= \\frac{1 - e1}{e1\\cdot a1} + \\frac{1}{a1\\cdot f12} + \\frac{1 - e2}{e2\\cdot a2} \\\\
-a.qdot &= \\frac{5.670374419E-8\\,\\left(a.t^{4} - b.t^{4}\\right)}{rrad} \\\\
+a.qdot &= \\frac{5.670374419E-8\\,\\left[kg/s^3-K^4\\right]\\,\\left(a.t^{4} - b.t^{4}\\right)}{rrad} \\\\
 a.qdot + b.qdot &= 0
 \\end{aligned}
 $$
@@ -10131,38 +10127,38 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT v_tec = 11 tol 1e-6
 // EXPECT qc_tec = 40 tol 1e-6
 // EXPECT qh_tec = 95 tol 1e-6
-ThermalSource A1(T=600)
-ThermalSource B1(T=300)
-RadiationTwoSurface RD(e1=0.8, e2=0.8, A1=1, A2=1, F12=1)
+ThermalSource A1(T=600 [K])
+ThermalSource B1(T=300 [K])
+RadiationTwoSurface RD(e1=0.8, e2=0.8, A1=1 [m^2], A2=1 [m^2], F12=1)
 connect(A1.port, RD.a)
 connect(RD.b, B1.port)
 q_rad = RD.a.Qdot
 
-ThermalSource A2(T=310)
-ThermalSource B2(T=300)
-HeatPipe HP(G=100, Qmax=50)
+ThermalSource A2(T=310 [K])
+ThermalSource B2(T=300 [K])
+HeatPipe HP(G=100 [W/K], Qmax=50 [W])
 connect(A2.port, HP.a)
 connect(HP.b, B2.port)
 q_hp = HP.a.Qdot
 
-ThermalSource A3(T=340)
-ThermalSource B3(T=300)
-ThermalSwitch SW0(G=50, Ton=360, band=1)
+ThermalSource A3(T=340 [K])
+ThermalSource B3(T=300 [K])
+ThermalSwitch SW0(G=50 [W/K], Ton=360 [K], band=1 [K])
 connect(A3.port, SW0.a)
 connect(SW0.b, B3.port)
 q_sw0 = SW0.a.Qdot
-ThermalSource A4(T=380)
-ThermalSource B4(T=370)
-ThermalSwitch SW1(G=50, Ton=360, band=1)
+ThermalSource A4(T=380 [K])
+ThermalSource B4(T=370 [K])
+ThermalSwitch SW1(G=50 [W/K], Ton=360 [K], band=1 [K])
 connect(A4.port, SW1.a)
 connect(SW1.b, B4.port)
 q_sw1 = SW1.a.Qdot
 
-PeltierTEC    TEC(Sab=0.05, Rel=2, Kth=0.5)
-CurrentSource CI(I=5)
+PeltierTEC    TEC(Sab=0.05 [V/K], Rel=2 [ohm], Kth=0.5 [W/K])
+CurrentSource CI(I=5 [A])
 Ground        GT()
-ThermalSource TH(T=320)
-ThermalSource TC(T=300)
+ThermalSource TH(T=320 [K])
+ThermalSource TC(T=300 [K])
 connect(TEC.p, CI.p)
 connect(TEC.n, CI.n, GT.port)
 connect(TEC.hot, TH.port)
@@ -10216,7 +10212,7 @@ ThermalMass inst(C, T0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`C\` | Number | Capacitance [F]. |
+| \`C\` | Number | Heat capacity [J/K]. |
 | \`T0\` | Number | Reference/initial temperature [K]. |
 
 ## Constitutive Equations
@@ -10240,9 +10236,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-ThermalMass   M(C=5000, T0=400)
-ThermalSource amb(T=300)
-Conduction    wall(k=2, area=1, L=0.1)
+ThermalMass   M(C=5000 [J/K], T0=400 [K])
+ThermalSource amb(T=300 [K])
+Conduction    wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])
 connect(M.port, wall.a)
 connect(wall.b, amb.port)
 
@@ -10312,7 +10308,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-ThermalSource SRC(T=350)
+ThermalSource SRC(T=350 [K])
 ThermalSensor SENS()
 connect(SRC.port, SENS.port)
 
@@ -10383,7 +10379,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-ThermalSource SRC(T=350)
+ThermalSource SRC(T=350 [K])
 ThermalSensor SENS()
 connect(SRC.port, SENS.port)
 
@@ -10473,38 +10469,38 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT v_tec = 11 tol 1e-6
 // EXPECT qc_tec = 40 tol 1e-6
 // EXPECT qh_tec = 95 tol 1e-6
-ThermalSource A1(T=600)
-ThermalSource B1(T=300)
-RadiationTwoSurface RD(e1=0.8, e2=0.8, A1=1, A2=1, F12=1)
+ThermalSource A1(T=600 [K])
+ThermalSource B1(T=300 [K])
+RadiationTwoSurface RD(e1=0.8, e2=0.8, A1=1 [m^2], A2=1 [m^2], F12=1)
 connect(A1.port, RD.a)
 connect(RD.b, B1.port)
 q_rad = RD.a.Qdot
 
-ThermalSource A2(T=310)
-ThermalSource B2(T=300)
-HeatPipe HP(G=100, Qmax=50)
+ThermalSource A2(T=310 [K])
+ThermalSource B2(T=300 [K])
+HeatPipe HP(G=100 [W/K], Qmax=50 [W])
 connect(A2.port, HP.a)
 connect(HP.b, B2.port)
 q_hp = HP.a.Qdot
 
-ThermalSource A3(T=340)
-ThermalSource B3(T=300)
-ThermalSwitch SW0(G=50, Ton=360, band=1)
+ThermalSource A3(T=340 [K])
+ThermalSource B3(T=300 [K])
+ThermalSwitch SW0(G=50 [W/K], Ton=360 [K], band=1 [K])
 connect(A3.port, SW0.a)
 connect(SW0.b, B3.port)
 q_sw0 = SW0.a.Qdot
-ThermalSource A4(T=380)
-ThermalSource B4(T=370)
-ThermalSwitch SW1(G=50, Ton=360, band=1)
+ThermalSource A4(T=380 [K])
+ThermalSource B4(T=370 [K])
+ThermalSwitch SW1(G=50 [W/K], Ton=360 [K], band=1 [K])
 connect(A4.port, SW1.a)
 connect(SW1.b, B4.port)
 q_sw1 = SW1.a.Qdot
 
-PeltierTEC    TEC(Sab=0.05, Rel=2, Kth=0.5)
-CurrentSource CI(I=5)
+PeltierTEC    TEC(Sab=0.05 [V/K], Rel=2 [ohm], Kth=0.5 [W/K])
+CurrentSource CI(I=5 [A])
 Ground        GT()
-ThermalSource TH(T=320)
-ThermalSource TC(T=300)
+ThermalSource TH(T=320 [K])
+ThermalSource TC(T=300 [K])
 connect(TEC.p, CI.p)
 connect(TEC.n, CI.n, GT.port)
 connect(TEC.hot, TH.port)
@@ -10593,11 +10589,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // 1/(25*2) + 0.05 + 1/(10*2) = 0.12 K/W, so Q = (380 - 293.15)/0.12 = 723.75 W.
 // The WallRC faces are states (never T-pinned); the films decouple them from
 // the temperature boundaries. der -> 0 without a DYNAMIC block.
-ThermalSource HOT(T=380)
-Convection    CVA(htc=25, area=2)
-WallRC        WALL(C1=50000, C2=50000, R=0.05, T10=320, T20=310)
-Convection    CVB(htc=10, area=2)
-ThermalSource AMB(T=293.15)
+ThermalSource HOT(T=380 [K])
+Convection    CVA(htc=25 [W/m^2-K], area=2 [m^2])
+WallRC        WALL(C1=50000 [J/K], C2=50000 [J/K], R=0.05 [K/W], T10=320 [K], T20=310 [K])
+Convection    CVB(htc=10 [W/m^2-K], area=2 [m^2])
+ThermalSource AMB(T=293.15 [K])
 connect(HOT.port, CVA.a)
 connect(CVA.b, WALL.a)
 connect(WALL.b, CVB.a)
@@ -10686,7 +10682,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // opens the sigmoid to precisely one half. Steady.
 // EXPECT x_o = 0.5 tol 1e-9
 
-CounterbalanceValve CB(c1, c2, cp1, CdA_max=3e-6, rho=870, P_set=3e6, R_p=3, eps_o=5e4)
+CounterbalanceValve CB(c1, c2, cp1, CdA_max=3e-6 [m^2], rho=870 [kg/m^3], P_set=3e6 [Pa], R_p=3, eps_o=5e4 [Pa])
 c1.P  = 1.5e6
 c1.h  = 0
 c2.P  = 1e5
@@ -10771,8 +10767,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Gas-charged accumulator riding a 150 bar line at steady state (der(Vg) -> 0
 // so port.mdot = 0): precharged to 90 bar over V0 = 10 L, the polytropic gas
 // (gamma = 1.4) compresses to Vg = V0*(P0/P)^(1/gamma) = 6.944 L.
-HydraulicSupply      SUP(P=15000000)
-HydraulicAccumulator ACC(P0=9000000, V0=0.01, gamma=1.4, rho=870, Vg0=0.01)
+HydraulicSupply      SUP(P=15000000 [Pa])
+HydraulicAccumulator ACC(P0=9000000 [Pa], V0=0.01 [m^3], gamma=1.4, rho=870 [kg/m^3], Vg0=0.01 [m^3])
 connect(SUP.out, ACC.port)
 v_gas = ACC.Vg
 q_acc = ACC.port.mdot
@@ -10864,33 +10860,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_fd = 0 tol 1e-6
 // EXPECT d_kr = 0 tol 1e-8
 // EXPECT d_pp = 0 tol 1e-2
-HydraulicSupply    S1(P=1000000)
-HydraulicCheckValve CVF(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T1(P=100000)
+HydraulicSupply    S1(P=1000000 [Pa])
+HydraulicCheckValve CVF(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T1(P=100000 [Pa])
 connect(S1.out, CVF.in)
 connect(CVF.out, T1.port)
-d_cv = CVF.in.mdot - 1e-6 * sqrt(2 * 850 * 900000)
-HydraulicSupply    S2(P=100000)
-HydraulicCheckValve CVR(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T2(P=1000000)
+d_cv = CVF.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 900000 [Pa])
+HydraulicSupply    S2(P=100000 [Pa])
+HydraulicCheckValve CVR(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T2(P=1000000 [Pa])
 connect(S2.out, CVR.in)
 connect(CVR.out, T2.port)
 
-HydraulicSupply       S3(P=25000000)
-HydraulicSequenceValve SQO(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T3(P=100000)
+HydraulicSupply       S3(P=25000000 [Pa])
+HydraulicSequenceValve SQO(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T3(P=100000 [Pa])
 connect(S3.out, SQO.in)
 connect(SQO.out, T3.port)
-d_sq = SQO.in.mdot - 1e-6 * sqrt(2 * 850 * 24900000)
-HydraulicSupply       S4(P=17000000)
-HydraulicSequenceValve SQS(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T4(P=100000)
+d_sq = SQO.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 24900000 [Pa])
+HydraulicSupply       S4(P=17000000 [Pa])
+HydraulicSequenceValve SQS(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T4(P=100000 [Pa])
 connect(S4.out, SQS.in)
 connect(SQS.out, T4.port)
 
-HydraulicSupply     S5(P=1000000)
-HydraulicFlowControl FC(Qset=0.001, rho=850)
-HydraulicTank       T5(P=100000)
+HydraulicSupply     S5(P=1000000 [Pa])
+HydraulicFlowControl FC(Qset=0.001 [m^3/s], rho=850 [kg/m^3])
+HydraulicTank       T5(P=100000 [Pa])
 connect(S5.out, FC.in)
 connect(FC.out, T5.port)
 
@@ -10899,32 +10895,32 @@ port(out)
   out.mdot = mdot
   out.h    = 0
 end
-OilFlowSource       FSD(mdot=2)
+OilFlowSource       FSD(mdot=2 [kg/s])
 HydraulicFlowDivider FD(frac=0.7)
-HydraulicTank       TA(P=500000)
-HydraulicTank       TB(P=300000)
+HydraulicTank       TA(P=500000 [Pa])
+HydraulicTank       TB(P=300000 [Pa])
 connect(FSD.out, FD.in)
 connect(FD.outa, TA.port)
 connect(FD.outb, TB.port)
-d_fd = FD.in.P - (0.7 * 500000 + 0.3 * 300000)
+d_fd = FD.in.P - (0.7 * 500000 [Pa] + 0.3 * 300000 [Pa])
 
-OilFlowSource      FKR(mdot=1)
-HydraulicResistance KR(K=2.5, rho=850, D=0.01)
-HydraulicTank      TK(P=100000)
+OilFlowSource      FKR(mdot=1 [kg/s])
+HydraulicResistance KR(K=2.5, rho=850 [kg/m^3], D=0.01 [m])
+HydraulicTank      TK(P=100000 [Pa])
 connect(FKR.out, KR.in)
 connect(KR.out, TK.port)
-vkr  = 1 / (850 * pi# / 4 * 0.01^2)
-d_kr = (KR.in.P - 100000) - 2.5 * 850 * vkr^2 / 2
+vkr  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+d_kr = (KR.in.P - 100000 [Pa]) - 2.5 * 850 [kg/m^3] * vkr^2 / 2
 
-OilFlowSource FPP(mdot=1)
-HydraulicPipe HP(rho=850, nu=4e-5, L=5, D=0.01, rough=0)
-HydraulicTank TP(P=100000)
+OilFlowSource FPP(mdot=1 [kg/s])
+HydraulicPipe HP(rho=850 [kg/m^3], nu=4e-5 [m^2/s], L=5 [m], D=0.01 [m], rough=0 [m])
+HydraulicTank TP(P=100000 [Pa])
 connect(FPP.out, HP.in)
 connect(HP.out, TP.port)
-vpp  = 1 / (850 * pi# / 4 * 0.01^2)
-repp = reynolds(850, vpp, 0.01, 850 * 4e-5)
+vpp  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+repp = reynolds(850 [kg/m^3], vpp, 0.01 [m], 850 [kg/m^3] * 4e-5 [m^2/s])
 fpp2 = friction_factor(repp, 0)
-d_pp = (HP.in.P - 100000) - fpp2 * (5 / 0.01) * 850 * vpp^2 / 2
+d_pp = (HP.in.P - 100000 [Pa]) - fpp2 * (5 [m] / 0.01 [m]) * 850 [kg/m^3] * vpp^2 / 2
 
 { CHECK cvf.dp 900000 0.8999999999999999 }
 { CHECK cvf.g 1 0.000001 }
@@ -10972,8 +10968,8 @@ HydraulicCylinder inst(rho, beta, V0, area, Patm, P0, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`rho\` | Number | Density [kg/m³]. |
-| \`beta\` | Number | Chevron angle [deg] / coefficient. |
-| \`V0\` | Number | Initial voltage / volume. |
+| \`beta\` | Number | Oil bulk modulus [Pa]. |
+| \`V0\` | Number | Dead volume of the chamber at zero stroke [m³]. |
 | \`area\` | Number | Area [m²]. |
 | \`Patm\` | Number | Atmospheric pressure [Pa]. |
 | \`P0\` | Number | Reference/initial pressure [Pa]. |
@@ -11001,9 +10997,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-HydraulicSupply   SUP(P=10000000)
-HydraulicOrifice  ORI(CdA=1e-5, rho=850)
-HydraulicCylinder CYL(rho=850, beta=1.5e9, V0=1e-4, area=0.001, Patm=100000, P0=100000)
+HydraulicSupply   SUP(P=10000000 [Pa])
+HydraulicOrifice  ORI(CdA=1e-5 [m^2], rho=850 [kg/m^3])
+HydraulicCylinder CYL(rho=850 [kg/m^3], beta=1.5e9 [Pa], V0=1e-4 [m^3], area=0.001 [m^2], Patm=100000 [Pa], P0=100000 [Pa])
 TransGround       G()
 connect(SUP.out, ORI.in)
 connect(ORI.out, CYL.in)
@@ -11094,10 +11090,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // supply (Aa = 20 cm2), rod side vented to a 2 bar tank (Ab = 12 cm2), rod on
 // a 50 kN.s/m damper. F = 8e6*0.002 - 2e5*0.0012 = 15760 N -> vel = 0.3152 m/s;
 // der(P) -> 0 gives the chamber flows rho*A*vel.
-HydraulicSupply SUP(P=8000000)
-HydraulicSupply RODLN(P=200000)
-HydraulicDoubleActingCylinder CYL(Aa=0.002, Ab=0.0012, rho=870, beta=1.4e9, Va0=0.001, Vb0=0.0006, Pa0=8000000, Pb0=200000)
-TransDamper     DMP(c=50000)
+HydraulicSupply SUP(P=8000000 [Pa])
+HydraulicSupply RODLN(P=200000 [Pa])
+HydraulicDoubleActingCylinder CYL(Aa=0.002 [m^2], Ab=0.0012 [m^2], rho=870 [kg/m^3], beta=1.4e9 [Pa], Va0=0.001 [m^3], Vb0=0.0006 [m^3], Pa0=8000000 [Pa], Pb0=200000 [Pa])
+TransDamper     DMP(c=50000 [kg/s])
 TransGround     GND()
 connect(SUP.out, CYL.a)
 connect(RODLN.out, CYL.b)
@@ -11191,33 +11187,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_fd = 0 tol 1e-6
 // EXPECT d_kr = 0 tol 1e-8
 // EXPECT d_pp = 0 tol 1e-2
-HydraulicSupply    S1(P=1000000)
-HydraulicCheckValve CVF(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T1(P=100000)
+HydraulicSupply    S1(P=1000000 [Pa])
+HydraulicCheckValve CVF(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T1(P=100000 [Pa])
 connect(S1.out, CVF.in)
 connect(CVF.out, T1.port)
-d_cv = CVF.in.mdot - 1e-6 * sqrt(2 * 850 * 900000)
-HydraulicSupply    S2(P=100000)
-HydraulicCheckValve CVR(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T2(P=1000000)
+d_cv = CVF.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 900000 [Pa])
+HydraulicSupply    S2(P=100000 [Pa])
+HydraulicCheckValve CVR(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T2(P=1000000 [Pa])
 connect(S2.out, CVR.in)
 connect(CVR.out, T2.port)
 
-HydraulicSupply       S3(P=25000000)
-HydraulicSequenceValve SQO(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T3(P=100000)
+HydraulicSupply       S3(P=25000000 [Pa])
+HydraulicSequenceValve SQO(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T3(P=100000 [Pa])
 connect(S3.out, SQO.in)
 connect(SQO.out, T3.port)
-d_sq = SQO.in.mdot - 1e-6 * sqrt(2 * 850 * 24900000)
-HydraulicSupply       S4(P=17000000)
-HydraulicSequenceValve SQS(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T4(P=100000)
+d_sq = SQO.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 24900000 [Pa])
+HydraulicSupply       S4(P=17000000 [Pa])
+HydraulicSequenceValve SQS(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T4(P=100000 [Pa])
 connect(S4.out, SQS.in)
 connect(SQS.out, T4.port)
 
-HydraulicSupply     S5(P=1000000)
-HydraulicFlowControl FC(Qset=0.001, rho=850)
-HydraulicTank       T5(P=100000)
+HydraulicSupply     S5(P=1000000 [Pa])
+HydraulicFlowControl FC(Qset=0.001 [m^3/s], rho=850 [kg/m^3])
+HydraulicTank       T5(P=100000 [Pa])
 connect(S5.out, FC.in)
 connect(FC.out, T5.port)
 
@@ -11226,32 +11222,32 @@ port(out)
   out.mdot = mdot
   out.h    = 0
 end
-OilFlowSource       FSD(mdot=2)
+OilFlowSource       FSD(mdot=2 [kg/s])
 HydraulicFlowDivider FD(frac=0.7)
-HydraulicTank       TA(P=500000)
-HydraulicTank       TB(P=300000)
+HydraulicTank       TA(P=500000 [Pa])
+HydraulicTank       TB(P=300000 [Pa])
 connect(FSD.out, FD.in)
 connect(FD.outa, TA.port)
 connect(FD.outb, TB.port)
-d_fd = FD.in.P - (0.7 * 500000 + 0.3 * 300000)
+d_fd = FD.in.P - (0.7 * 500000 [Pa] + 0.3 * 300000 [Pa])
 
-OilFlowSource      FKR(mdot=1)
-HydraulicResistance KR(K=2.5, rho=850, D=0.01)
-HydraulicTank      TK(P=100000)
+OilFlowSource      FKR(mdot=1 [kg/s])
+HydraulicResistance KR(K=2.5, rho=850 [kg/m^3], D=0.01 [m])
+HydraulicTank      TK(P=100000 [Pa])
 connect(FKR.out, KR.in)
 connect(KR.out, TK.port)
-vkr  = 1 / (850 * pi# / 4 * 0.01^2)
-d_kr = (KR.in.P - 100000) - 2.5 * 850 * vkr^2 / 2
+vkr  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+d_kr = (KR.in.P - 100000 [Pa]) - 2.5 * 850 [kg/m^3] * vkr^2 / 2
 
-OilFlowSource FPP(mdot=1)
-HydraulicPipe HP(rho=850, nu=4e-5, L=5, D=0.01, rough=0)
-HydraulicTank TP(P=100000)
+OilFlowSource FPP(mdot=1 [kg/s])
+HydraulicPipe HP(rho=850 [kg/m^3], nu=4e-5 [m^2/s], L=5 [m], D=0.01 [m], rough=0 [m])
+HydraulicTank TP(P=100000 [Pa])
 connect(FPP.out, HP.in)
 connect(HP.out, TP.port)
-vpp  = 1 / (850 * pi# / 4 * 0.01^2)
-repp = reynolds(850, vpp, 0.01, 850 * 4e-5)
+vpp  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+repp = reynolds(850 [kg/m^3], vpp, 0.01 [m], 850 [kg/m^3] * 4e-5 [m^2/s])
 fpp2 = friction_factor(repp, 0)
-d_pp = (HP.in.P - 100000) - fpp2 * (5 / 0.01) * 850 * vpp^2 / 2
+d_pp = (HP.in.P - 100000 [Pa]) - fpp2 * (5 [m] / 0.01 [m]) * 850 [kg/m^3] * vpp^2 / 2
 
 { CHECK cvf.dp 900000 0.8999999999999999 }
 { CHECK cvf.g 1 0.000001 }
@@ -11338,33 +11334,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_fd = 0 tol 1e-6
 // EXPECT d_kr = 0 tol 1e-8
 // EXPECT d_pp = 0 tol 1e-2
-HydraulicSupply    S1(P=1000000)
-HydraulicCheckValve CVF(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T1(P=100000)
+HydraulicSupply    S1(P=1000000 [Pa])
+HydraulicCheckValve CVF(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T1(P=100000 [Pa])
 connect(S1.out, CVF.in)
 connect(CVF.out, T1.port)
-d_cv = CVF.in.mdot - 1e-6 * sqrt(2 * 850 * 900000)
-HydraulicSupply    S2(P=100000)
-HydraulicCheckValve CVR(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T2(P=1000000)
+d_cv = CVF.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 900000 [Pa])
+HydraulicSupply    S2(P=100000 [Pa])
+HydraulicCheckValve CVR(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T2(P=1000000 [Pa])
 connect(S2.out, CVR.in)
 connect(CVR.out, T2.port)
 
-HydraulicSupply       S3(P=25000000)
-HydraulicSequenceValve SQO(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T3(P=100000)
+HydraulicSupply       S3(P=25000000 [Pa])
+HydraulicSequenceValve SQO(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T3(P=100000 [Pa])
 connect(S3.out, SQO.in)
 connect(SQO.out, T3.port)
-d_sq = SQO.in.mdot - 1e-6 * sqrt(2 * 850 * 24900000)
-HydraulicSupply       S4(P=17000000)
-HydraulicSequenceValve SQS(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T4(P=100000)
+d_sq = SQO.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 24900000 [Pa])
+HydraulicSupply       S4(P=17000000 [Pa])
+HydraulicSequenceValve SQS(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T4(P=100000 [Pa])
 connect(S4.out, SQS.in)
 connect(SQS.out, T4.port)
 
-HydraulicSupply     S5(P=1000000)
-HydraulicFlowControl FC(Qset=0.001, rho=850)
-HydraulicTank       T5(P=100000)
+HydraulicSupply     S5(P=1000000 [Pa])
+HydraulicFlowControl FC(Qset=0.001 [m^3/s], rho=850 [kg/m^3])
+HydraulicTank       T5(P=100000 [Pa])
 connect(S5.out, FC.in)
 connect(FC.out, T5.port)
 
@@ -11373,32 +11369,32 @@ port(out)
   out.mdot = mdot
   out.h    = 0
 end
-OilFlowSource       FSD(mdot=2)
+OilFlowSource       FSD(mdot=2 [kg/s])
 HydraulicFlowDivider FD(frac=0.7)
-HydraulicTank       TA(P=500000)
-HydraulicTank       TB(P=300000)
+HydraulicTank       TA(P=500000 [Pa])
+HydraulicTank       TB(P=300000 [Pa])
 connect(FSD.out, FD.in)
 connect(FD.outa, TA.port)
 connect(FD.outb, TB.port)
-d_fd = FD.in.P - (0.7 * 500000 + 0.3 * 300000)
+d_fd = FD.in.P - (0.7 * 500000 [Pa] + 0.3 * 300000 [Pa])
 
-OilFlowSource      FKR(mdot=1)
-HydraulicResistance KR(K=2.5, rho=850, D=0.01)
-HydraulicTank      TK(P=100000)
+OilFlowSource      FKR(mdot=1 [kg/s])
+HydraulicResistance KR(K=2.5, rho=850 [kg/m^3], D=0.01 [m])
+HydraulicTank      TK(P=100000 [Pa])
 connect(FKR.out, KR.in)
 connect(KR.out, TK.port)
-vkr  = 1 / (850 * pi# / 4 * 0.01^2)
-d_kr = (KR.in.P - 100000) - 2.5 * 850 * vkr^2 / 2
+vkr  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+d_kr = (KR.in.P - 100000 [Pa]) - 2.5 * 850 [kg/m^3] * vkr^2 / 2
 
-OilFlowSource FPP(mdot=1)
-HydraulicPipe HP(rho=850, nu=4e-5, L=5, D=0.01, rough=0)
-HydraulicTank TP(P=100000)
+OilFlowSource FPP(mdot=1 [kg/s])
+HydraulicPipe HP(rho=850 [kg/m^3], nu=4e-5 [m^2/s], L=5 [m], D=0.01 [m], rough=0 [m])
+HydraulicTank TP(P=100000 [Pa])
 connect(FPP.out, HP.in)
 connect(HP.out, TP.port)
-vpp  = 1 / (850 * pi# / 4 * 0.01^2)
-repp = reynolds(850, vpp, 0.01, 850 * 4e-5)
+vpp  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+repp = reynolds(850 [kg/m^3], vpp, 0.01 [m], 850 [kg/m^3] * 4e-5 [m^2/s])
 fpp2 = friction_factor(repp, 0)
-d_pp = (HP.in.P - 100000) - fpp2 * (5 / 0.01) * 850 * vpp^2 / 2
+d_pp = (HP.in.P - 100000 [Pa]) - fpp2 * (5 [m] / 0.01 [m]) * 850 [kg/m^3] * vpp^2 / 2
 
 { CHECK cvf.dp 900000 0.8999999999999999 }
 { CHECK cvf.g 1 0.000001 }
@@ -11479,10 +11475,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // 0.1424018 kg/s; torque = -disp*dP*eta_m/(2pi) = -28.5047 N·m.
 // EXPECT d_mm = 0 tol 1e-8
 // EXPECT d_mt = 0 tol 1e-6
-HydraulicSupply SM(P=20000000)
-HydraulicMotor  HM(disp=1e-5, rho=850, eta_v=0.95, eta_m=0.9)
-HydraulicTank   TM(P=100000)
-SpeedSource     WS(w=100)
+HydraulicSupply SM(P=20000000 [Pa])
+HydraulicMotor  HM(disp=1e-5 [m^3], rho=850 [kg/m^3], eta_v=0.95, eta_m=0.9)
+HydraulicTank   TM(P=100000 [Pa])
+SpeedSource     WS(w=100 [rad/s])
 MechGround      MG()
 connect(SM.out, HM.in)
 connect(HM.out, TM.port)
@@ -11562,9 +11558,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-HydraulicSupply  SUP(P=10000000)
-HydraulicOrifice ORI(CdA=1e-5, rho=850)
-HydraulicTank    TNK(P=0)
+HydraulicSupply  SUP(P=10000000 [Pa])
+HydraulicOrifice ORI(CdA=1e-5 [m^2], rho=850 [kg/m^3])
+HydraulicTank    TNK(P=0 [Pa])
 connect(SUP.out, ORI.in)
 connect(ORI.out, TNK.port)
 
@@ -11650,7 +11646,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // case): line pressure 5 bar, load side 20 bar, pilot at 15 bar with ratio 3.
 // dPe = (5-20)e5 + 3*(15-5)e5 = +15e5 > 0 -> poppet open, flow REVERSE:
 // mdot = -CdA*sqrt(2*rho*15e5) = -2e-6*sqrt(2*870*1.5e6) = -0.10219 kg/s.
-HydraulicPilotCheckValve PCV(o1, o2, op, CdA=2e-6, rho=870, rp=3, eps=50000)
+HydraulicPilotCheckValve PCV(o1, o2, op, CdA=2e-6 [m^2], rho=870 [kg/m^3], rp=3, eps=50000 [Pa])
 o1.P = 500000
 o1.h = 0
 o2.P = 2000000
@@ -11750,33 +11746,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_fd = 0 tol 1e-6
 // EXPECT d_kr = 0 tol 1e-8
 // EXPECT d_pp = 0 tol 1e-2
-HydraulicSupply    S1(P=1000000)
-HydraulicCheckValve CVF(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T1(P=100000)
+HydraulicSupply    S1(P=1000000 [Pa])
+HydraulicCheckValve CVF(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T1(P=100000 [Pa])
 connect(S1.out, CVF.in)
 connect(CVF.out, T1.port)
-d_cv = CVF.in.mdot - 1e-6 * sqrt(2 * 850 * 900000)
-HydraulicSupply    S2(P=100000)
-HydraulicCheckValve CVR(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T2(P=1000000)
+d_cv = CVF.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 900000 [Pa])
+HydraulicSupply    S2(P=100000 [Pa])
+HydraulicCheckValve CVR(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T2(P=1000000 [Pa])
 connect(S2.out, CVR.in)
 connect(CVR.out, T2.port)
 
-HydraulicSupply       S3(P=25000000)
-HydraulicSequenceValve SQO(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T3(P=100000)
+HydraulicSupply       S3(P=25000000 [Pa])
+HydraulicSequenceValve SQO(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T3(P=100000 [Pa])
 connect(S3.out, SQO.in)
 connect(SQO.out, T3.port)
-d_sq = SQO.in.mdot - 1e-6 * sqrt(2 * 850 * 24900000)
-HydraulicSupply       S4(P=17000000)
-HydraulicSequenceValve SQS(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T4(P=100000)
+d_sq = SQO.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 24900000 [Pa])
+HydraulicSupply       S4(P=17000000 [Pa])
+HydraulicSequenceValve SQS(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T4(P=100000 [Pa])
 connect(S4.out, SQS.in)
 connect(SQS.out, T4.port)
 
-HydraulicSupply     S5(P=1000000)
-HydraulicFlowControl FC(Qset=0.001, rho=850)
-HydraulicTank       T5(P=100000)
+HydraulicSupply     S5(P=1000000 [Pa])
+HydraulicFlowControl FC(Qset=0.001 [m^3/s], rho=850 [kg/m^3])
+HydraulicTank       T5(P=100000 [Pa])
 connect(S5.out, FC.in)
 connect(FC.out, T5.port)
 
@@ -11785,32 +11781,32 @@ port(out)
   out.mdot = mdot
   out.h    = 0
 end
-OilFlowSource       FSD(mdot=2)
+OilFlowSource       FSD(mdot=2 [kg/s])
 HydraulicFlowDivider FD(frac=0.7)
-HydraulicTank       TA(P=500000)
-HydraulicTank       TB(P=300000)
+HydraulicTank       TA(P=500000 [Pa])
+HydraulicTank       TB(P=300000 [Pa])
 connect(FSD.out, FD.in)
 connect(FD.outa, TA.port)
 connect(FD.outb, TB.port)
-d_fd = FD.in.P - (0.7 * 500000 + 0.3 * 300000)
+d_fd = FD.in.P - (0.7 * 500000 [Pa] + 0.3 * 300000 [Pa])
 
-OilFlowSource      FKR(mdot=1)
-HydraulicResistance KR(K=2.5, rho=850, D=0.01)
-HydraulicTank      TK(P=100000)
+OilFlowSource      FKR(mdot=1 [kg/s])
+HydraulicResistance KR(K=2.5, rho=850 [kg/m^3], D=0.01 [m])
+HydraulicTank      TK(P=100000 [Pa])
 connect(FKR.out, KR.in)
 connect(KR.out, TK.port)
-vkr  = 1 / (850 * pi# / 4 * 0.01^2)
-d_kr = (KR.in.P - 100000) - 2.5 * 850 * vkr^2 / 2
+vkr  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+d_kr = (KR.in.P - 100000 [Pa]) - 2.5 * 850 [kg/m^3] * vkr^2 / 2
 
-OilFlowSource FPP(mdot=1)
-HydraulicPipe HP(rho=850, nu=4e-5, L=5, D=0.01, rough=0)
-HydraulicTank TP(P=100000)
+OilFlowSource FPP(mdot=1 [kg/s])
+HydraulicPipe HP(rho=850 [kg/m^3], nu=4e-5 [m^2/s], L=5 [m], D=0.01 [m], rough=0 [m])
+HydraulicTank TP(P=100000 [Pa])
 connect(FPP.out, HP.in)
 connect(HP.out, TP.port)
-vpp  = 1 / (850 * pi# / 4 * 0.01^2)
-repp = reynolds(850, vpp, 0.01, 850 * 4e-5)
+vpp  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+repp = reynolds(850 [kg/m^3], vpp, 0.01 [m], 850 [kg/m^3] * 4e-5 [m^2/s])
 fpp2 = friction_factor(repp, 0)
-d_pp = (HP.in.P - 100000) - fpp2 * (5 / 0.01) * 850 * vpp^2 / 2
+d_pp = (HP.in.P - 100000 [Pa]) - fpp2 * (5 [m] / 0.01 [m]) * 850 [kg/m^3] * vpp^2 / 2
 
 { CHECK cvf.dp 900000 0.8999999999999999 }
 { CHECK cvf.g 1 0.000001 }
@@ -11887,12 +11883,12 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-HydraulicSupply  SUC(P=0)
-SpeedSource      SS(w=100)
+HydraulicSupply  SUC(P=0 [Pa])
+SpeedSource      SS(w=100 [rad/s])
 MechGround       G()
-HydraulicPump    PMP(disp=1e-5, rho=850, eta_v=0.95, eta_m=0.9)
-HydraulicOrifice ORI(CdA=1e-5, rho=850)
-HydraulicTank    DIS(P=0)
+HydraulicPump    PMP(disp=1e-5 [m^3], rho=850 [kg/m^3], eta_v=0.95, eta_m=0.9)
+HydraulicOrifice ORI(CdA=1e-5 [m^2], rho=850 [kg/m^3])
+HydraulicTank    DIS(P=0 [Pa])
 connect(SUC.out, PMP.in)
 connect(SS.a, PMP.shaft)
 connect(SS.b, G.port)
@@ -11986,33 +11982,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_fd = 0 tol 1e-6
 // EXPECT d_kr = 0 tol 1e-8
 // EXPECT d_pp = 0 tol 1e-2
-HydraulicSupply    S1(P=1000000)
-HydraulicCheckValve CVF(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T1(P=100000)
+HydraulicSupply    S1(P=1000000 [Pa])
+HydraulicCheckValve CVF(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T1(P=100000 [Pa])
 connect(S1.out, CVF.in)
 connect(CVF.out, T1.port)
-d_cv = CVF.in.mdot - 1e-6 * sqrt(2 * 850 * 900000)
-HydraulicSupply    S2(P=100000)
-HydraulicCheckValve CVR(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T2(P=1000000)
+d_cv = CVF.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 900000 [Pa])
+HydraulicSupply    S2(P=100000 [Pa])
+HydraulicCheckValve CVR(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T2(P=1000000 [Pa])
 connect(S2.out, CVR.in)
 connect(CVR.out, T2.port)
 
-HydraulicSupply       S3(P=25000000)
-HydraulicSequenceValve SQO(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T3(P=100000)
+HydraulicSupply       S3(P=25000000 [Pa])
+HydraulicSequenceValve SQO(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T3(P=100000 [Pa])
 connect(S3.out, SQO.in)
 connect(SQO.out, T3.port)
-d_sq = SQO.in.mdot - 1e-6 * sqrt(2 * 850 * 24900000)
-HydraulicSupply       S4(P=17000000)
-HydraulicSequenceValve SQS(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T4(P=100000)
+d_sq = SQO.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 24900000 [Pa])
+HydraulicSupply       S4(P=17000000 [Pa])
+HydraulicSequenceValve SQS(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T4(P=100000 [Pa])
 connect(S4.out, SQS.in)
 connect(SQS.out, T4.port)
 
-HydraulicSupply     S5(P=1000000)
-HydraulicFlowControl FC(Qset=0.001, rho=850)
-HydraulicTank       T5(P=100000)
+HydraulicSupply     S5(P=1000000 [Pa])
+HydraulicFlowControl FC(Qset=0.001 [m^3/s], rho=850 [kg/m^3])
+HydraulicTank       T5(P=100000 [Pa])
 connect(S5.out, FC.in)
 connect(FC.out, T5.port)
 
@@ -12021,32 +12017,32 @@ port(out)
   out.mdot = mdot
   out.h    = 0
 end
-OilFlowSource       FSD(mdot=2)
+OilFlowSource       FSD(mdot=2 [kg/s])
 HydraulicFlowDivider FD(frac=0.7)
-HydraulicTank       TA(P=500000)
-HydraulicTank       TB(P=300000)
+HydraulicTank       TA(P=500000 [Pa])
+HydraulicTank       TB(P=300000 [Pa])
 connect(FSD.out, FD.in)
 connect(FD.outa, TA.port)
 connect(FD.outb, TB.port)
-d_fd = FD.in.P - (0.7 * 500000 + 0.3 * 300000)
+d_fd = FD.in.P - (0.7 * 500000 [Pa] + 0.3 * 300000 [Pa])
 
-OilFlowSource      FKR(mdot=1)
-HydraulicResistance KR(K=2.5, rho=850, D=0.01)
-HydraulicTank      TK(P=100000)
+OilFlowSource      FKR(mdot=1 [kg/s])
+HydraulicResistance KR(K=2.5, rho=850 [kg/m^3], D=0.01 [m])
+HydraulicTank      TK(P=100000 [Pa])
 connect(FKR.out, KR.in)
 connect(KR.out, TK.port)
-vkr  = 1 / (850 * pi# / 4 * 0.01^2)
-d_kr = (KR.in.P - 100000) - 2.5 * 850 * vkr^2 / 2
+vkr  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+d_kr = (KR.in.P - 100000 [Pa]) - 2.5 * 850 [kg/m^3] * vkr^2 / 2
 
-OilFlowSource FPP(mdot=1)
-HydraulicPipe HP(rho=850, nu=4e-5, L=5, D=0.01, rough=0)
-HydraulicTank TP(P=100000)
+OilFlowSource FPP(mdot=1 [kg/s])
+HydraulicPipe HP(rho=850 [kg/m^3], nu=4e-5 [m^2/s], L=5 [m], D=0.01 [m], rough=0 [m])
+HydraulicTank TP(P=100000 [Pa])
 connect(FPP.out, HP.in)
 connect(HP.out, TP.port)
-vpp  = 1 / (850 * pi# / 4 * 0.01^2)
-repp = reynolds(850, vpp, 0.01, 850 * 4e-5)
+vpp  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+repp = reynolds(850 [kg/m^3], vpp, 0.01 [m], 850 [kg/m^3] * 4e-5 [m^2/s])
 fpp2 = friction_factor(repp, 0)
-d_pp = (HP.in.P - 100000) - fpp2 * (5 / 0.01) * 850 * vpp^2 / 2
+d_pp = (HP.in.P - 100000 [Pa]) - fpp2 * (5 [m] / 0.01 [m]) * 850 [kg/m^3] * vpp^2 / 2
 
 { CHECK cvf.dp 900000 0.8999999999999999 }
 { CHECK cvf.g 1 0.000001 }
@@ -12135,33 +12131,33 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_fd = 0 tol 1e-6
 // EXPECT d_kr = 0 tol 1e-8
 // EXPECT d_pp = 0 tol 1e-2
-HydraulicSupply    S1(P=1000000)
-HydraulicCheckValve CVF(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T1(P=100000)
+HydraulicSupply    S1(P=1000000 [Pa])
+HydraulicCheckValve CVF(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T1(P=100000 [Pa])
 connect(S1.out, CVF.in)
 connect(CVF.out, T1.port)
-d_cv = CVF.in.mdot - 1e-6 * sqrt(2 * 850 * 900000)
-HydraulicSupply    S2(P=100000)
-HydraulicCheckValve CVR(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T2(P=1000000)
+d_cv = CVF.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 900000 [Pa])
+HydraulicSupply    S2(P=100000 [Pa])
+HydraulicCheckValve CVR(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T2(P=1000000 [Pa])
 connect(S2.out, CVR.in)
 connect(CVR.out, T2.port)
 
-HydraulicSupply       S3(P=25000000)
-HydraulicSequenceValve SQO(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T3(P=100000)
+HydraulicSupply       S3(P=25000000 [Pa])
+HydraulicSequenceValve SQO(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T3(P=100000 [Pa])
 connect(S3.out, SQO.in)
 connect(SQO.out, T3.port)
-d_sq = SQO.in.mdot - 1e-6 * sqrt(2 * 850 * 24900000)
-HydraulicSupply       S4(P=17000000)
-HydraulicSequenceValve SQS(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T4(P=100000)
+d_sq = SQO.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 24900000 [Pa])
+HydraulicSupply       S4(P=17000000 [Pa])
+HydraulicSequenceValve SQS(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T4(P=100000 [Pa])
 connect(S4.out, SQS.in)
 connect(SQS.out, T4.port)
 
-HydraulicSupply     S5(P=1000000)
-HydraulicFlowControl FC(Qset=0.001, rho=850)
-HydraulicTank       T5(P=100000)
+HydraulicSupply     S5(P=1000000 [Pa])
+HydraulicFlowControl FC(Qset=0.001 [m^3/s], rho=850 [kg/m^3])
+HydraulicTank       T5(P=100000 [Pa])
 connect(S5.out, FC.in)
 connect(FC.out, T5.port)
 
@@ -12170,32 +12166,32 @@ port(out)
   out.mdot = mdot
   out.h    = 0
 end
-OilFlowSource       FSD(mdot=2)
+OilFlowSource       FSD(mdot=2 [kg/s])
 HydraulicFlowDivider FD(frac=0.7)
-HydraulicTank       TA(P=500000)
-HydraulicTank       TB(P=300000)
+HydraulicTank       TA(P=500000 [Pa])
+HydraulicTank       TB(P=300000 [Pa])
 connect(FSD.out, FD.in)
 connect(FD.outa, TA.port)
 connect(FD.outb, TB.port)
-d_fd = FD.in.P - (0.7 * 500000 + 0.3 * 300000)
+d_fd = FD.in.P - (0.7 * 500000 [Pa] + 0.3 * 300000 [Pa])
 
-OilFlowSource      FKR(mdot=1)
-HydraulicResistance KR(K=2.5, rho=850, D=0.01)
-HydraulicTank      TK(P=100000)
+OilFlowSource      FKR(mdot=1 [kg/s])
+HydraulicResistance KR(K=2.5, rho=850 [kg/m^3], D=0.01 [m])
+HydraulicTank      TK(P=100000 [Pa])
 connect(FKR.out, KR.in)
 connect(KR.out, TK.port)
-vkr  = 1 / (850 * pi# / 4 * 0.01^2)
-d_kr = (KR.in.P - 100000) - 2.5 * 850 * vkr^2 / 2
+vkr  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+d_kr = (KR.in.P - 100000 [Pa]) - 2.5 * 850 [kg/m^3] * vkr^2 / 2
 
-OilFlowSource FPP(mdot=1)
-HydraulicPipe HP(rho=850, nu=4e-5, L=5, D=0.01, rough=0)
-HydraulicTank TP(P=100000)
+OilFlowSource FPP(mdot=1 [kg/s])
+HydraulicPipe HP(rho=850 [kg/m^3], nu=4e-5 [m^2/s], L=5 [m], D=0.01 [m], rough=0 [m])
+HydraulicTank TP(P=100000 [Pa])
 connect(FPP.out, HP.in)
 connect(HP.out, TP.port)
-vpp  = 1 / (850 * pi# / 4 * 0.01^2)
-repp = reynolds(850, vpp, 0.01, 850 * 4e-5)
+vpp  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+repp = reynolds(850 [kg/m^3], vpp, 0.01 [m], 850 [kg/m^3] * 4e-5 [m^2/s])
 fpp2 = friction_factor(repp, 0)
-d_pp = (HP.in.P - 100000) - fpp2 * (5 / 0.01) * 850 * vpp^2 / 2
+d_pp = (HP.in.P - 100000 [Pa]) - fpp2 * (5 [m] / 0.01 [m]) * 850 [kg/m^3] * vpp^2 / 2
 
 { CHECK cvf.dp 900000 0.8999999999999999 }
 { CHECK cvf.g 1 0.000001 }
@@ -12266,9 +12262,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-HydraulicSupply  SUP(P=10000000)
-HydraulicOrifice ORI(CdA=1e-5, rho=850)
-HydraulicTank    TNK(P=0)
+HydraulicSupply  SUP(P=10000000 [Pa])
+HydraulicOrifice ORI(CdA=1e-5 [m^2], rho=850 [kg/m^3])
+HydraulicTank    TNK(P=0 [Pa])
 connect(SUP.out, ORI.in)
 connect(ORI.out, TNK.port)
 
@@ -12340,9 +12336,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-HydraulicSupply  SUP(P=10000000)
-HydraulicOrifice ORI(CdA=1e-5, rho=850)
-HydraulicTank    TNK(P=0)
+HydraulicSupply  SUP(P=10000000 [Pa])
+HydraulicOrifice ORI(CdA=1e-5 [m^2], rho=850 [kg/m^3])
+HydraulicTank    TNK(P=0 [Pa])
 connect(SUP.out, ORI.in)
 connect(ORI.out, TNK.port)
 
@@ -12464,10 +12460,10 @@ port(out)
   out.h    = h
 end
 WarmOilSource        SRC(mdot=0.5, h=627000)
-HydraulicThermalVolume HTV(V=0.004, rho=870, cp_o=1900, beta=1.4e9, hA=50, P0=1000000, T0=300)
-HydraulicOrifice     ORF(CdA=1e-5, rho=870)
-HydraulicTank        TNK(P=100000)
-ThermalSource        CASE(T=300)
+HydraulicThermalVolume HTV(V=0.004 [m^3], rho=870 [kg/m^3], cp_o=1900 [J/kg-K], beta=1.4e9 [Pa], hA=50 [W/K], P0=1000000 [Pa], T0=300 [K])
+HydraulicOrifice     ORF(CdA=1e-5 [m^2], rho=870 [kg/m^3])
+HydraulicTank        TNK(P=100000 [Pa])
+ThermalSource        CASE(T=300 [K])
 connect(SRC.out, HTV.in)
 connect(HTV.out, ORF.in)
 connect(ORF.out, TNK.port)
@@ -12523,7 +12519,7 @@ HydraulicValve inst(CdA_max, rho, u, domain$)
 | --- | --- | --- |
 | \`CdA_max\` | Number | Maximum Cd·A [m²]. |
 | \`rho\` | Number | Density [kg/m³]. |
-| \`u\` | Number | Specific internal energy [J/kg]. |
+| \`u\` | Number | Valve opening, 0 (shut) to 1 (fully open) [-]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -12547,7 +12543,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-HydraulicValve C(CdA_max=0.00001, rho=850, u=0.5)
+HydraulicValve C(CdA_max=0.00001 [m^2], rho=850 [kg/m^3], u=0.5)
 C.in.P = 1000000
 C.out.P = 100000
 C.in.h = 0
@@ -12627,9 +12623,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // u.sig * CdA_max between a 100 bar supply and a 1 bar tank.
 // mdot = 0.7*3e-5 * sqrt(2*870*9.9e6) = 2.7566 kg/s.
 SigConstant      CMD(k=0.7)
-HydraulicSupply  SUP(P=10000000)
-HydraulicValveCmd VLV(CdA_max=3e-5, rho=870)
-HydraulicTank    TNK(P=100000)
+HydraulicSupply  SUP(P=10000000 [Pa])
+HydraulicValveCmd VLV(CdA_max=3e-5 [m^2], rho=870 [kg/m^3])
+HydraulicTank    TNK(P=100000 [Pa])
 connect(SUP.out, VLV.in)
 connect(VLV.out, TNK.port)
 connect(CMD.out, VLV.u)
@@ -12712,11 +12708,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Bulk-modulus node between two equal orifices at steady state (der(P) -> 0
 // so in.mdot = out.mdot): with matched CdA the node pressure sits at the
 // midpoint (101e5 + 1e5)/2 = 51e5 Pa, and mdot = 1e-6*sqrt(2*870*50e5) = 0.09327 kg/s.
-HydraulicSupply  SUP(P=10100000)
-HydraulicOrifice OUP(CdA=1e-6, rho=870)
-HydraulicVolume  VOL(V=0.002, beta=1.4e9, rho=870, P0=5100000)
-HydraulicOrifice ODN(CdA=1e-6, rho=870)
-HydraulicTank    TNK(P=100000)
+HydraulicSupply  SUP(P=10100000 [Pa])
+HydraulicOrifice OUP(CdA=1e-6 [m^2], rho=870 [kg/m^3])
+HydraulicVolume  VOL(V=0.002 [m^3], beta=1.4e9 [Pa], rho=870 [kg/m^3], P0=5100000 [Pa])
+HydraulicOrifice ODN(CdA=1e-6 [m^2], rho=870 [kg/m^3])
+HydraulicTank    TNK(P=100000 [Pa])
 connect(SUP.out, OUP.in)
 connect(OUP.out, VOL.in)
 connect(VOL.out, ODN.in)
@@ -12807,10 +12803,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // compensator settles (der(dfrac) -> 0) exactly when out.P = ls.P + dP_margin,
 // holding 20 bar across the orifice regardless of the load.
 // mdot = 2e-6*sqrt(2*870*2e6) = 0.11798 kg/s.
-HydraulicSupply  RES(h1, P=100000)
-LoadSensingPump  PMP(h1, h2, hls, rho=870, Dv=6e-5, w_p=150, dP_margin=2000000, tau=0.05, d0=0.5)
-HydraulicOrifice MTR(h2, h3, CdA=2e-6, rho=870)
-HydraulicTank    LOAD(h3, P=6000000)
+HydraulicSupply  RES(h1, P=100000 [Pa])
+LoadSensingPump  PMP(h1, h2, hls, rho=870 [kg/m^3], Dv=6e-5 [m], w_p=150 [m^2/s], dP_margin=2000000 [Pa], tau=0.05 [s], d0=0.5)
+HydraulicOrifice MTR(h2, h3, CdA=2e-6 [m^2], rho=870 [kg/m^3])
+HydraulicTank    LOAD(h3, P=6000000 [Pa])
 hls.P = 6000000
 p_pump  = PMP.out.P
 q_pump  = PMP.out.mdot
@@ -12862,7 +12858,7 @@ ReliefValve inst(Pcrack, K, eps, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`Pcrack\` | Number | Cracking (relief) pressure [Pa]. |
-| \`K\` | Number | Gain / coefficient. |
+| \`K\` | Number | Flow gain once open: ṁ = K·(P_in − P_out) [kg/s·Pa]. |
 | \`eps\` | Number | Opening smoothing width [Pa] — the tanh transition around \`Pcrack\`. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
@@ -12889,9 +12885,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-HydraulicSupply SUP(P=4000000)
-ReliefValve     RV(Pcrack=5000000, K=1e-6, eps=10000)
-HydraulicTank   TNK(P=0)
+HydraulicSupply SUP(P=4000000 [Pa])
+ReliefValve     RV(Pcrack=5000000 [Pa], K=1e-6 [kg/s-Pa], eps=10000 [Pa])
+HydraulicTank   TNK(P=0 [Pa])
 connect(SUP.out, RV.in)
 connect(RV.out, TNK.port)
 
@@ -12977,9 +12973,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // gives vs = 0 and xs = u.sig): 50% command on CdA_max = 4e-6 across
 // 100 -> 1 bar. mdot = 0.5*4e-6*sqrt(2*870*9.9e6) = 0.26254 kg/s.
 SigConstant       CMD(k=0.5)
-HydraulicSupply   SUP(P=10000000)
-ServoValveDynamic SV(CdA_max=4e-6, rho=870, wn=300, zeta=0.8, xs0=0)
-HydraulicTank     TNK(P=100000)
+HydraulicSupply   SUP(P=10000000 [Pa])
+ServoValveDynamic SV(CdA_max=4e-6 [m^2], rho=870 [kg/m^3], wn=300 [rad/s], zeta=0.8, xs0=0)
+HydraulicTank     TNK(P=100000 [Pa])
 connect(SUP.out, SV.in)
 connect(SV.out, TNK.port)
 connect(CMD.out, SV.u)
@@ -13066,8 +13062,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // CoolingTower (Merkel-lite): heat rejection on the saturated-enthalpy
 // potential between the 310 K water inlet and a 295 K wet-bulb signal.
 // eps_t = 0.4 with 2 kg/s design air keeps the approach above the wet-bulb.
-LiquidSource LS(w1, fluid$ = Water, mdot = 2.0, P = 150000, T = 310)
-CoolingTower CT(w1, w2, wb1, fluid$ = Water, eps_t = 0.4, mdot_a = 2.0, Patm = 101325)
+LiquidSource LS(w1, fluid$ = Water, mdot = 2.0 [kg/s], P = 150000 [Pa], T = 310 [K])
+CoolingTower CT(w1, w2, wb1, fluid$ = Water, eps_t = 0.4, mdot_a = 2.0 [kg/s], Patm = 101325 [Pa])
 SigConstant  WB(wb1, k = 295)
 LiquidSink   SK(w2)
 
@@ -13149,7 +13145,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // GravityDrain: Torricelli square law through Cd*A = 6.2e-5 m^2 under
 // ~1.9 m of water head (dP = 18.7 kPa) -> mdot ~ 0.38 kg/s.
-GravityDrain GD(g1, g2, Cd = 0.62, A_d = 1e-4, rho = 998)
+GravityDrain GD(g1, g2, Cd = 0.62, A_d = 1e-4 [m^2], rho = 998 [kg/m^3])
 
 g1.P  = 120000
 g1.h  = 100000
@@ -13239,14 +13235,14 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT tau_h = -1416.667 tol 0.01
 // EXPECT dh_h = -425 tol 0.01
 
-TABLE etamap(m)
+TABLE etamap(m [kg/s]) [-]
   0    0.85
   200  0.85
 END
-LiquidSource HIN(fluid$=Water, mdot=100, P=600000, T=300)
-HydroTurbine HT(fluid$=Water, rho=1000, eta$=etamap, epsw=1e-6)
+LiquidSource HIN(fluid$=Water, mdot=100 [kg/s], P=600000 [Pa], T=300 [K])
+HydroTurbine HT(fluid$=Water, rho=1000 [kg/m^3], eta$=etamap, epsw=1e-6 [rad/s])
 LiquidSink   HOUT()
-SpeedSource  HS(w=30)
+SpeedSource  HS(w=30 [rad/s])
 MechGround   HG()
 connect(HIN.out, HT.in)
 connect(HT.out, HOUT.in)
@@ -13335,8 +13331,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // IceStorageBrine (hierarchical: LiquidWallHX + PCMMass) on an EG50 brine
 // loop near the melt band. With no DYNAMIC block the PCM state takes the
 // steady branch (Qdot = 0), so the pack floats at the brine temperature.
-LiquidSource   LS(b1, fluid$ = EG50, mdot = 0.4, P = 200000, T = 278)
-IceStorageBrine IST(b1, b2, fluid$ = EG50, UA = 400, m = 500, cp_p = 2100, L = 334000, Tm = 273.15, dTm = 2, T0 = 273)
+LiquidSource   LS(b1, fluid$ = EG50, mdot = 0.4 [kg/s], P = 200000 [Pa], T = 278 [K])
+IceStorageBrine IST(b1, b2, fluid$ = EG50, UA = 400 [W/K], m = 500 [kg], cp_p = 2100 [J/kg-K], L = 334000 [J/kg], Tm = 273.15 [K], dTm = 2 [K], T0 = 273 [K])
 LiquidSink     SK(b2)
 
 h_out = SK.h
@@ -13430,7 +13426,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_th = 0 tol 1e-4
 // EXPECT d_pp = 0 tol 1e-3
 // EXPECT d_ph = 0 tol 1e-4
-LiquidSource  LS(fluid$=Water, mdot=2, P=200000, T=300)
+LiquidSource  LS(fluid$=Water, mdot=2 [kg/s], P=200000 [Pa], T=300 [K])
 LiquidThreeWayValve TW(u=0.3)
 LiquidSink KA()
 LiquidSink KB()
@@ -13447,41 +13443,41 @@ function [in] = LPout(P, domain$ = liquid)
 port(in)
   in.P = P
 end
-LPin  CS1(fluid$=Water, P=300000, T=300)
-LiquidCheckValve CVF(CdA=1e-5, rho=997, eps=100)
-LPout CK1(P=100000)
+LPin  CS1(fluid$=Water, P=300000 [Pa], T=300 [K])
+LiquidCheckValve CVF(CdA=1e-5 [m^2], rho=997 [kg/m^3], eps=100 [Pa])
+LPout CK1(P=100000 [Pa])
 connect(CS1.out, CVF.in)
 connect(CVF.out, CK1.in)
-d_cv = CVF.in.mdot - 1e-5 * sqrt(2 * 997 * 200000)
-LPin  CS2(fluid$=Water, P=100000, T=300)
-LiquidCheckValve CVR(CdA=1e-5, rho=997, eps=100)
-LPout CK2(P=300000)
+d_cv = CVF.in.mdot - 1e-5 [m^2] * sqrt(2 * 997 [kg/m^3] * 200000 [Pa])
+LPin  CS2(fluid$=Water, P=100000 [Pa], T=300 [K])
+LiquidCheckValve CVR(CdA=1e-5 [m^2], rho=997 [kg/m^3], eps=100 [Pa])
+LPout CK2(P=300000 [Pa])
 connect(CS2.out, CVR.in)
 connect(CVR.out, CK2.in)
 
-LPin  TS1(fluid$=Water, P=300000, T=300)
-LiquidThermostat THS(fluid$=Water, CdA=1e-5, rho=997, Topen=360, Tband=2)
-LPout TK1(P=100000)
+LPin  TS1(fluid$=Water, P=300000 [Pa], T=300 [K])
+LiquidThermostat THS(fluid$=Water, CdA=1e-5 [m^2], rho=997 [kg/m^3], Topen=360 [K], Tband=2 [K])
+LPout TK1(P=100000 [Pa])
 connect(TS1.out, THS.in)
 connect(THS.out, TK1.in)
-LPin  TS2(fluid$=Water, P=300000, T=400)
-LiquidThermostat THO(fluid$=Water, CdA=1e-5, rho=997, Topen=360, Tband=2)
-LPout TK2(P=100000)
+LPin  TS2(fluid$=Water, P=300000 [Pa], T=400 [K])
+LiquidThermostat THO(fluid$=Water, CdA=1e-5 [m^2], rho=997 [kg/m^3], Topen=360 [K], Tband=2 [K])
+LPout TK2(P=100000 [Pa])
 connect(TS2.out, THO.in)
 connect(THO.out, TK2.in)
-d_th = THO.in.mdot - 1e-5 * sqrt(2 * 997 * 200000)
+d_th = THO.in.mdot - 1e-5 [m^2] * sqrt(2 * 997 [kg/m^3] * 200000 [Pa])
 
-TABLE headmap(Q)
+TABLE headmap(Q [m^3/s]) [m]
   0      10
   0.01   10
 END
-LiquidSource  PS(fluid$=Water, mdot=1, P=100000, T=300)
-LiquidPumpMap PM(rho=997, eta=0.7, map$=headmap)
+LiquidSource  PS(fluid$=Water, mdot=1 [kg/s], P=100000 [Pa], T=300 [K])
+LiquidPumpMap PM(rho=997 [kg/m^3], eta=0.7, map$=headmap)
 LiquidSink    PK()
 connect(PS.out, PM.in)
 connect(PM.out, PK.in)
-d_pp = (PM.out.P - PM.in.P) - 97772.3005
-d_ph = (PM.out.h - PM.in.h) - 140.095
+d_pp = (PM.out.P - PM.in.P) - 97772.3005 [Pa]
+d_ph = (PM.out.h - PM.in.h) - 140.095 [J/kg]
 
 { CHECK ck1.in.h 112837.8113 0.1128378113292524 }
 { CHECK ck1.in.mdot 0.1996997747 1.9969977466186585e-7 }
@@ -13553,8 +13549,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-LiquidSource S(fluid$=Water, mdot=0.1, P=200000, T=300)
-LiquidColdPlate CP(Q=2000)
+LiquidSource S(fluid$=Water, mdot=0.1 [kg/s], P=200000 [Pa], T=300 [K])
+LiquidColdPlate CP(Q=2000 [W])
 LiquidSink K()
 connect(S.out, CP.in)
 connect(CP.out, K.in)
@@ -13629,8 +13625,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // LiquidExpansionTank pinning the loop pressure datum at a heater inlet;
 // the boundary supplies flow and enthalpy, the tank supplies P.
-LiquidExpansionTank ET(t1, P = 150000)
-LiquidColdPlate     HTR(t1, t2, Q = 3000)
+LiquidExpansionTank ET(t1, P = 150000 [Pa])
+LiquidColdPlate     HTR(t1, t2, Q = 3000 [W])
 LiquidSink          SK(t2)
 
 t1.mdot = 0.25
@@ -13716,10 +13712,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // mixer's \`in2.P = in1.P\` closes the loop and the solver sizes the orifice
 // that balances the two legs. That is the acausal property the component layer
 // exists for - nothing here says which way the computation runs.
-LiquidSource        LS(l1, fluid$ = Water, mdot = 0.8, P = 200000, T = 310)
+LiquidSource        LS(l1, fluid$ = Water, mdot = 0.8 [kg/s], P = 200000 [Pa], T = 310 [K])
 LiquidThreeWayValve TW(l1, l2, l3, u = 0.65)
-LiquidOrifice       OA(l2, l4, CdA = 4e-5, rho = 993, model$ = incompressible)
-LiquidOrifice       OB(l3, l5, CdA = cda_b, rho = 993, model$ = incompressible)
+LiquidOrifice       OA(l2, l4, CdA = 4e-5 [m^2], rho = 993 [kg/m^3], model$ = incompressible)
+LiquidOrifice       OB(l3, l5, CdA = cda_b, rho = 993 [kg/m^3], model$ = incompressible)
 LiquidMixer         LM(l4, l5, l6)
 LiquidSink          LK(l6)
 
@@ -13832,10 +13828,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // mixer's \`in2.P = in1.P\` closes the loop and the solver sizes the orifice
 // that balances the two legs. That is the acausal property the component layer
 // exists for - nothing here says which way the computation runs.
-LiquidSource        LS(l1, fluid$ = Water, mdot = 0.8, P = 200000, T = 310)
+LiquidSource        LS(l1, fluid$ = Water, mdot = 0.8 [kg/s], P = 200000 [Pa], T = 310 [K])
 LiquidThreeWayValve TW(l1, l2, l3, u = 0.65)
-LiquidOrifice       OA(l2, l4, CdA = 4e-5, rho = 993, model$ = incompressible)
-LiquidOrifice       OB(l3, l5, CdA = cda_b, rho = 993, model$ = incompressible)
+LiquidOrifice       OA(l2, l4, CdA = 4e-5 [m^2], rho = 993 [kg/m^3], model$ = incompressible)
+LiquidOrifice       OB(l3, l5, CdA = cda_b, rho = 993 [kg/m^3], model$ = incompressible)
 LiquidMixer         LM(l4, l5, l6)
 LiquidSink          LK(l6)
 
@@ -13929,8 +13925,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // LiquidPipe: Darcy drop with properties off the fluid (rho, mu from Water
 // at the inlet state). 1 kg/s through 8 m of DN20: V ~ 3.2 m/s, Re ~ 7e4.
-LiquidSource LS(l1, fluid$ = Water, mdot = 1.0, P = 300000, T = 300)
-LiquidPipe   LP(l1, l2, fluid$ = Water, L = 8, D = 0.02, rough = 1.5e-5)
+LiquidSource LS(l1, fluid$ = Water, mdot = 1.0 [kg/s], P = 300000 [Pa], T = 300 [K])
+LiquidPipe   LP(l1, l2, fluid$ = Water, L = 8 [m], D = 0.02 [m], rough = 1.5e-5 [m])
 LiquidSink   SK(l2)
 
 dp_pipe = l1.P - l2.P
@@ -14009,7 +14005,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-LiquidSource S(fluid$=Water, mdot=0.1, P=200000, T=300)
+LiquidSource S(fluid$=Water, mdot=0.1 [kg/s], P=200000 [Pa], T=300 [K])
 LiquidPump P(eta=0.7, fluid$=Water)
 LiquidSink K()
 connect(S.out, P.in)
@@ -14078,10 +14074,10 @@ $$
 \\begin{aligned}
 q &= \\frac{in.mdot}{rho} \\\\
 head &= \\text{map\\$}\\left(q\\right) \\\\
-out.p &= in.p + rho\\cdot 9.80665\\cdot head \\\\
+out.p &= in.p + rho\\cdot 9.80665\\,\\left[m/s^2\\right]\\cdot head \\\\
 out.mdot &= in.mdot \\\\
-out.h &= in.h + \\frac{9.80665\\,head}{eta} \\\\
-w &= \\frac{in.mdot\\cdot 9.80665\\cdot head}{eta}
+out.h &= in.h + \\frac{9.80665\\,\\left[m/s^2\\right]\\,head}{eta} \\\\
+w &= \\frac{in.mdot\\cdot 9.80665\\,\\left[m/s^2\\right]\\cdot head}{eta}
 \\end{aligned}
 $$
 
@@ -14108,7 +14104,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_th = 0 tol 1e-4
 // EXPECT d_pp = 0 tol 1e-3
 // EXPECT d_ph = 0 tol 1e-4
-LiquidSource  LS(fluid$=Water, mdot=2, P=200000, T=300)
+LiquidSource  LS(fluid$=Water, mdot=2 [kg/s], P=200000 [Pa], T=300 [K])
 LiquidThreeWayValve TW(u=0.3)
 LiquidSink KA()
 LiquidSink KB()
@@ -14125,41 +14121,41 @@ function [in] = LPout(P, domain$ = liquid)
 port(in)
   in.P = P
 end
-LPin  CS1(fluid$=Water, P=300000, T=300)
-LiquidCheckValve CVF(CdA=1e-5, rho=997, eps=100)
-LPout CK1(P=100000)
+LPin  CS1(fluid$=Water, P=300000 [Pa], T=300 [K])
+LiquidCheckValve CVF(CdA=1e-5 [m^2], rho=997 [kg/m^3], eps=100 [Pa])
+LPout CK1(P=100000 [Pa])
 connect(CS1.out, CVF.in)
 connect(CVF.out, CK1.in)
-d_cv = CVF.in.mdot - 1e-5 * sqrt(2 * 997 * 200000)
-LPin  CS2(fluid$=Water, P=100000, T=300)
-LiquidCheckValve CVR(CdA=1e-5, rho=997, eps=100)
-LPout CK2(P=300000)
+d_cv = CVF.in.mdot - 1e-5 [m^2] * sqrt(2 * 997 [kg/m^3] * 200000 [Pa])
+LPin  CS2(fluid$=Water, P=100000 [Pa], T=300 [K])
+LiquidCheckValve CVR(CdA=1e-5 [m^2], rho=997 [kg/m^3], eps=100 [Pa])
+LPout CK2(P=300000 [Pa])
 connect(CS2.out, CVR.in)
 connect(CVR.out, CK2.in)
 
-LPin  TS1(fluid$=Water, P=300000, T=300)
-LiquidThermostat THS(fluid$=Water, CdA=1e-5, rho=997, Topen=360, Tband=2)
-LPout TK1(P=100000)
+LPin  TS1(fluid$=Water, P=300000 [Pa], T=300 [K])
+LiquidThermostat THS(fluid$=Water, CdA=1e-5 [m^2], rho=997 [kg/m^3], Topen=360 [K], Tband=2 [K])
+LPout TK1(P=100000 [Pa])
 connect(TS1.out, THS.in)
 connect(THS.out, TK1.in)
-LPin  TS2(fluid$=Water, P=300000, T=400)
-LiquidThermostat THO(fluid$=Water, CdA=1e-5, rho=997, Topen=360, Tband=2)
-LPout TK2(P=100000)
+LPin  TS2(fluid$=Water, P=300000 [Pa], T=400 [K])
+LiquidThermostat THO(fluid$=Water, CdA=1e-5 [m^2], rho=997 [kg/m^3], Topen=360 [K], Tband=2 [K])
+LPout TK2(P=100000 [Pa])
 connect(TS2.out, THO.in)
 connect(THO.out, TK2.in)
-d_th = THO.in.mdot - 1e-5 * sqrt(2 * 997 * 200000)
+d_th = THO.in.mdot - 1e-5 [m^2] * sqrt(2 * 997 [kg/m^3] * 200000 [Pa])
 
-TABLE headmap(Q)
+TABLE headmap(Q [m^3/s]) [m]
   0      10
   0.01   10
 END
-LiquidSource  PS(fluid$=Water, mdot=1, P=100000, T=300)
-LiquidPumpMap PM(rho=997, eta=0.7, map$=headmap)
+LiquidSource  PS(fluid$=Water, mdot=1 [kg/s], P=100000 [Pa], T=300 [K])
+LiquidPumpMap PM(rho=997 [kg/m^3], eta=0.7, map$=headmap)
 LiquidSink    PK()
 connect(PS.out, PM.in)
 connect(PM.out, PK.in)
-d_pp = (PM.out.P - PM.in.P) - 97772.3005
-d_ph = (PM.out.h - PM.in.h) - 140.095
+d_pp = (PM.out.P - PM.in.P) - 97772.3005 [Pa]
+d_ph = (PM.out.h - PM.in.h) - 140.095 [J/kg]
 
 { CHECK ck1.in.h 112837.8113 0.1128378113292524 }
 { CHECK ck1.in.mdot 0.1996997747 1.9969977466186585e-7 }
@@ -14230,8 +14226,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-LiquidSource S(fluid$=Water, mdot=0.1, P=200000, T=300)
-LiquidColdPlate CP(Q=2000)
+LiquidSource S(fluid$=Water, mdot=0.1 [kg/s], P=200000 [Pa], T=300 [K])
+LiquidColdPlate CP(Q=2000 [W])
 LiquidSink K()
 connect(S.out, CP.in)
 connect(CP.out, K.in)
@@ -14313,8 +14309,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-LiquidSource S(fluid$=Water, mdot=0.1, P=200000, T=300)
-LiquidColdPlate CP(Q=2000)
+LiquidSource S(fluid$=Water, mdot=0.1 [kg/s], P=200000 [Pa], T=300 [K])
+LiquidColdPlate CP(Q=2000 [W])
 LiquidSink K()
 connect(S.out, CP.in)
 connect(CP.out, K.in)
@@ -14406,9 +14402,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // LiquidTank at its steady point: 0.3 kg/s of 350 K water through a mixed
 // 25 kg tank losing UA = 40 W/K to a 290 K wall; der(Tt) = 0 pins Tt just
 // under the feed temperature.
-LiquidSource  LS(l1, fluid$ = Water, mdot = 0.3, P = 200000, T = 350)
-LiquidTank    TK(l1, l2, wl, fluid$ = Water, m = 25, UA = 40, T0 = 330)
-ThermalSource AMB(wl, T = 290)
+LiquidSource  LS(l1, fluid$ = Water, mdot = 0.3 [kg/s], P = 200000 [Pa], T = 350 [K])
+LiquidTank    TK(l1, l2, wl, fluid$ = Water, m = 25 [kg], UA = 40 [W/K], T0 = 330 [K])
+ThermalSource AMB(wl, T = 290 [K])
 LiquidSink    SK(l2)
 
 t_tank = TK.Tt
@@ -14503,7 +14499,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_th = 0 tol 1e-4
 // EXPECT d_pp = 0 tol 1e-3
 // EXPECT d_ph = 0 tol 1e-4
-LiquidSource  LS(fluid$=Water, mdot=2, P=200000, T=300)
+LiquidSource  LS(fluid$=Water, mdot=2 [kg/s], P=200000 [Pa], T=300 [K])
 LiquidThreeWayValve TW(u=0.3)
 LiquidSink KA()
 LiquidSink KB()
@@ -14520,41 +14516,41 @@ function [in] = LPout(P, domain$ = liquid)
 port(in)
   in.P = P
 end
-LPin  CS1(fluid$=Water, P=300000, T=300)
-LiquidCheckValve CVF(CdA=1e-5, rho=997, eps=100)
-LPout CK1(P=100000)
+LPin  CS1(fluid$=Water, P=300000 [Pa], T=300 [K])
+LiquidCheckValve CVF(CdA=1e-5 [m^2], rho=997 [kg/m^3], eps=100 [Pa])
+LPout CK1(P=100000 [Pa])
 connect(CS1.out, CVF.in)
 connect(CVF.out, CK1.in)
-d_cv = CVF.in.mdot - 1e-5 * sqrt(2 * 997 * 200000)
-LPin  CS2(fluid$=Water, P=100000, T=300)
-LiquidCheckValve CVR(CdA=1e-5, rho=997, eps=100)
-LPout CK2(P=300000)
+d_cv = CVF.in.mdot - 1e-5 [m^2] * sqrt(2 * 997 [kg/m^3] * 200000 [Pa])
+LPin  CS2(fluid$=Water, P=100000 [Pa], T=300 [K])
+LiquidCheckValve CVR(CdA=1e-5 [m^2], rho=997 [kg/m^3], eps=100 [Pa])
+LPout CK2(P=300000 [Pa])
 connect(CS2.out, CVR.in)
 connect(CVR.out, CK2.in)
 
-LPin  TS1(fluid$=Water, P=300000, T=300)
-LiquidThermostat THS(fluid$=Water, CdA=1e-5, rho=997, Topen=360, Tband=2)
-LPout TK1(P=100000)
+LPin  TS1(fluid$=Water, P=300000 [Pa], T=300 [K])
+LiquidThermostat THS(fluid$=Water, CdA=1e-5 [m^2], rho=997 [kg/m^3], Topen=360 [K], Tband=2 [K])
+LPout TK1(P=100000 [Pa])
 connect(TS1.out, THS.in)
 connect(THS.out, TK1.in)
-LPin  TS2(fluid$=Water, P=300000, T=400)
-LiquidThermostat THO(fluid$=Water, CdA=1e-5, rho=997, Topen=360, Tband=2)
-LPout TK2(P=100000)
+LPin  TS2(fluid$=Water, P=300000 [Pa], T=400 [K])
+LiquidThermostat THO(fluid$=Water, CdA=1e-5 [m^2], rho=997 [kg/m^3], Topen=360 [K], Tband=2 [K])
+LPout TK2(P=100000 [Pa])
 connect(TS2.out, THO.in)
 connect(THO.out, TK2.in)
-d_th = THO.in.mdot - 1e-5 * sqrt(2 * 997 * 200000)
+d_th = THO.in.mdot - 1e-5 [m^2] * sqrt(2 * 997 [kg/m^3] * 200000 [Pa])
 
-TABLE headmap(Q)
+TABLE headmap(Q [m^3/s]) [m]
   0      10
   0.01   10
 END
-LiquidSource  PS(fluid$=Water, mdot=1, P=100000, T=300)
-LiquidPumpMap PM(rho=997, eta=0.7, map$=headmap)
+LiquidSource  PS(fluid$=Water, mdot=1 [kg/s], P=100000 [Pa], T=300 [K])
+LiquidPumpMap PM(rho=997 [kg/m^3], eta=0.7, map$=headmap)
 LiquidSink    PK()
 connect(PS.out, PM.in)
 connect(PM.out, PK.in)
-d_pp = (PM.out.P - PM.in.P) - 97772.3005
-d_ph = (PM.out.h - PM.in.h) - 140.095
+d_pp = (PM.out.P - PM.in.P) - 97772.3005 [Pa]
+d_ph = (PM.out.h - PM.in.h) - 140.095 [J/kg]
 
 { CHECK ck1.in.h 112837.8113 0.1128378113292524 }
 { CHECK ck1.in.mdot 0.1996997747 1.9969977466186585e-7 }
@@ -14637,10 +14633,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // mixer's \`in2.P = in1.P\` closes the loop and the solver sizes the orifice
 // that balances the two legs. That is the acausal property the component layer
 // exists for - nothing here says which way the computation runs.
-LiquidSource        LS(l1, fluid$ = Water, mdot = 0.8, P = 200000, T = 310)
+LiquidSource        LS(l1, fluid$ = Water, mdot = 0.8 [kg/s], P = 200000 [Pa], T = 310 [K])
 LiquidThreeWayValve TW(l1, l2, l3, u = 0.65)
-LiquidOrifice       OA(l2, l4, CdA = 4e-5, rho = 993, model$ = incompressible)
-LiquidOrifice       OB(l3, l5, CdA = cda_b, rho = 993, model$ = incompressible)
+LiquidOrifice       OA(l2, l4, CdA = 4e-5 [m^2], rho = 993 [kg/m^3], model$ = incompressible)
+LiquidOrifice       OB(l3, l5, CdA = cda_b, rho = 993 [kg/m^3], model$ = incompressible)
 LiquidMixer         LM(l4, l5, l6)
 LiquidSink          LK(l6)
 
@@ -14694,7 +14690,7 @@ LiquidVolume inst(C, P0, domain$)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`C\` | Number | Capacitance [F]. |
+| \`C\` | Number | Hydraulic capacitance, stored mass per unit pressure [kg/Pa]. |
 | \`P0\` | Number | Reference/initial pressure [Pa]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
@@ -14722,8 +14718,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // LiquidVolume with no DYNAMIC block: der(in.P) takes the steady branch,
 // recovering in.mdot = out.mdot through the compliance node.
-LiquidSource LS(l1, fluid$ = Water, mdot = 0.5, P = 250000, T = 300)
-LiquidVolume LV(l1, l2, C = 1e-8, P0 = 250000)
+LiquidSource LS(l1, fluid$ = Water, mdot = 0.5 [kg/s], P = 250000 [Pa], T = 300 [K])
+LiquidVolume LV(l1, l2, C = 1e-8 [kg/Pa], P0 = 250000 [Pa])
 LiquidSink   SK(l2)
 
 l2.P  = 250000
@@ -14807,11 +14803,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-LiquidSource    SRC(fluid$=EG50, mdot=0.3, P=200000, T=315)
+LiquidSource    SRC(fluid$=EG50, mdot=0.3 [kg/s], P=200000 [Pa], T=315 [K])
 LiquidPump      PUMP(fluid$=EG50, eta=0.6)
-LiquidColdPlate CP(Q=5000)
-LiquidWallHX    RAD(fluid$=EG50, UA=800)
-ThermalSource   AMB(T=298)
+LiquidColdPlate CP(Q=5000 [W])
+LiquidWallHX    RAD(fluid$=EG50, UA=800 [W/K])
+ThermalSource   AMB(T=298 [K])
 LiquidSink      OUT()
 connect(SRC.out, PUMP.in)
 connect(PUMP.out, CP.in)
@@ -14886,7 +14882,7 @@ $$
 \\text{der}\\left(lvl\\right) &= \\frac{in.mdot - out.mdot}{rho\\cdot a_{t}} \\\\
 \\text{init}\\left(lvl\\right) &= l0 \\\\
 in.p &= p0 \\\\
-out.p &= p0 + rho\\cdot 9.80665\\cdot lvl \\\\
+out.p &= p0 + rho\\cdot 9.80665\\,\\left[m/s^2\\right]\\cdot lvl \\\\
 out.h &= in.h
 \\end{aligned}
 $$
@@ -14904,7 +14900,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // OpenTank at steady throughflow: the free surface sees P0, the outlet the
 // gravity head, and der(lvl) = 0 equalises the flows; the pinned outlet
 // pressure sizes the level (~1.02 m of water).
-OpenTank TK(o1, o2, A_t = 0.5, P0 = 101325, rho = 998, L0 = 1.0)
+OpenTank TK(o1, o2, A_t = 0.5 [m^2], P0 = 101325 [Pa], rho = 998 [kg/m^3], L0 = 1.0 [m])
 LiquidSink SK(o2)
 
 o1.mdot = 1.0
@@ -15003,8 +14999,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // ThermalStorageTank charging at steady state: 340 K water into the top
 // node, three-node stratification with kmix = 20 W/K mixing and small
 // shell losses to 293 K ambient; der(Ti) = 0 solves the 3x3 node balance.
-LiquidSource       LS(l1, fluid$ = Water, mdot = 0.2, P = 150000, T = 340)
-ThermalStorageTank TST(l1, l2, fluid$ = Water, m_node = 50, cp_f = 4180, UA_loss = 5, T_amb = 293, kmix = 20, T10 = 320, T20 = 310, T30 = 300)
+LiquidSource       LS(l1, fluid$ = Water, mdot = 0.2 [kg/s], P = 150000 [Pa], T = 340 [K])
+ThermalStorageTank TST(l1, l2, fluid$ = Water, m_node = 50 [kg], cp_f = 4180 [J/kg-K], UA_loss = 5 [W/K], T_amb = 293 [K], kmix = 20 [W/K], T10 = 320 [K], T20 = 310 [K], T30 = 300 [K])
 LiquidSink         SK(l2)
 
 t_top    = TST.T1
@@ -15092,21 +15088,21 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT bd.b.w = 25 tol 1e-9
 // EXPECT brk.a.tau = 30 tol 0.01
 // EXPECT ld2.a.w = 15 tol 0.01
-SpeedSource SS1(w=10)
+SpeedSource SS1(w=10 [rad/s])
 MechGround  MG1()
-ScrewDrive  SDX(lead=0.01)
-TransDamper TD1(c=100)
+ScrewDrive  SDX(lead=0.01 [m])
+TransDamper TD1(c=100 [kg/s])
 TransGround TG1()
 connect(SS1.a, SDX.shaft)
 connect(SS1.b, MG1.port)
 connect(SDX.rod, TD1.a)
 connect(TD1.b, TG1.port)
-d_pow = SDX.shaft.tau * 10 + SDX.rod.f * SDX.rod.vel
+d_pow = SDX.shaft.tau * 10 [rad/s] + SDX.rod.f * SDX.rod.vel
 
-SpeedSource SS2(w=10)
+SpeedSource SS2(w=10 [rad/s])
 MechGround  MG2()
-RackPinion  RP(r=0.1)
-TransDamper TD2(c=100)
+RackPinion  RP(r=0.1 [m])
+TransDamper TD2(c=100 [kg/s])
 TransGround TG2()
 connect(SS2.a, RP.shaft)
 connect(SS2.b, MG2.port)
@@ -15119,20 +15115,20 @@ port(b)
   a.vel - b.vel = v
   a.f + b.f = 0
 end
-VelSource   VS(v=1)
+VelSource   VS(v=1 [m/s])
 TransGround TG3()
 TransGround TG4()
 Lever       LV(ratio=2)
-TransDamper TD3(c=10)
+TransDamper TD3(c=10 [kg/s])
 connect(VS.a, LV.b)
 connect(VS.b, TG3.port)
 connect(LV.a, TD3.a)
 connect(TD3.b, TG4.port)
 
-SpeedSource SS3(w=50)
+SpeedSource SS3(w=50 [rad/s])
 MechGround  MG3()
 BeltDrive   BD(ratio=2, eta=0.9)
-RotationalDamper LD(c=1)
+RotationalDamper LD(c=1 [N-m-s])
 MechGround  MG4()
 connect(SS3.a, BD.a)
 connect(SS3.b, MG3.port)
@@ -15140,9 +15136,9 @@ connect(BD.b, LD.a)
 connect(LD.b, MG4.port)
 
 SigConstant  UB(k=0.8)
-TorqueSource TSB(T=30)
-Brake        BRK(Tmax=50, eps=0.01)
-RotationalDamper LD2(c=2)
+TorqueSource TSB(T=30 [N-m])
+Brake        BRK(Tmax=50 [N-m], eps=0.01 [rad/s])
+RotationalDamper LD2(c=2 [N-m-s])
 MechGround   MGB1()
 MechGround   MGB2()
 connect(UB.out, BRK.u)
@@ -15234,21 +15230,21 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT bd.b.w = 25 tol 1e-9
 // EXPECT brk.a.tau = 30 tol 0.01
 // EXPECT ld2.a.w = 15 tol 0.01
-SpeedSource SS1(w=10)
+SpeedSource SS1(w=10 [rad/s])
 MechGround  MG1()
-ScrewDrive  SDX(lead=0.01)
-TransDamper TD1(c=100)
+ScrewDrive  SDX(lead=0.01 [m])
+TransDamper TD1(c=100 [kg/s])
 TransGround TG1()
 connect(SS1.a, SDX.shaft)
 connect(SS1.b, MG1.port)
 connect(SDX.rod, TD1.a)
 connect(TD1.b, TG1.port)
-d_pow = SDX.shaft.tau * 10 + SDX.rod.f * SDX.rod.vel
+d_pow = SDX.shaft.tau * 10 [rad/s] + SDX.rod.f * SDX.rod.vel
 
-SpeedSource SS2(w=10)
+SpeedSource SS2(w=10 [rad/s])
 MechGround  MG2()
-RackPinion  RP(r=0.1)
-TransDamper TD2(c=100)
+RackPinion  RP(r=0.1 [m])
+TransDamper TD2(c=100 [kg/s])
 TransGround TG2()
 connect(SS2.a, RP.shaft)
 connect(SS2.b, MG2.port)
@@ -15261,20 +15257,20 @@ port(b)
   a.vel - b.vel = v
   a.f + b.f = 0
 end
-VelSource   VS(v=1)
+VelSource   VS(v=1 [m/s])
 TransGround TG3()
 TransGround TG4()
 Lever       LV(ratio=2)
-TransDamper TD3(c=10)
+TransDamper TD3(c=10 [kg/s])
 connect(VS.a, LV.b)
 connect(VS.b, TG3.port)
 connect(LV.a, TD3.a)
 connect(TD3.b, TG4.port)
 
-SpeedSource SS3(w=50)
+SpeedSource SS3(w=50 [rad/s])
 MechGround  MG3()
 BeltDrive   BD(ratio=2, eta=0.9)
-RotationalDamper LD(c=1)
+RotationalDamper LD(c=1 [N-m-s])
 MechGround  MG4()
 connect(SS3.a, BD.a)
 connect(SS3.b, MG3.port)
@@ -15282,9 +15278,9 @@ connect(BD.b, LD.a)
 connect(LD.b, MG4.port)
 
 SigConstant  UB(k=0.8)
-TorqueSource TSB(T=30)
-Brake        BRK(Tmax=50, eps=0.01)
-RotationalDamper LD2(c=2)
+TorqueSource TSB(T=30 [N-m])
+Brake        BRK(Tmax=50 [N-m], eps=0.01 [rad/s])
+RotationalDamper LD2(c=2 [N-m-s])
 MechGround   MGB1()
 MechGround   MGB2()
 connect(UB.out, BRK.u)
@@ -15375,10 +15371,10 @@ TABLE prof(th)
   0    0
   12   0.06
 END
-SpeedSource SS(w = 10)
+SpeedSource SS(w = 10 [rad/s])
 MechGround  MG()
 Cam         CAM(prof$ = prof, theta0 = 0)
-TransDamper TD(c = 100)
+TransDamper TD(c = 100 [kg/s])
 TransGround TG()
 connect(SS.a, CAM.shaft)
 connect(SS.b, MG.port)
@@ -15461,9 +15457,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // CamFollower steady: a 50 N preload on the rod node compresses the internal
 // 5000 N/m return spring by 0.01 m; mass and node settle at zero velocity.
 // EXPECT v_rod = 0 tol 1e-9
-ForceSource FS(F = 50)
+ForceSource FS(F = 50 [N])
 TransGround G()
-CamFollower CF(m = 2, kspring = 5000, x0 = 0, v0 = 0)
+CamFollower CF(m = 2 [kg], kspring = 5000 [N/m], x0 = 0 [m], v0 = 0 [m/s])
 connect(FS.a, CF.rod)
 connect(FS.b, G.port)
 v_rod = CF.rod.vel
@@ -15513,7 +15509,7 @@ Clutch inst(Tmax, eng, eps)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`Tmax\` | Number | Maximum temperature [K]. |
+| \`Tmax\` | Number | Maximum transmissible torque [N·m]. |
 | \`eng\` | Number | Engagement fraction (0–1). |
 | \`eps\` | Number | Slip smoothing speed [rad/s] — regularizes the sign of the slip speed. |
 
@@ -15539,9 +15535,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TorqueSource     TS(T=30)
-Clutch           CL(Tmax=50, eng=1, eps=0.01)
-RotationalDamper LOAD(c=2)
+TorqueSource     TS(T=30 [N-m])
+Clutch           CL(Tmax=50 [N-m], eng=1, eps=0.01 [rad/s])
+RotationalDamper LOAD(c=2 [N-m-s])
 MechGround       GS()
 MechGround       GL()
 connect(TS.a, CL.a)
@@ -15622,9 +15618,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // ClutchCmd: engagement 0.5 commanded over the signal port, slipping 3 rad/s
 // -> carried torque u*Tmax = 40 N.m.
 // EXPECT tau_c = 40 tol 1e-6
-ClutchCmd   CL(Tmax = 80, eps = 0.01)
+ClutchCmd   CL(Tmax = 80 [N-m], eps = 0.01 [rad/s])
 SigConstant U(k = 0.5)
-SpeedSource SS(w = 3)
+SpeedSource SS(w = 3 [rad/s])
 MechGround  G1()
 MechGround  G2()
 connect(SS.a, CL.a)
@@ -15711,8 +15707,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // term), and a 100 N press penetrates the 1e5 N/m contact by F/k = 1 mm past
 // the 2 mm gap: x = 0.003 m.
 // EXPECT x_e = 0.003 tol 1e-5
-ForceSource FS(F = 100)
-EndStop     ES(gap = 0.002, k = 1e5, c = 200, eps = 1e-5, x0 = 0)
+ForceSource FS(F = 100 [N])
+EndStop     ES(gap = 0.002 [m], k = 1e5 [N/m], c = 200 [kg/s], eps = 1e-5 [m], x0 = 0 [m])
 TransGround G1()
 connect(FS.a, ES.port)
 connect(FS.b, G1.port)
@@ -15787,10 +15783,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 // 3-way translational node via connect: vel equal, sum f = 0.
-ForceSource FS(F = 100)
+ForceSource FS(F = 100 [N])
 TransGround TG()
-TransDamper D1(c = 5)
-TransDamper D2(c = 15)
+TransDamper D1(c = 5 [kg/s])
+TransDamper D2(c = 15 [kg/s])
 connect(FS.a, TG.port, D1.b, D2.b)
 connect(FS.b, D1.a, D2.a)
 vm = D1.a.vel
@@ -15874,18 +15870,18 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT fw_eng = 500 tol 1e-3
 // EXPECT fw_ovr = 0 tol 1e-3
 
-SpeedSource FA(w=5)
+SpeedSource FA(w=5 [rad/s])
 MechGround  FGA()
-Freewheel   FW1(k=100, eps=1e-3)
+Freewheel   FW1(k=100 [N-m-s], eps=1e-3 [rad/s])
 MechGround  FGB()
 connect(FA.a, FW1.a)
 connect(FA.b, FGA.port)
 connect(FW1.b, FGB.port)
 fw_eng = FW1.a.tau
 
-SpeedSource FC(w=-5)
+SpeedSource FC(w=-5 [rad/s])
 MechGround  FGC()
-Freewheel   FW2(k=100, eps=1e-3)
+Freewheel   FW2(k=100 [N-m-s], eps=1e-3 [rad/s])
 MechGround  FGD()
 connect(FC.a, FW2.a)
 connect(FC.b, FGC.port)
@@ -15937,10 +15933,10 @@ Friction inst(Fc, Fs, vs, bv, eps)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`Fc\` | Number | Coulomb friction force [N]. |
-| \`Fs\` | Number | Static friction force [N]. |
-| \`vs\` | Number | Reference / slip velocity [m/s]. |
-| \`bv\` | Number | Viscous-friction coefficient. |
+| \`Fc\` | Number | Coulomb (kinetic) friction torque [N·m]. |
+| \`Fs\` | Number | Static (breakaway) friction torque [N·m]. |
+| \`vs\` | Number | Stribeck speed [rad/s]. |
+| \`bv\` | Number | Viscous friction coefficient [N·m·s]. |
 | \`eps\` | Number | Stick–slip smoothing speed [rad/s] — regularizes the sign of the slip speed. |
 
 ## Constitutive Equations
@@ -15965,8 +15961,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TorqueSource TS(T=5)
-Friction     FR(Fc=2, Fs=3, vs=1, bv=0.5, eps=0.01)
+TorqueSource TS(T=5 [N-m])
+Friction     FR(Fc=2 [N-m], Fs=3 [N-m], vs=1 [rad/s], bv=0.5 [N-m-s], eps=0.01 [rad/s])
 MechGround   G()
 connect(TS.a, FR.a)
 connect(TS.b, FR.b, G.port)
@@ -16039,9 +16035,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TorqueSource     TS(T=10)
+TorqueSource     TS(T=10 [N-m])
 Gear             G(ratio=2)
-RotationalDamper D(c=0.5)
+RotationalDamper D(c=0.5 [N-m-s])
 MechGround       M1()
 MechGround       M2()
 connect(TS.a, G.in)
@@ -16118,9 +16114,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TorqueSource     TS(T=12)
-Inertia          J(J=3, w0=0)
-RotationalDamper D(c=0.6)
+TorqueSource     TS(T=12 [N-m])
+Inertia          J(J=3 [kg-m^2], w0=0 [rad/s])
+RotationalDamper D(c=0.6 [N-m-s])
 MechGround       G()
 connect(TS.a, J.port, D.a)
 connect(TS.b, D.b, G.port)
@@ -16204,21 +16200,21 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT bd.b.w = 25 tol 1e-9
 // EXPECT brk.a.tau = 30 tol 0.01
 // EXPECT ld2.a.w = 15 tol 0.01
-SpeedSource SS1(w=10)
+SpeedSource SS1(w=10 [rad/s])
 MechGround  MG1()
-ScrewDrive  SDX(lead=0.01)
-TransDamper TD1(c=100)
+ScrewDrive  SDX(lead=0.01 [m])
+TransDamper TD1(c=100 [kg/s])
 TransGround TG1()
 connect(SS1.a, SDX.shaft)
 connect(SS1.b, MG1.port)
 connect(SDX.rod, TD1.a)
 connect(TD1.b, TG1.port)
-d_pow = SDX.shaft.tau * 10 + SDX.rod.f * SDX.rod.vel
+d_pow = SDX.shaft.tau * 10 [rad/s] + SDX.rod.f * SDX.rod.vel
 
-SpeedSource SS2(w=10)
+SpeedSource SS2(w=10 [rad/s])
 MechGround  MG2()
-RackPinion  RP(r=0.1)
-TransDamper TD2(c=100)
+RackPinion  RP(r=0.1 [m])
+TransDamper TD2(c=100 [kg/s])
 TransGround TG2()
 connect(SS2.a, RP.shaft)
 connect(SS2.b, MG2.port)
@@ -16231,20 +16227,20 @@ port(b)
   a.vel - b.vel = v
   a.f + b.f = 0
 end
-VelSource   VS(v=1)
+VelSource   VS(v=1 [m/s])
 TransGround TG3()
 TransGround TG4()
 Lever       LV(ratio=2)
-TransDamper TD3(c=10)
+TransDamper TD3(c=10 [kg/s])
 connect(VS.a, LV.b)
 connect(VS.b, TG3.port)
 connect(LV.a, TD3.a)
 connect(TD3.b, TG4.port)
 
-SpeedSource SS3(w=50)
+SpeedSource SS3(w=50 [rad/s])
 MechGround  MG3()
 BeltDrive   BD(ratio=2, eta=0.9)
-RotationalDamper LD(c=1)
+RotationalDamper LD(c=1 [N-m-s])
 MechGround  MG4()
 connect(SS3.a, BD.a)
 connect(SS3.b, MG3.port)
@@ -16252,9 +16248,9 @@ connect(BD.b, LD.a)
 connect(LD.b, MG4.port)
 
 SigConstant  UB(k=0.8)
-TorqueSource TSB(T=30)
-Brake        BRK(Tmax=50, eps=0.01)
-RotationalDamper LD2(c=2)
+TorqueSource TSB(T=30 [N-m])
+Brake        BRK(Tmax=50 [N-m], eps=0.01 [rad/s])
+RotationalDamper LD2(c=2 [N-m-s])
 MechGround   MGB1()
 MechGround   MGB2()
 connect(UB.out, BRK.u)
@@ -16324,8 +16320,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TorqueSource     TS(T=10)
-RotationalDamper D(c=0.5)
+TorqueSource     TS(T=10 [N-m])
+RotationalDamper D(c=0.5 [N-m-s])
 MechGround       G()
 connect(TS.a, D.a)
 connect(TS.b, D.b, G.port)
@@ -16375,7 +16371,7 @@ Planetary inst(g)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`g\` | Number | Gravitational acceleration [m/s²]. |
+| \`g\` | Number | Ring-to-sun tooth ratio [-]. |
 
 ## Constitutive Equations
 
@@ -16399,9 +16395,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TorqueSource     TS(T=10)
+TorqueSource     TS(T=10 [N-m])
 Planetary        PG(g=2)
-RotationalDamper LOAD(c=1)
+RotationalDamper LOAD(c=1 [N-m-s])
 MechGround       GR()
 MechGround       GS()
 MechGround       GL()
@@ -16490,21 +16486,21 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT bd.b.w = 25 tol 1e-9
 // EXPECT brk.a.tau = 30 tol 0.01
 // EXPECT ld2.a.w = 15 tol 0.01
-SpeedSource SS1(w=10)
+SpeedSource SS1(w=10 [rad/s])
 MechGround  MG1()
-ScrewDrive  SDX(lead=0.01)
-TransDamper TD1(c=100)
+ScrewDrive  SDX(lead=0.01 [m])
+TransDamper TD1(c=100 [kg/s])
 TransGround TG1()
 connect(SS1.a, SDX.shaft)
 connect(SS1.b, MG1.port)
 connect(SDX.rod, TD1.a)
 connect(TD1.b, TG1.port)
-d_pow = SDX.shaft.tau * 10 + SDX.rod.f * SDX.rod.vel
+d_pow = SDX.shaft.tau * 10 [rad/s] + SDX.rod.f * SDX.rod.vel
 
-SpeedSource SS2(w=10)
+SpeedSource SS2(w=10 [rad/s])
 MechGround  MG2()
-RackPinion  RP(r=0.1)
-TransDamper TD2(c=100)
+RackPinion  RP(r=0.1 [m])
+TransDamper TD2(c=100 [kg/s])
 TransGround TG2()
 connect(SS2.a, RP.shaft)
 connect(SS2.b, MG2.port)
@@ -16517,20 +16513,20 @@ port(b)
   a.vel - b.vel = v
   a.f + b.f = 0
 end
-VelSource   VS(v=1)
+VelSource   VS(v=1 [m/s])
 TransGround TG3()
 TransGround TG4()
 Lever       LV(ratio=2)
-TransDamper TD3(c=10)
+TransDamper TD3(c=10 [kg/s])
 connect(VS.a, LV.b)
 connect(VS.b, TG3.port)
 connect(LV.a, TD3.a)
 connect(TD3.b, TG4.port)
 
-SpeedSource SS3(w=50)
+SpeedSource SS3(w=50 [rad/s])
 MechGround  MG3()
 BeltDrive   BD(ratio=2, eta=0.9)
-RotationalDamper LD(c=1)
+RotationalDamper LD(c=1 [N-m-s])
 MechGround  MG4()
 connect(SS3.a, BD.a)
 connect(SS3.b, MG3.port)
@@ -16538,9 +16534,9 @@ connect(BD.b, LD.a)
 connect(LD.b, MG4.port)
 
 SigConstant  UB(k=0.8)
-TorqueSource TSB(T=30)
-Brake        BRK(Tmax=50, eps=0.01)
-RotationalDamper LD2(c=2)
+TorqueSource TSB(T=30 [N-m])
+Brake        BRK(Tmax=50 [N-m], eps=0.01 [rad/s])
+RotationalDamper LD2(c=2 [N-m-s])
 MechGround   MGB1()
 MechGround   MGB2()
 connect(UB.out, BRK.u)
@@ -16594,7 +16590,7 @@ RotationalDamper inst(c)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`c\` | Number | Damping / specific-heat coefficient. |
+| \`c\` | Number | Rotational damping coefficient [N·m·s]. |
 
 ## Constitutive Equations
 
@@ -16617,8 +16613,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TorqueSource     TS(T=10)
-RotationalDamper D(c=0.5)
+TorqueSource     TS(T=10 [N-m])
+RotationalDamper D(c=0.5 [N-m-s])
 MechGround       G()
 connect(TS.a, D.a)
 connect(TS.b, D.b, G.port)
@@ -16668,7 +16664,7 @@ RotationalSpring inst(k, theta0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`k\` | Number | Stiffness / conductivity. |
+| \`k\` | Number | Torsional stiffness, torque per radian [N·m]. |
 | \`theta0\` | Number | Initial angle [rad]. |
 
 ## Constitutive Equations
@@ -16697,8 +16693,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // RotationalSpring steady: der(theta) -> 0 locks both ends (b grounded), and
 // the 12 N.m source winds the 400 N.m/rad spring to theta = 0.03 rad.
 // EXPECT th = 0.03 tol 1e-9
-TorqueSource     TQ(T = 12)
-RotationalSpring SP(k = 400, theta0 = 0)
+TorqueSource     TQ(T = 12 [N-m])
+RotationalSpring SP(k = 400 [N-m], theta0 = 0)
 MechGround       G1()
 MechGround       G2()
 connect(TQ.a, SP.a)
@@ -16785,21 +16781,21 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT bd.b.w = 25 tol 1e-9
 // EXPECT brk.a.tau = 30 tol 0.01
 // EXPECT ld2.a.w = 15 tol 0.01
-SpeedSource SS1(w=10)
+SpeedSource SS1(w=10 [rad/s])
 MechGround  MG1()
-ScrewDrive  SDX(lead=0.01)
-TransDamper TD1(c=100)
+ScrewDrive  SDX(lead=0.01 [m])
+TransDamper TD1(c=100 [kg/s])
 TransGround TG1()
 connect(SS1.a, SDX.shaft)
 connect(SS1.b, MG1.port)
 connect(SDX.rod, TD1.a)
 connect(TD1.b, TG1.port)
-d_pow = SDX.shaft.tau * 10 + SDX.rod.f * SDX.rod.vel
+d_pow = SDX.shaft.tau * 10 [rad/s] + SDX.rod.f * SDX.rod.vel
 
-SpeedSource SS2(w=10)
+SpeedSource SS2(w=10 [rad/s])
 MechGround  MG2()
-RackPinion  RP(r=0.1)
-TransDamper TD2(c=100)
+RackPinion  RP(r=0.1 [m])
+TransDamper TD2(c=100 [kg/s])
 TransGround TG2()
 connect(SS2.a, RP.shaft)
 connect(SS2.b, MG2.port)
@@ -16812,20 +16808,20 @@ port(b)
   a.vel - b.vel = v
   a.f + b.f = 0
 end
-VelSource   VS(v=1)
+VelSource   VS(v=1 [m/s])
 TransGround TG3()
 TransGround TG4()
 Lever       LV(ratio=2)
-TransDamper TD3(c=10)
+TransDamper TD3(c=10 [kg/s])
 connect(VS.a, LV.b)
 connect(VS.b, TG3.port)
 connect(LV.a, TD3.a)
 connect(TD3.b, TG4.port)
 
-SpeedSource SS3(w=50)
+SpeedSource SS3(w=50 [rad/s])
 MechGround  MG3()
 BeltDrive   BD(ratio=2, eta=0.9)
-RotationalDamper LD(c=1)
+RotationalDamper LD(c=1 [N-m-s])
 MechGround  MG4()
 connect(SS3.a, BD.a)
 connect(SS3.b, MG3.port)
@@ -16833,9 +16829,9 @@ connect(BD.b, LD.a)
 connect(LD.b, MG4.port)
 
 SigConstant  UB(k=0.8)
-TorqueSource TSB(T=30)
-Brake        BRK(Tmax=50, eps=0.01)
-RotationalDamper LD2(c=2)
+TorqueSource TSB(T=30 [N-m])
+Brake        BRK(Tmax=50 [N-m], eps=0.01 [rad/s])
+RotationalDamper LD2(c=2 [N-m-s])
 MechGround   MGB1()
 MechGround   MGB2()
 connect(UB.out, BRK.u)
@@ -16912,8 +16908,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-GradeRoadLoad ROAD(Crr=50, Caero=2, m=1500, g=9.81, grade=0.05)
-SpeedSource   SS(w=30)
+GradeRoadLoad ROAD(Crr=50 [N-m], Caero=2 [kg-m^2], m=1500 [kg], g=9.81 [m/s^2], grade=0.05)
+SpeedSource   SS(w=30 [rad/s])
 MechGround    G()
 connect(SS.a, ROAD.shaft)
 connect(SS.b, G.port)
@@ -16963,7 +16959,7 @@ TorqueSource inst(T)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`T\` | Number | Temperature [K]. |
+| \`T\` | Number | Applied torque [N·m]. |
 
 ## Constitutive Equations
 
@@ -16986,8 +16982,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TorqueSource     TS(T=10)
-RotationalDamper D(c=0.5)
+TorqueSource     TS(T=10 [N-m])
+RotationalDamper D(c=0.5 [N-m-s])
 MechGround       G()
 connect(TS.a, D.a)
 connect(TS.b, D.b, G.port)
@@ -17070,8 +17066,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // TorsionalBacklash steady: 15 N.m winds the 1000 N.m/rad spring past the
 // +-0.01 rad lash, so th = half + T/k = 0.025 rad (hinge width 1e-4).
 // EXPECT th_b = 0.025 tol 1e-4
-TorqueSource      TQ(T = 15)
-TorsionalBacklash BL(k = 1000, half = 0.01, eps = 1e-4, theta0 = 0)
+TorqueSource      TQ(T = 15 [N-m])
+TorsionalBacklash BL(k = 1000 [N-m], half = 0.01, eps = 1e-4, theta0 = 0)
 MechGround        G1()
 MechGround        G2()
 connect(TQ.a, BL.a)
@@ -17124,7 +17120,7 @@ TransDamper inst(c)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`c\` | Number | Damping / specific-heat coefficient. |
+| \`c\` | Number | Damping coefficient, force per unit speed [kg/s]. |
 
 ## Constitutive Equations
 
@@ -17147,9 +17143,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-PneumaticSupply   SUP(fluid$=Air, P=300000, T=300)
-PneumaticActuator ACT(fluid$=Air, area=0.01, Patm=100000)
-TransDamper       D(c=1000)
+PneumaticSupply   SUP(fluid$=Air, P=300000 [Pa], T=300 [K])
+PneumaticActuator ACT(fluid$=Air, area=0.01 [m^2], Patm=100000 [Pa])
+TransDamper       D(c=1000 [kg/s])
 TransGround       G()
 connect(SUP.out, ACT.in)
 connect(ACT.rod, D.a)
@@ -17216,9 +17212,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-PneumaticSupply   SUP(fluid$=Air, P=300000, T=300)
-PneumaticActuator ACT(fluid$=Air, area=0.01, Patm=100000)
-TransDamper       D(c=1000)
+PneumaticSupply   SUP(fluid$=Air, P=300000 [Pa], T=300 [K])
+PneumaticActuator ACT(fluid$=Air, area=0.01 [m^2], Patm=100000 [Pa])
+TransDamper       D(c=1000 [kg/s])
 TransGround       G()
 connect(SUP.out, ACT.in)
 connect(ACT.rod, D.a)
@@ -17293,9 +17289,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-ForceSource FS(F=10)
-TransMass   M(m=2, v0=0)
-TransDamper D(c=0.5)
+ForceSource FS(F=10 [N])
+TransMass   M(m=2 [kg], v0=0 [m/s])
+TransDamper D(c=0.5 [kg/s])
 TransGround GS()
 TransGround GD()
 connect(FS.a, M.port, D.a)
@@ -17378,8 +17374,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // TransSpring steady: der(x) -> 0 locks both ends (b grounded), and the 50 N
 // source compresses the 2000 N/m spring to x = 0.025 m.
 // EXPECT x_s = 0.025 tol 1e-9
-ForceSource FS(F = 50)
-TransSpring SP(k = 2000, x0 = 0)
+ForceSource FS(F = 50 [N])
+TransSpring SP(k = 2000 [N/m], x0 = 0 [m])
 TransGround G1()
 TransGround G2()
 connect(FS.a, SP.a)
@@ -17474,11 +17470,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // tau_b = 90 N.m, and Pf = 4500 W = hA*(Tr - T_amb) closes the balance.
 // EXPECT tr = 600 tol 1e-6
 // EXPECT taub = 90 tol 1e-6
-SpeedSource       SS(w = 50)
+SpeedSource       SS(w = 50 [rad/s])
 MechGround        G1()
 MechGround        G2()
 SigConstant       U(k = 0.4)
-WheelBrakeThermal WB(Tmax = 300, eps = 0.01, C = 10, hA = 15, T_amb = 300, T_fade = 600, k_fade = 0.5, eps_f = 30, T0 = 300)
+WheelBrakeThermal WB(Tmax = 300 [N-m], eps = 0.01 [rad/s], C = 10 [J/K], hA = 15 [W/K], T_amb = 300 [K], T_fade = 600 [K], k_fade = 0.5, eps_f = 30 [K], T0 = 300 [K])
 connect(SS.a, WB.a)
 connect(SS.b, G1.port)
 connect(WB.b, G2.port)
@@ -17572,9 +17568,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // mixes with 1 kg/s outdoor air at 308.15 K, is filtered (K = 50, 20% fouled),
 // cooled to a 285.15 K saturated coil outlet, reheated 3 kW, and delivered by
 // a 600 Pa fan at 65% efficiency.
-MoistAirSource RA(P=101325, T=297.15, W=0.009, mdot=2)
-MoistAirSource OA(P=101325, T=308.15, W=0.016, mdot=1)
-AHU            UNIT(Kf=50, foul=1.2, Tc=285.15, Qh=3000, dPfan=600, eta_fan=0.65)
+MoistAirSource RA(P=101325 [Pa], T=297.15 [K], W=0.009, mdot=2 [kg/s])
+MoistAirSource OA(P=101325 [Pa], T=308.15 [K], W=0.016, mdot=1 [kg/s])
+AHU            UNIT(Kf=50 [Pa-s^2/kg^2], foul=1.2, Tc=285.15 [K], Qh=3000 [W], dPfan=600 [Pa], eta_fan=0.65)
 MoistAirSink   SUP()
 connect(RA.out, UNIT.ret_in)
 connect(OA.out, UNIT.oa_in)
@@ -17656,9 +17652,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 // W rides EQUAL across a pass-through and across a plain connect node.
-MoistAirSource SRC(a1, P = 101325, T = 300, W = 0.010, mdot = 1.5)
-AirFilter      FLT(a1, a2, K = 100, foul = 1.0)
-HeatingCoil    HTR(a2, a3, Q = 3000)
+MoistAirSource SRC(a1, P = 101325 [Pa], T = 300 [K], W = 0.010, mdot = 1.5 [kg/s])
+AirFilter      FLT(a1, a2, K = 100 [Pa-s^2/kg^2], foul = 1.0)
+HeatingCoil    HTR(a2, a3, Q = 3000 [W])
 MoistAirSink   SK(a3)
 w1 = a1.W
 w2 = a2.W
@@ -17730,7 +17726,7 @@ t_{out} &= \\text{Temperature}\\left(\\mathrm{airh2o}, h=out.h, p=in.p, w=out.w\
 t_{dp_in} &= \\text{Dewpoint}\\left(\\mathrm{airh2o}, h=in.h, p=in.p, w=in.w\\right) \\\\
 margin_{adp} &= t_{dp_in} - t_{adp} \\\\
 mdot_{w} &= in.mdot\\cdot \\left(in.w - out.w\\right) \\\\
-h_{f} &= 4186\\,\\left(t_{out} - 273.15\\right) \\\\
+h_{f} &= 4186\\,\\left[J/kg-K\\right]\\,\\left(t_{out} - 273.15\\,\\left[K\\right]\\right) \\\\
 q_{air} &= in.mdot\\cdot \\left(in.h - out.h\\right) \\\\
 q &= q_{air} - mdot_{w}\\cdot h_{f} \\\\
 q_{sens} &= in.mdot\\cdot \\text{Cp}\\left(\\mathrm{airh2o}, t=t_{in}, p=in.p, w=in.w\\right)\\cdot \\left(t_{in} - t_{out}\\right) \\\\
@@ -17771,7 +17767,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-ApparatusDewPointCoil C(T_adp=283.15, BF=0.15)
+ApparatusDewPointCoil C(T_adp=283.15 [K], BF=0.15)
 C.in.mdot = 1 [kg/s]
 C.in.P = 101325 [Pa]
 C.in.W = 0.012
@@ -17875,11 +17871,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // HAPropsSI's NaN region — fixtures/README growth item 4); here Tz and Wz
 // are integrator STATES seeded from init(T0/W0), which sidesteps the
 // guess landscape entirely.
-MoistAirSource SUP(P = 101325, T = 288.15, W = 0.007, mdot = 0.12)
-CabinZone      ZONE(Vz = 3, T0 = 300.15, W0 = 0.010, n_occ = 2, q_sens = 70, mw_occ = 1.5e-5, Q_aux = 300)
+MoistAirSource SUP(P = 101325 [Pa], T = 288.15 [K], W = 0.007, mdot = 0.12 [kg/s])
+CabinZone      ZONE(Vz = 3 [m^3], T0 = 300.15 [K], W0 = 0.010, n_occ = 2, q_sens = 70 [W], mw_occ = 1.5e-5 [kg/s], Q_aux = 300 [W])
 MoistAirSink   SNK()
-Convection     SHELL(htc = 5, area = 3)
-ThermalSource  AMB(T = 305)
+Convection     SHELL(htc = 5 [W/m^2-K], area = 3 [m^2])
+ThermalSource  AMB(T = 305 [K])
 connect(SUP.out, ZONE.in)
 connect(ZONE.out, SNK.in)
 connect(ZONE.wall, SHELL.a)
@@ -18031,7 +18027,7 @@ out.p &= in.p \\\\
 out.w &= \\text{Humrat}\\left(\\mathrm{airh2o}, t=tout, p=in.p, r=1\\right) \\\\
 out.h &= \\text{Enthalpy}\\left(\\mathrm{airh2o}, t=tout, p=in.p, w=out.w\\right) \\\\
 q &= in.mdot\\cdot \\left(in.h - out.h\\right) \\\\
-q_{lat} &= in.mdot\\cdot 2501000\\cdot \\left(in.w - out.w\\right)
+q_{lat} &= in.mdot\\cdot 2501000\\,\\left[J/kg\\right]\\cdot \\left(in.w - out.w\\right)
 \\end{aligned}
 $$
 
@@ -18045,8 +18041,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-MoistAirSource SRC(P=101325, T=303.15, W=0.012, mdot=1)
-CoolingCoil    CC(Tout=283.15)
+MoistAirSource SRC(P=101325 [Pa], T=303.15 [K], W=0.012, mdot=1 [kg/s])
+CoolingCoil    CC(Tout=283.15 [K])
 MoistAirSink   SNK()
 connect(SRC.out, CC.in)
 connect(CC.out, SNK.in)
@@ -18217,8 +18213,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // Outlet diffuser: 0.6 kg/s expands from A1 = 0.05 m2 to A2 = 0.15 m2 with
 // 70% static-pressure recovery of the inlet velocity head.
-MoistAirSource SUP(P=101325, T=295.15, W=0.009, mdot=0.6)
-Diffuser       DIF(A1=0.05, A2=0.15, eta_rec=0.7)
+MoistAirSource SUP(P=101325 [Pa], T=295.15 [K], W=0.009, mdot=0.6 [kg/s])
+Diffuser       DIF(A1=0.05 [m^2], A2=0.15 [m^2], eta_rec=0.7)
 MoistAirSink   SNK()
 connect(SUP.out, DIF.in)
 connect(DIF.out, SNK.in)
@@ -18303,7 +18299,7 @@ connect(ERV.exh_out, exh_out)
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-DOAS C(eff_h=0.6, eff_w=0.5, T_adp=283.15, BF=0.15, Q_reheat=1000)
+DOAS C(eff_h=0.6, eff_w=0.5, T_adp=283.15 [K], BF=0.15, Q_reheat=1000 [W])
 C.oa_in.mdot = 1 [kg/s]
 C.oa_in.P = 101325 [Pa]
 C.oa_in.W = 0.012
@@ -18416,7 +18412,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-Economizer C(mdot_sup=2, f_min=0.2, lim=298.15, band=1)
+Economizer C(mdot_sup=2 [kg/s], f_min=0.2, lim=298.15 [K], band=1 [K])
 C.oa_in.P = 101325 [Pa]
 C.oa_in.W = 0.006
 C.oa_in.h = Enthalpy(AirH2O, T=288.15, P=101325, W=0.006)
@@ -18506,8 +18502,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // (305.15 K, W = 0.016) exchanges with cool dry building exhaust (297.15 K,
 // W = 0.009) at eff_h = 0.75, eff_w = 0.7. Balanced 1 kg/s streams; moisture
 // and energy close exactly on the dry-air basis.
-MoistAirSource OA(P=101325, T=305.15, W=0.016, mdot=1)
-MoistAirSource EX(P=101325, T=297.15, W=0.009, mdot=1)
+MoistAirSource OA(P=101325 [Pa], T=305.15 [K], W=0.016, mdot=1 [kg/s])
+MoistAirSource EX(P=101325 [Pa], T=297.15 [K], W=0.009, mdot=1 [kg/s])
 EnthalpyWheel  WHL(eff_h=0.75, eff_w=0.7)
 MoistAirSink   SUP()
 MoistAirSink   REJ()
@@ -18594,7 +18590,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Adiabatic (swamp) cooler on hot dry air: 308.15 K, W = 0.008, effectiveness
 // 0.85 toward the adiabatic-saturation state. Constant enthalpy; the outlet
 // humidity moves 85% of the way to W_sat(h, P).
-MoistAirSource OA(P=101325, T=308.15, W=0.008, mdot=1)
+MoistAirSource OA(P=101325 [Pa], T=308.15 [K], W=0.008, mdot=1 [kg/s])
 EvaporativeCooler EC(eff=0.85)
 MoistAirSink   SNK()
 connect(OA.out, EC.in)
@@ -18768,7 +18764,7 @@ connect(wall, CO.wall)
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-FanCoilUnit C(K=100, foul=1, dP=250, eta=0.7, eps=0.7)
+FanCoilUnit C(K=100 [Pa-s^2/kg^2], foul=1, dP=250 [Pa], eta=0.7, eps=0.7)
 C.in.mdot = 1 [kg/s]
 C.in.P = 101325 [Pa]
 C.in.W = 0.012
@@ -18848,7 +18844,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-FanPoweredBox C(Q_fan=100, Q_reheat=1000)
+FanPoweredBox C(Q_fan=100 [W], Q_reheat=1000 [W])
 C.pri_in.mdot = 1 [kg/s]
 C.pri_in.P = 101325 [Pa]
 C.pri_in.W = 0.012
@@ -18937,7 +18933,7 @@ port(out)
   out.h    = h0
 end
 MASrc      SRC(W=0.006, h0=40000, mdot=2, P=101325)
-HeatingCoil HC(Q=10000)
+HeatingCoil HC(Q=10000 [W])
 connect(SRC.out, HC.in)
 
 { CHECK hc.in.h 40000 0.04 }
@@ -19077,7 +19073,7 @@ Humidifier inst(mdot_w, h_w, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`mdot_w\` | Number | Water/coolant mass flow [kg/s]. |
-| \`h_w\` | Number | Wall heat-transfer coefficient [W/m²·K]. |
+| \`h_w\` | Number | Specific enthalpy of the injected water or steam [J/kg]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -19103,8 +19099,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-MoistAirSource SRC(P=101325, T=295, W=0.005, mdot=2)
-Humidifier     HUM(mdot_w=0.002, h_w=2.5e6)
+MoistAirSource SRC(P=101325 [Pa], T=295 [K], W=0.005, mdot=2 [kg/s])
+Humidifier     HUM(mdot_w=0.002 [kg/s], h_w=2.5e6 [J/kg])
 MoistAirSink   SNK()
 connect(SRC.out, HUM.in)
 connect(HUM.out, SNK.in)
@@ -19433,7 +19429,7 @@ The acausal equations this component expands into (over its port members and par
 $$
 \\begin{aligned}
 dp &= in.p - out.p \\\\
-in.mdot &= c_{inf}\\cdot dp\\cdot \\left(dp^{2} + eps^{2}\\right)^{\\frac{n_{exp} - 1}{2}} \\\\
+in.mdot &= c_{inf}\\cdot dp\\cdot \\left(\\frac{dp^{2} + eps^{2}}{1\\,\\left[kg^2/m^2-s^4\\right]}\\right)^{\\frac{n_{exp} - 1}{2}} \\\\
 out.mdot &= in.mdot \\\\
 out.w &= in.w \\\\
 out.h &= in.h
@@ -19453,7 +19449,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Envelope infiltration: power-law crack flow (n = 0.65) across a 50 Pa
 // stack/wind pressure difference between outdoors (101375 Pa, cold dry air)
 // and the zone (101325 Pa). mdot ~ C_inf * dP^n = 0.004 * 50^0.65 = 0.0508 kg/s.
-Infiltration INF(z1, z2, C_inf=0.004, n_exp=0.65, eps=1)
+Infiltration INF(z1, z2, C_inf=0.004 [kg/s-Pa], n_exp=0.65, eps=1 [Pa])
 z1.P = 101375
 z1.W = 0.004
 z1.h = Enthalpy(AirH2O, T=278.15, P=101375, W=0.004)
@@ -19539,7 +19535,7 @@ $$
 \\begin{aligned}
 t_{out} &= t_{in} - eps_{t}\\cdot \\left(t_{in} - wall.t\\right) \\\\
 out.h &= \\text{Enthalpy}\\left(\\mathrm{airh2o}, t=t_{out}, p=in.p, w=out.w\\right) \\\\
-h_{f} &= 4186\\,\\left(wall.t - 273.15\\right) \\\\
+h_{f} &= 4186\\,\\left[J/kg-K\\right]\\,\\left(wall.t - 273.15\\,\\left[K\\right]\\right) \\\\
 q &= in.mdot\\cdot \\left(in.h - out.h\\right) - mdot_{w}\\cdot h_{f} \\\\
 wall.qdot &= -q
 \\end{aligned}
@@ -19549,7 +19545,7 @@ $$
 
 $$
 \\begin{aligned}
-h_{f} &= 4186\\,\\left(t_{in} - 273.15\\right) \\\\
+h_{f} &= 4186\\,\\left[J/kg-K\\right]\\,\\left(t_{in} - 273.15\\,\\left[K\\right]\\right) \\\\
 h_{pure} &= in.h - \\frac{mdot_{w}\\cdot h_{f}}{in.mdot} \\\\
 t_{pure} &= \\text{Temperature}\\left(\\mathrm{airh2o}, h=h_{pure}, p=in.p, w=out.w\\right) \\\\
 t_{out} &= t_{in} + \\left(1 + f_{excess}\\right)\\cdot \\left(t_{pure} - t_{in}\\right) \\\\
@@ -19655,8 +19651,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // dry supply (300.15 K, W = 0.002) with effectiveness 0.75 on moisture and
 // 0.7 on enthalpy. Water and energy close exactly on the dry-air basis:
 // wet-side losses mirror the dry-side gains scaled by mdot_dry/mdot_wet.
-MoistAirSource DRY(P=101325, T=300.15, W=0.002, mdot=0.02)
-MoistAirSource WET(P=101325, T=330.15, W=0.05, mdot=0.025)
+MoistAirSource DRY(P=101325 [Pa], T=300.15 [K], W=0.002, mdot=0.02 [kg/s])
+MoistAirSource WET(P=101325 [Pa], T=330.15 [K], W=0.05, mdot=0.025 [kg/s])
 MembraneHumidifier MH(eff_h=0.7, eff_w=0.75)
 MoistAirSink   DOUT()
 MoistAirSink   WOUT()
@@ -19827,7 +19823,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 // A 3-way moist-air node: sum of dry-air mass flow zero and W equal on a split.
-MoistAirSource SRC(a1, P = 101325, T = 305, W = 0.009, mdot = 2.0)
+MoistAirSource SRC(a1, P = 101325 [Pa], T = 305 [K], W = 0.009, mdot = 2.0 [kg/s])
 MoistAirDamper DMP(a1, a2, a3, u = 0.25)
 MoistAirSink   S2(a2)
 MoistAirSink   S3(a3)
@@ -19919,8 +19915,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Humid-air supply duct: 10 m of 0.3 m round duct at 1 kg/s dry-air flow.
 // Darcy friction on the total (moist) mass flow; composition and enthalpy
 // pass through, only pressure drops.
-MoistAirSource SUP(P=101325, T=293.15, W=0.008, mdot=1)
-MoistAirDuct   DCT(L=10, D=0.3, rough=1e-4, mu_a=1.85e-5)
+MoistAirSource SUP(P=101325 [Pa], T=293.15 [K], W=0.008, mdot=1 [kg/s])
+MoistAirDuct   DCT(L=10 [m], D=0.3 [m], rough=1e-4 [m], mu_a=1.85e-5 [Pa-s])
 MoistAirSink   SNK()
 connect(SUP.out, DCT.in)
 connect(DCT.out, SNK.in)
@@ -20005,8 +20001,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Supply blower: 500 Pa rise at 60% efficiency on 1.2 kg/s of room air.
 // All shaft power ends up in the stream: W_el = mdot * v_in * dP / eta,
 // and the outlet enthalpy carries the same specific work.
-MoistAirSource RA(P=101325, T=293.15, W=0.008, mdot=1.2)
-MoistAirFan    FAN(dP=500, eta=0.6)
+MoistAirSource RA(P=101325 [Pa], T=293.15 [K], W=0.008, mdot=1.2 [kg/s])
+MoistAirFan    FAN(dP=500 [Pa], eta=0.6)
 MoistAirSink   SNK()
 connect(RA.out, FAN.in)
 connect(FAN.out, SNK.in)
@@ -20084,8 +20080,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-MoistAirSource SRC(P=101325, T=295, W=0.005, mdot=2)
-Humidifier     HUM(mdot_w=0.002, h_w=2.5e6)
+MoistAirSource SRC(P=101325 [Pa], T=295 [K], W=0.005, mdot=2 [kg/s])
+Humidifier     HUM(mdot_w=0.002 [kg/s], h_w=2.5e6 [J/kg])
 MoistAirSink   SNK()
 connect(SRC.out, HUM.in)
 connect(HUM.out, SNK.in)
@@ -20137,7 +20133,7 @@ MoistAirSource inst(P, T, W, mdot, domain$)
 | --- | --- | --- |
 | \`P\` | Number | Pressure [Pa]. |
 | \`T\` | Number | Temperature [K]. |
-| \`W\` | Number | Humidity ratio [kg/kg] / work [W]. |
+| \`W\` | Number | Humidity ratio, kg water per kg dry air [-]. |
 | \`mdot\` | Number | Mass flow rate [kg/s]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
@@ -20164,8 +20160,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-MoistAirSource SRC(P=101325, T=295, W=0.005, mdot=2)
-Humidifier     HUM(mdot_w=0.002, h_w=2.5e6)
+MoistAirSource SRC(P=101325 [Pa], T=295 [K], W=0.005, mdot=2 [kg/s])
+Humidifier     HUM(mdot_w=0.002 [kg/s], h_w=2.5e6 [J/kg])
 MoistAirSink   SNK()
 connect(SRC.out, HUM.in)
 connect(HUM.out, SNK.in)
@@ -20232,7 +20228,7 @@ w_{sat} &= \\text{Humrat}\\left(\\mathrm{airh2o}, t=t_{out}, p=in.p, r=1\\right)
 out.w &= 0.5\\,\\left(in.w + w_{sat} - \\sqrt{\\left(in.w - w_{sat}\\right)^{2} + 1.0E-12}\\right) \\\\
 out.h &= \\text{Enthalpy}\\left(\\mathrm{airh2o}, t=t_{out}, p=in.p, w=out.w\\right) \\\\
 q &= in.mdot\\cdot \\left(in.h - out.h\\right) \\\\
-q_{lat} &= in.mdot\\cdot 2501000\\cdot \\left(in.w - out.w\\right) \\\\
+q_{lat} &= in.mdot\\cdot 2501000\\,\\left[J/kg\\right]\\cdot \\left(in.w - out.w\\right) \\\\
 wall.qdot &= -q
 \\end{aligned}
 $$
@@ -20251,10 +20247,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // (305.15 K, W = 0.012) approaches a 283.15 K wall with effectiveness 0.8.
 // The outlet W is smooth-clamped at saturation, so the coil dehumidifies and
 // the wall receives sensible + latent duty (wall.Qdot = -Q).
-MoistAirSource SRC(P=101325, T=305.15, W=0.012, mdot=1)
+MoistAirSource SRC(P=101325 [Pa], T=305.15 [K], W=0.012, mdot=1 [kg/s])
 MoistAirWallHX COIL(eps=0.8)
 MoistAirSink   SNK()
-ThermalSource  WALLT(T=283.15)
+ThermalSource  WALLT(T=283.15 [K])
 connect(SRC.out, COIL.in)
 connect(COIL.out, SNK.in)
 connect(COIL.wall, WALLT.port)
@@ -20324,7 +20320,7 @@ The acausal equations this component expands into (over its port members and par
 $$
 \\begin{aligned}
 dt &= zone.t - wall.t \\\\
-q_{flux} &= c\\cdot dt\\cdot \\left(dt^{2} + eps_{dt}^{2}\\right)^{\\frac{n - 1}{2}} \\\\
+q_{flux} &= c\\cdot dt\\cdot \\left(\\frac{dt^{2} + eps_{dt}^{2}}{1\\,\\left[K^2\\right]}\\right)^{\\frac{n - 1}{2}} \\\\
 q &= a\\cdot q_{flux} \\\\
 zone.qdot &= q \\\\
 wall.qdot &= -q \\\\
@@ -20342,7 +20338,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-RadiantPanel C(A=10, C=8, n=1.1, eps_dT=0.1, W_room=0.008, P_room=101325)
+RadiantPanel C(A=10 [m^2], C=8 [W/m^2-K], n=1.1, eps_dT=0.1 [K], W_room=0.008, P_room=101325 [Pa])
 C.zone.T = 298.15 [K]
 C.wall.T = 289.15 [K]
 
@@ -20515,7 +20511,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results without changing the calculation.
 
 \`\`\`frees
-SteamHumidifier C(W_set=0.015, h_steam=2676000)
+SteamHumidifier C(W_set=0.015, h_steam=2676000 [J/kg])
 C.in.mdot = 1 [kg/s]
 C.in.P = 101325 [Pa]
 C.in.W = 0.012
@@ -20692,7 +20688,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // (u = 0.6 of mdot_max = 0.5 kg/s -> 0.3 kg/s) and the reheat command adds
 // 30% of Qr_max = 2000 W. Flow-determining: the inlet stream's mdot comes
 // from the box, so the plenum boundary pins only P, W, h.
-VAVBox VAV(z1, z2, u1, r1, mdot_max=0.5, Qr_max=2000)
+VAVBox VAV(z1, z2, u1, r1, mdot_max=0.5 [kg/s], Qr_max=2000 [W])
 u1.sig = 0.6
 r1.sig = 0.3
 z1.P = 101325
@@ -20780,10 +20776,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // 3 bar fresh supply entrains ER = 1.2 times its own flow from the 1.6 bar,
 // 330 K stack return; the mixed stream feeds the 1.5 bar stack inlet with the
 // flow-weighted enthalpy.
-PneumaticSupply     FRESH(fluid$=Air, P=300000, T=310)
-PneumaticSupply     RET(fluid$=Air, P=160000, T=330)
-AnodeRecirc         AR(fluid$=Air, C=1.5e-8, b=0.3, ER=1.2)
-PneumaticAtmosphere STACK(P=150000)
+PneumaticSupply     FRESH(fluid$=Air, P=300000 [Pa], T=310 [K])
+PneumaticSupply     RET(fluid$=Air, P=160000 [Pa], T=330 [K])
+AnodeRecirc         AR(fluid$=Air, C=1.5e-8 [m^3/s-Pa], b=0.3, ER=1.2)
+PneumaticAtmosphere STACK(P=150000 [Pa])
 connect(FRESH.out, AR.sup_in)
 connect(RET.out, AR.ret_in)
 connect(AR.out, STACK.port)
@@ -20859,8 +20855,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-GasSource S1(a, y=1, mdot=2, P=100000, h0=300000)
-GasSource S2(b, y=0, mdot=3, P=100000, h0=290000)
+GasSource S1(a, y=1, mdot=2 [kg/s], P=100000 [Pa], h0=300000 [J/kg])
+GasSource S2(b, y=0, mdot=3 [kg/s], P=100000 [Pa], h0=290000 [J/kg])
 GasMixer  MIX(a, b, c)
 
 { CHECK a.h 300000 0.3 }
@@ -21026,7 +21022,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-GasSource S(a, y=0.21, mdot=1.5, P=120000, h0=305000)
+GasSource S(a, y=0.21, mdot=1.5 [kg/s], P=120000 [Pa], h0=305000 [J/kg])
 GasPipe   P(a, b)
 
 { CHECK a.h 305000 0.305 }
@@ -21106,7 +21102,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-GasSource S(a, y=0.21, mdot=1.5, P=120000, h0=305000)
+GasSource S(a, y=0.21, mdot=1.5 [kg/s], P=120000 [Pa], h0=305000 [J/kg])
 GasPipe   P(a, b)
 
 { CHECK a.h 305000 0.305 }
@@ -21185,9 +21181,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-PneumaticSupply   SUP(fluid$=Air, P=300000, T=300)
-PneumaticActuator ACT(fluid$=Air, area=0.01, Patm=100000)
-TransDamper       D(c=1000)
+PneumaticSupply   SUP(fluid$=Air, P=300000 [Pa], T=300 [K])
+PneumaticActuator ACT(fluid$=Air, area=0.01 [m^2], Patm=100000 [Pa])
+TransDamper       D(c=1000 [kg/s])
 TransGround       G()
 connect(SUP.out, ACT.in)
 connect(ACT.rod, D.a)
@@ -21265,9 +21261,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticOrifice    ORI(fluid$=Air, C=1e-8, b=0.3)
-PneumaticAtmosphere ATM(P=50000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticOrifice    ORI(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere ATM(P=50000 [Pa])
 connect(SUP.out, ORI.in)
 connect(ORI.out, ATM.port)
 
@@ -21349,9 +21345,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Pneumatic check valve in its forward (conducting) direction: 7 bar supply
 // into a 1 bar exhaust, well past the eps = 1 kPa gate width, so the tanh
 // gate is fully open and the ISO 6358 law carries the whole flow.
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticCheckValve CHK(fluid$=Air, C=1e-8, b=0.3, eps=1000)
-PneumaticAtmosphere ATM(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticCheckValve CHK(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3, eps=1000 [Pa])
+PneumaticAtmosphere ATM(P=100000 [Pa])
 connect(SUP.out, CHK.in)
 connect(CHK.out, ATM.port)
 m_fwd  = CHK.in.mdot
@@ -21440,10 +21436,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // 6 bar (Aa = 40 cm2), rod side on a 1 bar return line (Ab = 30 cm2), rod on
 // a 40 kN.s/m damper. F = 6e5*0.004 - 1e5*0.003 = 2100 N -> vel = 0.0525 m/s;
 // der(P) -> 0 gives the isothermal chamber flows P*A*vel/(R*T).
-PneumaticSupply SUP(fluid$=Air, P=600000, T=300)
-PneumaticSupply RET(fluid$=Air, P=100000, T=300)
-PneumaticDoubleActingCylinder CYL(Aa=0.004, Ab=0.003, R=287, T=300, Va0=0.0008, Vb0=0.0006, Pa0=600000, Pb0=100000)
-TransDamper     DMP(c=40000)
+PneumaticSupply SUP(fluid$=Air, P=600000 [Pa], T=300 [K])
+PneumaticSupply RET(fluid$=Air, P=100000 [Pa], T=300 [K])
+PneumaticDoubleActingCylinder CYL(Aa=0.004 [m^2], Ab=0.003 [m^2], R=287 [J/kg-K], T=300 [K], Va0=0.0008 [m^3], Vb0=0.0006 [m^3], Pa0=600000 [Pa], Pb0=100000 [Pa])
+TransDamper     DMP(c=40000 [kg/s])
 TransGround     GND()
 connect(SUP.out, CYL.a)
 connect(RET.out, CYL.b)
@@ -21499,7 +21495,7 @@ PneumaticOrifice inst(fluid$, C, b, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
-| \`C\` | Number | Capacitance [F]. |
+| \`C\` | Number | Sonic conductance (ISO 6358) [m³/s·Pa]. |
 | \`b\` | Number | Critical pressure ratio / coefficient. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
@@ -21530,9 +21526,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticOrifice    ORI(fluid$=Air, C=1e-8, b=0.3)
-PneumaticAtmosphere ATM(P=50000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticOrifice    ORI(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere ATM(P=50000 [Pa])
 connect(SUP.out, ORI.in)
 connect(ORI.out, ATM.port)
 
@@ -21582,9 +21578,9 @@ PneumaticServoValve inst(fluid$, Cmax, b, u, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
-| \`Cmax\` | Number | Maximum capacity rate [W/K]. |
+| \`Cmax\` | Number | Sonic conductance when fully open (ISO 6358) [m³/s·Pa]. |
 | \`b\` | Number | Critical pressure ratio / coefficient. |
-| \`u\` | Number | Specific internal energy [J/kg]. |
+| \`u\` | Number | Valve opening, 0 (shut) to 1 (fully open) [-]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -21614,9 +21610,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticServoValve SV(fluid$=Air, Cmax=1e-8, b=0.3, u=0.5)
-PneumaticAtmosphere ATM(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticServoValve SV(fluid$=Air, Cmax=1e-8 [m^3/s-Pa], b=0.3, u=0.5)
+PneumaticAtmosphere ATM(P=100000 [Pa])
 connect(SUP.out, SV.in)
 connect(SV.out, ATM.port)
 
@@ -21697,9 +21693,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // sonic conductance scaled to 0.6 * Cmax, blowing 7 bar supply down to
 // atmosphere (choked: P_atm/P_sup = 0.143 < b = 0.3).
 SigConstant           CMD(k=0.6)
-PneumaticSupply       SUP(fluid$=Air, P=700000, T=300)
-PneumaticServoValveCmd SVC(fluid$=Air, Cmax=1e-8, b=0.3)
-PneumaticAtmosphere   ATM(P=100000)
+PneumaticSupply       SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticServoValveCmd SVC(fluid$=Air, Cmax=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere   ATM(P=100000 [Pa])
 connect(SUP.out, SVC.in)
 connect(SVC.out, ATM.port)
 connect(CMD.out, SVC.u)
@@ -21780,9 +21776,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticOrifice    ORI(fluid$=Air, C=1e-8, b=0.3)
-PneumaticAtmosphere ATM(P=50000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticOrifice    ORI(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere ATM(P=50000 [Pa])
 connect(SUP.out, ORI.in)
 connect(ORI.out, ATM.port)
 
@@ -21876,12 +21872,12 @@ function [port] = GasCap(domain$ = gas)
 port(port)
   port.mdot = 0
 end
-PneumaticSupply        SUP(fluid$=Air, P=600000, T=320)
-PneumaticOrifice       OIN(fluid$=Air, C=1e-8, b=0.3)
-PneumaticThermalVolume TNK(fluid$=Air, V=0.01, R=287, cv=718, cp=1005, m0=0.012, T0=300)
+PneumaticSupply        SUP(fluid$=Air, P=600000 [Pa], T=320 [K])
+PneumaticOrifice       OIN(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticThermalVolume TNK(fluid$=Air, V=0.01 [m^3], R=287 [J/kg-K], cv=718 [J/kg-K], cp=1005 [J/kg-K], m0=0.012 [kg], T0=300 [K])
 GasCap                 CAP()
-Convection             SHELL(htc=10, area=0.05)
-ThermalSource          CASE(T=293.15)
+Convection             SHELL(htc=10 [W/m^2-K], area=0.05 [m^2])
+ThermalSource          CASE(T=293.15 [K])
 connect(SUP.out, OIN.in)
 connect(OIN.out, TNK.in)
 connect(TNK.out, CAP.port)
@@ -21972,10 +21968,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // supply->work carries 0.6 C of ISO 6358 flow, work->exhaust bleeds 0.4 C,
 // and the work port delivers the net (m_in - m_out) at the reservoir pressure.
 SigConstant         CMD(k=0.6)
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticValve32    V32(fluid$=Air, C=1e-8, b=0.3)
-PneumaticAtmosphere WRK(P=400000)
-PneumaticAtmosphere ATM(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticValve32    V32(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere WRK(P=400000 [Pa])
+PneumaticAtmosphere ATM(P=100000 [Pa])
 connect(SUP.out, V32.sup_in)
 connect(V32.work, WRK.port)
 connect(V32.exh_out, ATM.port)
@@ -22074,12 +22070,12 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // and bled through 0.7 C — four ISO 6358 paths with complementary commands,
 // each work port carrying its net flow.
 SigConstant         CMD(k=0.7)
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticValve52    V52(fluid$=Air, C=1e-8, b=0.3)
-PneumaticAtmosphere WA(P=500000)
-PneumaticAtmosphere WB(P=250000)
-PneumaticAtmosphere EXA(P=100000)
-PneumaticAtmosphere EXB(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticValve52    V52(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere WA(P=500000 [Pa])
+PneumaticAtmosphere WB(P=250000 [Pa])
+PneumaticAtmosphere EXA(P=100000 [Pa])
+PneumaticAtmosphere EXB(P=100000 [Pa])
 connect(SUP.out, V52.sup_in)
 connect(V52.wa, WA.port)
 connect(V52.wb, WB.port)
@@ -22137,7 +22133,7 @@ PneumaticVolume inst(V, T, R, P0, domain$)
 | --- | --- | --- |
 | \`V\` | Number | Volume [m³]. |
 | \`T\` | Number | Temperature [K]. |
-| \`R\` | Number | Resistance [Ω]. |
+| \`R\` | Number | Specific gas constant [J/kg·K]. |
 | \`P0\` | Number | Reference/initial pressure [Pa]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
@@ -22172,9 +22168,9 @@ function [port] = GasCap(domain$ = gas)
 port(port)
   port.mdot = 0
 end
-PneumaticSupply  SUP(fluid$=Air, P=700000, T=300)
-PneumaticOrifice ORI(fluid$=Air, C=1e-8, b=0.3)
-PneumaticVolume  VOL(V=0.001, T=300, R=287, P0=120000)
+PneumaticSupply  SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticOrifice ORI(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticVolume  VOL(V=0.001 [m^3], T=300 [K], R=287 [J/kg-K], P0=120000 [Pa])
 GasCap           CAP()
 connect(SUP.out, ORI.in)
 connect(ORI.out, VOL.in)
@@ -22257,10 +22253,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // Vacuum ejector picking a load: 7 bar motive air (choked ISO 6358) entrains
 // ER = 0.6 times its mass flow from a 0.6 bar suction vessel; mass and energy
 // mix exactly at the 1 bar exhaust.
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticSupply     VAC(fluid$=Air, P=60000, T=295)
-VacuumEjector       EJ(fluid$=Air, C=2e-8, b=0.3, ER=0.6)
-PneumaticAtmosphere ATM(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticSupply     VAC(fluid$=Air, P=60000 [Pa], T=295 [K])
+VacuumEjector       EJ(fluid$=Air, C=2e-8 [m^3/s-Pa], b=0.3, ER=0.6)
+PneumaticAtmosphere ATM(P=100000 [Pa])
 connect(SUP.out, EJ.sup_in)
 connect(VAC.out, EJ.suc_in)
 connect(EJ.exh_out, ATM.port)
@@ -22352,22 +22348,22 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // source, so the probe reads -351.
 // EXPECT tq_hold = -351 tol 1e-6
 
-TABLE kmap(sr)
+TABLE kmap(sr) [rad-N^-0.5-m^-0.5/s]
   0   25
   1   25
 END
-TABLE trmap(sr)
+TABLE trmap(sr) [-]
   0    2.0
   0.5  1.6
   1    1.0
 END
 SigConstant GEAR(k=3)
 SigConstant LOCK(k=0)
-SpeedSource SI(w=250)
+SpeedSource SI(w=250 [rad/s])
 MechGround  GI()
-SpeedSource SO(w=62.5)
+SpeedSource SO(w=62.5 [rad/s])
 MechGround  GO()
-AutomaticTransmission AT(Kmap$=kmap, TRmap$=trmap, eta=0.9, Tlock=5000, eps=0.5)
+AutomaticTransmission AT(Kmap$=kmap, TRmap$=trmap, eta=0.9, Tlock=5000 [N-m], eps=0.5 [rad/s])
 connect(SI.a, AT.in)
 connect(SI.b, GI.port)
 connect(AT.out, SO.a)
@@ -22471,7 +22467,7 @@ port(out)
   out.h    = Enthalpy(Air, P=P, T=T)
 end
 ExhaustSource   EXH(P=101325, T=700, mdot=0.05)
-CatalystLightOff CAT(fluid$=Air, C=15000, UA=40, T50=550, k=25, q_exo=50000, T0=300)
+CatalystLightOff CAT(fluid$=Air, C=15000 [J/K], UA=40 [W/K], T50=550 [K], k=25 [K], q_exo=50000 [J/kg], T0=300 [K])
 Sink            TAIL()
 connect(EXH.out, CAT.in)
 connect(CAT.out, TAIL.in)
@@ -22555,18 +22551,18 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT tc.pump.tau = 100 tol 1e-6
 // EXPECT tq_turb = -160 tol 1e-6
 // EXPECT df.in.tau = 44.4444 tol 1e-3
-TABLE kmap(sr)
+TABLE kmap(sr) [rad-N^-0.5-m^-0.5/s]
   0   25
   1   25
 END
-TABLE trmap(sr)
+TABLE trmap(sr) [-]
   0    2.0
   0.5  1.6
   1    1.0
 END
-SpeedSource     SP(w=250)
+SpeedSource     SP(w=250 [rad/s])
 MechGround      GP()
-SpeedSource     ST(w=125)
+SpeedSource     ST(w=125 [rad/s])
 MechGround      GT()
 TorqueConverter TC(Kmap$=kmap, TRmap$=trmap)
 connect(SP.a, TC.pump)
@@ -22575,11 +22571,11 @@ connect(ST.a, TC.turb)
 connect(ST.b, GT.port)
 tq_turb = TC.turb.tau
 
-SpeedSource      SI(w=100)
+SpeedSource      SI(w=100 [rad/s])
 MechGround       GI()
 Differential     DF(ratio=3)
-RotationalDamper WL(c=2)
-RotationalDamper WR(c=2)
+RotationalDamper WL(c=2 [N-m-s])
+RotationalDamper WR(c=2 [N-m-s])
 MechGround       GL()
 MechGround       GR()
 connect(SI.a, DF.in)
@@ -22664,30 +22660,30 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT fx_e = 3695.175 tol 0.01
 
 time = 0
-TABLE flat10(t)
+TABLE flat10(t [s]) [m/s]
   0    10
   100  10
 END
-SpeedSource       W1(w=40)
+SpeedSource       W1(w=40 [rad/s])
 MechGround        WG1()
-TirePacejka       TP0(r=0.3, Fz=4000, B=10, C=1.5, D=1, E=0, epsv=0.1)
+TirePacejka       TP0(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, E=0, epsv=0.1 [m/s])
 DriveCycleSource  V1(map$=flat10)
 connect(W1.a, TP0.wheel)
 connect(W1.b, WG1.port)
 connect(TP0.veh, V1.port)
 
-SpeedSource       W2(w=40)
+SpeedSource       W2(w=40 [rad/s])
 MechGround        WG2()
-TireLongitudinal  TL(r=0.3, Fz=4000, B=10, C=1.5, D=1, epsv=0.1)
+TireLongitudinal  TL(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, epsv=0.1 [m/s])
 DriveCycleSource  V2(map$=flat10)
 connect(W2.a, TL.wheel)
 connect(W2.b, WG2.port)
 connect(TL.veh, V2.port)
 d_fx = TP0.Fx - TL.Fx
 
-SpeedSource       W3(w=40)
+SpeedSource       W3(w=40 [rad/s])
 MechGround        WG3()
-TirePacejka       TPE(r=0.3, Fz=4000, B=10, C=1.5, D=1, E=-2, epsv=0.1)
+TirePacejka       TPE(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, E=-2, epsv=0.1 [m/s])
 DriveCycleSource  V3(map$=flat10)
 connect(W3.a, TPE.wheel)
 connect(TPE.veh, V3.port)
@@ -22739,9 +22735,9 @@ Engine inst(Tmax, throttle, bf)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`Tmax\` | Number | Maximum temperature [K]. |
+| \`Tmax\` | Number | Maximum (full-throttle) torque [N·m]. |
 | \`throttle\` | Number | Throttle (0–1). |
-| \`bf\` | Number | Friction coefficient. |
+| \`bf\` | Number | Viscous friction coefficient [N·m·s]. |
 
 ## Constitutive Equations
 
@@ -22763,8 +22759,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Engine   ENG(Tmax=200, throttle=0.5, bf=0.1)
-RoadLoad RL(Crr=10, Caero=0.01)
+Engine   ENG(Tmax=200 [N-m], throttle=0.5, bf=0.1 [N-m-s])
+RoadLoad RL(Crr=10 [N-m], Caero=0.01 [kg-m^2])
 connect(ENG.shaft, RL.shaft)
 
 { CHECK eng.shaft.tau -91 0.00009099999999999999 }
@@ -22834,7 +22830,7 @@ The acausal equations this component expands into (over its port members and par
 \`\`\`
 HeatedDuct D(fluid$=fluid$, UA=UA)
 WallRC     W(C1=C1, C2=C2, R=R, T10=T10, T20=T20)
-Convection CV(htc=hA, area=1)
+Convection CV(htc=hA / 1 [m^2], area=1 [m^2])
 connect(in, D.in)
 connect(D.out, out)
 connect(D.wall, W.a)
@@ -22863,10 +22859,10 @@ port(out)
   out.mdot = mdot
   out.h    = Enthalpy(Air, P=P, T=T)
 end
-ExhaustSource     EXH(P=101325, T=750, mdot=0.05)
-ExhaustPipeThermal PIPE(fluid$=Air, UA=15, hA=8, C1=4000, C2=4000, R=0.08, T10=400, T20=350)
+ExhaustSource     EXH(P=101325 [Pa], T=750 [K], mdot=0.05 [kg/s])
+ExhaustPipeThermal PIPE(fluid$=Air, UA=15 [W/K], hA=8 [W/K], C1=4000 [J/K], C2=4000 [J/K], R=0.08 [K/W], T10=400 [K], T20=350 [K])
 Sink              TAIL()
-ThermalSource     AMB(T=300)
+ThermalSource     AMB(T=300 [K])
 connect(EXH.out, PIPE.in)
 connect(PIPE.out, TAIL.in)
 connect(PIPE.amb, AMB.port)
@@ -22954,9 +22950,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 SigConstant      GS(k=3)
 GearboxScheduled GB(eta=0.9)
-SpeedSource      SO(w=10)
+SpeedSource      SO(w=10 [rad/s])
 MechGround       G1()
-TorqueSource     TI(T=5)
+TorqueSource     TI(T=5 [N-m])
 MechGround       G2()
 connect(TI.a, GB.in)
 connect(TI.b, G2.port)
@@ -22965,30 +22961,30 @@ connect(SO.b, G1.port)
 connect(GS.out, GB.u)
 tq_out = GB.out.tau
 
-TABLE wotmap(w)
+TABLE wotmap(w [rad/s]) [N-m]
   0    200
   500  200
 END
-TABLE bmap(w : tau = 0, 200)
+TABLE bmap(w [rad/s] : tau = 0, 200) [kg/J]
   0    6e-8  6e-8
   500  6e-8  6e-8
 END
-SpeedSource EW1(w=100)
+SpeedSource EW1(w=100 [rad/s])
 MechGround  EG1()
-MeanValueEngine E1(throttle=0.5, Tpeak=200, w_peak=100, FMEP_a=10, FMEP_b=0.05, model$=parabolic)
+MeanValueEngine E1(throttle=0.5, Tpeak=200 [N-m], w_peak=100 [rad/s], FMEP_a=10 [N-m], FMEP_b=0.05 [N-m-s], model$=parabolic)
 connect(E1.shaft, EW1.a)
 connect(EW1.b, EG1.port)
 
-SpeedSource EW2(w=100)
+SpeedSource EW2(w=100 [rad/s])
 MechGround  EG2()
-MeanValueEngine E2(throttle=0.5, Tpeak=200, w_peak=100, FMEP_a=10, FMEP_b=0.05, FMEP_c=0, model$=chenflynn)
+MeanValueEngine E2(throttle=0.5, Tpeak=200 [N-m], w_peak=100 [rad/s], FMEP_a=10 [N-m], FMEP_b=0.05 [N-m-s], FMEP_c=0 [kg-m^2], model$=chenflynn)
 connect(E2.shaft, EW2.a)
 connect(EW2.b, EG2.port)
 d_tau = E1.shaft.tau - E2.shaft.tau
 
-SpeedSource EW3(w=100)
+SpeedSource EW3(w=100 [rad/s])
 MechGround  EG3()
-MeanValueEngine EB(throttle=0.5, map_wot$=wotmap, bsfc$=bmap, FMEP_a=10, FMEP_b=0, model$=bsfc)
+MeanValueEngine EB(throttle=0.5, map_wot$=wotmap, bsfc$=bmap, FMEP_a=10 [N-m], FMEP_b=0 [N-m-s], model$=bsfc)
 connect(EB.shaft, EW3.a)
 connect(EW3.b, EG3.port)
 
@@ -23079,7 +23075,7 @@ TABLE gprof(s)
   100  0
 END
 VelSource    CRUISE(v=15)
-GradeProfile GP(m=1500, g=9.80665, map$=gprof, s0=0)
+GradeProfile GP(m=1500 [kg], g=9.80665 [m/s^2], map$=gprof, s0=0 [m])
 connect(CRUISE.port, GP.port)
 DYNAMIC climb(method = ode45, time = 0 .. 4, points = 21)
 END
@@ -23129,11 +23125,13 @@ GradeRoadLoad inst(Crr, Caero, m, g, grade)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`Crr\` | Number | Rolling-resistance coefficient. |
-| \`Caero\` | Number | Aerodynamic drag term ½ρCdA [kg/m]. |
+| \`Crr\` | Number | Rolling-resistance coefficient [N·m]. |
+| \`Caero\` | Number | Aerodynamic drag term ½ρCdA [kg·m²]. |
 | \`m\` | Number | Mass [kg]. |
 | \`g\` | Number | Gravitational acceleration [m/s²]. |
 | \`grade\` | Number | Road grade (rise/run). |
+
+The grade force $m g \\sin(\\text{grade})$ acts on the shaft at a 1 m wheel radius; put a \`Gear\` or \`Transmission\` between the wheel and this load to refer it to another radius.
 
 ## Constitutive Equations
 
@@ -23141,7 +23139,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
-shaft.tau &= crr + caero\\cdot shaft.w^{2} + m\\cdot g\\cdot \\sin\\left(grade\\right)
+shaft.tau &= crr + caero\\cdot shaft.w^{2} + m\\cdot g\\cdot \\sin\\left(grade\\right)\\cdot 1\\,\\left[m\\right]
 \\end{aligned}
 $$
 
@@ -23155,8 +23153,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-GradeRoadLoad ROAD(Crr=50, Caero=2, m=1500, g=9.81, grade=0.05)
-SpeedSource   SS(w=30)
+GradeRoadLoad ROAD(Crr=50 [N-m], Caero=2 [kg-m^2], m=1500 [kg], g=9.81 [m/s^2], grade=0.05)
+SpeedSource   SS(w=30 [rad/s])
 MechGround    G()
 connect(SS.a, ROAD.shaft)
 connect(SS.b, G.port)
@@ -23249,20 +23247,20 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT mot_cmd = 40 tol 1e-9
 // EXPECT eng_cmd = 40 tol 1e-9
 
-TABLE effm(w : tau = -100, 100)
+TABLE effm(w [rad/s] : tau = -100, 100) [-]
   0    0.9  0.9
   400  0.9  0.9
 END
-SpeedSource   SE(w=100)
+SpeedSource   SE(w=100 [rad/s])
 MechGround    GE()
-SpeedSource   SR(w=50)
+SpeedSource   SR(w=50 [rad/s])
 MechGround    GR2()
-SigConstant   Z1(k=0)
-SigConstant   Z2(k=0)
-VoltageSource BUS(E=350)
+SigConstant   Z1(k=0 [N-m])
+SigConstant   Z2(k=0 [N-m])
+VoltageSource BUS(E=350 [V])
 Ground        GND()
-ThermalSource COOL(T=300)
-HybridPowerSplit HPS(g=2, eff1$=effm, eff2$=effm, epsP=10)
+ThermalSource COOL(T=300 [K])
+HybridPowerSplit HPS(g=2, eff1$=effm, eff2$=effm, epsP=10 [W])
 connect(SE.a, HPS.eng)
 connect(SE.b, GE.port)
 connect(SR.a, HPS.out)
@@ -23272,7 +23270,7 @@ connect(BUS.n, HPS.n, GND.port)
 connect(Z1.out, HPS.u1)
 connect(Z2.out, HPS.u2)
 connect(HPS.heat, COOL.port)
-HPS.sun.tau = 0
+HPS.sun.tau = 0 [N-m]
 w_sun = HPS.sun.w
 
 SigConstant     SOC(k=0.6)
@@ -23329,10 +23327,10 @@ MeanValueEngine inst(throttle, Tpeak, w_peak, FMEP_a, FMEP_b)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`throttle\` | Number | Throttle (0–1). |
-| \`Tpeak\` | Number | Peak temperature [K]. |
+| \`Tpeak\` | Number | Peak wide-open-throttle torque [N·m]. |
 | \`w_peak\` | Number | Peak frequency [rad/s]. |
-| \`FMEP_a\` | Number | Friction-MEP constant [Pa]. |
-| \`FMEP_b\` | Number | Friction-MEP slope coefficient. |
+| \`FMEP_a\` | Number | Constant friction torque [N·m]. |
+| \`FMEP_b\` | Number | Speed-proportional friction coefficient [N·m·s]. |
 
 ## Constitutive Equations
 
@@ -23357,8 +23355,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-MeanValueEngine ENG(throttle=0.6, Tpeak=200, w_peak=400, FMEP_a=5, FMEP_b=0.01)
-SpeedSource     SS(w=400)
+MeanValueEngine ENG(throttle=0.6, Tpeak=200 [N-m], w_peak=400 [rad/s], FMEP_a=5 [N-m], FMEP_b=0.01 [N-m-s])
+SpeedSource     SS(w=400 [rad/s])
 MechGround      G()
 connect(SS.a, ENG.shaft)
 connect(SS.b, G.port)
@@ -23448,7 +23446,7 @@ port(port)
   port.vel = amp * sin(w * time)
 end
 RoadShaker ROAD(amp=0.1, w=6.2832)
-QuarterCar QC(ms=300, mu=40, ks=20000, cs=1500, kt=180000)
+QuarterCar QC(ms=300 [kg], mu=40 [kg], ks=20000 [N/m], cs=1500 [kg/s], kt=180000 [N/m])
 connect(ROAD.port, QC.road)
 DYNAMIC shake(method = ode23s, time = 0 .. 2, points = 21)
 END
@@ -23498,8 +23496,8 @@ RoadLoad inst(Crr, Caero)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| \`Crr\` | Number | Rolling-resistance coefficient. |
-| \`Caero\` | Number | Aerodynamic drag term ½ρCdA [kg/m]. |
+| \`Crr\` | Number | Rolling-resistance coefficient [N·m]. |
+| \`Caero\` | Number | Aerodynamic drag term ½ρCdA [kg·m²]. |
 
 ## Constitutive Equations
 
@@ -23521,8 +23519,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Engine   ENG(Tmax=200, throttle=0.5, bf=0.1)
-RoadLoad RL(Crr=10, Caero=0.01)
+Engine   ENG(Tmax=200 [N-m], throttle=0.5, bf=0.1 [N-m-s])
+RoadLoad RL(Crr=10 [N-m], Caero=0.01 [kg-m^2])
 connect(ENG.shaft, RL.shaft)
 
 { CHECK eng.shaft.tau -91 0.00009099999999999999 }
@@ -23611,30 +23609,30 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT fx_e = 3695.175 tol 0.01
 
 time = 0
-TABLE flat10(t)
+TABLE flat10(t [s]) [m/s]
   0    10
   100  10
 END
-SpeedSource       W1(w=40)
+SpeedSource       W1(w=40 [rad/s])
 MechGround        WG1()
-TirePacejka       TP0(r=0.3, Fz=4000, B=10, C=1.5, D=1, E=0, epsv=0.1)
+TirePacejka       TP0(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, E=0, epsv=0.1 [m/s])
 DriveCycleSource  V1(map$=flat10)
 connect(W1.a, TP0.wheel)
 connect(W1.b, WG1.port)
 connect(TP0.veh, V1.port)
 
-SpeedSource       W2(w=40)
+SpeedSource       W2(w=40 [rad/s])
 MechGround        WG2()
-TireLongitudinal  TL(r=0.3, Fz=4000, B=10, C=1.5, D=1, epsv=0.1)
+TireLongitudinal  TL(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, epsv=0.1 [m/s])
 DriveCycleSource  V2(map$=flat10)
 connect(W2.a, TL.wheel)
 connect(W2.b, WG2.port)
 connect(TL.veh, V2.port)
 d_fx = TP0.Fx - TL.Fx
 
-SpeedSource       W3(w=40)
+SpeedSource       W3(w=40 [rad/s])
 MechGround        WG3()
-TirePacejka       TPE(r=0.3, Fz=4000, B=10, C=1.5, D=1, E=-2, epsv=0.1)
+TirePacejka       TPE(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, E=-2, epsv=0.1 [m/s])
 DriveCycleSource  V3(map$=flat10)
 connect(W3.a, TPE.wheel)
 connect(TPE.veh, V3.port)
@@ -23727,30 +23725,30 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT fx_e = 3695.175 tol 0.01
 
 time = 0
-TABLE flat10(t)
+TABLE flat10(t [s]) [m/s]
   0    10
   100  10
 END
-SpeedSource       W1(w=40)
+SpeedSource       W1(w=40 [rad/s])
 MechGround        WG1()
-TirePacejka       TP0(r=0.3, Fz=4000, B=10, C=1.5, D=1, E=0, epsv=0.1)
+TirePacejka       TP0(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, E=0, epsv=0.1 [m/s])
 DriveCycleSource  V1(map$=flat10)
 connect(W1.a, TP0.wheel)
 connect(W1.b, WG1.port)
 connect(TP0.veh, V1.port)
 
-SpeedSource       W2(w=40)
+SpeedSource       W2(w=40 [rad/s])
 MechGround        WG2()
-TireLongitudinal  TL(r=0.3, Fz=4000, B=10, C=1.5, D=1, epsv=0.1)
+TireLongitudinal  TL(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, epsv=0.1 [m/s])
 DriveCycleSource  V2(map$=flat10)
 connect(W2.a, TL.wheel)
 connect(W2.b, WG2.port)
 connect(TL.veh, V2.port)
 d_fx = TP0.Fx - TL.Fx
 
-SpeedSource       W3(w=40)
+SpeedSource       W3(w=40 [rad/s])
 MechGround        WG3()
-TirePacejka       TPE(r=0.3, Fz=4000, B=10, C=1.5, D=1, E=-2, epsv=0.1)
+TirePacejka       TPE(r=0.3 [m], Fz=4000 [N], B=10, C=1.5, D=1, E=-2, epsv=0.1 [m/s])
 DriveCycleSource  V3(map$=flat10)
 connect(W3.a, TPE.wheel)
 connect(TPE.veh, V3.port)
@@ -23835,18 +23833,18 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT tc.pump.tau = 100 tol 1e-6
 // EXPECT tq_turb = -160 tol 1e-6
 // EXPECT df.in.tau = 44.4444 tol 1e-3
-TABLE kmap(sr)
+TABLE kmap(sr) [rad-N^-0.5-m^-0.5/s]
   0   25
   1   25
 END
-TABLE trmap(sr)
+TABLE trmap(sr) [-]
   0    2.0
   0.5  1.6
   1    1.0
 END
-SpeedSource     SP(w=250)
+SpeedSource     SP(w=250 [rad/s])
 MechGround      GP()
-SpeedSource     ST(w=125)
+SpeedSource     ST(w=125 [rad/s])
 MechGround      GT()
 TorqueConverter TC(Kmap$=kmap, TRmap$=trmap)
 connect(SP.a, TC.pump)
@@ -23855,11 +23853,11 @@ connect(ST.a, TC.turb)
 connect(ST.b, GT.port)
 tq_turb = TC.turb.tau
 
-SpeedSource      SI(w=100)
+SpeedSource      SI(w=100 [rad/s])
 MechGround       GI()
 Differential     DF(ratio=3)
-RotationalDamper WL(c=2)
-RotationalDamper WR(c=2)
+RotationalDamper WL(c=2 [N-m-s])
+RotationalDamper WR(c=2 [N-m-s])
 MechGround       GL()
 MechGround       GR()
 connect(SI.a, DF.in)
@@ -23938,10 +23936,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-SpeedSource      SS(w=200)
+SpeedSource      SS(w=200 [rad/s])
 MechGround       G()
 Transmission     TR(ratio=10, eta=0.9)
-RotationalDamper LOAD(c=2)
+RotationalDamper LOAD(c=2 [N-m-s])
 MechGround       G2()
 connect(SS.a, TR.in)
 connect(SS.b, G.port)
@@ -24007,7 +24005,7 @@ The acausal equations this component expands into (over its port members and par
 
 $$
 \\begin{aligned}
-f_{res} &= 0.5\\,rhoa\\cdot cd\\cdot af\\cdot port.vel\\cdot \\left|port.vel\\right| + m\\cdot 9.80665\\cdot \\left(crr\\cdot \\tanh\\left(\\frac{port.vel}{0.1}\\right) + \\sin\\left(grade\\right)\\right) \\\\
+f_{res} &= 0.5\\,rhoa\\cdot cd\\cdot af\\cdot port.vel\\cdot \\left|port.vel\\right| + m\\cdot 9.80665\\,\\left[m/s^2\\right]\\cdot \\left(crr\\cdot \\tanh\\left(\\frac{port.vel}{0.1\\,\\left[m/s\\right]}\\right) + \\sin\\left(grade\\right)\\right) \\\\
 \\text{der}\\left(port.vel\\right) &= \\frac{port.f - f_{res}}{m} \\\\
 \\text{init}\\left(port.vel\\right) &= v0
 \\end{aligned}
@@ -24031,7 +24029,7 @@ port(port)
   port.vel = v
 end
 VelSource   CRUISE(v=30)
-VehicleBody VB(m=1500, Cd=0.32, Af=2.2, rhoA=1.2, Crr=0.012, grade=0, v0=30)
+VehicleBody VB(m=1500 [kg], Cd=0.32, Af=2.2 [m^2], rhoA=1.2 [kg/m^3], Crr=0.012, grade=0, v0=30 [m/s])
 connect(CRUISE.port, VB.port)
 f_drive = VB.port.f
 f_check = VB.F_res
@@ -24115,15 +24113,15 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // -1.197022e6 N·m (eps-regularized).
 // EXPECT tau_w = -1197022 tol 5
 
-TABLE cpmap(lam : beta = 0, 20)
+TABLE cpmap(lam : beta = 0, 20) [-]
   0    0.45  0.45
   20   0.45  0.45
 END
-SigConstant WIND(k=12)
+SigConstant WIND(k=12 [m/s])
 SigConstant PITCH(k=0)
-SpeedSource WS(w=2)
+SpeedSource WS(w=2 [rad/s])
 MechGround  WG()
-WindRotor   WR(rho=1.225, R=40, cp$=cpmap, epsv=1e-6, epsw=1e-6)
+WindRotor   WR(rho=1.225 [kg/m^3], R=40 [m], cp$=cpmap, epsv=1e-6 [m/s], epsw=1e-6 [rad/s])
 connect(WR.shaft, WS.a)
 connect(WS.b, WG.port)
 connect(WIND.out, WR.wind)
@@ -24619,37 +24617,17 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-function [out] = SigConst(k)
-port(out)
-  out.sig = k
-end
-function [in, out] = SigGain(k)
-port(in)
-port(out)
-  out.sig = k * in.sig
-end
-function [in1, in2, out] = SigSum()
-port(in1)
-port(in2)
-port(out)
-  out.sig = in1.sig + in2.sig
-end
-SigConst R(k=1)
-SigGain  FWD(k=8)
-function [inp, inm, out] = SigDiff()
-port(inp)
-port(inm)
-port(out)
-  out.sig = inp.sig - inm.sig
-end
-SigDiff  ERR()
-connect(R.out, ERR.inp)
+SigConstant R(k=1)
+SigGain     FWD(k=8)
+SigDiff     ERR()
+connect(R.out, ERR.in1)
 connect(ERR.out, FWD.in)
-connect(FWD.out, ERR.inm)
+connect(FWD.out, ERR.in2)
 
-{ CHECK err.inm.sig 0.8888888889 8.888888888888888e-7 }
-{ CHECK err.inp.sig 1 0.000001 }
+{ CHECK err.in2.sig 0.8888888889 8.888888888888888e-7 }
+{ CHECK err.in1.sig 1 0.000001 }
 { CHECK err.out.sig 0.1111111111 1.111111111111111e-7 }
+
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
@@ -24884,22 +24862,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-function [out] = SigConst(k)
-port(out)
-  out.sig = k
-end
-function [in, out] = SigGain(k)
-port(in)
-port(out)
-  out.sig = k * in.sig
-end
-function [in1, in2, out] = SigSum()
-port(in1)
-port(in2)
-port(out)
-  out.sig = in1.sig + in2.sig
-end
-SigConst SRC(k=2)
+SigConstant SRC(k=2)
 SigGain  A(k=3)
 SigGain  B(k=5)
 connect(SRC.out, A.in, B.in)
@@ -26209,7 +26172,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // SigSpeedProbe: torque-free shaft-speed pickup on a node driven at 7 rad/s.
 // EXPECT y = 7 tol 1e-9
-SpeedSource   SS(w = 7)
+SpeedSource   SS(w = 7 [rad/s])
 MechGround    G1()
 SigSpeedProbe PR()
 connect(SS.a, PR.shaft)
@@ -26730,8 +26693,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // SigVelProbe: force-free velocity pickup. 10 N through a 2 N.s/m damper to
 // ground -> the probed node moves at 5 m/s and the probe draws no force.
 // EXPECT y = 5 tol 1e-9
-ForceSource FS(F = 10)
-TransDamper TD(c = 2)
+ForceSource FS(F = 10 [N])
+TransDamper TD(c = 2 [kg/s])
 TransGround G1()
 TransGround G2()
 SigVelProbe PR()
@@ -26820,20 +26783,20 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT mot_cmd = 40 tol 1e-9
 // EXPECT eng_cmd = 40 tol 1e-9
 
-TABLE effm(w : tau = -100, 100)
+TABLE effm(w [rad/s] : tau = -100, 100) [-]
   0    0.9  0.9
   400  0.9  0.9
 END
-SpeedSource   SE(w=100)
+SpeedSource   SE(w=100 [rad/s])
 MechGround    GE()
-SpeedSource   SR(w=50)
+SpeedSource   SR(w=50 [rad/s])
 MechGround    GR2()
-SigConstant   Z1(k=0)
-SigConstant   Z2(k=0)
-VoltageSource BUS(E=350)
+SigConstant   Z1(k=0 [N-m])
+SigConstant   Z2(k=0 [N-m])
+VoltageSource BUS(E=350 [V])
 Ground        GND()
-ThermalSource COOL(T=300)
-HybridPowerSplit HPS(g=2, eff1$=effm, eff2$=effm, epsP=10)
+ThermalSource COOL(T=300 [K])
+HybridPowerSplit HPS(g=2, eff1$=effm, eff2$=effm, epsP=10 [W])
 connect(SE.a, HPS.eng)
 connect(SE.b, GE.port)
 connect(SR.a, HPS.out)
@@ -26843,7 +26806,7 @@ connect(BUS.n, HPS.n, GND.port)
 connect(Z1.out, HPS.u1)
 connect(Z2.out, HPS.u2)
 connect(HPS.heat, COOL.port)
-HPS.sun.tau = 0
+HPS.sun.tau = 0 [N-m]
 w_sun = HPS.sun.w
 
 SigConstant     SOC(k=0.6)
@@ -26933,7 +26896,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT c_z = 800 tol 1e-6
 SigConstant VENT(k = 0.025)
 SigConstant OCC(k = 2)
-ZoneCO2     Z(Vz = 75, c_amb = 400, gen_occ = 5, c0 = 400)
+ZoneCO2     Z(Vz = 75 [m^3], c_amb = 400, gen_occ = 5 [m^3/s], c0 = 400)
 connect(VENT.out, Z.vent)
 connect(OCC.out, Z.occ)
 c_z = Z.out.sig
@@ -27008,8 +26971,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BlendSource S1(fluid$=R134a, mdot=0.01, P=400000, x=0.3, z=0.2)
-BlendSource S2(fluid$=R134a, mdot=0.03, P=400000, x=0.3, z=0.6)
+BlendSource S1(fluid$=R134a, mdot=0.01 [kg/s], P=400000 [Pa], x=0.3, z=0.2)
+BlendSource S2(fluid$=R134a, mdot=0.03 [kg/s], P=400000 [Pa], x=0.3, z=0.6)
 BlendMixer  MIX()
 BlendSink   SNK()
 connect(S1.out, MIX.in1)
@@ -27093,7 +27056,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BlendSource SRC(fluid$=R134a, mdot=0.02, P=400000, x=0.3, z=0.35)
+BlendSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=400000 [Pa], x=0.3, z=0.35)
 BlendSensor SEN(fluid$=R134a)
 BlendSink SNK()
 connect(SRC.out, SEN.in)
@@ -27169,7 +27132,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BlendSource SRC(fluid$=R134a, mdot=0.02, P=400000, x=0.3, z=1)
+BlendSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=400000 [Pa], x=0.3, z=1)
 BlendSink SNK()
 connect(SRC.out, SNK.in)
 
@@ -27222,7 +27185,7 @@ BlendSource inst(fluid$, mdot, P, x, z, domain$)
 | \`mdot\` | Number | Mass flow rate [kg/s]. |
 | \`P\` | Number | Pressure [Pa]. |
 | \`x\` | Number | Vapor quality / fraction (0–1). |
-| \`z\` | Number | Elevation [m]. |
+| \`z\` | Number | Overall (feed) composition carried by the stream [-]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -27251,7 +27214,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BlendSource SRC(fluid$=R134a, mdot=0.02, P=400000, x=0.3, z=1)
+BlendSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=400000 [Pa], x=0.3, z=1)
 BlendSink SNK()
 connect(SRC.out, SNK.in)
 
@@ -27336,9 +27299,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BoilingVessel   COOK(fluid$=Water, V=0.005, m0=3.0, T0=288.15)
-SteamReliefValve PRV(fluid$=Water, A=2e-6, Pset=111458, Cd=0.8, kgas=1.14, Rgas=461.5, eps=1000)
-TwoPhasePressureSink ATM(P=101325)
+BoilingVessel   COOK(fluid$=Water, V=0.005 [m^3], m0=3.0 [kg], T0=288.15 [K])
+SteamReliefValve PRV(fluid$=Water, A=2e-6 [m^2], Pset=111458 [Pa], Cd=0.8, kgas=1.14, Rgas=461.5 [J/kg-K], eps=1000 [Pa])
+TwoPhasePressureSink ATM(P=101325 [Pa])
 
 connect(COOK.vent, PRV.in)
 connect(PRV.out, ATM.in)
@@ -27408,7 +27371,7 @@ out.h &= in.h \\\\
 t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
 pf &= \\text{P\\_sat}\\left(\\mathrm{fluid\\$}, t=t_{in}\\right) \\\\
 dp_{eff} &= in.p - \\text{max}\\left(out.p, pf\\right) \\\\
-in.mdot &= c\\cdot dp_{eff}^{n}
+in.mdot &= c\\cdot \\left(\\frac{dp_{eff}}{1\\,\\left[Pa\\right]}\\right)^{n}
 \\end{aligned}
 $$
 
@@ -27432,8 +27395,8 @@ port(out)
 end
 hsub = Enthalpy(R134a, P=1000000, x=0)
 PHSupply2            SC(P=1200000, h=hsub)
-CapillaryTube        CT(fluid$=R134a, C=1e-7, n=0.5)
-TwoPhasePressureSink KC(P=300000)
+CapillaryTube        CT(fluid$=R134a, C=1e-7 [kg/s], n=0.5)
+TwoPhasePressureSink KC(P=300000 [Pa])
 connect(SC.out, CT.in)
 connect(CT.out, KC.in)
 T_chk  = Temperature(R134a, P=1200000, h=hsub)
@@ -27523,8 +27486,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EjectorMomentum: 1.2 MPa motive vapor expands (eta_n = 0.8) to the 350 kPa
 // suction level, momentum-mixes with the entrained stream and the diffuser
 // recovers the mixed velocity head as a pressure lift on the outlet.
-TwoPhaseSourcePH MOT(mdot = 0.03, P = 1200000, h = 430000)
-TwoPhaseSourcePH SUC(mdot = 0.01, P = 350000, h = 405000)
+TwoPhaseSourcePH MOT(mdot = 0.03 [kg/s], P = 1200000 [Pa], h = 430000 [J/kg])
+TwoPhaseSourcePH SUC(mdot = 0.01 [kg/s], P = 350000 [Pa], h = 405000 [J/kg])
 EjectorMomentum  EJ(fluid$ = R134a, eta_n = 0.8, eta_m = 0.85)
 TwoPhaseSink     SNK()
 connect(MOT.out, EJ.mot_in)
@@ -27640,12 +27603,12 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // this block stalls Newton on the high-pressure (P,h) flash; the transient is
 // the component's intended C-R-C usage anyway). Pressure chain settles in
 // ~Cc/Kv = 25 ms, the enthalpy states in a few seconds.
-TwoPhasePressureSource SUP(fluid$ = R134a, P = 1220000, x = 1)
-FewCellCondenser       CND(fluid$ = R134a, V = 0.001, Cc = 1e-7, UA = 30, Kv = 4e-6, P0 = 1210000, h0 = 400000)
-ThermalSource          W1(T = 305)
-ThermalSource          W2(T = 305)
-ThermalSource          W3(T = 305)
-TwoPhasePressureSink   RET(P = 1200000)
+TwoPhasePressureSource SUP(fluid$ = R134a, P = 1220000 [Pa], x = 1)
+FewCellCondenser       CND(fluid$ = R134a, V = 0.001 [m^3], Cc = 1e-7 [kg/Pa], UA = 30 [W/K], Kv = 4e-6 [kg/s-Pa], P0 = 1210000 [Pa], h0 = 400000 [J/kg])
+ThermalSource          W1(T = 305 [K])
+ThermalSource          W2(T = 305 [K])
+ThermalSource          W3(T = 305 [K])
+TwoPhasePressureSink   RET(P = 1200000 [Pa])
 connect(SUP.out, CND.in)
 connect(CND.out, RET.in)
 connect(CND.w1, W1.port)
@@ -27761,12 +27724,12 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // the four Kv flows (20 kPa across four resistances -> mdot = 0.02 kg/s) and
 // der(h)=0 gives per-cell energy balances against three 300 K wall nodes.
 // The refrigerant boils from x ~ 0.3 toward x ~ 0.8, staying inside the dome.
-TwoPhasePressureSource SUP(fluid$ = R134a, P = 360000, x = 0.3)
-FewCellEvaporator      EV(fluid$ = R134a, V = 0.001, Cc = 1e-7, UA = 30, Kv = 4e-6, P0 = 350000, h0 = 270000)
-ThermalSource          W1(T = 300)
-ThermalSource          W2(T = 300)
-ThermalSource          W3(T = 300)
-TwoPhasePressureSink   RET(P = 340000)
+TwoPhasePressureSource SUP(fluid$ = R134a, P = 360000 [Pa], x = 0.3)
+FewCellEvaporator      EV(fluid$ = R134a, V = 0.001 [m^3], Cc = 1e-7 [kg/Pa], UA = 30 [W/K], Kv = 4e-6 [kg/s-Pa], P0 = 350000 [Pa], h0 = 270000 [J/kg])
+ThermalSource          W1(T = 300 [K])
+ThermalSource          W2(T = 300 [K])
+ThermalSource          W3(T = 300 [K])
+TwoPhasePressureSink   RET(P = 340000 [Pa])
 connect(SUP.out, EV.in)
 connect(EV.out, RET.in)
 connect(EV.w1, W1.port)
@@ -27852,7 +27815,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // saturated vapor, 0.6 kg/s saturated liquid.
 // EXPECT d_v = 0 tol 1e-9
 // EXPECT d_l = 0 tol 1e-9
-TwoPhaseSource SRC(fluid$=R134a, mdot=1, P=400000, x=0.4)
+TwoPhaseSource SRC(fluid$=R134a, mdot=1 [kg/s], P=400000 [Pa], x=0.4)
 FlashTank      FT(fluid$=R134a)
 TwoPhaseSink   SL()
 TwoPhaseSink   SV()
@@ -27943,9 +27906,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // R744 is not in this build, so supercritical-region Air stands in: 3 MPa /
 // 390 K gas cools against a 305 K wall at an effectiveness on the local cp.
 h_in = Enthalpy(Air, T = 390, P = 3000000)
-TwoPhaseSourcePH SRC(mdot = 0.1, P = 3000000, h = h_in)
-GasCooler        GC(fluid$ = Air, UA = 150, dP = 50000)
-ThermalSource    WALL(T = 305)
+TwoPhaseSourcePH SRC(mdot = 0.1 [kg/s], P = 3000000 [Pa], h = h_in)
+GasCooler        GC(fluid$ = Air, UA = 150 [W/K], dP = 50000 [Pa])
+ThermalSource    WALL(T = 305 [K])
 TwoPhaseSink     SNK()
 connect(SRC.out, GC.in)
 connect(GC.wall, WALL.port)
@@ -28003,7 +27966,7 @@ MovingBoundaryCondenser inst(fluid$, U_cond, U_sc, D, L, eps_zone, domain$)
 | \`U_sc\` | Number | Subcool-zone overall coefficient [W/m²·K]. |
 | \`D\` | Number | Diameter [m]. |
 | \`L\` | Number | Length [m]. |
-| \`eps_zone\` | Number | Zone-collapse smoothing width. |
+| \`eps_zone\` | Number | Zone-collapse smoothing width [m]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -28040,10 +28003,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-MovingBoundaryCondenser CD(fluid$=R134a, U_cond=2500, U_sc=300, D=0.01, L=8, eps_zone=0.01)
-TwoPhaseSourcePH SRC(mdot=0.02, P=900000, h=445000)
+MovingBoundaryCondenser CD(fluid$=R134a, U_cond=2500 [W/m^2-K], U_sc=300 [W/m^2-K], D=0.01 [m], L=8 [m], eps_zone=0.01 [m])
+TwoPhaseSourcePH SRC(mdot=0.02 [kg/s], P=900000 [Pa], h=445000 [J/kg])
 TwoPhaseSink SNK()
-ThermalSource WALL(T=300)
+ThermalSource WALL(T=300 [K])
 connect(SRC.out, CD.in)
 connect(CD.out, SNK.in)
 connect(CD.wall, WALL.port)
@@ -28098,7 +28061,7 @@ MovingBoundaryEvaporator inst(fluid$, U_tp, U_sh, D, L, eps_zone, domain$)
 | \`U_sh\` | Number | Superheat-zone overall coefficient [W/m²·K]. |
 | \`D\` | Number | Diameter [m]. |
 | \`L\` | Number | Length [m]. |
-| \`eps_zone\` | Number | Zone-collapse smoothing width. |
+| \`eps_zone\` | Number | Zone-collapse smoothing width [m]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -28135,10 +28098,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-MovingBoundaryEvaporator EV(fluid$=R134a, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.01)
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=350000, x=0.25)
+MovingBoundaryEvaporator EV(fluid$=R134a, U_tp=2000 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=5 [m], eps_zone=0.01 [m])
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=350000 [Pa], x=0.25)
 TwoPhaseSink SNK()
-ThermalSource WALL(T=292)
+ThermalSource WALL(T=292 [K])
 connect(SRC.out, EV.in)
 connect(EV.out, SNK.in)
 connect(EV.wall, WALL.port)
@@ -28225,23 +28188,23 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // energy balance (replicated).
 // EXPECT os.bleed.mdot = 0.002 tol 1e-9
 // EXPECT d_os = 0 tol 1e-6
-TwoPhaseSourcePH M1(mdot=0.1, P=800000, h=430000)
-TwoPhaseSourcePH S1(mdot=0.05, P=300000, h=410000)
+TwoPhaseSourcePH M1(mdot=0.1 [kg/s], P=800000 [Pa], h=430000 [J/kg])
+TwoPhaseSourcePH S1(mdot=0.05 [kg/s], P=300000 [Pa], h=410000 [J/kg])
 TwoPhaseEjector  EJ(PLR=1.3)
 TwoPhaseSink     KE()
 connect(M1.out, EJ.m)
 connect(S1.out, EJ.s)
 connect(EJ.out, KE.in)
 
-TwoPhaseSourcePH DIS(mdot=0.1, P=1500000, h=440000)
+TwoPhaseSourcePH DIS(mdot=0.1 [kg/s], P=1500000 [Pa], h=440000 [J/kg])
 OilSeparator     OS(fluid$=R134a, f=0.02)
 TwoPhaseSink     KO()
 TwoPhaseSink     KB()
 connect(DIS.out, OS.in)
 connect(OS.out, KO.in)
 connect(OS.bleed, KB.in)
-hf_chk = Enthalpy(R134a, P=1500000, x=0)
-d_os   = 0.098 * OS.out.h - (0.1 * 440000 - 0.002 * hf_chk)
+hf_chk = Enthalpy(R134a, P=1500000 [Pa], x=0)
+d_os   = 0.098 [kg/s] * OS.out.h - (0.1 [kg/s] * 440000 [J/kg] - 0.002 [kg/s] * hf_chk)
 
 { CHECK d_os 0 1e-8 }
 { CHECK dis.out.h 440000 0.44 }
@@ -28290,7 +28253,7 @@ ProportionalReliefValve inst(fluid$, Pcrack, grad, eps, domain$)
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
 | \`Pcrack\` | Number | Cracking (relief) pressure [Pa]. |
-| \`grad\` | Number | Flow gain above the set pressure [kg/s per Pa]: ṁ ≈ grad · (P − Pcrack). |
+| \`grad\` | Number | Flow gain above the set pressure [kg/s·Pa]: ṁ ≈ grad · (P − Pcrack). |
 | \`eps\` | Number | Smoothing width [Pa] of the max(0, P − Pcrack) regularization. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
@@ -28342,19 +28305,19 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
     (4) vapour fraction   (cook.x_cv)  - the cooker stays almost all liquid. }
 
 { ---- Electrical heater: 220 V across a 32.27 ohm element = 1.5 kW ---- }
-VoltageSource   SUP(E=220)
-HeatingResistor HTR(R=32.2667)
+VoltageSource   SUP(E=220 [V])
+HeatingResistor HTR(R=32.2667 [ohm])
 Ground          GND()
 I_heater = 220 / 32.2667                 { heater current by Ohm's law, A }
 
 { ---- Steel body heated by the element, passing heat to the water ---- }
-ThermalMass STEEL(C=750, T0=293.15)      { 750 J/K steel thermal mass }
-Convection  S2W(htc=333.33, area=1)      { steel -> water link, 333 W/K }
+ThermalMass STEEL(C=750 [J/K], T0=293.15 [K])      { 750 J/K steel thermal mass }
+Convection  S2W(htc=333.33 [W/m^2-K], area=1 [m^2])      { steel -> water link, 333 W/K }
 
 { ---- Rigid 5 L two-phase water vessel + lifting relief valve to air ---- }
-BoilingVessel   COOK(fluid$=Water, V=0.005, m0=2.994, T0=293.15)
-ProportionalReliefValve PRV(fluid$=Water, Pcrack=202600, grad=6e-7, eps=2000)
-TwoPhasePressureSink ATM(P=101300)
+BoilingVessel   COOK(fluid$=Water, V=0.005 [m^3], m0=2.994 [kg], T0=293.15 [K])
+ProportionalReliefValve PRV(fluid$=Water, Pcrack=202600 [Pa], grad=6e-7 [kg/s-Pa], eps=2000 [Pa])
+TwoPhasePressureSink ATM(P=101300 [Pa])
 
 connect(SUP.p, HTR.p)
 connect(SUP.n, HTR.n, GND.port)          { circuit return tied to ground }
@@ -28452,8 +28415,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT rv2.i.h = 450000
 // EXPECT rv2.i.p = 2000000
 // EXPECT rv2.s.h = 410000
-TwoPhaseSourcePH D1(mdot=0.1, P=2000000, h=450000)
-TwoPhaseSourcePH I1(mdot=0.1, P=400000, h=410000)
+TwoPhaseSourcePH D1(mdot=0.1 [kg/s], P=2000000 [Pa], h=450000 [J/kg])
+TwoPhaseSourcePH I1(mdot=0.1 [kg/s], P=400000 [Pa], h=410000 [J/kg])
 ReversingValve   RV1(mode=0)
 TwoPhaseSink     O1()
 TwoPhaseSink     S1()
@@ -28461,8 +28424,8 @@ connect(D1.out, RV1.d)
 connect(I1.out, RV1.i)
 connect(RV1.o, O1.in)
 connect(RV1.s, S1.in)
-TwoPhaseSourcePH D2(mdot=0.1, P=2000000, h=450000)
-TwoPhaseSourcePH O2S(mdot=0.1, P=400000, h=410000)
+TwoPhaseSourcePH D2(mdot=0.1 [kg/s], P=2000000 [Pa], h=450000 [J/kg])
+TwoPhaseSourcePH O2S(mdot=0.1 [kg/s], P=400000 [Pa], h=410000 [J/kg])
 ReversingValve   RV2(mode=1)
 TwoPhaseSink     I2()
 TwoPhaseSink     S2()
@@ -28553,9 +28516,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BoilingVessel   COOK(fluid$=Water, V=0.005, m0=3.0, T0=288.15)
-SteamReliefValve PRV(fluid$=Water, A=2e-6, Pset=111458, Cd=0.8, kgas=1.14, Rgas=461.5, eps=1000)
-TwoPhasePressureSink ATM(P=101325)
+BoilingVessel   COOK(fluid$=Water, V=0.005 [m^3], m0=3.0 [kg], T0=288.15 [K])
+SteamReliefValve PRV(fluid$=Water, A=2e-6 [m^2], Pset=111458 [Pa], Cd=0.8, kgas=1.14, Rgas=461.5 [J/kg-K], eps=1000 [Pa])
+TwoPhasePressureSink ATM(P=101325 [Pa])
 
 connect(COOK.vent, PRV.in)
 connect(PRV.out, ATM.in)
@@ -28639,8 +28602,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // SuctionAccumulator: a wet suction stream (x = 0.95) feeds the accumulator,
 // which delivers saturated vapor and traps the liquid carryover — the stored
 // mass m grows at mdot*(1 - x_in) = 2.5 g/s over the 60 s run.
-TwoPhaseSource     SRC(fluid$ = R134a, mdot = 0.05, P = 350000, x = 0.95)
-SuctionAccumulator ACC(fluid$ = R134a, m0 = 0.5)
+TwoPhaseSource     SRC(fluid$ = R134a, mdot = 0.05 [kg/s], P = 350000 [Pa], x = 0.95)
+SuctionAccumulator ACC(fluid$ = R134a, m0 = 0.5 [kg])
 TwoPhaseSink       SNK()
 connect(SRC.out, ACC.in)
 connect(ACC.out, SNK.in)
@@ -28733,9 +28696,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // after ~95 s of retry ladder; Air's reference state (h = 0 at the ~79 K NBP)
 // leaves a wide valid neighborhood around the same guess and it solves in
 // under a second.
-Source      HOT(fluid$ = Air, mdot = 0.3, P = 110000, T = 450)
-Source      COLD(fluid$ = Air, mdot = 0.25, P = 300000, T = 300)
-ThreeZoneHX HX(UA = 600, hot$ = Air, cold$ = Air, arr$ = counter)
+Source      HOT(fluid$ = Air, mdot = 0.3 [kg/s], P = 110000 [Pa], T = 450 [K])
+Source      COLD(fluid$ = Air, mdot = 0.25 [kg/s], P = 300000 [Pa], T = 300 [K])
+ThreeZoneHX HX(UA = 600 [W/K], hot$ = Air, cold$ = Air, arr$ = counter)
 Sink        HSNK()
 Sink        CSNK()
 connect(HOT.out, HX.hot_in)
@@ -28820,10 +28783,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // TranscriticalBackPressureValve: signal-commanded odd-symmetric square-law
 // valve between fixed 1.2 MPa / 400 kPa rails at half opening (u.sig = 0.5).
 // R744 is not in this build; the commanded-area law itself is fluid-agnostic.
-TwoPhasePressureSource         HI(fluid$ = R134a, P = 1200000, x = 0)
-TranscriticalBackPressureValve BPV(fluid$ = R134a, CdA_max = 2e-6)
+TwoPhasePressureSource         HI(fluid$ = R134a, P = 1200000 [Pa], x = 0)
+TranscriticalBackPressureValve BPV(fluid$ = R134a, CdA_max = 2e-6 [m^2])
 SigConstant                    CMD(k = 0.5)
-TwoPhasePressureSink           LO(P = 400000)
+TwoPhasePressureSink           LO(P = 400000 [Pa])
 connect(HI.out, BPV.in)
 connect(BPV.out, LO.in)
 connect(CMD.out, BPV.u)
@@ -28897,7 +28860,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 // TwoPhaseCap: dead-end cap on a pressure reservoir — zero through-flow.
-TwoPhasePressureSource PS(fluid$ = R134a, P = 500000, x = 0.2)
+TwoPhasePressureSource PS(fluid$ = R134a, P = 500000 [Pa], x = 0.2)
 TwoPhaseCap            CAP()
 connect(PS.out, CAP.in)
 m_dead = CAP.in.mdot
@@ -28951,7 +28914,7 @@ TwoPhaseChamber inst(fluid$, V, C, UA, P0, h0, domain$)
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
 | \`V\` | Number | Volume [m³]. |
-| \`C\` | Number | Capacitance [F]. |
+| \`C\` | Number | Capacitance, stored mass per unit pressure [kg/Pa]. |
 | \`UA\` | Number | Overall conductance UA [W/K]. |
 | \`P0\` | Number | Reference/initial pressure [Pa]. |
 | \`h0\` | Number | Reference enthalpy [J/kg]. |
@@ -28990,9 +28953,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // TwoPhaseChamber: heated capacitive control volume in its steady limit —
 // der(P)=0 gives mass balance, der(hcv)=0 gives the energy balance
 // hcv = h_in + UA*(Twall - Tcv)/mdot, an evaporating chamber at 350 kPa.
-TwoPhaseSourcePH SRC(mdot = 0.02, P = 350000, h = 280000)
-TwoPhaseChamber  CH(fluid$ = R134a, V = 0.003, C = 1e-7, UA = 50, P0 = 350000, h0 = 320000)
-ThermalSource    WALL(T = 300)
+TwoPhaseSourcePH SRC(mdot = 0.02 [kg/s], P = 350000 [Pa], h = 280000 [J/kg])
+TwoPhaseChamber  CH(fluid$ = R134a, V = 0.003 [m^3], C = 1e-7 [kg/Pa], UA = 50 [W/K], P0 = 350000 [Pa], h0 = 320000 [J/kg])
+ThermalSource    WALL(T = 300 [K])
 TwoPhaseSink     SNK()
 connect(SRC.out, CH.in)
 connect(CH.wall, WALL.port)
@@ -29078,7 +29041,7 @@ _No additional equations (uses the shared body)._
 $$
 \\begin{aligned}
 rho_{in} &= \\text{Density}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
-in.mdot &= eta_{v}\\cdot disp\\cdot \\frac{rpm}{60}\\cdot rho_{in}
+in.mdot &= eta_{v}\\cdot disp\\cdot \\frac{rpm}{60\\,\\left[s\\right]}\\cdot rho_{in}
 \\end{aligned}
 $$
 
@@ -29092,8 +29055,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhasePressureSource SUC(fluid$=R134a, P=350000, x=1)
-TwoPhaseCompressor CMP(fluid$=R134a, eta=0.7, model$=volumetric, eta_v=0.9, disp=2e-5, rpm=2500.000000)
+TwoPhasePressureSource SUC(fluid$=R134a, P=350000 [Pa], x=1)
+TwoPhaseCompressor CMP(fluid$=R134a, eta=0.7, model$=volumetric, eta_v=0.9, disp=2e-5 [m^3], rpm=2500.000000)
 TwoPhaseSink DIS()
 connect(SUC.out, CMP.in)
 connect(CMP.out, DIS.in)
@@ -29179,8 +29142,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // TwoPhaseCondenser: lumped non-isobaric condenser — superheated R134a at
 // 1.21 MPa leaves 10 kPa lower as liquid with a set 5 K exit subcooling.
-TwoPhaseSourcePH  SRC(mdot = 0.03, P = 1210000, h = 430000)
-TwoPhaseCondenser CND(fluid$ = R134a, SC_set = 5, dP = 10000)
+TwoPhaseSourcePH  SRC(mdot = 0.03 [kg/s], P = 1210000 [Pa], h = 430000 [J/kg])
+TwoPhaseCondenser CND(fluid$ = R134a, SC_set = 5 [K], dP = 10000 [Pa])
 TwoPhaseSink      SNK()
 connect(SRC.out, CND.in)
 connect(CND.out, SNK.in)
@@ -29263,27 +29226,27 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 // Coolant loop: pump -> two parallel cold-plate branches -> LiquidMixer -> sink
-LiquidSource  PIN(fluid$=EG50, mdot=0.3, P=200000 [Pa], T=305 [K])
-LiquidOrifice O1(CdA=1.5e-5, rho=1050)
-LiquidOrifice O2(CdA=1.2e-5, rho=1050)
-LiquidWallHX  CP1(fluid$=EG50, UA=300)
-LiquidWallHX  CP2(fluid$=EG50, UA=300)
-LiquidWallHX  CHL(fluid$=EG50, UA=400)
+LiquidSource  PIN(fluid$=EG50, mdot=0.3 [kg/s], P=200000 [Pa], T=305 [K])
+LiquidOrifice O1(CdA=1.5e-5 [m^2], rho=1050 [kg/m^3])
+LiquidOrifice O2(CdA=1.2e-5 [m^2], rho=1050 [kg/m^3])
+LiquidWallHX  CP1(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CP2(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CHL(fluid$=EG50, UA=400 [W/K])
 LiquidMixer   MIX()
 LiquidSink    POUT()
-MassGen       BATT(C=60000, Qgen=4000 [W], T0=305 [K])
-MassGen       MOTOR(C=40000, Qgen=5000 [W], T0=305 [K])
+MassGen       BATT(C=60000 [J/K], Qgen=4000 [W], T0=305 [K])
+MassGen       MOTOR(C=40000 [J/K], Qgen=5000 [W], T0=305 [K])
 
 // Refrigerant loop: feed -> chiller evaporator (wall-coupled) + a second
 // evaporator -> TwoPhaseMixer -> compressor -> floating-head condenser.
 TwoPhasePressureSource FEED(fluid$=R1234yf, P=350000 [Pa], x=0.2)
-TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600, dP=20000, SH=5)
-TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200, dP=20000, SH=8)
+TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600 [W/K], dP=20000 [Pa], SH=5 [K])
+TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200 [W/K], dP=20000 [Pa], SH=8 [K])
 TwoPhaseMixer          SUC()
 TwoPhaseCompressor     CMP(fluid$=R1234yf, eta=0.7)
-TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000, T_amb=313)
+TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000 [W/K], T_amb=313 [K])
 TwoPhaseSink           LIQ()
-MassGen                CABIN(C=8000, Qgen=2500 [W], T0=305 [K])
+MassGen                CABIN(C=8000 [J/K], Qgen=2500 [W], T0=305 [K])
 
 connect(PIN.out, O1.in, O2.in)
 connect(O1.out, CP1.in)
@@ -29390,8 +29353,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseEnthalpySource SRC(mdot=0.02, h=435000)
-TwoPhaseCondenserUA COND(fluid$=R134a, UA=400, T_amb=305, V=0.002)
+TwoPhaseEnthalpySource SRC(mdot=0.02 [kg/s], h=435000 [J/kg])
+TwoPhaseCondenserUA COND(fluid$=R134a, UA=400 [W/K], T_amb=305 [K], V=0.002 [m^3])
 TwoPhaseSink SNK()
 connect(SRC.out, COND.in)
 connect(COND.out, SNK.in)
@@ -29475,23 +29438,23 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // energy balance (replicated).
 // EXPECT os.bleed.mdot = 0.002 tol 1e-9
 // EXPECT d_os = 0 tol 1e-6
-TwoPhaseSourcePH M1(mdot=0.1, P=800000, h=430000)
-TwoPhaseSourcePH S1(mdot=0.05, P=300000, h=410000)
+TwoPhaseSourcePH M1(mdot=0.1 [kg/s], P=800000 [Pa], h=430000 [J/kg])
+TwoPhaseSourcePH S1(mdot=0.05 [kg/s], P=300000 [Pa], h=410000 [J/kg])
 TwoPhaseEjector  EJ(PLR=1.3)
 TwoPhaseSink     KE()
 connect(M1.out, EJ.m)
 connect(S1.out, EJ.s)
 connect(EJ.out, KE.in)
 
-TwoPhaseSourcePH DIS(mdot=0.1, P=1500000, h=440000)
+TwoPhaseSourcePH DIS(mdot=0.1 [kg/s], P=1500000 [Pa], h=440000 [J/kg])
 OilSeparator     OS(fluid$=R134a, f=0.02)
 TwoPhaseSink     KO()
 TwoPhaseSink     KB()
 connect(DIS.out, OS.in)
 connect(OS.out, KO.in)
 connect(OS.bleed, KB.in)
-hf_chk = Enthalpy(R134a, P=1500000, x=0)
-d_os   = 0.098 * OS.out.h - (0.1 * 440000 - 0.002 * hf_chk)
+hf_chk = Enthalpy(R134a, P=1500000 [Pa], x=0)
+d_os   = 0.098 [kg/s] * OS.out.h - (0.1 [kg/s] * 440000 [J/kg] - 0.002 [kg/s] * hf_chk)
 
 { CHECK d_os 0 1e-8 }
 { CHECK dis.out.h 440000 0.44 }
@@ -29539,7 +29502,7 @@ TwoPhaseEnthalpySource inst(mdot, h, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`mdot\` | Number | Mass flow rate [kg/s]. |
-| \`h\` | Number | Heat-transfer coefficient [W/m²·K]. |
+| \`h\` | Number | Specific enthalpy [J/kg]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -29563,8 +29526,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseEnthalpySource SRC(mdot=0.02, h=435000)
-TwoPhaseCondenserUA COND(fluid$=R134a, UA=400, T_amb=305, V=0.002)
+TwoPhaseEnthalpySource SRC(mdot=0.02 [kg/s], h=435000 [J/kg])
+TwoPhaseCondenserUA COND(fluid$=R134a, UA=400 [W/K], T_amb=305 [K], V=0.002 [m^3])
 TwoPhaseSink SNK()
 connect(SRC.out, COND.in)
 connect(COND.out, SNK.in)
@@ -29646,8 +29609,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // TwoPhaseEvaporator: lumped non-isobaric evaporator — two-phase R134a in at
 // 360 kPa leaves 10 kPa lower with a set 5 K exit superheat; Q is an output.
-TwoPhaseSourcePH   SRC(mdot = 0.03, P = 360000, h = 260000)
-TwoPhaseEvaporator EV(fluid$ = R134a, SH_set = 5, dP = 10000)
+TwoPhaseSourcePH   SRC(mdot = 0.03 [kg/s], P = 360000 [Pa], h = 260000 [J/kg])
+TwoPhaseEvaporator EV(fluid$ = R134a, SH_set = 5 [K], dP = 10000 [Pa])
 TwoPhaseSink       SNK()
 connect(SRC.out, EV.in)
 connect(EV.out, SNK.in)
@@ -29732,27 +29695,27 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 // Coolant loop: pump -> two parallel cold-plate branches -> LiquidMixer -> sink
-LiquidSource  PIN(fluid$=EG50, mdot=0.3, P=200000 [Pa], T=305 [K])
-LiquidOrifice O1(CdA=1.5e-5, rho=1050)
-LiquidOrifice O2(CdA=1.2e-5, rho=1050)
-LiquidWallHX  CP1(fluid$=EG50, UA=300)
-LiquidWallHX  CP2(fluid$=EG50, UA=300)
-LiquidWallHX  CHL(fluid$=EG50, UA=400)
+LiquidSource  PIN(fluid$=EG50, mdot=0.3 [kg/s], P=200000 [Pa], T=305 [K])
+LiquidOrifice O1(CdA=1.5e-5 [m^2], rho=1050 [kg/m^3])
+LiquidOrifice O2(CdA=1.2e-5 [m^2], rho=1050 [kg/m^3])
+LiquidWallHX  CP1(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CP2(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CHL(fluid$=EG50, UA=400 [W/K])
 LiquidMixer   MIX()
 LiquidSink    POUT()
-MassGen       BATT(C=60000, Qgen=4000 [W], T0=305 [K])
-MassGen       MOTOR(C=40000, Qgen=5000 [W], T0=305 [K])
+MassGen       BATT(C=60000 [J/K], Qgen=4000 [W], T0=305 [K])
+MassGen       MOTOR(C=40000 [J/K], Qgen=5000 [W], T0=305 [K])
 
 // Refrigerant loop: feed -> chiller evaporator (wall-coupled) + a second
 // evaporator -> TwoPhaseMixer -> compressor -> floating-head condenser.
 TwoPhasePressureSource FEED(fluid$=R1234yf, P=350000 [Pa], x=0.2)
-TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600, dP=20000, SH=5)
-TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200, dP=20000, SH=8)
+TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600 [W/K], dP=20000 [Pa], SH=5 [K])
+TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200 [W/K], dP=20000 [Pa], SH=8 [K])
 TwoPhaseMixer          SUC()
 TwoPhaseCompressor     CMP(fluid$=R1234yf, eta=0.7)
-TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000, T_amb=313)
+TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000 [W/K], T_amb=313 [K])
 TwoPhaseSink           LIQ()
-MassGen                CABIN(C=8000, Qgen=2500 [W], T0=305 [K])
+MassGen                CABIN(C=8000 [J/K], Qgen=2500 [W], T0=305 [K])
 
 connect(PIN.out, O1.in, O2.in)
 connect(O1.out, CP1.in)
@@ -29826,7 +29789,7 @@ TwoPhaseExpansionValve inst(fluid$, Cv, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
-| \`Cv\` | Number | Flow coefficient. |
+| \`Cv\` | Number | Flow coefficient: ṁ|ṁ| = 2·Cv²·ρ·ΔP, an effective area [m²]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -29852,11 +29815,11 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R1234yf, mdot=0.025, P=350000, x=0.2)
-TwoPhaseEvaporator EVP(fluid$=R1234yf, SH_set=8, dP=0)
+TwoPhaseSource SRC(fluid$=R1234yf, mdot=0.025 [kg/s], P=350000 [Pa], x=0.2)
+TwoPhaseEvaporator EVP(fluid$=R1234yf, SH_set=8 [K], dP=0 [Pa])
 TwoPhaseCompressor CMP(fluid$=R1234yf, eta=0.7)
-TwoPhaseCondenser CND(fluid$=R1234yf, SC_set=5, dP=0)
-TwoPhaseExpansionValve EXV(fluid$=R1234yf, Cv=5e-7)
+TwoPhaseCondenser CND(fluid$=R1234yf, SC_set=5 [K], dP=0 [Pa])
+TwoPhaseExpansionValve EXV(fluid$=R1234yf, Cv=5e-7 [m^2])
 TwoPhaseSink SNK()
 connect(SRC.out, EVP.in)
 connect(EVP.out, CMP.in)
@@ -29952,8 +29915,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=500000, x=0.3)
-TwoPhaseFlowRes LINE(fluid$=R134a, L=2, D=0.008)
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=500000 [Pa], x=0.3)
+TwoPhaseFlowRes LINE(fluid$=R134a, L=2 [m], D=0.008 [m])
 TwoPhaseSensor SEN(fluid$=R134a)
 TwoPhaseSink SNK()
 connect(SRC.out, LINE.in)
@@ -30042,8 +30005,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // frees-language: 2
 // TwoPhaseInternalHX: suction-line heat exchanger — the 1.2 MPa liquid line
 // subcools against the 350 kPa suction vapor at eps = 0.6 on the vapor side.
-TwoPhaseSourcePH   LIQ(mdot = 0.03, P = 1200000, h = 260000)
-TwoPhaseSourcePH   VAP(mdot = 0.03, P = 350000, h = 405000)
+TwoPhaseSourcePH   LIQ(mdot = 0.03 [kg/s], P = 1200000 [Pa], h = 260000 [J/kg])
+TwoPhaseSourcePH   VAP(mdot = 0.03 [kg/s], P = 350000 [Pa], h = 405000 [J/kg])
 TwoPhaseInternalHX IHX(fluid$ = R134a, eps = 0.6)
 TwoPhaseSink       LSNK()
 TwoPhaseSink       VSNK()
@@ -30134,8 +30097,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=500000, x=0.5)
-TwoPhaseInventory INV(fluid$=R134a, V=0.001)
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=500000 [Pa], x=0.5)
+TwoPhaseInventory INV(fluid$=R134a, V=0.001 [m^3])
 TwoPhaseSink SNK()
 connect(SRC.out, INV.in)
 connect(INV.out, SNK.in)
@@ -30210,27 +30173,27 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 // Coolant loop: pump -> two parallel cold-plate branches -> LiquidMixer -> sink
-LiquidSource  PIN(fluid$=EG50, mdot=0.3, P=200000 [Pa], T=305 [K])
-LiquidOrifice O1(CdA=1.5e-5, rho=1050)
-LiquidOrifice O2(CdA=1.2e-5, rho=1050)
-LiquidWallHX  CP1(fluid$=EG50, UA=300)
-LiquidWallHX  CP2(fluid$=EG50, UA=300)
-LiquidWallHX  CHL(fluid$=EG50, UA=400)
+LiquidSource  PIN(fluid$=EG50, mdot=0.3 [kg/s], P=200000 [Pa], T=305 [K])
+LiquidOrifice O1(CdA=1.5e-5 [m^2], rho=1050 [kg/m^3])
+LiquidOrifice O2(CdA=1.2e-5 [m^2], rho=1050 [kg/m^3])
+LiquidWallHX  CP1(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CP2(fluid$=EG50, UA=300 [W/K])
+LiquidWallHX  CHL(fluid$=EG50, UA=400 [W/K])
 LiquidMixer   MIX()
 LiquidSink    POUT()
-MassGen       BATT(C=60000, Qgen=4000 [W], T0=305 [K])
-MassGen       MOTOR(C=40000, Qgen=5000 [W], T0=305 [K])
+MassGen       BATT(C=60000 [J/K], Qgen=4000 [W], T0=305 [K])
+MassGen       MOTOR(C=40000 [J/K], Qgen=5000 [W], T0=305 [K])
 
 // Refrigerant loop: feed -> chiller evaporator (wall-coupled) + a second
 // evaporator -> TwoPhaseMixer -> compressor -> floating-head condenser.
 TwoPhasePressureSource FEED(fluid$=R1234yf, P=350000 [Pa], x=0.2)
-TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600, dP=20000, SH=5)
-TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200, dP=20000, SH=8)
+TwoPhaseEvaporatorUA   CHLR(fluid$=R1234yf, UA=600 [W/K], dP=20000 [Pa], SH=5 [K])
+TwoPhaseEvaporatorUA   AUX(fluid$=R1234yf, UA=200 [W/K], dP=20000 [Pa], SH=8 [K])
 TwoPhaseMixer          SUC()
 TwoPhaseCompressor     CMP(fluid$=R1234yf, eta=0.7)
-TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000, T_amb=313)
+TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=1000 [W/K], T_amb=313 [K])
 TwoPhaseSink           LIQ()
-MassGen                CABIN(C=8000, Qgen=2500 [W], T0=305 [K])
+MassGen                CABIN(C=8000 [J/K], Qgen=2500 [W], T0=305 [K])
 
 connect(PIN.out, O1.in, O2.in)
 connect(O1.out, CP1.in)
@@ -30430,7 +30393,7 @@ port(in)
   in.P = P
 end
 RSrc        SRC(P=500000, h0=250000, mdot=0.05)
-TwoPhasePipe TP(fluid$=R134a, L=2, D=0.01, rough=1e-5, x=0.3, rho_l=1200, rho_g=20, mu_l=2e-4, mu_g=1e-5)
+TwoPhasePipe TP(fluid$=R134a, L=2 [m], D=0.01 [m], rough=1e-5 [m], x=0.3, rho_l=1200 [kg/m^3], rho_g=20 [kg/m^3], mu_l=2e-4 [Pa-s], mu_g=1e-5 [Pa-s])
 Sink        SNK()
 connect(SRC.out, TP.in)
 connect(TP.out, SNK.in)
@@ -30503,9 +30466,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhasePressureSource HI(fluid$=R134a, P=900000, x=0)
-EXV V(fluid$=R134a, CdA_max=2e-6, u=0.6)
-TwoPhasePressureSink LO(P=350000)
+TwoPhasePressureSource HI(fluid$=R134a, P=900000 [Pa], x=0)
+EXV V(fluid$=R134a, CdA_max=2e-6 [m^2], u=0.6)
+TwoPhasePressureSink LO(P=350000 [Pa])
 connect(HI.out, V.in)
 connect(V.out, LO.in)
 
@@ -30584,9 +30547,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhasePressureSource HI(fluid$=R134a, P=900000, x=0)
-EXV V(fluid$=R134a, CdA_max=2e-6, u=0.6)
-TwoPhasePressureSink LO(P=350000)
+TwoPhasePressureSource HI(fluid$=R134a, P=900000 [Pa], x=0)
+EXV V(fluid$=R134a, CdA_max=2e-6 [m^2], u=0.6)
+TwoPhasePressureSink LO(P=350000 [Pa])
 connect(HI.out, V.in)
 connect(V.out, LO.in)
 
@@ -30668,8 +30631,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=900000, x=0.05)
-TwoPhaseReceiver RCV(fluid$=R134a, V=0.002)
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=900000 [Pa], x=0.05)
+TwoPhaseReceiver RCV(fluid$=R134a, V=0.002 [m^3])
 TwoPhaseSink SNK()
 connect(SRC.out, RCV.in)
 connect(RCV.out, SNK.in)
@@ -30754,8 +30717,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=500000, x=0.3)
-TwoPhaseFlowRes LINE(fluid$=R134a, L=2, D=0.008)
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=500000 [Pa], x=0.3)
+TwoPhaseFlowRes LINE(fluid$=R134a, L=2 [m], D=0.008 [m])
 TwoPhaseSensor SEN(fluid$=R134a)
 TwoPhaseSink SNK()
 connect(SRC.out, LINE.in)
@@ -30853,13 +30816,13 @@ port(out)
 end
 hsub = Enthalpy(R134a, P=1000000, x=0)
 PHSupply             SA(P=1200000, h=hsub)
-TwoPhaseShortTube    STA(fluid$=R134a, CdA=2e-6)
-TwoPhasePressureSink KA(P=400000)
+TwoPhaseShortTube    STA(fluid$=R134a, CdA=2e-6 [m^2])
+TwoPhasePressureSink KA(P=400000 [Pa])
 connect(SA.out, STA.in)
 connect(STA.out, KA.in)
 PHSupply             SB(P=1200000, h=hsub)
-TwoPhaseShortTube    STB(fluid$=R134a, CdA=2e-6)
-TwoPhasePressureSink KB(P=200000)
+TwoPhaseShortTube    STB(fluid$=R134a, CdA=2e-6 [m^2])
+TwoPhasePressureSink KB(P=200000 [Pa])
 connect(SB.out, STB.in)
 connect(STB.out, KB.in)
 r_choke = STA.in.mdot / STB.in.mdot
@@ -30937,8 +30900,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=500000, x=0.5)
-TwoPhaseInventory INV(fluid$=R134a, V=0.001)
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=500000 [Pa], x=0.5)
+TwoPhaseInventory INV(fluid$=R134a, V=0.001 [m^3])
 TwoPhaseSink SNK()
 connect(SRC.out, INV.in)
 connect(INV.out, SNK.in)
@@ -31020,8 +30983,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=500000, x=0.5)
-TwoPhaseInventory INV(fluid$=R134a, V=0.001)
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=500000 [Pa], x=0.5)
+TwoPhaseInventory INV(fluid$=R134a, V=0.001 [m^3])
 TwoPhaseSink SNK()
 connect(SRC.out, INV.in)
 connect(INV.out, SNK.in)
@@ -31073,7 +31036,7 @@ TwoPhaseSourcePH inst(mdot, P, h, domain$)
 | --- | --- | --- |
 | \`mdot\` | Number | Mass flow rate [kg/s]. |
 | \`P\` | Number | Pressure [Pa]. |
-| \`h\` | Number | Heat-transfer coefficient [W/m²·K]. |
+| \`h\` | Number | Specific enthalpy [J/kg]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
@@ -31098,10 +31061,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-MovingBoundaryCondenser CD(fluid$=R134a, U_cond=2500, U_sc=300, D=0.01, L=8, eps_zone=0.01)
-TwoPhaseSourcePH SRC(mdot=0.02, P=900000, h=445000)
+MovingBoundaryCondenser CD(fluid$=R134a, U_cond=2500 [W/m^2-K], U_sc=300 [W/m^2-K], D=0.01 [m], L=8 [m], eps_zone=0.01 [m])
+TwoPhaseSourcePH SRC(mdot=0.02 [kg/s], P=900000 [Pa], h=445000 [J/kg])
 TwoPhaseSink SNK()
-ThermalSource WALL(T=300)
+ThermalSource WALL(T=300 [K])
 connect(SRC.out, CD.in)
 connect(CD.out, SNK.in)
 connect(CD.wall, WALL.port)
@@ -31153,7 +31116,7 @@ TwoPhaseVolume inst(fluid$, V, C, P0, domain$)
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
 | \`V\` | Number | Volume [m³]. |
-| \`C\` | Number | Capacitance [F]. |
+| \`C\` | Number | Capacitance, stored mass per unit pressure [kg/Pa]. |
 | \`P0\` | Number | Reference/initial pressure [Pa]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
@@ -31191,8 +31154,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // TwoPhaseVolume: adiabatic capacitive C-node in its steady limit (no DYNAMIC
 // block, so der(P) = 0 forces in.mdot = out.mdot); reports the void-weighted
 // charge of 2 L of R134a at x = 0.5.
-TwoPhaseSource SRC(fluid$ = R134a, mdot = 0.04, P = 400000, x = 0.5)
-TwoPhaseVolume VOL(fluid$ = R134a, V = 0.002, C = 1e-7, P0 = 400000)
+TwoPhaseSource SRC(fluid$ = R134a, mdot = 0.04 [kg/s], P = 400000 [Pa], x = 0.5)
+TwoPhaseVolume VOL(fluid$ = R134a, V = 0.002 [m^3], C = 1e-7 [kg/Pa], P0 = 400000 [Pa])
 TwoPhaseSink   SNK()
 connect(SRC.out, VOL.in)
 connect(VOL.out, SNK.in)
@@ -31245,7 +31208,7 @@ TXVSuperheat inst(fluid$, Kv, SH_set, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
-| \`Kv\` | Number | Flow coefficient. |
+| \`Kv\` | Number | Mass-flow gain per kelvin of superheat above SH_set [kg/s·K]. |
 | \`SH_set\` | Number | Target superheat [K]. |
 | \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
@@ -31274,10 +31237,10 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-TwoPhasePressureSource HI(fluid$=R134a, P=900000, x=0)
-TXVSuperheat V(fluid$=R134a, Kv=5e-7, SH_set=5)
-TwoPhasePressureSink LO(P=350000)
-ThermalSource BULB(T=288)
+TwoPhasePressureSource HI(fluid$=R134a, P=900000 [Pa], x=0)
+TXVSuperheat V(fluid$=R134a, Kv=5e-7 [kg/s-K], SH_set=5 [K])
+TwoPhasePressureSink LO(P=350000 [Pa])
+ThermalSource BULB(T=288 [K])
 connect(HI.out, V.in)
 connect(V.out, LO.in)
 connect(V.bulb, BULB.port)
@@ -37711,34 +37674,34 @@ UA_bcp   = h_chl_c * A_bcp
 UA_mcp   = htc_1phase('EG50', 200000, 320, 0.17, 0.008, 1.5e-4) * A_mcp
 
 { ---- Coolant line ---- }
-LiquidSource  PUMPIN(fluid$=EG50, mdot=0.4, P=200000 [Pa], T=305 [K])
+LiquidSource  PUMPIN(fluid$=EG50, mdot=0.4 [kg/s], P=200000 [Pa], T=305 [K])
 LiquidPump    PUMP(fluid$=EG50, eta=0.6)
-LiquidOrifice OBAT(CdA=1.6e-5, rho=1050)
-LiquidOrifice OMOT(CdA=1.2e-5, rho=1050)
+LiquidOrifice OBAT(CdA=1.6e-5 [m^2], rho=1050 [kg/m^3])
+LiquidOrifice OMOT(CdA=1.2e-5 [m^2], rho=1050 [kg/m^3])
 LiquidWallHX  BCP(fluid$=EG50, UA=UA_bcp)
 LiquidWallHX  CHLC(fluid$=EG50, UA=UA_chl_c)
 LiquidWallHX  MCP(fluid$=EG50, UA=UA_mcp)
 LiquidMixer   MIX()
 LiquidWallHX  RAD1(fluid$=EG50, UA=UA_rad)
-LiquidOrifice OR1(CdA=1.2e-4, rho=1050)
+LiquidOrifice OR1(CdA=1.2e-4 [m^2], rho=1050 [kg/m^3])
 LiquidWallHX  RAD2(fluid$=EG50, UA=UA_rad)
-LiquidOrifice OR2(CdA=1.2e-4, rho=1050)
+LiquidOrifice OR2(CdA=1.2e-4 [m^2], rho=1050 [kg/m^3])
 LiquidWallHX  RAD3(fluid$=EG50, UA=UA_rad)
-LiquidOrifice OR3(CdA=1.2e-4, rho=1050)
+LiquidOrifice OR3(CdA=1.2e-4 [m^2], rho=1050 [kg/m^3])
 ThermalSource AMB(T=313 [K])
 LiquidSink    PUMPOUT()
 
-MassGen BATT(C=60000, Qgen=4000, T0=305 [K])
-MassGen MOTOR(C=40000, Qgen=5000, T0=305 [K])
-MassGen CABIN(C=8000,  Qgen=2500, T0=305 [K])
+MassGen BATT(C=60000 [J/K], Qgen=4000 [W], T0=305 [K])
+MassGen MOTOR(C=40000 [J/K], Qgen=5000 [W], T0=305 [K])
+MassGen CABIN(C=8000 [J/K],  Qgen=2500 [W], T0=305 [K])
 
 { ---- Refrigerant line ---- }
 TwoPhasePressureSource FEED(fluid$=R1234yf, P=350000 [Pa], x=0.20)
-TwoPhaseEvaporatorUA CHLR(fluid$=R1234yf, UA=UA_chl_r, dP=dP_chl, SH=5)
-TwoPhaseEvaporatorUA CABE(fluid$=R1234yf, UA=UA_cab,  dP=dP_cab, SH=8)
+TwoPhaseEvaporatorUA CHLR(fluid$=R1234yf, UA=UA_chl_r, dP=dP_chl, SH=5 [K])
+TwoPhaseEvaporatorUA CABE(fluid$=R1234yf, UA=UA_cab,  dP=dP_cab, SH=8 [K])
 TwoPhaseMixer SUC()
 TwoPhaseCompressor CMP(fluid$=R1234yf, eta=0.7)
-TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=UA_cond, T_amb=313)
+TwoPhaseCondenserFloat COND(fluid$=R1234yf, UA=UA_cond, T_amb=313 [K])
 TwoPhaseSink  LIQ()
 
 connect(PUMPIN.out, PUMP.in)
@@ -40423,9 +40386,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-Vol_vessel = 0.080
-m = 4
-P_ves = 160000
+Vol_vessel = 0.080 [m^3]
+m = 4 [kg]
+P_ves = 160000 [Pa]
 v_avg = Vol_vessel / m
 T_sat = Temperature(R134a, P=P_ves, x=0)
 x = Quality(R134a, P=P_ves, v=v_avg)
@@ -47677,7 +47640,7 @@ function [in, out] = MyFan(fluid$=Air, model$=simple)
   END
 end
 Source SUP(fluid$=Air, mdot=0.1 [kg/s], P=101325 [Pa], T=293.15 [K])
-MyFan  F1(fluid$=Air, model$=curve, dP0=300, kQ=1.5e4)
+MyFan  F1(fluid$=Air, model$=curve, dP0=300 [Pa], kQ=1.5e4 [Pa-s^2/kg^2])
 Sink   RET()
 connect(SUP.out, F1.in)
 connect(F1.out, RET.in)
@@ -51246,7 +51209,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 Re = 1e5
-eps = 0.00015
+eps = 0.00015 [m]
 D = 0.25 [m]
 { ff is unknown — set a guess of ~0.02 in Variable Info }
 1/sqrt(ff) = -2*log10(eps/(3.7*D) + 2.51/(Re*sqrt(ff)))
@@ -54174,8 +54137,8 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-BatteryRC B(Voc=48, R0=0.1, R1=0.2, C1=1000, Vrc0=0)
-Resistor  RL(R=4.7)
+BatteryRC B(Voc=48 [V], R0=0.1 [ohm], R1=0.2 [ohm], C1=1000 [farad], Vrc0=0 [V])
+Resistor  RL(R=4.7 [ohm])
 Ground    G()
 connect(B.p, RL.a)
 connect(B.n, RL.b, G.port)

@@ -32,9 +32,9 @@ Battery2RC inst(Voc, R0, R1, C1, R2, C2, Vrc1_0, Vrc2_0)
 | `Voc` | Number | Open-circuit voltage [V]. |
 | `R0` | Number | Series (ohmic) resistance [Ω]. |
 | `R1` | Number | First RC-branch resistance [Ω]. |
-| `C1` | Number | First RC-branch capacitance [F]. |
+| `C1` | Number | First RC-branch capacitance [farad]. |
 | `R2` | Number | Second RC-branch resistance [Ω]. |
-| `C2` | Number | Second RC-branch capacitance [F]. |
+| `C2` | Number | Second RC-branch capacitance [farad]. |
 | `Vrc1_0` | Number | Initial first-RC voltage [V]. |
 | `Vrc2_0` | Number | Initial second-RC voltage [V]. |
 
@@ -63,8 +63,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-Battery2RC B(Voc=48, R0=0.1, R1=0.2, C1=1000, R2=0.1, C2=2000, Vrc1_0=0, Vrc2_0=0)
-Resistor   RL(R=4.6)
+Battery2RC B(Voc=48 [V], R0=0.1 [ohm], R1=0.2 [ohm], C1=1000 [farad], R2=0.1 [ohm], C2=2000 [farad], Vrc1_0=0 [V], Vrc2_0=0 [V])
+Resistor   RL(R=4.6 [ohm])
 Ground     G()
 connect(B.p, RL.a)
 connect(B.n, RL.b, G.port)

@@ -59,7 +59,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // Combustor: fuel mass addition at eta_b on the LHV with a rated pressure
 // loss. Kerosene-like fuel (43 MJ/kg) at f = 0.02 into a 6 bar air stream.
-Combustor CB(g1, g2, mdot_f = 0.02, LHV = 43e6, eta_b = 0.98, dP = 20000)
+Combustor CB(g1, g2, mdot_f = 0.02 [kg/s], LHV = 43e6 [J/kg], eta_b = 0.98, dP = 20000 [Pa])
 
 g1.P     = 600000
 g1.h     = 550000

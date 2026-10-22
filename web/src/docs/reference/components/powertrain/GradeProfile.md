@@ -72,7 +72,7 @@ TABLE gprof(s)
   100  0
 END
 VelSource    CRUISE(v=15)
-GradeProfile GP(m=1500, g=9.80665, map$=gprof, s0=0)
+GradeProfile GP(m=1500 [kg], g=9.80665 [m/s^2], map$=gprof, s0=0 [m])
 connect(CRUISE.port, GP.port)
 DYNAMIC climb(method = ode45, time = 0 .. 4, points = 21)
 END

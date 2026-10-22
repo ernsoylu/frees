@@ -61,7 +61,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 // frees-language: 2
 // A 3-way moist-air node: sum of dry-air mass flow zero and W equal on a split.
-MoistAirSource SRC(a1, P = 101325, T = 305, W = 0.009, mdot = 2.0)
+MoistAirSource SRC(a1, P = 101325 [Pa], T = 305 [K], W = 0.009, mdot = 2.0 [kg/s])
 MoistAirDamper DMP(a1, a2, a3, u = 0.25)
 MoistAirSink   S2(a2)
 MoistAirSink   S3(a3)

@@ -53,8 +53,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-LiquidSource S(fluid$=Water, mdot=0.1, P=200000, T=300)
-LiquidColdPlate CP(Q=2000)
+LiquidSource S(fluid$=Water, mdot=0.1 [kg/s], P=200000 [Pa], T=300 [K])
+LiquidColdPlate CP(Q=2000 [W])
 LiquidSink K()
 connect(S.out, CP.in)
 connect(CP.out, K.in)

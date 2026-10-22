@@ -69,33 +69,33 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT d_fd = 0 tol 1e-6
 // EXPECT d_kr = 0 tol 1e-8
 // EXPECT d_pp = 0 tol 1e-2
-HydraulicSupply    S1(P=1000000)
-HydraulicCheckValve CVF(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T1(P=100000)
+HydraulicSupply    S1(P=1000000 [Pa])
+HydraulicCheckValve CVF(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T1(P=100000 [Pa])
 connect(S1.out, CVF.in)
 connect(CVF.out, T1.port)
-d_cv = CVF.in.mdot - 1e-6 * sqrt(2 * 850 * 900000)
-HydraulicSupply    S2(P=100000)
-HydraulicCheckValve CVR(CdA=1e-6, rho=850, eps=100)
-HydraulicTank      T2(P=1000000)
+d_cv = CVF.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 900000 [Pa])
+HydraulicSupply    S2(P=100000 [Pa])
+HydraulicCheckValve CVR(CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100 [Pa])
+HydraulicTank      T2(P=1000000 [Pa])
 connect(S2.out, CVR.in)
 connect(CVR.out, T2.port)
 
-HydraulicSupply       S3(P=25000000)
-HydraulicSequenceValve SQO(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T3(P=100000)
+HydraulicSupply       S3(P=25000000 [Pa])
+HydraulicSequenceValve SQO(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T3(P=100000 [Pa])
 connect(S3.out, SQO.in)
 connect(SQO.out, T3.port)
-d_sq = SQO.in.mdot - 1e-6 * sqrt(2 * 850 * 24900000)
-HydraulicSupply       S4(P=17000000)
-HydraulicSequenceValve SQS(Pset=20000000, CdA=1e-6, rho=850, eps=100000)
-HydraulicTank         T4(P=100000)
+d_sq = SQO.in.mdot - 1e-6 [m^2] * sqrt(2 * 850 [kg/m^3] * 24900000 [Pa])
+HydraulicSupply       S4(P=17000000 [Pa])
+HydraulicSequenceValve SQS(Pset=20000000 [Pa], CdA=1e-6 [m^2], rho=850 [kg/m^3], eps=100000 [Pa])
+HydraulicTank         T4(P=100000 [Pa])
 connect(S4.out, SQS.in)
 connect(SQS.out, T4.port)
 
-HydraulicSupply     S5(P=1000000)
-HydraulicFlowControl FC(Qset=0.001, rho=850)
-HydraulicTank       T5(P=100000)
+HydraulicSupply     S5(P=1000000 [Pa])
+HydraulicFlowControl FC(Qset=0.001 [m^3/s], rho=850 [kg/m^3])
+HydraulicTank       T5(P=100000 [Pa])
 connect(S5.out, FC.in)
 connect(FC.out, T5.port)
 
@@ -104,32 +104,32 @@ port(out)
   out.mdot = mdot
   out.h    = 0
 end
-OilFlowSource       FSD(mdot=2)
+OilFlowSource       FSD(mdot=2 [kg/s])
 HydraulicFlowDivider FD(frac=0.7)
-HydraulicTank       TA(P=500000)
-HydraulicTank       TB(P=300000)
+HydraulicTank       TA(P=500000 [Pa])
+HydraulicTank       TB(P=300000 [Pa])
 connect(FSD.out, FD.in)
 connect(FD.outa, TA.port)
 connect(FD.outb, TB.port)
-d_fd = FD.in.P - (0.7 * 500000 + 0.3 * 300000)
+d_fd = FD.in.P - (0.7 * 500000 [Pa] + 0.3 * 300000 [Pa])
 
-OilFlowSource      FKR(mdot=1)
-HydraulicResistance KR(K=2.5, rho=850, D=0.01)
-HydraulicTank      TK(P=100000)
+OilFlowSource      FKR(mdot=1 [kg/s])
+HydraulicResistance KR(K=2.5, rho=850 [kg/m^3], D=0.01 [m])
+HydraulicTank      TK(P=100000 [Pa])
 connect(FKR.out, KR.in)
 connect(KR.out, TK.port)
-vkr  = 1 / (850 * pi# / 4 * 0.01^2)
-d_kr = (KR.in.P - 100000) - 2.5 * 850 * vkr^2 / 2
+vkr  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+d_kr = (KR.in.P - 100000 [Pa]) - 2.5 * 850 [kg/m^3] * vkr^2 / 2
 
-OilFlowSource FPP(mdot=1)
-HydraulicPipe HP(rho=850, nu=4e-5, L=5, D=0.01, rough=0)
-HydraulicTank TP(P=100000)
+OilFlowSource FPP(mdot=1 [kg/s])
+HydraulicPipe HP(rho=850 [kg/m^3], nu=4e-5 [m^2/s], L=5 [m], D=0.01 [m], rough=0 [m])
+HydraulicTank TP(P=100000 [Pa])
 connect(FPP.out, HP.in)
 connect(HP.out, TP.port)
-vpp  = 1 / (850 * pi# / 4 * 0.01^2)
-repp = reynolds(850, vpp, 0.01, 850 * 4e-5)
+vpp  = 1 [kg/s] / (850 [kg/m^3] * pi# / 4 * (0.01 [m])^2)
+repp = reynolds(850 [kg/m^3], vpp, 0.01 [m], 850 [kg/m^3] * 4e-5 [m^2/s])
 fpp2 = friction_factor(repp, 0)
-d_pp = (HP.in.P - 100000) - fpp2 * (5 / 0.01) * 850 * vpp^2 / 2
+d_pp = (HP.in.P - 100000 [Pa]) - fpp2 * (5 [m] / 0.01 [m]) * 850 [kg/m^3] * vpp^2 / 2
 
 { CHECK cvf.dp 900000 0.8999999999999999 }
 { CHECK cvf.g 1 0.000001 }

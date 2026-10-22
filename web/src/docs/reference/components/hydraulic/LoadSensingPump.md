@@ -68,10 +68,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // compensator settles (der(dfrac) -> 0) exactly when out.P = ls.P + dP_margin,
 // holding 20 bar across the orifice regardless of the load.
 // mdot = 2e-6*sqrt(2*870*2e6) = 0.11798 kg/s.
-HydraulicSupply  RES(h1, P=100000)
-LoadSensingPump  PMP(h1, h2, hls, rho=870, Dv=6e-5, w_p=150, dP_margin=2000000, tau=0.05, d0=0.5)
-HydraulicOrifice MTR(h2, h3, CdA=2e-6, rho=870)
-HydraulicTank    LOAD(h3, P=6000000)
+HydraulicSupply  RES(h1, P=100000 [Pa])
+LoadSensingPump  PMP(h1, h2, hls, rho=870 [kg/m^3], Dv=6e-5 [m], w_p=150 [m^2/s], dP_margin=2000000 [Pa], tau=0.05 [s], d0=0.5)
+HydraulicOrifice MTR(h2, h3, CdA=2e-6 [m^2], rho=870 [kg/m^3])
+HydraulicTank    LOAD(h3, P=6000000 [Pa])
 hls.P = 6000000
 p_pump  = PMP.out.P
 q_pump  = PMP.out.mdot

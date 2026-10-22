@@ -29,9 +29,9 @@ Engine inst(Tmax, throttle, bf)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `Tmax` | Number | Maximum temperature [K]. |
+| `Tmax` | Number | Maximum (full-throttle) torque [N·m]. |
 | `throttle` | Number | Throttle (0–1). |
-| `bf` | Number | Friction coefficient. |
+| `bf` | Number | Viscous friction coefficient [N·m·s]. |
 
 ## Constitutive Equations
 
@@ -53,8 +53,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-Engine   ENG(Tmax=200, throttle=0.5, bf=0.1)
-RoadLoad RL(Crr=10, Caero=0.01)
+Engine   ENG(Tmax=200 [N-m], throttle=0.5, bf=0.1 [N-m-s])
+RoadLoad RL(Crr=10 [N-m], Caero=0.01 [kg-m^2])
 connect(ENG.shaft, RL.shaft)
 
 { CHECK eng.shaft.tau -91 0.00009099999999999999 }

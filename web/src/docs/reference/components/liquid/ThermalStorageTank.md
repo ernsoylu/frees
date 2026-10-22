@@ -75,8 +75,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // ThermalStorageTank charging at steady state: 340 K water into the top
 // node, three-node stratification with kmix = 20 W/K mixing and small
 // shell losses to 293 K ambient; der(Ti) = 0 solves the 3x3 node balance.
-LiquidSource       LS(l1, fluid$ = Water, mdot = 0.2, P = 150000, T = 340)
-ThermalStorageTank TST(l1, l2, fluid$ = Water, m_node = 50, cp_f = 4180, UA_loss = 5, T_amb = 293, kmix = 20, T10 = 320, T20 = 310, T30 = 300)
+LiquidSource       LS(l1, fluid$ = Water, mdot = 0.2 [kg/s], P = 150000 [Pa], T = 340 [K])
+ThermalStorageTank TST(l1, l2, fluid$ = Water, m_node = 50 [kg], cp_f = 4180 [J/kg-K], UA_loss = 5 [W/K], T_amb = 293 [K], kmix = 20 [W/K], T10 = 320 [K], T20 = 310 [K], T30 = 300 [K])
 LiquidSink         SK(l2)
 
 t_top    = TST.T1

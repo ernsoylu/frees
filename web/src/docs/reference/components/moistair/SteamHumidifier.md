@@ -59,7 +59,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-SteamHumidifier C(W_set=0.015, h_steam=2676000)
+SteamHumidifier C(W_set=0.015, h_steam=2676000 [J/kg])
 C.in.mdot = 1 [kg/s]
 C.in.P = 101325 [Pa]
 C.in.W = 0.012

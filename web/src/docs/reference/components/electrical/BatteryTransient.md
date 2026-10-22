@@ -31,7 +31,7 @@ BatteryTransient inst(Voc, R0, Q0, C_th, SOC0, T0)
 | --- | --- | --- |
 | `Voc` | Number | Open-circuit voltage [V]. |
 | `R0` | Number | Series (ohmic) resistance [Ω]. |
-| `Q0` | Number | Reference heat [W]. |
+| `Q0` | Number | Rated capacity in ampere-hours, entered as a plain number (the model converts it with 3600 A·s per A·h) [-]. |
 | `C_th` | Number | Thermal capacitance [J/K]. |
 | `SOC0` | Number | Initial state of charge (0–1). |
 | `T0` | Number | Reference/initial temperature [K]. |
@@ -48,7 +48,7 @@ qgen &= r0\cdot p.i^{2} \\
 heat.t &= t \\
 \text{der}\left(t\right) &= \frac{qgen + heat.qdot}{c_{th}} \\
 \text{init}\left(t\right) &= t0 \\
-\text{der}\left(soc\right) &= \frac{p.i}{3600\,q0} \\
+\text{der}\left(soc\right) &= \frac{p.i}{3600\,\left[Coulomb\right]\,q0} \\
 \text{init}\left(soc\right) &= soc0
 \end{aligned}
 $$
@@ -63,11 +63,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-BatteryTransient B(Voc=400, R0=0.1, Q0=100, C_th=50000, SOC0=0.9, T0=298)
-Resistor      MOT(R=3.9)
+BatteryTransient B(Voc=400 [V], R0=0.1 [ohm], Q0=100, C_th=50000 [J/K], SOC0=0.9, T0=298 [K])
+Resistor      MOT(R=3.9 [ohm])
 Ground        G()
-Conduction    PLATE(k=10, area=1, L=0.1)
-ThermalSource COOL(T=298)
+Conduction    PLATE(k=10 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource COOL(T=298 [K])
 connect(B.p, MOT.a)
 connect(B.n, MOT.b, G.port)
 connect(B.heat, PLATE.a)

@@ -30,7 +30,7 @@ port(out)
     out.h = in.h + v * (out.P - in.P) / eta
   END
   VARIANT npsh REQUIRE Pvap, NPSHr, eps_n
-    NPSH_a  = (in.P - Pvap) * v / 9.80665
+    NPSH_a  = (in.P - Pvap) * v / 9.80665 [m/s^2]
     derate  = 0.5 * (1 + tanh((NPSH_a - NPSHr) / eps_n))
     out.h   = in.h + v * (out.P - in.P) / (eta * derate)
   END
@@ -189,10 +189,10 @@ port(in)
 port(out)
   Q        = in.mdot / rho
   head     = map$(Q)
-  out.P    = in.P + rho * 9.80665 * head
+  out.P    = in.P + rho * 9.80665 [m/s^2] * head
   out.mdot = in.mdot
-  out.h    = in.h + 9.80665 * head / eta
-  W        = in.mdot * 9.80665 * head / eta
+  out.h    = in.h + 9.80665 [m/s^2] * head / eta
+  W        = in.mdot * 9.80665 [m/s^2] * head / eta
 end
 
 // Expansion tank / degas bottle: pins the loop pressure datum — the one
@@ -279,7 +279,7 @@ port(out)
   der(lvl)  = (in.mdot - out.mdot) / (rho * A_t)
   init(lvl) = L0
   in.P  = P0
-  out.P = P0 + rho * 9.80665 * lvl
+  out.P = P0 + rho * 9.80665 [m/s^2] * lvl
   out.h = in.h
 end
 

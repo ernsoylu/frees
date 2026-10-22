@@ -53,10 +53,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-SpeedSource      SS(w=200)
+SpeedSource      SS(w=200 [rad/s])
 MechGround       G()
 Transmission     TR(ratio=10, eta=0.9)
-RotationalDamper LOAD(c=2)
+RotationalDamper LOAD(c=2 [N-m-s])
 MechGround       G2()
 connect(SS.a, TR.in)
 connect(SS.b, G.port)

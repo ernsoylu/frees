@@ -31,7 +31,7 @@ TwoPhaseVolume inst(fluid$, V, C, P0, domain$)
 | --- | --- | --- |
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
 | `V` | Number | Volume [m³]. |
-| `C` | Number | Capacitance [F]. |
+| `C` | Number | Capacitance, stored mass per unit pressure [kg/Pa]. |
 | `P0` | Number | Reference/initial pressure [Pa]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
@@ -69,8 +69,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // TwoPhaseVolume: adiabatic capacitive C-node in its steady limit (no DYNAMIC
 // block, so der(P) = 0 forces in.mdot = out.mdot); reports the void-weighted
 // charge of 2 L of R134a at x = 0.5.
-TwoPhaseSource SRC(fluid$ = R134a, mdot = 0.04, P = 400000, x = 0.5)
-TwoPhaseVolume VOL(fluid$ = R134a, V = 0.002, C = 1e-7, P0 = 400000)
+TwoPhaseSource SRC(fluid$ = R134a, mdot = 0.04 [kg/s], P = 400000 [Pa], x = 0.5)
+TwoPhaseVolume VOL(fluid$ = R134a, V = 0.002 [m^3], C = 1e-7 [kg/Pa], P0 = 400000 [Pa])
 TwoPhaseSink   SNK()
 connect(SRC.out, VOL.in)
 connect(VOL.out, SNK.in)

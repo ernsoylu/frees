@@ -42,9 +42,10 @@ port(out)
   out.tau = -ratio * eta * in.tau
 end
 
+// The grade force m*g*sin(grade) is referred to the shaft at a 1 m wheel radius.
 function [shaft] = GradeRoadLoad(Crr, Caero, m, g, grade)
 port(shaft)
-  shaft.tau = Crr + Caero * shaft.w^2 + m * g * sin(grade)
+  shaft.tau = Crr + Caero * shaft.w^2 + m * g * sin(grade) * 1 [m]
 end
 
 // ── Vehicle set (Wave 4) ───────────────────────────────────────────────────
@@ -77,7 +78,7 @@ end
 // (tanh-signed) and grade load; velocity is the state.
 function [port] = VehicleBody(m, Cd, Af, rhoA, Crr, grade, v0)
 port(port)
-  F_res = 0.5 * rhoA * Cd * Af * port.vel * abs(port.vel) + m * 9.80665 * (Crr * tanh(port.vel / 0.1) + sin(grade))
+  F_res = 0.5 * rhoA * Cd * Af * port.vel * abs(port.vel) + m * 9.80665 [m/s^2] * (Crr * tanh(port.vel / 0.1 [m/s]) + sin(grade))
   der(port.vel)  = (port.f - F_res) / m
   init(port.vel) = v0
 end
@@ -200,7 +201,7 @@ port(out)
 port(amb)
   HeatedDuct D(fluid$=fluid$, UA=UA)
   WallRC     W(C1=C1, C2=C2, R=R, T10=T10, T20=T20)
-  Convection CV(htc=hA, area=1)
+  Convection CV(htc=hA / 1 [m^2], area=1 [m^2])
   connect(in, D.in)
   connect(D.out, out)
   connect(D.wall, W.a)

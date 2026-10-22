@@ -60,7 +60,7 @@ TABLE fanCurve(Q [m^3/s]) [Pa]
   0.05   180
   0.10    60
 END
-FanMap F1(rho=1.2, map$=fanCurve)
+FanMap F1(rho=1.2 [kg/m^3], map$=fanCurve)
 F1.in.mdot = 0.06
 F1.in.P    = 101325
 F1.in.h    = 300000

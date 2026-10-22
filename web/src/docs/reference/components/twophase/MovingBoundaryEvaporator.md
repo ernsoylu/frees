@@ -34,7 +34,7 @@ MovingBoundaryEvaporator inst(fluid$, U_tp, U_sh, D, L, eps_zone, domain$)
 | `U_sh` | Number | Superheat-zone overall coefficient [W/m²·K]. |
 | `D` | Number | Diameter [m]. |
 | `L` | Number | Length [m]. |
-| `eps_zone` | Number | Zone-collapse smoothing width. |
+| `eps_zone` | Number | Zone-collapse smoothing width [m]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
@@ -71,10 +71,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-MovingBoundaryEvaporator EV(fluid$=R134a, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.01)
-TwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=350000, x=0.25)
+MovingBoundaryEvaporator EV(fluid$=R134a, U_tp=2000 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=5 [m], eps_zone=0.01 [m])
+TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=350000 [Pa], x=0.25)
 TwoPhaseSink SNK()
-ThermalSource WALL(T=292)
+ThermalSource WALL(T=292 [K])
 connect(SRC.out, EV.in)
 connect(EV.out, SNK.in)
 connect(EV.wall, WALL.port)

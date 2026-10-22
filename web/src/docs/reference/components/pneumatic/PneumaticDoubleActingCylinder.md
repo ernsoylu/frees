@@ -68,10 +68,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // 6 bar (Aa = 40 cm2), rod side on a 1 bar return line (Ab = 30 cm2), rod on
 // a 40 kN.s/m damper. F = 6e5*0.004 - 1e5*0.003 = 2100 N -> vel = 0.0525 m/s;
 // der(P) -> 0 gives the isothermal chamber flows P*A*vel/(R*T).
-PneumaticSupply SUP(fluid$=Air, P=600000, T=300)
-PneumaticSupply RET(fluid$=Air, P=100000, T=300)
-PneumaticDoubleActingCylinder CYL(Aa=0.004, Ab=0.003, R=287, T=300, Va0=0.0008, Vb0=0.0006, Pa0=600000, Pb0=100000)
-TransDamper     DMP(c=40000)
+PneumaticSupply SUP(fluid$=Air, P=600000 [Pa], T=300 [K])
+PneumaticSupply RET(fluid$=Air, P=100000 [Pa], T=300 [K])
+PneumaticDoubleActingCylinder CYL(Aa=0.004 [m^2], Ab=0.003 [m^2], R=287 [J/kg-K], T=300 [K], Va0=0.0008 [m^3], Vb0=0.0006 [m^3], Pa0=600000 [Pa], Pb0=100000 [Pa])
+TransDamper     DMP(c=40000 [kg/s])
 TransGround     GND()
 connect(SUP.out, CYL.a)
 connect(RET.out, CYL.b)

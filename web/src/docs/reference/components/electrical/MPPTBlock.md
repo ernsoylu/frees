@@ -57,20 +57,20 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT i_pv = 5.999978 tol 1e-5
 // EXPECT v_cmd = 30 tol 1e-9
 
-SigConstant   SUN(k=1000)
-VoltageSource HOLD(E=0.5)
+SigConstant   SUN(k=1000 [W/m^2])
+VoltageSource HOLD(E=0.5 [V])
 Ground        G1()
-PVSingleDiode PV(Isc_ref=6, Gref=1000, I0d=1e-9, n_d=1.934236, Vt=0.02585, Rs=1e-9, Rsh=1e9)
+PVSingleDiode PV(Isc_ref=6 [A], Gref=1000 [W/m^2], I0d=1e-9 [A], n_d=1.934236, Vt=0.02585 [V], Rs=1e-9 [ohm], Rsh=1e9 [ohm])
 connect(PV.p, HOLD.p)
 connect(PV.n, HOLD.n, G1.port)
 connect(SUN.out, PV.G)
 i_pv = -PV.p.I
 
-TABLE vmp(g)
+TABLE vmp(g [W/m^2]) [V]
   0     30
   2000  30
 END
-SigConstant SUN2(k=800)
+SigConstant SUN2(k=800 [W/m^2])
 MPPTBlock   MPPT(vmp$=vmp)
 connect(SUN2.out, MPPT.G)
 v_cmd = MPPT.out.sig

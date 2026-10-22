@@ -66,9 +66,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // R744 is not in this build, so supercritical-region Air stands in: 3 MPa /
 // 390 K gas cools against a 305 K wall at an effectiveness on the local cp.
 h_in = Enthalpy(Air, T = 390, P = 3000000)
-TwoPhaseSourcePH SRC(mdot = 0.1, P = 3000000, h = h_in)
-GasCooler        GC(fluid$ = Air, UA = 150, dP = 50000)
-ThermalSource    WALL(T = 305)
+TwoPhaseSourcePH SRC(mdot = 0.1 [kg/s], P = 3000000 [Pa], h = h_in)
+GasCooler        GC(fluid$ = Air, UA = 150 [W/K], dP = 50000 [Pa])
+ThermalSource    WALL(T = 305 [K])
 TwoPhaseSink     SNK()
 connect(SRC.out, GC.in)
 connect(GC.wall, WALL.port)

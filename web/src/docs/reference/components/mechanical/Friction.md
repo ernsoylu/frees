@@ -29,10 +29,10 @@ Friction inst(Fc, Fs, vs, bv, eps)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `Fc` | Number | Coulomb friction force [N]. |
-| `Fs` | Number | Static friction force [N]. |
-| `vs` | Number | Reference / slip velocity [m/s]. |
-| `bv` | Number | Viscous-friction coefficient. |
+| `Fc` | Number | Coulomb (kinetic) friction torque [N·m]. |
+| `Fs` | Number | Static (breakaway) friction torque [N·m]. |
+| `vs` | Number | Stribeck speed [rad/s]. |
+| `bv` | Number | Viscous friction coefficient [N·m·s]. |
 | `eps` | Number | Stick–slip smoothing speed [rad/s] — regularizes the sign of the slip speed. |
 
 ## Constitutive Equations
@@ -57,8 +57,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TorqueSource TS(T=5)
-Friction     FR(Fc=2, Fs=3, vs=1, bv=0.5, eps=0.01)
+TorqueSource TS(T=5 [N-m])
+Friction     FR(Fc=2 [N-m], Fs=3 [N-m], vs=1 [rad/s], bv=0.5 [N-m-s], eps=0.01 [rad/s])
 MechGround   G()
 connect(TS.a, FR.a)
 connect(TS.b, FR.b, G.port)

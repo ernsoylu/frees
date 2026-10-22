@@ -31,7 +31,7 @@ HydraulicValve inst(CdA_max, rho, u, domain$)
 | --- | --- | --- |
 | `CdA_max` | Number | Maximum Cd·A [m²]. |
 | `rho` | Number | Density [kg/m³]. |
-| `u` | Number | Specific internal energy [J/kg]. |
+| `u` | Number | Valve opening, 0 (shut) to 1 (fully open) [-]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
@@ -55,7 +55,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-HydraulicValve C(CdA_max=0.00001, rho=850, u=0.5)
+HydraulicValve C(CdA_max=0.00001 [m^2], rho=850 [kg/m^3], u=0.5)
 C.in.P = 1000000
 C.out.P = 100000
 C.in.h = 0

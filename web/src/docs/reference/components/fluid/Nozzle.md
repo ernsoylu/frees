@@ -30,7 +30,7 @@ Nozzle inst(k, R, A_throat, A_exit, P_amb, T0)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `k` | Number | Stiffness / conductivity. |
-| `R` | Number | Resistance [Ω]. |
+| `R` | Number | Specific gas constant [J/kg·K]. |
 | `A_throat` | Number | Throat area [m²]. |
 | `A_exit` | Number | Exit area [m²]. |
 | `P_amb` | Number | Ambient pressure [Pa]. |
@@ -62,7 +62,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-Nozzle N(s_in, s_out, k=1.4, R=287, A_throat=0.01, A_exit=0.04, P_amb=0, T0=500)
+Nozzle N(s_in, s_out, k=1.4, R=287 [J/kg-K], A_throat=0.01 [m^2], A_exit=0.04 [m^2], P_amb=0 [Pa], T0=500 [K])
 s_in.P    = 1000000
 s_in.mdot = 2
 s_in.h    = 300000

@@ -62,8 +62,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // Outlet diffuser: 0.6 kg/s expands from A1 = 0.05 m2 to A2 = 0.15 m2 with
 // 70% static-pressure recovery of the inlet velocity head.
-MoistAirSource SUP(P=101325, T=295.15, W=0.009, mdot=0.6)
-Diffuser       DIF(A1=0.05, A2=0.15, eta_rec=0.7)
+MoistAirSource SUP(P=101325 [Pa], T=295.15 [K], W=0.009, mdot=0.6 [kg/s])
+Diffuser       DIF(A1=0.05 [m^2], A2=0.15 [m^2], eta_rec=0.7)
 MoistAirSink   SNK()
 connect(SUP.out, DIF.in)
 connect(DIF.out, SNK.in)

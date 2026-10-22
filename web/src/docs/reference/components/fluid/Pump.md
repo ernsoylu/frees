@@ -56,7 +56,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 // frees-language: 2
 { Raise 2 kg/s of 20 C water from 1 bar to 6 bar with a 75 %-efficient pump. }
-Source SRC(fluid$=Water, mdot=2, P=100000, T=293.15)
+Source SRC(fluid$=Water, mdot=2 [kg/s], P=100000 [Pa], T=293.15 [K])
 Pump   P1(eta=0.75, fluid$=Water)
 Sink   SNK()
 connect(SRC.out, P1.in)

@@ -29,7 +29,7 @@ ThermalMass inst(C, T0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `C` | Number | Capacitance [F]. |
+| `C` | Number | Heat capacity [J/K]. |
 | `T0` | Number | Reference/initial temperature [K]. |
 
 ## Constitutive Equations
@@ -53,9 +53,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-ThermalMass   M(C=5000, T0=400)
-ThermalSource amb(T=300)
-Conduction    wall(k=2, area=1, L=0.1)
+ThermalMass   M(C=5000 [J/K], T0=400 [K])
+ThermalSource amb(T=300 [K])
+Conduction    wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])
 connect(M.port, wall.a)
 connect(wall.b, amb.port)
 

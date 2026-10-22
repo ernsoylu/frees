@@ -30,7 +30,7 @@ ReliefValve inst(Pcrack, K, eps, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `Pcrack` | Number | Cracking (relief) pressure [Pa]. |
-| `K` | Number | Gain / coefficient. |
+| `K` | Number | Flow gain once open: ṁ = K·(P_in − P_out) [kg/s·Pa]. |
 | `eps` | Number | Opening smoothing width [Pa] — the tanh transition around `Pcrack`. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
@@ -57,9 +57,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-HydraulicSupply SUP(P=4000000)
-ReliefValve     RV(Pcrack=5000000, K=1e-6, eps=10000)
-HydraulicTank   TNK(P=0)
+HydraulicSupply SUP(P=4000000 [Pa])
+ReliefValve     RV(Pcrack=5000000 [Pa], K=1e-6 [kg/s-Pa], eps=10000 [Pa])
+HydraulicTank   TNK(P=0 [Pa])
 connect(SUP.out, RV.in)
 connect(RV.out, TNK.port)
 

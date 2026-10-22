@@ -33,7 +33,7 @@ BlendSource inst(fluid$, mdot, P, x, z, domain$)
 | `mdot` | Number | Mass flow rate [kg/s]. |
 | `P` | Number | Pressure [Pa]. |
 | `x` | Number | Vapor quality / fraction (0–1). |
-| `z` | Number | Elevation [m]. |
+| `z` | Number | Overall (feed) composition carried by the stream [-]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
@@ -62,7 +62,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-BlendSource SRC(fluid$=R134a, mdot=0.02, P=400000, x=0.3, z=1)
+BlendSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=400000 [Pa], x=0.3, z=1)
 BlendSink SNK()
 connect(SRC.out, SNK.in)
 

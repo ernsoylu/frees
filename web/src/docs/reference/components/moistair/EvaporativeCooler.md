@@ -60,7 +60,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Adiabatic (swamp) cooler on hot dry air: 308.15 K, W = 0.008, effectiveness
 // 0.85 toward the adiabatic-saturation state. Constant enthalpy; the outlet
 // humidity moves 85% of the way to W_sat(h, P).
-MoistAirSource OA(P=101325, T=308.15, W=0.008, mdot=1)
+MoistAirSource OA(P=101325 [Pa], T=308.15 [K], W=0.008, mdot=1 [kg/s])
 EvaporativeCooler EC(eff=0.85)
 MoistAirSink   SNK()
 connect(OA.out, EC.in)

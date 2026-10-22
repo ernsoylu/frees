@@ -63,7 +63,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // (u = 0.6 of mdot_max = 0.5 kg/s -> 0.3 kg/s) and the reheat command adds
 // 30% of Qr_max = 2000 W. Flow-determining: the inlet stream's mdot comes
 // from the box, so the plenum boundary pins only P, W, h.
-VAVBox VAV(z1, z2, u1, r1, mdot_max=0.5, Qr_max=2000)
+VAVBox VAV(z1, z2, u1, r1, mdot_max=0.5 [kg/s], Qr_max=2000 [W])
 u1.sig = 0.6
 r1.sig = 0.3
 z1.P = 101325

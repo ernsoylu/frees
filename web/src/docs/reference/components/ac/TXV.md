@@ -30,7 +30,7 @@ TXV inst(fluid$, Kv, SH_set, CdA0, tau_valve, tau_bulb, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
-| `Kv` | Number | Flow coefficient. |
+| `Kv` | Number | Opening gain: flow area added per kelvin of superheat above SH_set [m²/K]. |
 | `SH_set` | Number | Target superheat [K]. |
 | `CdA0` | Number | Reference Cd·A [m²]. |
 | `tau_valve` | Number | Valve time constant [s]. |
@@ -71,9 +71,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 { R134a thermostatic expansion valve: 12 bar liquid line to a 3 bar evaporator,
   bulb held 8 K above evaporator saturation (3 K above the 5 K set point),
   so the valve opens over its time constants. }
-TwoPhasePressureSource SRC(fluid$=R134a, P=1200000, x=0)
-TXV                    V1(fluid$=R134a, Kv=2e-8, SH_set=5, CdA0=1e-6, tau_valve=2, tau_bulb=10)
-TwoPhasePressureSink   SNK(P=300000)
+TwoPhasePressureSource SRC(fluid$=R134a, P=1200000 [Pa], x=0)
+TXV                    V1(fluid$=R134a, Kv=2e-8 [m^2/K], SH_set=5 [K], CdA0=1e-6 [m^2], tau_valve=2 [s], tau_bulb=10 [s])
+TwoPhasePressureSink   SNK(P=300000 [Pa])
 ThermalSource          BULB(T=T_sat(R134a, P=300000) + 8)
 connect(SRC.out, V1.in)
 connect(V1.out, SNK.in)

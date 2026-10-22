@@ -46,37 +46,17 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-function [out] = SigConst(k)
-port(out)
-  out.sig = k
-end
-function [in, out] = SigGain(k)
-port(in)
-port(out)
-  out.sig = k * in.sig
-end
-function [in1, in2, out] = SigSum()
-port(in1)
-port(in2)
-port(out)
-  out.sig = in1.sig + in2.sig
-end
-SigConst R(k=1)
-SigGain  FWD(k=8)
-function [inp, inm, out] = SigDiff()
-port(inp)
-port(inm)
-port(out)
-  out.sig = inp.sig - inm.sig
-end
-SigDiff  ERR()
-connect(R.out, ERR.inp)
+SigConstant R(k=1)
+SigGain     FWD(k=8)
+SigDiff     ERR()
+connect(R.out, ERR.in1)
 connect(ERR.out, FWD.in)
-connect(FWD.out, ERR.inm)
+connect(FWD.out, ERR.in2)
 
-{ CHECK err.inm.sig 0.8888888889 8.888888888888888e-7 }
-{ CHECK err.inp.sig 1 0.000001 }
+{ CHECK err.in2.sig 0.8888888889 8.888888888888888e-7 }
+{ CHECK err.in1.sig 1 0.000001 }
 { CHECK err.out.sig 0.1111111111 1.111111111111111e-7 }
+
 ```
 
 Expected output (selected solution values; numerical rounding may vary):

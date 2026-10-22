@@ -49,7 +49,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // SigSpeedProbe: torque-free shaft-speed pickup on a node driven at 7 rad/s.
 // EXPECT y = 7 tol 1e-9
-SpeedSource   SS(w = 7)
+SpeedSource   SS(w = 7 [rad/s])
 MechGround    G1()
 SigSpeedProbe PR()
 connect(SS.a, PR.shaft)

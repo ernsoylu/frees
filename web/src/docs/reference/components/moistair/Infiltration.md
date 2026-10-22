@@ -42,7 +42,7 @@ The acausal equations this component expands into (over its port members and par
 $$
 \begin{aligned}
 dp &= in.p - out.p \\
-in.mdot &= c_{inf}\cdot dp\cdot \left(dp^{2} + eps^{2}\right)^{\frac{n_{exp} - 1}{2}} \\
+in.mdot &= c_{inf}\cdot dp\cdot \left(\frac{dp^{2} + eps^{2}}{1\,\left[kg^2/m^2-s^4\right]}\right)^{\frac{n_{exp} - 1}{2}} \\
 out.mdot &= in.mdot \\
 out.w &= in.w \\
 out.h &= in.h
@@ -62,7 +62,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Envelope infiltration: power-law crack flow (n = 0.65) across a 50 Pa
 // stack/wind pressure difference between outdoors (101375 Pa, cold dry air)
 // and the zone (101325 Pa). mdot ~ C_inf * dP^n = 0.004 * 50^0.65 = 0.0508 kg/s.
-Infiltration INF(z1, z2, C_inf=0.004, n_exp=0.65, eps=1)
+Infiltration INF(z1, z2, C_inf=0.004 [kg/s-Pa], n_exp=0.65, eps=1 [Pa])
 z1.P = 101375
 z1.W = 0.004
 z1.h = Enthalpy(AirH2O, T=278.15, P=101375, W=0.004)

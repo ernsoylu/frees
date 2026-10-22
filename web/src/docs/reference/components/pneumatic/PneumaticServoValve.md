@@ -32,9 +32,9 @@ PneumaticServoValve inst(fluid$, Cmax, b, u, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
-| `Cmax` | Number | Maximum capacity rate [W/K]. |
+| `Cmax` | Number | Sonic conductance when fully open (ISO 6358) [m³/s·Pa]. |
 | `b` | Number | Critical pressure ratio / coefficient. |
-| `u` | Number | Specific internal energy [J/kg]. |
+| `u` | Number | Valve opening, 0 (shut) to 1 (fully open) [-]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
@@ -64,9 +64,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticServoValve SV(fluid$=Air, Cmax=1e-8, b=0.3, u=0.5)
-PneumaticAtmosphere ATM(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticServoValve SV(fluid$=Air, Cmax=1e-8 [m^3/s-Pa], b=0.3, u=0.5)
+PneumaticAtmosphere ATM(P=100000 [Pa])
 connect(SUP.out, SV.in)
 connect(SV.out, ATM.port)
 

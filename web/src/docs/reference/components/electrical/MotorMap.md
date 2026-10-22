@@ -76,17 +76,17 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // DCDC 400 V -> 12 V into 1.2 ohm: Pout = 120 W, Pin = 133.333 W at eta 0.9,
 // input current 0.33333 A.
 // EXPECT iin = 0.333333 tol 1e-4
-TABLE effm(w : tau = -100, 100)
+TABLE effm(w [rad/s] : tau = -100, 100) [-]
   0     0.9   0.9
   200   0.9   0.9
 END
-VoltageSource BUS(E=400)
+VoltageSource BUS(E=400 [V])
 Ground        GB()
-SigConstant   CMD1(k=50)
-SpeedSource   SPD1(w=100)
+SigConstant   CMD1(k=50 [N-m])
+SpeedSource   SPD1(w=100 [rad/s])
 MechGround    MG1()
-ThermalSource TS1(T=300)
-MotorMap      MOT1(eff$=effm, epsP=1)
+ThermalSource TS1(T=300 [K])
+MotorMap      MOT1(eff$=effm, epsP=1 [W])
 connect(BUS.p, MOT1.p)
 connect(BUS.n, MOT1.n, GB.port)
 connect(CMD1.out, MOT1.u)
@@ -95,13 +95,13 @@ connect(SPD1.b, MG1.port)
 connect(MOT1.heat, TS1.port)
 pe1 = MOT1.Pe
 i1  = MOT1.p.I
-VoltageSource BUS2(E=400)
+VoltageSource BUS2(E=400 [V])
 Ground        GB2()
-SigConstant   CMD2(k=-50)
-SpeedSource   SPD2(w=100)
+SigConstant   CMD2(k=-50 [N-m])
+SpeedSource   SPD2(w=100 [rad/s])
 MechGround    MG2()
-ThermalSource TS2(T=300)
-MotorMap      MOT2(eff$=effm, epsP=1)
+ThermalSource TS2(T=300 [K])
+MotorMap      MOT2(eff$=effm, epsP=1 [W])
 connect(BUS2.p, MOT2.p)
 connect(BUS2.n, MOT2.n, GB2.port)
 connect(CMD2.out, MOT2.u)
@@ -110,11 +110,11 @@ connect(SPD2.b, MG2.port)
 connect(MOT2.heat, TS2.port)
 pe2 = MOT2.Pe
 
-VoltageSource SRC(E=400)
+VoltageSource SRC(E=400 [V])
 Ground        GI()
-InverterLoss  INV(V0=1, r=1e-3, Esw=0.02, fsw=10000, Iref=200, Vref=400, Vnom=400, epsI=1)
-Resistor      RL(R=3.979)
-ThermalSource TSI(T=300)
+InverterLoss  INV(V0=1 [V], r=1e-3 [ohm], Esw=0.02 [J], fsw=10000 [Hz], Iref=200 [A], Vref=400 [V], Vnom=400 [V], epsI=1 [A])
+Resistor      RL(R=3.979 [ohm])
+ThermalSource TSI(T=300 [K])
 connect(SRC.p, INV.in_p)
 connect(INV.out_p, RL.a)
 connect(RL.b, SRC.n, GI.port)
@@ -122,10 +122,10 @@ connect(INV.heat, TSI.port)
 il  = INV.in_p.I
 qiv = INV.Q
 
-VoltageSource HV(E=400)
+VoltageSource HV(E=400 [V])
 Ground        GD()
-DCDCConverter DC(ratio=0.03, eta=0.9, epsP=1)
-Resistor      RLV(R=1.2)
+DCDCConverter DC(ratio=0.03, eta=0.9, epsP=1 [W])
+Resistor      RLV(R=1.2 [ohm])
 connect(HV.p, DC.in_p)
 connect(HV.n, DC.in_n, GD.port)
 Ground        GD2()

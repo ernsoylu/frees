@@ -53,10 +53,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 // frees-language: 2
 // 3-way translational node via connect: vel equal, sum f = 0.
-ForceSource FS(F = 100)
+ForceSource FS(F = 100 [N])
 TransGround TG()
-TransDamper D1(c = 5)
-TransDamper D2(c = 15)
+TransDamper D1(c = 5 [kg/s])
+TransDamper D2(c = 15 [kg/s])
 connect(FS.a, TG.port, D1.b, D2.b)
 connect(FS.b, D1.a, D2.a)
 vm = D1.a.vel

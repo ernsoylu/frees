@@ -33,7 +33,7 @@ PneumaticVolume inst(V, T, R, P0, domain$)
 | --- | --- | --- |
 | `V` | Number | Volume [m³]. |
 | `T` | Number | Temperature [K]. |
-| `R` | Number | Resistance [Ω]. |
+| `R` | Number | Specific gas constant [J/kg·K]. |
 | `P0` | Number | Reference/initial pressure [Pa]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
@@ -68,9 +68,9 @@ function [port] = GasCap(domain$ = gas)
 port(port)
   port.mdot = 0
 end
-PneumaticSupply  SUP(fluid$=Air, P=700000, T=300)
-PneumaticOrifice ORI(fluid$=Air, C=1e-8, b=0.3)
-PneumaticVolume  VOL(V=0.001, T=300, R=287, P0=120000)
+PneumaticSupply  SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticOrifice ORI(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticVolume  VOL(V=0.001 [m^3], T=300 [K], R=287 [J/kg-K], P0=120000 [Pa])
 GasCap           CAP()
 connect(SUP.out, ORI.in)
 connect(ORI.out, VOL.in)

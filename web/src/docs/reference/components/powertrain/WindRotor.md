@@ -64,15 +64,15 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // -1.197022e6 N·m (eps-regularized).
 // EXPECT tau_w = -1197022 tol 5
 
-TABLE cpmap(lam : beta = 0, 20)
+TABLE cpmap(lam : beta = 0, 20) [-]
   0    0.45  0.45
   20   0.45  0.45
 END
-SigConstant WIND(k=12)
+SigConstant WIND(k=12 [m/s])
 SigConstant PITCH(k=0)
-SpeedSource WS(w=2)
+SpeedSource WS(w=2 [rad/s])
 MechGround  WG()
-WindRotor   WR(rho=1.225, R=40, cp$=cpmap, epsv=1e-6, epsw=1e-6)
+WindRotor   WR(rho=1.225 [kg/m^3], R=40 [m], cp$=cpmap, epsv=1e-6 [m/s], epsw=1e-6 [rad/s])
 connect(WR.shaft, WS.a)
 connect(WS.b, WG.port)
 connect(WIND.out, WR.wind)

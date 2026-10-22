@@ -67,7 +67,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // case): line pressure 5 bar, load side 20 bar, pilot at 15 bar with ratio 3.
 // dPe = (5-20)e5 + 3*(15-5)e5 = +15e5 > 0 -> poppet open, flow REVERSE:
 // mdot = -CdA*sqrt(2*rho*15e5) = -2e-6*sqrt(2*870*1.5e6) = -0.10219 kg/s.
-HydraulicPilotCheckValve PCV(o1, o2, op, CdA=2e-6, rho=870, rp=3, eps=50000)
+HydraulicPilotCheckValve PCV(o1, o2, op, CdA=2e-6 [m^2], rho=870 [kg/m^3], rp=3, eps=50000 [Pa])
 o1.P = 500000
 o1.h = 0
 o2.P = 2000000

@@ -29,8 +29,8 @@ RoadLoad inst(Crr, Caero)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `Crr` | Number | Rolling-resistance coefficient. |
-| `Caero` | Number | Aerodynamic drag term ½ρCdA [kg/m]. |
+| `Crr` | Number | Rolling-resistance coefficient [N·m]. |
+| `Caero` | Number | Aerodynamic drag term ½ρCdA [kg·m²]. |
 
 ## Constitutive Equations
 
@@ -52,8 +52,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-Engine   ENG(Tmax=200, throttle=0.5, bf=0.1)
-RoadLoad RL(Crr=10, Caero=0.01)
+Engine   ENG(Tmax=200 [N-m], throttle=0.5, bf=0.1 [N-m-s])
+RoadLoad RL(Crr=10 [N-m], Caero=0.01 [kg-m^2])
 connect(ENG.shaft, RL.shaft)
 
 { CHECK eng.shaft.tau -91 0.00009099999999999999 }

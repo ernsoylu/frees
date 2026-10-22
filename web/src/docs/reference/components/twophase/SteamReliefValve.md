@@ -66,9 +66,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-BoilingVessel   COOK(fluid$=Water, V=0.005, m0=3.0, T0=288.15)
-SteamReliefValve PRV(fluid$=Water, A=2e-6, Pset=111458, Cd=0.8, kgas=1.14, Rgas=461.5, eps=1000)
-TwoPhasePressureSink ATM(P=101325)
+BoilingVessel   COOK(fluid$=Water, V=0.005 [m^3], m0=3.0 [kg], T0=288.15 [K])
+SteamReliefValve PRV(fluid$=Water, A=2e-6 [m^2], Pset=111458 [Pa], Cd=0.8, kgas=1.14, Rgas=461.5 [J/kg-K], eps=1000 [Pa])
+TwoPhasePressureSink ATM(P=101325 [Pa])
 
 connect(COOK.vent, PRV.in)
 connect(PRV.out, ATM.in)

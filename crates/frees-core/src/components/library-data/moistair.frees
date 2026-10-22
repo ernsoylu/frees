@@ -51,7 +51,7 @@ port(out)
   out.W    = HumRat(AirH2O, T=Tout, P=in.P, R=1)
   out.h    = Enthalpy(AirH2O, T=Tout, P=in.P, W=out.W)
   Q        = in.mdot * (in.h - out.h)
-  Q_lat    = in.mdot * 2.501e6 * (in.W - out.W)
+  Q_lat    = in.mdot * 2.501e6 [J/kg] * (in.W - out.W)
 end
 
 // Moist-air-side heat-exchanger half with a wall heat port: a WET cooling coil.
@@ -66,7 +66,7 @@ port(wall)
   out.mdot  = in.mdot
   out.P     = in.P
   Q         = in.mdot * (in.h - out.h)
-  Q_lat     = in.mdot * 2.501e6 * (in.W - out.W)
+  Q_lat     = in.mdot * 2.501e6 [J/kg] * (in.W - out.W)
   wall.Qdot = -Q
   // Temperature-effectiveness rung (the original model): the air approaches
   // the wall temperature; outlet W smooth-clamped at saturation.
@@ -263,7 +263,7 @@ function [in, out] = Infiltration(C_inf, n_exp, eps, domain$ = moistair)
 port(in)
 port(out)
   dP       = in.P - out.P
-  in.mdot  = C_inf * dP * (dP^2 + eps^2)^((n_exp - 1) / 2)
+  in.mdot  = C_inf * dP * ((dP^2 + eps^2) / 1 [Pa^2])^((n_exp - 1) / 2)
   out.mdot = in.mdot
   out.W    = in.W
   out.h    = in.h
@@ -507,7 +507,7 @@ port(out)
   T_dp_in    = DewPoint(AirH2O, h=in.h, P=in.P, W=in.W)
   margin_adp = T_dp_in - T_adp
   mdot_w     = in.mdot * (in.W - out.W)
-  h_f        = 4186 * (T_out - 273.15)
+  h_f        = 4186 [J/kg-K] * (T_out - 273.15 [K])
   Q_air      = in.mdot * (in.h - out.h)
   Q          = Q_air - mdot_w * h_f
   Q_sens     = in.mdot * Cp(AirH2O, T=T_in, P=in.P, W=in.W) * (T_in - T_out)
@@ -687,7 +687,7 @@ port(wall)
   VARIANT cooled REQUIRE eps_T
     T_out     = T_in - eps_T * (T_in - wall.T)
     out.h     = Enthalpy(AirH2O, T=T_out, P=in.P, W=out.W)
-    h_f       = 4186 * (wall.T - 273.15)
+    h_f       = 4186 [J/kg-K] * (wall.T - 273.15 [K])
     Q         = in.mdot * (in.h - out.h) - mdot_w * h_f
     wall.Qdot = -Q
   END
@@ -699,7 +699,7 @@ port(wall)
   // with a ThermalSource at the solution temperature, which is then reported
   // rather than used (the ThermalSensor pattern).
   VARIANT adiabatic REQUIRE f_excess
-    h_f       = 4186 * (T_in - 273.15)
+    h_f       = 4186 [J/kg-K] * (T_in - 273.15 [K])
     h_pure    = in.h - mdot_w * h_f / in.mdot
     T_pure    = Temperature(AirH2O, h=h_pure, P=in.P, W=out.W)
     T_out     = T_in + (1 + f_excess) * (T_pure - T_in)
@@ -860,7 +860,7 @@ function [zone, wall] = RadiantPanel(A, C, n, eps_dT, W_room, P_room)
 port(zone)
 port(wall)
   dT        = zone.T - wall.T
-  q_flux    = C * dT * (dT^2 + eps_dT^2)^((n - 1) / 2)
+  q_flux    = C * dT * ((dT^2 + eps_dT^2) / 1 [K^2])^((n - 1) / 2)
   Q         = A * q_flux
   zone.Qdot = Q
   wall.Qdot = -Q

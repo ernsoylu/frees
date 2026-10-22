@@ -63,8 +63,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TwoPhaseEnthalpySource SRC(mdot=0.02, h=435000)
-TwoPhaseCondenserUA COND(fluid$=R134a, UA=400, T_amb=305, V=0.002)
+TwoPhaseEnthalpySource SRC(mdot=0.02 [kg/s], h=435000 [J/kg])
+TwoPhaseCondenserUA COND(fluid$=R134a, UA=400 [W/K], T_amb=305 [K], V=0.002 [m^3])
 TwoPhaseSink SNK()
 connect(SRC.out, COND.in)
 connect(COND.out, SNK.in)

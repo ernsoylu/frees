@@ -60,8 +60,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // TwoPhaseEvaporator: lumped non-isobaric evaporator — two-phase R134a in at
 // 360 kPa leaves 10 kPa lower with a set 5 K exit superheat; Q is an output.
-TwoPhaseSourcePH   SRC(mdot = 0.03, P = 360000, h = 260000)
-TwoPhaseEvaporator EV(fluid$ = R134a, SH_set = 5, dP = 10000)
+TwoPhaseSourcePH   SRC(mdot = 0.03 [kg/s], P = 360000 [Pa], h = 260000 [J/kg])
+TwoPhaseEvaporator EV(fluid$ = R134a, SH_set = 5 [K], dP = 10000 [Pa])
 TwoPhaseSink       SNK()
 connect(SRC.out, EV.in)
 connect(EV.out, SNK.in)

@@ -64,8 +64,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // IceStorageBrine (hierarchical: LiquidWallHX + PCMMass) on an EG50 brine
 // loop near the melt band. With no DYNAMIC block the PCM state takes the
 // steady branch (Qdot = 0), so the pack floats at the brine temperature.
-LiquidSource   LS(b1, fluid$ = EG50, mdot = 0.4, P = 200000, T = 278)
-IceStorageBrine IST(b1, b2, fluid$ = EG50, UA = 400, m = 500, cp_p = 2100, L = 334000, Tm = 273.15, dTm = 2, T0 = 273)
+LiquidSource   LS(b1, fluid$ = EG50, mdot = 0.4 [kg/s], P = 200000 [Pa], T = 278 [K])
+IceStorageBrine IST(b1, b2, fluid$ = EG50, UA = 400 [W/K], m = 500 [kg], cp_p = 2100 [J/kg-K], L = 334000 [J/kg], Tm = 273.15 [K], dTm = 2 [K], T0 = 273 [K])
 LiquidSink     SK(b2)
 
 h_out = SK.h

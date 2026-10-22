@@ -67,10 +67,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // supply->work carries 0.6 C of ISO 6358 flow, work->exhaust bleeds 0.4 C,
 // and the work port delivers the net (m_in - m_out) at the reservoir pressure.
 SigConstant         CMD(k=0.6)
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticValve32    V32(fluid$=Air, C=1e-8, b=0.3)
-PneumaticAtmosphere WRK(P=400000)
-PneumaticAtmosphere ATM(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticValve32    V32(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere WRK(P=400000 [Pa])
+PneumaticAtmosphere ATM(P=100000 [Pa])
 connect(SUP.out, V32.sup_in)
 connect(V32.work, WRK.port)
 connect(V32.exh_out, ATM.port)

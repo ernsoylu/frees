@@ -30,10 +30,10 @@ MeanValueEngine inst(throttle, Tpeak, w_peak, FMEP_a, FMEP_b)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `throttle` | Number | Throttle (0–1). |
-| `Tpeak` | Number | Peak temperature [K]. |
+| `Tpeak` | Number | Peak wide-open-throttle torque [N·m]. |
 | `w_peak` | Number | Peak frequency [rad/s]. |
-| `FMEP_a` | Number | Friction-MEP constant [Pa]. |
-| `FMEP_b` | Number | Friction-MEP slope coefficient. |
+| `FMEP_a` | Number | Constant friction torque [N·m]. |
+| `FMEP_b` | Number | Speed-proportional friction coefficient [N·m·s]. |
 
 ## Constitutive Equations
 
@@ -58,8 +58,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-MeanValueEngine ENG(throttle=0.6, Tpeak=200, w_peak=400, FMEP_a=5, FMEP_b=0.01)
-SpeedSource     SS(w=400)
+MeanValueEngine ENG(throttle=0.6, Tpeak=200 [N-m], w_peak=400 [rad/s], FMEP_a=5 [N-m], FMEP_b=0.01 [N-m-s])
+SpeedSource     SS(w=400 [rad/s])
 MechGround      G()
 connect(SS.a, ENG.shaft)
 connect(SS.b, G.port)

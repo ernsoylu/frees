@@ -93,12 +93,12 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // the four Kv flows (20 kPa across four resistances -> mdot = 0.02 kg/s) and
 // der(h)=0 gives per-cell energy balances against three 300 K wall nodes.
 // The refrigerant boils from x ~ 0.3 toward x ~ 0.8, staying inside the dome.
-TwoPhasePressureSource SUP(fluid$ = R134a, P = 360000, x = 0.3)
-FewCellEvaporator      EV(fluid$ = R134a, V = 0.001, Cc = 1e-7, UA = 30, Kv = 4e-6, P0 = 350000, h0 = 270000)
-ThermalSource          W1(T = 300)
-ThermalSource          W2(T = 300)
-ThermalSource          W3(T = 300)
-TwoPhasePressureSink   RET(P = 340000)
+TwoPhasePressureSource SUP(fluid$ = R134a, P = 360000 [Pa], x = 0.3)
+FewCellEvaporator      EV(fluid$ = R134a, V = 0.001 [m^3], Cc = 1e-7 [kg/Pa], UA = 30 [W/K], Kv = 4e-6 [kg/s-Pa], P0 = 350000 [Pa], h0 = 270000 [J/kg])
+ThermalSource          W1(T = 300 [K])
+ThermalSource          W2(T = 300 [K])
+ThermalSource          W3(T = 300 [K])
+TwoPhasePressureSink   RET(P = 340000 [Pa])
 connect(SUP.out, EV.in)
 connect(EV.out, RET.in)
 connect(EV.w1, W1.port)

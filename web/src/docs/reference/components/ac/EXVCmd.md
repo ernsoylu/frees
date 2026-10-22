@@ -61,13 +61,13 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // are the two leaf components of that file that need no humid-air backend; the
 // signal-driven one also crosses the SIGNAL domain into the twophase bond,
 // which is exactly the multi-domain case the connect rules must keep separate.
-TwoPhaseSourcePH SA(c1, mdot = 0.04, P = 1000000, h = 260000)
-EXV              XV(c1, c2, fluid$ = R134a, CdA_max = 5e-6, u = 0.8)
+TwoPhaseSourcePH SA(c1, mdot = 0.04 [kg/s], P = 1000000 [Pa], h = 260000 [J/kg])
+EXV              XV(c1, c2, fluid$ = R134a, CdA_max = 5e-6 [m^2], u = 0.8)
 TwoPhaseSink     KA(c2)
 
-TwoPhaseSourcePH SB(d1, mdot = 0.04, P = 1000000, h = 260000)
+TwoPhaseSourcePH SB(d1, mdot = 0.04 [kg/s], P = 1000000 [Pa], h = 260000 [J/kg])
 SigConstant      CMD(u1, k = 0.8)
-EXVCmd           XC(d1, d2, u1, fluid$ = R134a, CdA_max = 5e-6)
+EXVCmd           XC(d1, d2, u1, fluid$ = R134a, CdA_max = 5e-6 [m^2])
 TwoPhaseSink     KB(d2)
 
 rho_xv = XV.rho_in

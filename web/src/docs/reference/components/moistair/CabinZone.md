@@ -83,11 +83,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // HAPropsSI's NaN region — fixtures/README growth item 4); here Tz and Wz
 // are integrator STATES seeded from init(T0/W0), which sidesteps the
 // guess landscape entirely.
-MoistAirSource SUP(P = 101325, T = 288.15, W = 0.007, mdot = 0.12)
-CabinZone      ZONE(Vz = 3, T0 = 300.15, W0 = 0.010, n_occ = 2, q_sens = 70, mw_occ = 1.5e-5, Q_aux = 300)
+MoistAirSource SUP(P = 101325 [Pa], T = 288.15 [K], W = 0.007, mdot = 0.12 [kg/s])
+CabinZone      ZONE(Vz = 3 [m^3], T0 = 300.15 [K], W0 = 0.010, n_occ = 2, q_sens = 70 [W], mw_occ = 1.5e-5 [kg/s], Q_aux = 300 [W])
 MoistAirSink   SNK()
-Convection     SHELL(htc = 5, area = 3)
-ThermalSource  AMB(T = 305)
+Convection     SHELL(htc = 5 [W/m^2-K], area = 3 [m^2])
+ThermalSource  AMB(T = 305 [K])
 connect(SUP.out, ZONE.in)
 connect(ZONE.out, SNK.in)
 connect(ZONE.wall, SHELL.a)

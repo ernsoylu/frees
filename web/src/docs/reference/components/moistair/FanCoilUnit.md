@@ -62,7 +62,7 @@ connect(wall, CO.wall)
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-FanCoilUnit C(K=100, foul=1, dP=250, eta=0.7, eps=0.7)
+FanCoilUnit C(K=100 [Pa-s^2/kg^2], foul=1, dP=250 [Pa], eta=0.7, eps=0.7)
 C.in.mdot = 1 [kg/s]
 C.in.P = 101325 [Pa]
 C.in.W = 0.012

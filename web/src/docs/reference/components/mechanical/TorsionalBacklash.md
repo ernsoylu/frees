@@ -63,8 +63,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // TorsionalBacklash steady: 15 N.m winds the 1000 N.m/rad spring past the
 // +-0.01 rad lash, so th = half + T/k = 0.025 rad (hinge width 1e-4).
 // EXPECT th_b = 0.025 tol 1e-4
-TorqueSource      TQ(T = 15)
-TorsionalBacklash BL(k = 1000, half = 0.01, eps = 1e-4, theta0 = 0)
+TorqueSource      TQ(T = 15 [N-m])
+TorsionalBacklash BL(k = 1000 [N-m], half = 0.01, eps = 1e-4, theta0 = 0)
 MechGround        G1()
 MechGround        G2()
 connect(TQ.a, BL.a)

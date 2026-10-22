@@ -139,7 +139,7 @@ For system problems — loops, circuits, networks — frees has a library of 312
 ```run
 { What pressure does 50 m of pipe cost? }
 Source  SUP(fluid$=Water, mdot=2 [kg/s], P=300000 [Pa], T=298 [K])
-Pipe    LINE(fluid$=Water, L=50 [m], D=0.05 [m], rough=0.0001)
+Pipe    LINE(fluid$=Water, L=50 [m], D=0.05 [m], rough=0.0001 [m])
 Sink    RET()
 
 connect(SUP.out, LINE.in)

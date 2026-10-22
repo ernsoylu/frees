@@ -29,7 +29,7 @@ Inductor inst(L, I0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `L` | Number | Length [m]. |
+| `L` | Number | Inductance [henry]. |
 | `I0` | Number | Saturation current [A]. |
 
 ## Constitutive Equations
@@ -58,9 +58,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Inductor steady: der(IL) -> 0 forces zero drop across the coil, so the loop
 // current is the resistor's: IL = 10/5 = 2 A.
 // EXPECT il = 2 tol 1e-9
-VoltageSource SRC(E = 10)
-Inductor      L1(L = 0.1, I0 = 0)
-Resistor      R1(R = 5)
+VoltageSource SRC(E = 10 [V])
+Inductor      L1(L = 0.1 [henry], I0 = 0 [A])
+Resistor      R1(R = 5 [ohm])
 Ground        G()
 connect(SRC.p, L1.p)
 connect(L1.n, R1.a)

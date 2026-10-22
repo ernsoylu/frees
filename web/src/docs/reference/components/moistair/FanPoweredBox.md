@@ -58,7 +58,7 @@ $$
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-FanPoweredBox C(Q_fan=100, Q_reheat=1000)
+FanPoweredBox C(Q_fan=100 [W], Q_reheat=1000 [W])
 C.pri_in.mdot = 1 [kg/s]
 C.pri_in.P = 101325 [Pa]
 C.pri_in.W = 0.012

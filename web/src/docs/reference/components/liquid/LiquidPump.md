@@ -56,7 +56,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-LiquidSource S(fluid$=Water, mdot=0.1, P=200000, T=300)
+LiquidSource S(fluid$=Water, mdot=0.1 [kg/s], P=200000 [Pa], T=300 [K])
 LiquidPump P(eta=0.7, fluid$=Water)
 LiquidSink K()
 connect(S.out, P.in)

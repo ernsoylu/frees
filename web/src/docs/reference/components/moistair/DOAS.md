@@ -63,7 +63,7 @@ connect(ERV.exh_out, exh_out)
 Paste this complete document into the editor and select **Solve**. The `CHECK` comments verify the selected results without changing the calculation.
 
 ```frees
-DOAS C(eff_h=0.6, eff_w=0.5, T_adp=283.15, BF=0.15, Q_reheat=1000)
+DOAS C(eff_h=0.6, eff_w=0.5, T_adp=283.15 [K], BF=0.15, Q_reheat=1000 [W])
 C.oa_in.mdot = 1 [kg/s]
 C.oa_in.P = 101325 [Pa]
 C.oa_in.W = 0.012

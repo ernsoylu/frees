@@ -67,9 +67,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 SigConstant      GS(k=3)
 GearboxScheduled GB(eta=0.9)
-SpeedSource      SO(w=10)
+SpeedSource      SO(w=10 [rad/s])
 MechGround       G1()
-TorqueSource     TI(T=5)
+TorqueSource     TI(T=5 [N-m])
 MechGround       G2()
 connect(TI.a, GB.in)
 connect(TI.b, G2.port)
@@ -78,30 +78,30 @@ connect(SO.b, G1.port)
 connect(GS.out, GB.u)
 tq_out = GB.out.tau
 
-TABLE wotmap(w)
+TABLE wotmap(w [rad/s]) [N-m]
   0    200
   500  200
 END
-TABLE bmap(w : tau = 0, 200)
+TABLE bmap(w [rad/s] : tau = 0, 200) [kg/J]
   0    6e-8  6e-8
   500  6e-8  6e-8
 END
-SpeedSource EW1(w=100)
+SpeedSource EW1(w=100 [rad/s])
 MechGround  EG1()
-MeanValueEngine E1(throttle=0.5, Tpeak=200, w_peak=100, FMEP_a=10, FMEP_b=0.05, model$=parabolic)
+MeanValueEngine E1(throttle=0.5, Tpeak=200 [N-m], w_peak=100 [rad/s], FMEP_a=10 [N-m], FMEP_b=0.05 [N-m-s], model$=parabolic)
 connect(E1.shaft, EW1.a)
 connect(EW1.b, EG1.port)
 
-SpeedSource EW2(w=100)
+SpeedSource EW2(w=100 [rad/s])
 MechGround  EG2()
-MeanValueEngine E2(throttle=0.5, Tpeak=200, w_peak=100, FMEP_a=10, FMEP_b=0.05, FMEP_c=0, model$=chenflynn)
+MeanValueEngine E2(throttle=0.5, Tpeak=200 [N-m], w_peak=100 [rad/s], FMEP_a=10 [N-m], FMEP_b=0.05 [N-m-s], FMEP_c=0 [kg-m^2], model$=chenflynn)
 connect(E2.shaft, EW2.a)
 connect(EW2.b, EG2.port)
 d_tau = E1.shaft.tau - E2.shaft.tau
 
-SpeedSource EW3(w=100)
+SpeedSource EW3(w=100 [rad/s])
 MechGround  EG3()
-MeanValueEngine EB(throttle=0.5, map_wot$=wotmap, bsfc$=bmap, FMEP_a=10, FMEP_b=0, model$=bsfc)
+MeanValueEngine EB(throttle=0.5, map_wot$=wotmap, bsfc$=bmap, FMEP_a=10 [N-m], FMEP_b=0 [N-m-s], model$=bsfc)
 connect(EB.shaft, EW3.a)
 connect(EW3.b, EG3.port)
 

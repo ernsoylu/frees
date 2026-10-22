@@ -58,9 +58,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 // frees-language: 2
 // W rides EQUAL across a pass-through and across a plain connect node.
-MoistAirSource SRC(a1, P = 101325, T = 300, W = 0.010, mdot = 1.5)
-AirFilter      FLT(a1, a2, K = 100, foul = 1.0)
-HeatingCoil    HTR(a2, a3, Q = 3000)
+MoistAirSource SRC(a1, P = 101325 [Pa], T = 300 [K], W = 0.010, mdot = 1.5 [kg/s])
+AirFilter      FLT(a1, a2, K = 100 [Pa-s^2/kg^2], foul = 1.0)
+HeatingCoil    HTR(a2, a3, Q = 3000 [W])
 MoistAirSink   SK(a3)
 w1 = a1.W
 w2 = a2.W

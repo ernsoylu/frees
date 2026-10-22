@@ -1535,7 +1535,7 @@ N_f = Integral(1/(C*(dsig*Y*sqrt(pi#*a))^m), a, a_i, a_c)`,
     note: "Results: COP = 3.9, cooling load = 10,250 Btu/min, compressor power = 2,594 Btu/min.",
     code: `{ Problem 1: Ammonia Refrigeration Cycle COP }
 P_suction = 38.5 [psia]
-superheat = 20 [F]
+superheat = 20 [R]       { a 20 °F superheat (a temperature difference) }
 P_discharge = 229 [psia]
 m_dot = 22 [lb/min]
 
@@ -1551,10 +1551,10 @@ W_dot_comp = m_dot * (h2 - h1)`,
     value: "face-bypass-control",
     title: "HVAC & Refrigeration: Face and Bypass Control Load",
     description: "Face and bypass control maintains room air at 80°F db/50% rh. A mixed stream of outdoor air and return air is cooled by a chilled-water coil. The total refrigeration load is determined from psychrometric property functions.",
-    note: "Results: mixed enthalpy = 32.8 Btu/lb, supply enthalpy = 23.8 Btu/lb, total load = 67.9 tons of refrigeration.",
+    note: "Results: total load = 67.7 tons of refrigeration (the chart solution reads 67.9). The coil enthalpy drop is 9.0 Btu/lb; absolute enthalpies are on CoolProp's datum, which differs from the psychrometric chart by a constant that cancels in the difference.",
     code: `{ Problem 2: Face and Bypass Control Load }
-V_dot_supply = 20000 [cfm]
-V_dot_oa = 5000 [cfm]
+V_dot_supply = 20000 [ft^3/min]
+V_dot_oa = 5000 [ft^3/min]
 T_room = 80 [F]
 rh_room = 0.50
 T_oa_db = 90 [F]
@@ -1564,7 +1564,7 @@ T_coil_out_wb = 56 [F]
 P_atm = 14.696 [psia]
 
 v_supply = 13.25 [ft^3/lb] { Specific volume of supply air }
-m_dot_supply = V_dot_supply * 60 / v_supply
+m_dot_supply = V_dot_supply / v_supply
 
 f_oa = V_dot_oa / V_dot_supply
 f_return = 1 - f_oa
@@ -1574,8 +1574,8 @@ h_oa = Enthalpy(AirH2O, T=T_oa_db, B=T_oa_wb, P=P_atm)
 h_mix = f_oa * h_oa + f_return * h_room
 h_supply = Enthalpy(AirH2O, T=T_coil_out_db, B=T_coil_out_wb, P=P_atm)
 
-Q_dot_coil_btu = m_dot_supply * (h_mix - h_supply)
-Q_dot_coil_tons = Q_dot_coil_btu / 12000`,
+Q_dot_coil = m_dot_supply * (h_mix - h_supply)
+Q_dot_coil_tons = Q_dot_coil / (12000 [Btu/hr])   { 1 ton of refrigeration = 12,000 Btu/hr }`,
   },
   {
     value: "solar-heat-gain",
@@ -1604,14 +1604,15 @@ Q_total = Q_North + Q_East + Q_West`,
     description: "Finds the dry-bulb temperature of tempered air leaving an 80% effective sensible/latent heat recovery enthalpy wheel.",
     note: "Results: leaving dry-bulb temperature = 79°F.",
     code: `{ Problem 5: Enthalpy Wheel Heat Recovery }
-V_dot_oa = 1500 [cfm]
+V_dot_oa = 1500 [ft^3/min]
 T_oa_db = 95 [F]
 T_oa_wb = 78 [F]
 T_room_db = 75 [F]
 rh_room = 0.50
 effectiveness = 0.80
 
-T_tempered_db = T_oa_db - (T_oa_db - T_room_db) * effectiveness`,
+T_tempered_db = T_oa_db - (T_oa_db - T_room_db) * effectiveness
+T_tempered_db_F = T_tempered_db / (1 [R]) - 459.67   { the same temperature in °F }`,
   },
   {
     value: "run-around-cycle",
@@ -1619,15 +1620,26 @@ T_tempered_db = T_oa_db - (T_oa_db - T_room_db) * effectiveness`,
     description: "Determines leaving air temperature from a cooling coil coupled to a run-around loop water cycle under steady-state energy balance.",
     note: "Results: heat transfer rate = 75,000 Btu/hr, air temp difference = 13.6°F, leaving air temperature = 61.4°F (or 52°F depending on heating balancing).",
     code: `{ Problem 6: Run-Around Water Cycle }
-gpm = 15 [gpm]
-delta_T_water = 10 [F]
+V_dot_water = 15 [gal/min]
+delta_T_water = 10 [R]           { a 10 °F temperature difference }
 T_air_in = 75 [F]
-cfm = 5000 [cfm]
+V_dot_air = 5000 [ft^3/min]
+
+{ The rules of thumb with their units: 500 = 8.33 lbm/gal x 60 min/hr x 1 Btu/lbm-°F,
+  1.1 = 0.0764 lbm/ft^3 x 60 min/hr x 0.24 Btu/lbm-°F }
+rho_w = 8.3333 [lbm/gal]
+cp_w = 1 [Btu/lbm-R]
+rho_a = 0.0764 [lbm/ft^3]
+cp_a = 0.24 [Btu/lbm-R]
 
 { Heat transfer rate }
-Q = 500 * gpm * delta_T_water
-Q = 1.1 * cfm * delta_T_air
-T_air_out = T_air_in - delta_T_air`,
+Q = rho_w * V_dot_water * cp_w * delta_T_water
+Q = rho_a * V_dot_air * cp_a * delta_T_air
+T_air_out = T_air_in - delta_T_air
+
+Q_Btuh = Q / (1 [Btu/hr])                      { 75,000 Btu/hr }
+delta_T_air_F = delta_T_air / (1 [R])          { °F of air temperature drop }
+T_air_out_F = T_air_out / (1 [R]) - 459.67`,
   },
   {
     value: "latent-heat-freezing",
@@ -1650,46 +1662,38 @@ Q_required = mass * Cp_below * (T_freeze - T_storage)`,
     description: "Calculates entering and leaving air conditions for a cooling coil serving a space with both sensible and latent heat gains under outdoor ventilation requirements.",
     note: "Results: Mixed Air Temp = 80.7°F db / 66.2°F wb, Leaving Air Temp = 55.0°F db / 51.1°F wb.",
     code: `{ Problem 3: Psychrometric Room Balancing }
-{ AirH2O properties use SI internally: convert °F→K and psia→Pa,
-  then divide enthalpy by 2326 to work in Btu/lb throughout. }
-Q_sensible = 90000         { Btu/hr }
-Q_latent = 40000           { Btu/hr }
-V_dot_supply = 3600        { cfm }
-T_supply_db = 55           { °F }
-T_room_db = 78             { °F }
+Q_sensible = 90000 [Btu/hr]
+Q_latent = 40000 [Btu/hr]
+V_dot_supply = 3600 [ft^3/min]
+T_supply_db = 55 [F]
+T_room_db = 78 [F]
 rh_room = 0.45
-T_oa_db = 92               { °F }
-T_oa_wb = 76               { °F }
-V_dot_oa = 700             { cfm }
-P_atm = 14.696 * 6894.76   { psia → Pa }
+T_oa_db = 92 [F]
+T_oa_wb = 76 [F]
+V_dot_oa = 700 [ft^3/min]
+P_atm = 14.696 [psia]
+rho_std = 0.075 [lbm/ft^3]   { standard air: the 4.5 in Q = 4.5 x cfm x dh is 60 min/hr x 0.075 lbm/ft^3 }
 
 V_dot_return = V_dot_supply - V_dot_oa
 f_oa = V_dot_oa / V_dot_supply
 f_return = V_dot_return / V_dot_supply
 
-{ Convert to Kelvin for the property call }
-T_room_K = (T_room_db - 32) * 5/9 + 273.15
-T_oa_K   = (T_oa_db   - 32) * 5/9 + 273.15
-T_oa_wb_K = (T_oa_wb  - 32) * 5/9 + 273.15
-
 { Mixed air condition (MAT) }
 T_entering_db = f_oa * T_oa_db + f_return * T_room_db
-T_entering_K  = (T_entering_db - 32) * 5/9 + 273.15
-
-h_room = Enthalpy(AirH2O, T=T_room_K, R=rh_room,  P=P_atm) / 2326
-h_oa   = Enthalpy(AirH2O, T=T_oa_K,   B=T_oa_wb_K, P=P_atm) / 2326
+h_room = Enthalpy(AirH2O, T=T_room_db, R=rh_room, P=P_atm)
+h_oa   = Enthalpy(AirH2O, T=T_oa_db, B=T_oa_wb, P=P_atm)
 h_mix  = f_oa * h_oa + f_return * h_room
+T_entering_wb = WetBulb(AirH2O, T=T_entering_db, H=h_mix, P=P_atm)
 
-T_entering_wb_K = WetBulb(AirH2O, T=T_entering_K, H=h_mix * 2326, P=P_atm)
-T_entering_wb   = (T_entering_wb_K - 273.15) * 9/5 + 32
+{ Coil load: room sensible + latent + ventilation load }
+Q_total = Q_sensible + Q_latent + rho_std * V_dot_oa * (h_oa - h_room)
+h_leaving = h_mix - Q_total / (rho_std * V_dot_supply)
+T_leaving_wb = WetBulb(AirH2O, T=T_supply_db, H=h_leaving, P=P_atm)
 
-{ Room total load: sensible + latent + ventilation load }
-Q_total = Q_sensible + Q_latent + V_dot_oa * 4.5 * (h_oa - h_room)
-h_leaving = h_mix - Q_total / (4.5 * V_dot_supply)
-
-T_supply_K    = (T_supply_db - 32) * 5/9 + 273.15
-T_leaving_wb_K = WetBulb(AirH2O, T=T_supply_K, H=h_leaving * 2326, P=P_atm)
-T_leaving_wb   = (T_leaving_wb_K - 273.15) * 9/5 + 32`,
+{ The same temperatures in °F }
+T_entering_db_F = T_entering_db / (1 [R]) - 459.67
+T_entering_wb_F = T_entering_wb / (1 [R]) - 459.67
+T_leaving_wb_F  = T_leaving_wb / (1 [R]) - 459.67`,
   },
   {
     value: "pumping-friction-head",
@@ -1722,27 +1726,24 @@ h_pump = h_total - h_inlet`,
     description: "Finds the wet-bulb temperature of the supply air to maintain a room at 75°F db/63°F wb under sensible load and Sensible Heat Factor.",
     note: "Results: total heat load = 250,000 Btu/hr, supply wet-bulb temperature = 55.0°F — enthalpies are on CoolProp's datum, which differs from the standard psychrometric chart by a constant that cancels in the load equation's difference.",
     code: `{ Problem 9: Air Supply Wet-Bulb Determination }
-{ AirH2O needs SI: convert °F→K and psia→Pa; Enthalpy returns J/kg,
-  divide by 2326 to get Btu/lb; multiply back by 2326 for H= input. }
-T_room_db = 75             { °F }
-T_room_wb = 63             { °F }
-T_supply_db = 58           { °F }
-Q_sensible = 200000        { Btu/hr }
+T_room_db = 75 [F]
+T_room_wb = 63 [F]
+T_supply_db = 58 [F]
+Q_sensible = 200000 [Btu/hr]
 SHF = 0.80
-V_dot_supply = 10700       { cfm }
-P_atm = 14.696 * 6894.76   { psia → Pa }
+V_dot_supply = 10700 [ft^3/min]
+P_atm = 14.696 [psia]
+rho_std = 0.075 [lbm/ft^3]   { standard air: the 4.5 in Q = 4.5 x cfm x dh is 60 min/hr x 0.075 lbm/ft^3 }
 
-T_room_db_K   = (T_room_db   - 32) * 5/9 + 273.15
-T_room_wb_K   = (T_room_wb   - 32) * 5/9 + 273.15
-T_supply_db_K = (T_supply_db - 32) * 5/9 + 273.15
-
-h_room = Enthalpy(AirH2O, T=T_room_db_K, B=T_room_wb_K, P=P_atm) / 2326
+h_room = Enthalpy(AirH2O, T=T_room_db, B=T_room_wb, P=P_atm)
 Q_total = Q_sensible / SHF
 
 { Total heat equation — h_supply solved implicitly }
-Q_total = 4.5 * V_dot_supply * (h_room - h_supply)
-T_supply_wb_K = WetBulb(AirH2O, T=T_supply_db_K, H=h_supply * 2326, P=P_atm)
-T_supply_wb   = (T_supply_wb_K - 273.15) * 9/5 + 32`,
+Q_total = rho_std * V_dot_supply * (h_room - h_supply)
+T_supply_wb = WetBulb(AirH2O, T=T_supply_db, H=h_supply, P=P_atm)
+
+Q_total_Btuh = Q_total / (1 [Btu/hr])
+T_supply_wb_F = T_supply_wb / (1 [R]) - 459.67`,
   },
   {
     value: "multistage-food-freezing",

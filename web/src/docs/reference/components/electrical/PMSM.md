@@ -56,9 +56,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-VoltageSource    VS(E=48)
-PMSM             M(Rs=0.5, lambda_pm=0.1, poles=4)
-RotationalDamper LOAD(c=0.05)
+VoltageSource    VS(E=48 [V])
+PMSM             M(Rs=0.5 [ohm], lambda_pm=0.1 [Wb], poles=4)
+RotationalDamper LOAD(c=0.05 [N-m-s])
 Ground           G()
 MechGround       MG()
 connect(VS.p, M.p)

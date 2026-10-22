@@ -55,8 +55,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // LiquidExpansionTank pinning the loop pressure datum at a heater inlet;
 // the boundary supplies flow and enthalpy, the tank supplies P.
-LiquidExpansionTank ET(t1, P = 150000)
-LiquidColdPlate     HTR(t1, t2, Q = 3000)
+LiquidExpansionTank ET(t1, P = 150000 [Pa])
+LiquidColdPlate     HTR(t1, t2, Q = 3000 [W])
 LiquidSink          SK(t2)
 
 t1.mdot = 0.25

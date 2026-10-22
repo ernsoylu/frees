@@ -62,9 +62,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // TwoZoneHX: the hierarchical two-cell counterflow exchanger (two nested
 // HeatExchangers at UA/2 each, counter-plumbed). Air on both sides — the
 // wide (P,h) surface keeps the 49-equation inner block Newton-stable.
-Source    HS(h1, fluid$ = Air, mdot = 0.4, P = 110000, T = 450)
-Source    CS(c1, fluid$ = Air, mdot = 0.5, P = 200000, T = 300)
-TwoZoneHX HX(h1, h2, c1, c2, UA = 300, hot$ = Air, cold$ = Air, arr$ = counterflow)
+Source    HS(h1, fluid$ = Air, mdot = 0.4 [kg/s], P = 110000 [Pa], T = 450 [K])
+Source    CS(c1, fluid$ = Air, mdot = 0.5 [kg/s], P = 200000 [Pa], T = 300 [K])
+TwoZoneHX HX(h1, h2, c1, c2, UA = 300 [W/K], hot$ = Air, cold$ = Air, arr$ = counterflow)
 Sink      SKH(h2)
 Sink      SKC(c2)
 

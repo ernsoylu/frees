@@ -67,10 +67,10 @@ TABLE prof(th)
   0    0
   12   0.06
 END
-SpeedSource SS(w = 10)
+SpeedSource SS(w = 10 [rad/s])
 MechGround  MG()
 Cam         CAM(prof$ = prof, theta0 = 0)
-TransDamper TD(c = 100)
+TransDamper TD(c = 100 [kg/s])
 TransGround TG()
 connect(SS.a, CAM.shaft)
 connect(SS.b, MG.port)

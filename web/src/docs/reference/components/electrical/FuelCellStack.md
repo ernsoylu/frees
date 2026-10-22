@@ -31,12 +31,12 @@ FuelCellStack inst(ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T)
 | --- | --- | --- |
 | `ncells` | Number | Number of cells. |
 | `area` | Number | Area [m²]. |
-| `i0` | Number | Initial current [A]. |
-| `ilim` | Number | Current limit [A]. |
-| `Rohm` | Number | Ohmic resistance [Ω]. |
+| `i0` | Number | Exchange current density [A/m²]. |
+| `ilim` | Number | Limiting current density [A/m²]. |
+| `Rohm` | Number | Area-specific ohmic resistance [Ω·m²]. |
 | `E0` | Number | Reference EMF [V]. |
 | `alpha` | Number | Void fraction / coefficient. |
-| `Eth` | Number | Activation/threshold energy. |
+| `Eth` | Number | Thermoneutral cell voltage [V]. |
 | `T` | Number | Temperature [K]. |
 
 ## Constitutive Equations
@@ -47,7 +47,7 @@ $$
 \begin{aligned}
 i_{cell} &= -p.i \\
 i &= \frac{i_{cell}}{area} \\
-v_{cell} &= e0 - \frac{8.314\,t}{alpha\cdot 96485}\cdot \ln\left(\frac{i}{i0}\right) - i\cdot rohm - \frac{8.314\,t}{2\,96485}\cdot \ln\left(\frac{ilim}{ilim - i}\right) \\
+v_{cell} &= e0 - \frac{8.314\,\left[kg m^2/s^2-K-mol\right]\,t}{alpha\cdot 96485\,\left[s A/mol\right]}\cdot \ln\left(\frac{i}{i0}\right) - i\cdot rohm - \frac{8.314\,\left[kg m^2/s^2-K-mol\right]\,t}{2\,96485\,\left[s A/mol\right]}\cdot \ln\left(\frac{ilim}{ilim - i}\right) \\
 p.v - n.v &= ncells\cdot v_{cell} \\
 p.i + n.i &= 0 \\
 q &= i_{cell}\cdot ncells\cdot \left(eth - v_{cell}\right) \\
@@ -71,10 +71,10 @@ port(n)
   p.I = Idraw
   p.I + n.I = 0
 end
-FuelCellStack FC(ncells=10, area=0.01, i0=10, ilim=20000, Rohm=1e-5, E0=1.18, alpha=0.5, Eth=1.48, T=343)
+FuelCellStack FC(ncells=10, area=0.01 [m^2], i0=10 [A/m^2], ilim=20000 [A/m^2], Rohm=1e-5 [ohm-m^2], E0=1.18 [V], alpha=0.5, Eth=1.48 [V], T=343 [K])
 CurrentDraw   LOAD(Idraw=50)
-ThermalSource COOL(T=343)
-Convection    HS(htc=200, area=1)
+ThermalSource COOL(T=343 [K])
+Convection    HS(htc=200 [W/m^2-K], area=1 [m^2])
 Ground        G()
 connect(FC.p, LOAD.p)
 connect(FC.n, LOAD.n, G.port)

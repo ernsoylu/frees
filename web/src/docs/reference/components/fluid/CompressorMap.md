@@ -85,7 +85,7 @@ TABLE etamap(pr)
   4    0.70
 END
 
-Source        SRC(a1, fluid$ = Air, mdot = 0.15, P = 100000, T = 300)
+Source        SRC(a1, fluid$ = Air, mdot = 0.15 [kg/s], P = 100000 [Pa], T = 300 [K])
 CompressorMap CM(a1, a2, fluid$ = Air, map_eta$ = etamap)
 Sink          SK(a2)
 

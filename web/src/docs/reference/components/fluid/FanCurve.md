@@ -31,7 +31,7 @@ FanCurve inst(rho, dP0, Q0)
 | --- | --- | --- |
 | `rho` | Number | Density [kg/m³]. |
 | `dP0` | Number | Reference pressure drop [Pa]. |
-| `Q0` | Number | Reference heat [W]. |
+| `Q0` | Number | Free-delivery volume flow, where the pressure rise falls to zero [m³/s]. |
 
 ## Constitutive Equations
 
@@ -57,7 +57,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 // frees-language: 2
 { Quadratic fan curve: 250 Pa shut-off rise, zero rise at 0.12 m^3/s. }
-FanCurve F1(rho=1.2, dP0=250, Q0=0.12)
+FanCurve F1(rho=1.2 [kg/m^3], dP0=250 [Pa], Q0=0.12 [m^3/s])
 F1.in.mdot = 0.06          { 0.05 m^3/s of air }
 F1.in.P    = 101325
 F1.in.h    = 300000

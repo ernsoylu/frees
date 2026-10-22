@@ -54,11 +54,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-VoltageSource   VS(E=10)
-HeatingResistor HR(R=5)
+VoltageSource   VS(E=10 [V])
+HeatingResistor HR(R=5 [ohm])
 Ground          G()
-Conduction      C(k=2, area=1, L=0.1)
-ThermalSource   AMB(T=300)
+Conduction      C(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])
+ThermalSource   AMB(T=300 [K])
 connect(VS.p, HR.p)
 connect(VS.n, HR.n, G.port)
 connect(HR.heat, C.a)

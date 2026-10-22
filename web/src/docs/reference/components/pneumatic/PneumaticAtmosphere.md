@@ -58,9 +58,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticOrifice    ORI(fluid$=Air, C=1e-8, b=0.3)
-PneumaticAtmosphere ATM(P=50000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticOrifice    ORI(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3)
+PneumaticAtmosphere ATM(P=50000 [Pa])
 connect(SUP.out, ORI.in)
 connect(ORI.out, ATM.port)
 

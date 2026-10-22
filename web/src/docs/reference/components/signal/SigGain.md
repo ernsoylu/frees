@@ -52,22 +52,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-function [out] = SigConst(k)
-port(out)
-  out.sig = k
-end
-function [in, out] = SigGain(k)
-port(in)
-port(out)
-  out.sig = k * in.sig
-end
-function [in1, in2, out] = SigSum()
-port(in1)
-port(in2)
-port(out)
-  out.sig = in1.sig + in2.sig
-end
-SigConst SRC(k=2)
+SigConstant SRC(k=2)
 SigGain  A(k=3)
 SigGain  B(k=5)
 connect(SRC.out, A.in, B.in)

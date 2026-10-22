@@ -30,8 +30,8 @@ HydraulicCylinder inst(rho, beta, V0, area, Patm, P0, domain$)
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `rho` | Number | Density [kg/m³]. |
-| `beta` | Number | Chevron angle [deg] / coefficient. |
-| `V0` | Number | Initial voltage / volume. |
+| `beta` | Number | Oil bulk modulus [Pa]. |
+| `V0` | Number | Dead volume of the chamber at zero stroke [m³]. |
 | `area` | Number | Area [m²]. |
 | `Patm` | Number | Atmospheric pressure [Pa]. |
 | `P0` | Number | Reference/initial pressure [Pa]. |
@@ -59,9 +59,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-HydraulicSupply   SUP(P=10000000)
-HydraulicOrifice  ORI(CdA=1e-5, rho=850)
-HydraulicCylinder CYL(rho=850, beta=1.5e9, V0=1e-4, area=0.001, Patm=100000, P0=100000)
+HydraulicSupply   SUP(P=10000000 [Pa])
+HydraulicOrifice  ORI(CdA=1e-5 [m^2], rho=850 [kg/m^3])
+HydraulicCylinder CYL(rho=850 [kg/m^3], beta=1.5e9 [Pa], V0=1e-4 [m^3], area=0.001 [m^2], Patm=100000 [Pa], P0=100000 [Pa])
 TransGround       G()
 connect(SUP.out, ORI.in)
 connect(ORI.out, CYL.in)

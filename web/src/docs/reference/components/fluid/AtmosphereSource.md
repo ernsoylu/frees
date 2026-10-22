@@ -57,7 +57,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // AtmosphereSource: the ISA 1976 state at 5 km as a flow boundary —
 // P = isa_P(5000) ~ 54 kPa, h = Enthalpy(Air) at the ISA temperature.
-AtmosphereSource ATM(a1, alt = 5000, mdot = 1.0)
+AtmosphereSource ATM(a1, alt = 5000 [m], mdot = 1.0 [kg/s])
 Sink             SK(a1)
 
 p_amb = SK.P

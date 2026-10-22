@@ -55,12 +55,12 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-BatteryThermal   B(Voc=48, R0=0.1)
-DCMotor          MOT(Kt=0.5, Ke=0.5, R=1)
-RotationalDamper LOAD(c=0.1)
+BatteryThermal   B(Voc=48 [V], R0=0.1 [ohm])
+DCMotor          MOT(Kt=0.5 [N-m/A], Ke=0.5 [N-m/A], R=1 [ohm])
+RotationalDamper LOAD(c=0.1 [N-m-s])
 Ground           G()
 MechGround       MG()
-ThermalSource    COOL(T=300)
+ThermalSource    COOL(T=300 [K])
 connect(B.p, MOT.p)
 connect(B.n, MOT.n, G.port)
 connect(MOT.shaft, LOAD.a)

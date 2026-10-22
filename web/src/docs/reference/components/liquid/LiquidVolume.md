@@ -29,7 +29,7 @@ LiquidVolume inst(C, P0, domain$)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `C` | Number | Capacitance [F]. |
+| `C` | Number | Hydraulic capacitance, stored mass per unit pressure [kg/Pa]. |
 | `P0` | Number | Reference/initial pressure [Pa]. |
 | `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
@@ -57,8 +57,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // frees-language: 2
 // LiquidVolume with no DYNAMIC block: der(in.P) takes the steady branch,
 // recovering in.mdot = out.mdot through the compliance node.
-LiquidSource LS(l1, fluid$ = Water, mdot = 0.5, P = 250000, T = 300)
-LiquidVolume LV(l1, l2, C = 1e-8, P0 = 250000)
+LiquidSource LS(l1, fluid$ = Water, mdot = 0.5 [kg/s], P = 250000 [Pa], T = 300 [K])
+LiquidVolume LV(l1, l2, C = 1e-8 [kg/Pa], P0 = 250000 [Pa])
 LiquidSink   SK(l2)
 
 l2.P  = 250000

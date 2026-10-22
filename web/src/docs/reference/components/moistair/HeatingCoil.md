@@ -63,7 +63,7 @@ port(out)
   out.h    = h0
 end
 MASrc      SRC(W=0.006, h0=40000, mdot=2, P=101325)
-HeatingCoil HC(Q=10000)
+HeatingCoil HC(Q=10000 [W])
 connect(SRC.out, HC.in)
 
 { CHECK hc.in.h 40000 0.04 }

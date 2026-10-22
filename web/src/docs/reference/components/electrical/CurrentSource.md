@@ -52,8 +52,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-CurrentSource CS(I=2)
-Resistor      R(R=5)
+CurrentSource CS(I=2 [A])
+Resistor      R(R=5 [ohm])
 Ground        G()
 connect(CS.p, R.a)
 connect(CS.n, R.b, G.port)

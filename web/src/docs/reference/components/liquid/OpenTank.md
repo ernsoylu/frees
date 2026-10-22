@@ -47,7 +47,7 @@ $$
 \text{der}\left(lvl\right) &= \frac{in.mdot - out.mdot}{rho\cdot a_{t}} \\
 \text{init}\left(lvl\right) &= l0 \\
 in.p &= p0 \\
-out.p &= p0 + rho\cdot 9.80665\cdot lvl \\
+out.p &= p0 + rho\cdot 9.80665\,\left[m/s^2\right]\cdot lvl \\
 out.h &= in.h
 \end{aligned}
 $$
@@ -65,7 +65,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // OpenTank at steady throughflow: the free surface sees P0, the outlet the
 // gravity head, and der(lvl) = 0 equalises the flows; the pinned outlet
 // pressure sizes the level (~1.02 m of water).
-OpenTank TK(o1, o2, A_t = 0.5, P0 = 101325, rho = 998, L0 = 1.0)
+OpenTank TK(o1, o2, A_t = 0.5 [m^2], P0 = 101325 [Pa], rho = 998 [kg/m^3], L0 = 1.0 [m])
 LiquidSink SK(o2)
 
 o1.mdot = 1.0

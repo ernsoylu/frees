@@ -73,9 +73,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // (the ports are resistive by design): films h_a = h_b = 8 W/m2K, U = 2.5,
 // A = 12 m2. R_tot = 1/96 + 1/30 + 1/96 = 0.0541667 K/W,
 // Q = (298.15 - 283.15)/R_tot = 276.92 W.
-ThermalSource ZONEA(T=298.15)
-MultiZoneWall WALL(h_a=8, h_b=8, U=2.5, A=12, C1=200000, C2=200000, T10=296, T20=288)
-ThermalSource ZONEB(T=283.15)
+ThermalSource ZONEA(T=298.15 [K])
+MultiZoneWall WALL(h_a=8 [W/m^2-K], h_b=8 [W/m^2-K], U=2.5 [W/m^2-K], A=12 [m^2], C1=200000 [J/K], C2=200000 [J/K], T10=296 [K], T20=288 [K])
+ThermalSource ZONEB(T=283.15 [K])
 connect(ZONEA.port, WALL.a)
 connect(WALL.b, ZONEB.port)
 q_zone  = WALL.qa

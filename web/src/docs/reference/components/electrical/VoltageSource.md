@@ -52,9 +52,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-VoltageSource VS(E=10)
-Resistor R1(R=3)
-Resistor R2(R=2)
+VoltageSource VS(E=10 [V])
+Resistor R1(R=3 [ohm])
+Resistor R2(R=2 [ohm])
 Ground   G()
 connect(VS.p, R1.a)
 connect(R1.b, R2.a)

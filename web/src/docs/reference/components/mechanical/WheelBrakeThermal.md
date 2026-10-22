@@ -72,11 +72,11 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // tau_b = 90 N.m, and Pf = 4500 W = hA*(Tr - T_amb) closes the balance.
 // EXPECT tr = 600 tol 1e-6
 // EXPECT taub = 90 tol 1e-6
-SpeedSource       SS(w = 50)
+SpeedSource       SS(w = 50 [rad/s])
 MechGround        G1()
 MechGround        G2()
 SigConstant       U(k = 0.4)
-WheelBrakeThermal WB(Tmax = 300, eps = 0.01, C = 10, hA = 15, T_amb = 300, T_fade = 600, k_fade = 0.5, eps_f = 30, T0 = 300)
+WheelBrakeThermal WB(Tmax = 300 [N-m], eps = 0.01 [rad/s], C = 10 [J/K], hA = 15 [W/K], T_amb = 300 [K], T_fade = 600 [K], k_fade = 0.5, eps_f = 30 [K], T0 = 300 [K])
 connect(SS.a, WB.a)
 connect(SS.b, G1.port)
 connect(WB.b, G2.port)

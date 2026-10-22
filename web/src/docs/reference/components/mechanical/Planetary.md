@@ -29,7 +29,7 @@ Planetary inst(g)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `g` | Number | Gravitational acceleration [m/s²]. |
+| `g` | Number | Ring-to-sun tooth ratio [-]. |
 
 ## Constitutive Equations
 
@@ -53,9 +53,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TorqueSource     TS(T=10)
+TorqueSource     TS(T=10 [N-m])
 Planetary        PG(g=2)
-RotationalDamper LOAD(c=1)
+RotationalDamper LOAD(c=1 [N-m-s])
 MechGround       GR()
 MechGround       GS()
 MechGround       GL()

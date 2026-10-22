@@ -29,7 +29,7 @@ TransDamper inst(c)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `c` | Number | Damping / specific-heat coefficient. |
+| `c` | Number | Damping coefficient, force per unit speed [kg/s]. |
 
 ## Constitutive Equations
 
@@ -52,9 +52,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-PneumaticSupply   SUP(fluid$=Air, P=300000, T=300)
-PneumaticActuator ACT(fluid$=Air, area=0.01, Patm=100000)
-TransDamper       D(c=1000)
+PneumaticSupply   SUP(fluid$=Air, P=300000 [Pa], T=300 [K])
+PneumaticActuator ACT(fluid$=Air, area=0.01 [m^2], Patm=100000 [Pa])
+TransDamper       D(c=1000 [kg/s])
 TransGround       G()
 connect(SUP.out, ACT.in)
 connect(ACT.rod, D.a)

@@ -3,7 +3,8 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import { EXAMPLES } from './examples'
-import { initSync, solve } from './wasm/pkg/frees.js'
+import { CYCLE_EXAMPLES } from './helpExamples'
+import { check, initSync, solve } from './wasm/pkg/frees.js'
 
 initSync({ module: readFileSync(new URL('./wasm/pkg/frees_bg.wasm', import.meta.url)) })
 
@@ -51,4 +52,16 @@ it.each<[string, Record<string, string>]>([
     expect(variables.get('t_half')?.value).toBeCloseTo(Math.log(2) / 0.012, 2)
   }
   if (id === 'transient-heat-rod') expect(variables.get('t_mid_final')?.value).toBeCloseTo(313.15, 4)
+})
+
+it('every gallery and Help example is dimensionally consistent', () => {
+  const documents: [string, string][] = [
+    ...EXAMPLES.map((e): [string, string] => [e.id, e.text]),
+    ...CYCLE_EXAMPLES.map((e): [string, string] => [e.value, e.code]),
+  ]
+  const warned = documents.flatMap(([id, text]) => {
+    const warnings: string[] = JSON.parse(check(text, '{}')).unitWarnings
+    return warnings.length ? [`${id}: ${warnings.join(' | ')}`] : []
+  })
+  expect(warned).toEqual([])
 })

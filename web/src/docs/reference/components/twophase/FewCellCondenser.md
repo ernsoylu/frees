@@ -92,12 +92,12 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // this block stalls Newton on the high-pressure (P,h) flash; the transient is
 // the component's intended C-R-C usage anyway). Pressure chain settles in
 // ~Cc/Kv = 25 ms, the enthalpy states in a few seconds.
-TwoPhasePressureSource SUP(fluid$ = R134a, P = 1220000, x = 1)
-FewCellCondenser       CND(fluid$ = R134a, V = 0.001, Cc = 1e-7, UA = 30, Kv = 4e-6, P0 = 1210000, h0 = 400000)
-ThermalSource          W1(T = 305)
-ThermalSource          W2(T = 305)
-ThermalSource          W3(T = 305)
-TwoPhasePressureSink   RET(P = 1200000)
+TwoPhasePressureSource SUP(fluid$ = R134a, P = 1220000 [Pa], x = 1)
+FewCellCondenser       CND(fluid$ = R134a, V = 0.001 [m^3], Cc = 1e-7 [kg/Pa], UA = 30 [W/K], Kv = 4e-6 [kg/s-Pa], P0 = 1210000 [Pa], h0 = 400000 [J/kg])
+ThermalSource          W1(T = 305 [K])
+ThermalSource          W2(T = 305 [K])
+ThermalSource          W3(T = 305 [K])
+TwoPhasePressureSink   RET(P = 1200000 [Pa])
 connect(SUP.out, CND.in)
 connect(CND.out, RET.in)
 connect(CND.w1, W1.port)

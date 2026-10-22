@@ -1944,7 +1944,13 @@ pub fn check_with_tables_complex(
     // *reported* map too (`putIfAbsent`), because a port member's unit comes
     // from its physical domain and nothing else can derive it.
     let declared = declared_units(&equations, overrides, &member_units);
-    let unit_report = crate::units::checker::check_units(&equations, &declared);
+    let (function_units, function_input_units) = declared_function_units(&doc.defs);
+    let unit_report = crate::units::checker::check_units_full(
+        &equations,
+        &declared,
+        &function_units,
+        &function_input_units,
+    );
     let mut inferred_units = unit_report.inferred;
     inferred_units.extend(literal_units(&equations));
     for (name, unit) in &member_units {
@@ -2318,7 +2324,7 @@ fn steady_storage_equations(
             Equation::new(
                 eq.rhs,
                 Expr::num(0.0),
-                format!("{} [steady: der=0]", eq.source_text),
+                format!("{}{}", eq.source_text, crate::ast::STEADY_DER_SUFFIX),
             )
         })
         .collect();
@@ -2859,6 +2865,39 @@ fn declared_units(
         }
     }
     units
+}
+
+/// Output unit and per-argument units of each TABLE/FUNCTION, by name.
+pub(crate) type FunctionUnits = (
+    BTreeMap<String, String>,
+    BTreeMap<String, Vec<Option<String>>>,
+);
+
+/// Declared TABLE/FUNCTION units by lowercase name: each call's output unit
+/// and its per-argument units, the extra inputs of
+/// [`crate::units::checker::check_units_full`]. Without them every lookup —
+/// including a component's `map$(Q)` — reads as dimensionless, so a correctly
+/// annotated `TABLE pump(Q [m^3/s]) [Pa]` would warn.
+pub(crate) fn declared_function_units(defs: &Definitions) -> FunctionUnits {
+    let mut outputs = BTreeMap::new();
+    let mut inputs = BTreeMap::new();
+    for t in &defs.tables {
+        if let Some(unit) = &t.output_unit {
+            outputs.insert(t.name.clone(), unit.clone());
+        }
+        if let Some(units) = &t.arg_units {
+            inputs.insert(t.name.clone(), units.clone());
+        }
+    }
+    for f in &defs.functions {
+        if let Some(unit) = &f.output_unit {
+            outputs.insert(f.name.clone(), unit.clone());
+        }
+        if let Some(units) = &f.param_units {
+            inputs.insert(f.name.clone(), units.clone());
+        }
+    }
+    (outputs, inputs)
 }
 
 /// Every equation's residual at the final values, in source order, plus the

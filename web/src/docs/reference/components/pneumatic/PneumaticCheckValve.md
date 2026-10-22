@@ -63,9 +63,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Pneumatic check valve in its forward (conducting) direction: 7 bar supply
 // into a 1 bar exhaust, well past the eps = 1 kPa gate width, so the tanh
 // gate is fully open and the ISO 6358 law carries the whole flow.
-PneumaticSupply     SUP(fluid$=Air, P=700000, T=300)
-PneumaticCheckValve CHK(fluid$=Air, C=1e-8, b=0.3, eps=1000)
-PneumaticAtmosphere ATM(P=100000)
+PneumaticSupply     SUP(fluid$=Air, P=700000 [Pa], T=300 [K])
+PneumaticCheckValve CHK(fluid$=Air, C=1e-8 [m^3/s-Pa], b=0.3, eps=1000 [Pa])
+PneumaticAtmosphere ATM(P=100000 [Pa])
 connect(SUP.out, CHK.in)
 connect(CHK.out, ATM.port)
 m_fwd  = CHK.in.mdot

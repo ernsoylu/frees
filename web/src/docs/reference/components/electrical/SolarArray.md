@@ -72,33 +72,33 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT mh2 = 2.0894e-6 tol 1e-9
 // Solar array at 1000 W/m2 into 1 ohm, far from Voc: I = Isc = 8 A.
 // EXPECT isol = 8 tol 1e-3
-ChargerCCCV CH(Imax=10, Vmax=4.2, epsV=0.01)
-Battery     BT(Voc=3.6, R0=0.01)
+ChargerCCCV CH(Imax=10 [A], Vmax=4.2 [V], epsV=0.01 [V])
+Battery     BT(Voc=3.6 [V], R0=0.01 [ohm])
 Ground      GC()
 connect(CH.p, BT.p)
 connect(CH.n, BT.n, GC.port)
 icc = BT.p.I
 
-ThermalFuse   FU(R0=0.1, Iblow=50, kR=100, epsI=1)
-CurrentSource CF(I=100)
+ThermalFuse   FU(R0=0.1 [ohm], Iblow=50 [A], kR=100, epsI=1 [A])
+CurrentSource CF(I=100 [A])
 Ground        GF()
 connect(FU.p, CF.p)
 connect(FU.n, CF.n, GF.port)
 vfuse = FU.p.V - FU.n.V
 
-HarnessResistance HR(R20=0.01, alphaT=0.004)
-CurrentSource     CHR(I=10)
+HarnessResistance HR(R20=0.01 [ohm], alphaT=0.004 [1/K])
+CurrentSource     CHR(I=10 [A])
 Ground            GH()
-ThermalSource     THW(T=350)
+ThermalSource     THW(T=350 [K])
 connect(HR.a, CHR.p)
 connect(HR.b, CHR.n, GH.port)
 connect(HR.heat, THW.port)
 dvh = HR.a.V - HR.b.V
 
-Electrolyzer  EL(ncells=10, area=0.01, i0=10, Rohm=1e-4, E0=1.48, alpha=0.5, Eth=1.48, T=333)
-CurrentSource CE(I=20)
+Electrolyzer  EL(ncells=10, area=0.01 [m^2], i0=10 [A/m^2], Rohm=1e-4 [ohm-m^2], E0=1.48 [V], alpha=0.5, Eth=1.48 [V], T=333 [K])
+CurrentSource CE(I=20 [A])
 Ground        GE()
-ThermalSource TE(T=333)
+ThermalSource TE(T=333 [K])
 connect(EL.p, CE.p)
 connect(EL.n, CE.n, GE.port)
 connect(EL.heat, TE.port)
@@ -106,9 +106,9 @@ vel = EL.p.V - EL.n.V
 qel = EL.Q
 mh2 = EL.mdot_h2
 
-SigConstant IRR(k=1000)
-SolarArray  SA(Isc_ref=8, Gref=1000, Voc=40, epsV=0.5)
-Resistor    RS(R=1)
+SigConstant IRR(k=1000 [W/m^2])
+SolarArray  SA(Isc_ref=8 [A], Gref=1000 [W/m^2], Voc=40 [V], epsV=0.5 [V])
+Resistor    RS(R=1 [ohm])
 Ground      GA()
 connect(IRR.out, SA.G)
 connect(SA.p, RS.a)

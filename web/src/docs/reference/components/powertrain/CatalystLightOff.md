@@ -80,7 +80,7 @@ port(out)
   out.h    = Enthalpy(Air, P=P, T=T)
 end
 ExhaustSource   EXH(P=101325, T=700, mdot=0.05)
-CatalystLightOff CAT(fluid$=Air, C=15000, UA=40, T50=550, k=25, q_exo=50000, T0=300)
+CatalystLightOff CAT(fluid$=Air, C=15000 [J/K], UA=40 [W/K], T50=550 [K], k=25 [K], q_exo=50000 [J/kg], T0=300 [K])
 Sink            TAIL()
 connect(EXH.out, CAT.in)
 connect(CAT.out, TAIL.in)

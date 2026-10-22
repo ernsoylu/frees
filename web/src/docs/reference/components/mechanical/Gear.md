@@ -52,9 +52,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TorqueSource     TS(T=10)
+TorqueSource     TS(T=10 [N-m])
 Gear             G(ratio=2)
-RotationalDamper D(c=0.5)
+RotationalDamper D(c=0.5 [N-m-s])
 MechGround       M1()
 MechGround       M2()
 connect(TS.a, G.in)

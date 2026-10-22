@@ -33,7 +33,7 @@ port(out)
   VARIANT volumetric REQUIRE eta, eta_v, disp, rpm
     out.h   = in.h + (h_s - in.h) / eta
     rho_in  = Density(fluid$, P=in.P, h=in.h)
-    in.mdot = eta_v * disp * (rpm / 60) * rho_in
+    in.mdot = eta_v * disp * (rpm / 60 [s]) * rho_in
   END
   VARIANT map REQUIRE map_eta$, rpm
     PRr   = out.P / in.P
@@ -129,7 +129,7 @@ port(out)
   Q        = in.mdot / rho
   head     = map$(Q)
   out.mdot = in.mdot
-  out.P    = in.P + rho * 9.80665 * head
+  out.P    = in.P + rho * 9.80665 [m/s^2] * head
 end
 
 // Compressor whose isentropic efficiency comes from a tabulated map. `map_eta$`

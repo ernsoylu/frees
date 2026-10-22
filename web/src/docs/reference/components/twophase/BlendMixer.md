@@ -54,8 +54,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-BlendSource S1(fluid$=R134a, mdot=0.01, P=400000, x=0.3, z=0.2)
-BlendSource S2(fluid$=R134a, mdot=0.03, P=400000, x=0.3, z=0.6)
+BlendSource S1(fluid$=R134a, mdot=0.01 [kg/s], P=400000 [Pa], x=0.3, z=0.2)
+BlendSource S2(fluid$=R134a, mdot=0.03 [kg/s], P=400000 [Pa], x=0.3, z=0.6)
 BlendMixer  MIX()
 BlendSink   SNK()
 connect(S1.out, MIX.in1)

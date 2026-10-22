@@ -64,10 +64,10 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // Rcc = 0.5 K/W into the plate node, which convects (htc*A = 2 W/K) to a
 // 293.15 K coolant boundary. Steady: (320 - Tp)/0.5 = 2*(Tp - 293.15)
 // -> Tp = 306.575 K, Q = 26.85 W.
-ThermalSource CELL(T=320)
-CellToPackThermal CTP(Rcc=0.5, Cpl=1500, T0=300)
-Convection    CVP(htc=20, area=0.1)
-ThermalSource COOL(T=293.15)
+ThermalSource CELL(T=320 [K])
+CellToPackThermal CTP(Rcc=0.5 [K/W], Cpl=1500 [J/K], T0=300 [K])
+Convection    CVP(htc=20 [W/m^2-K], area=0.1 [m^2])
+ThermalSource COOL(T=293.15 [K])
 connect(CELL.port, CTP.cell)
 connect(CTP.plate, CVP.a)
 connect(CVP.b, COOL.port)

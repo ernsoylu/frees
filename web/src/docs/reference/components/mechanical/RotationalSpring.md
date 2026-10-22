@@ -29,7 +29,7 @@ RotationalSpring inst(k, theta0)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `k` | Number | Stiffness / conductivity. |
+| `k` | Number | Torsional stiffness, torque per radian [N·m]. |
 | `theta0` | Number | Initial angle [rad]. |
 
 ## Constitutive Equations
@@ -58,8 +58,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // RotationalSpring steady: der(theta) -> 0 locks both ends (b grounded), and
 // the 12 N.m source winds the 400 N.m/rad spring to theta = 0.03 rad.
 // EXPECT th = 0.03 tol 1e-9
-TorqueSource     TQ(T = 12)
-RotationalSpring SP(k = 400, theta0 = 0)
+TorqueSource     TQ(T = 12 [N-m])
+RotationalSpring SP(k = 400 [N-m], theta0 = 0)
 MechGround       G1()
 MechGround       G2()
 connect(TQ.a, SP.a)

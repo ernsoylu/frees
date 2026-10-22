@@ -29,7 +29,7 @@ TorqueSource inst(T)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `T` | Number | Temperature [K]. |
+| `T` | Number | Applied torque [N·m]. |
 
 ## Constitutive Equations
 
@@ -52,8 +52,8 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-TorqueSource     TS(T=10)
-RotationalDamper D(c=0.5)
+TorqueSource     TS(T=10 [N-m])
+RotationalDamper D(c=0.5 [N-m-s])
 MechGround       G()
 connect(TS.a, D.a)
 connect(TS.b, D.b, G.port)

@@ -71,7 +71,7 @@ TABLE cpmap(j)
   2    0.05
 END
 
-Propeller PR(sh1, vh1, Dp = 2.0, rhoA = 1.225, ct$ = ctmap, cpw$ = cpmap, epsn = 1e-6)
+Propeller PR(sh1, vh1, Dp = 2.0 [m], rhoA = 1.225 [kg/m^3], ct$ = ctmap, cpw$ = cpmap, epsn = 1e-6 [m/s])
 
 sh1.w   = 125.66370614359172
 vh1.vel = 30

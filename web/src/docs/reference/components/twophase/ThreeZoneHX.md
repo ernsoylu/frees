@@ -71,9 +71,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // after ~95 s of retry ladder; Air's reference state (h = 0 at the ~79 K NBP)
 // leaves a wide valid neighborhood around the same guess and it solves in
 // under a second.
-Source      HOT(fluid$ = Air, mdot = 0.3, P = 110000, T = 450)
-Source      COLD(fluid$ = Air, mdot = 0.25, P = 300000, T = 300)
-ThreeZoneHX HX(UA = 600, hot$ = Air, cold$ = Air, arr$ = counter)
+Source      HOT(fluid$ = Air, mdot = 0.3 [kg/s], P = 110000 [Pa], T = 450 [K])
+Source      COLD(fluid$ = Air, mdot = 0.25 [kg/s], P = 300000 [Pa], T = 300 [K])
+ThreeZoneHX HX(UA = 600 [W/K], hot$ = Air, cold$ = Air, arr$ = counter)
 Sink        HSNK()
 Sink        CSNK()
 connect(HOT.out, HX.hot_in)

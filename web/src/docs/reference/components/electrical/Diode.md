@@ -29,7 +29,7 @@ Diode inst(Gon, eps)
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `Gon` | Number | On-state conductance [S]. |
+| `Gon` | Number | On-state conductance [siemens]. |
 | `eps` | Number | Conduction smoothing voltage [V] — the tanh transition width around zero bias. |
 
 ## Constitutive Equations
@@ -54,9 +54,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-VoltageSource VS(E=5)
-Diode         D(Gon=10, eps=0.001)
-Resistor      R(R=1)
+VoltageSource VS(E=5 [V])
+Diode         D(Gon=10 [siemens], eps=0.001 [V])
+Resistor      R(R=1 [ohm])
 Ground        G()
 connect(VS.p, D.p)
 connect(D.n, R.a)

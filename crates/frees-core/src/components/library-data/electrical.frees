@@ -75,7 +75,7 @@ port(heat)
   heat.T    = T
   der(T)    = (Qgen + heat.Qdot) / C_th
   init(T)   = T0
-  der(SOC)  = p.I / (3600 * Q0)
+  der(SOC)  = p.I / (3600 [A-s] * Q0)
   init(SOC) = SOC0
 end
 
@@ -139,7 +139,7 @@ port(n)
 port(heat)
   I_cell    = -p.I
   i         = I_cell / area
-  V_cell    = E0 - (8.314 * T / (alpha * 96485)) * ln(i / i0) - i * Rohm - (8.314 * T / (2 * 96485)) * ln(ilim / (ilim - i))
+  V_cell    = E0 - (8.314 [J/mol-K] * T / (alpha * 96485 [A-s/mol])) * ln(i / i0) - i * Rohm - (8.314 [J/mol-K] * T / (2 * 96485 [A-s/mol])) * ln(ilim / (ilim - i))
   p.V - n.V = ncells * V_cell
   p.I + n.I = 0
   Q         = I_cell * ncells * (Eth - V_cell)
@@ -159,10 +159,10 @@ port(p)
 port(n)
 port(heat)
   I         = -p.I
-  R0        = R0ref * exp((Ea / 8.314) * (1 / T - 1 / Tref))
+  R0        = R0ref * exp((Ea / 8.314 [J/mol-K]) * (1 / T - 1 / Tref))
   Voc       = ocv$(SOC)
   p.I + n.I = 0
-  der(SOC)  = -I / (3600 * Qcap)
+  der(SOC)  = -I / (3600 [A-s] * Qcap)
   init(SOC) = SOC0
   Qgen      = R0 * I^2 - I * T * dudt$(SOC)
   heat.T    = T
@@ -173,7 +173,7 @@ port(heat)
     p.V - n.V = Voc - R0 * I
   END
   VARIANT aging REQUIRE k_age
-    der(Ah)   = abs(I) / 3600
+    der(Ah)   = abs(I) / 3600 [A-s]
     init(Ah)  = 0
     Qcap      = Q0 * (1 - k_age * Ah)
     p.V - n.V = Voc - R0 * I
@@ -185,9 +185,9 @@ port(heat)
     p.V - n.V = Voc - R0 * I - v1
   END
   VARIANT aging_cal REQUIRE k_age, k_cal, Ea_cal
-    der(Ah)   = abs(I) / 3600
+    der(Ah)   = abs(I) / 3600 [A-s]
     init(Ah)  = 0
-    der(fcal) = k_cal * exp(-Ea_cal / (8.314 * T))
+    der(fcal) = k_cal * exp(-Ea_cal / (8.314 [J/mol-K] * T))
     init(fcal) = 0
     Qcap      = Q0 * (1 - k_age * Ah - fcal)
     p.V - n.V = Voc - R0 * I
@@ -202,10 +202,10 @@ port(p)
 port(n)
 port(heat)
   I_cell    = -p.I / Np
-  R0        = R0ref * exp((Ea / 8.314) * (1 / T - 1 / Tref))
+  R0        = R0ref * exp((Ea / 8.314 [J/mol-K]) * (1 / T - 1 / Tref))
   p.V - n.V = Ns * (ocv$(SOC) - R0 * I_cell)
   p.I + n.I = 0
-  der(SOC)  = -I_cell / (3600 * Q0)
+  der(SOC)  = -I_cell / (3600 [A-s] * Q0)
   init(SOC) = SOC0
   Qgen      = Ns * Np * (R0 * I_cell^2 - I_cell * T * dudt$(SOC))
   heat.T    = T
@@ -320,10 +320,10 @@ port(n)
 port(heat)
   I_cell    = p.I
   i         = I_cell / area
-  V_cell    = E0 + (8.314 * T / (alpha * 96485)) * ln(i / i0 + 1) + i * Rohm
+  V_cell    = E0 + (8.314 [J/mol-K] * T / (alpha * 96485 [A-s/mol])) * ln(i / i0 + 1) + i * Rohm
   p.V - n.V = ncells * V_cell
   p.I + n.I = 0
-  mdot_h2   = ncells * I_cell * 2.016e-3 / (2 * 96485)
+  mdot_h2   = ncells * I_cell * 2.016e-3 [kg/mol] / (2 * 96485 [A-s/mol])
   Q         = I_cell * ncells * (V_cell - Eth)
   heat.Qdot = -Q
 end
