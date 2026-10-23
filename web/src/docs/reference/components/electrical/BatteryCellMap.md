@@ -30,19 +30,23 @@ BatteryCellMap inst(ocv$, dudt$, R0ref, Tref, Ea, Q0, C_th, SOC0, T0, k_age, mod
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ocv$` | String |
-| `dudt$` | String |
-| `R0ref` | Number |
-| `Tref` | Number |
-| `Ea` | Number |
-| `Q0` | Number |
-| `C_th` | Number |
-| `SOC0` | Number |
-| `T0` | Number |
-| `k_age` | Number |
-| `model$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ocv$` | String | Name of the open-circuit-voltage table, SOC → V. |
+| `dudt$` | String | Name of the entropic-coefficient table, SOC → dU/dT in V/K. |
+| `R0ref` | Number | Ohmic resistance at the reference temperature [ohm]. |
+| `Tref` | Number | Reference temperature of R0ref [K]. |
+| `Ea` | Number | Arrhenius activation energy of the ohmic resistance [J/mol]. |
+| `Q0` | Number | Rated capacity in ampere-hours, as a bare number [-]. |
+| `C_th` | Number | Cell heat capacity [J/K]. |
+| `SOC0` | Number | Initial state of charge, 0 to 1 [-]. |
+| `T0` | Number | Initial cell temperature [K]. |
+| `k_age` | Number | Capacity lost per ampere-hour of throughput (`aging`, `aging_cal`) [-]. |
+| `R1` | Number | RC-branch resistance (`rc_map`) [ohm]. |
+| `C1` | Number | RC-branch capacitance (`rc_map`) [farad]. |
+| `k_cal` | Number | Calendar-fade rate prefactor (`aging_cal`) [1/s]. |
+| `Ea_cal` | Number | Calendar-fade activation energy (`aging_cal`) [J/mol]. |
+| `model$` | String | Variant — `static` (default), `aging`, `rc_map` or `aging_cal`. |
 
 ## Constitutive Equations
 

@@ -28,9 +28,9 @@ Differential inst(ratio)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ratio` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ratio` | Number | Final-drive ratio, input speed over mean wheel speed [-]. |
 
 ## Constitutive Equations
 

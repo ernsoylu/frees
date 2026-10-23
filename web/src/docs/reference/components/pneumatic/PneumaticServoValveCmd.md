@@ -28,12 +28,12 @@ PneumaticServoValveCmd inst(fluid$, Cmax, b, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `Cmax` | Number |
-| `b` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| `Cmax` | Number | ISO 6358 sonic conductance at full command [m^3/s-Pa]. |
+| `b` | Number | ISO 6358 critical pressure ratio [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

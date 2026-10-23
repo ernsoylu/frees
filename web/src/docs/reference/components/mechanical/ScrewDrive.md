@@ -28,9 +28,9 @@ ScrewDrive inst(lead)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `lead` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `lead` | Number | Axial travel per revolution [m]. |
 
 ## Constitutive Equations
 

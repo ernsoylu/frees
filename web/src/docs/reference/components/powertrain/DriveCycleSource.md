@@ -28,9 +28,9 @@ DriveCycleSource inst(map$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `map$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `map$` | String | Name of the TABLE or FUNCTION mapping time in s to vehicle speed in m/s. |
 
 ## Constitutive Equations
 

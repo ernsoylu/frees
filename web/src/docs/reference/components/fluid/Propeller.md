@@ -28,13 +28,13 @@ Propeller inst(Dp, rhoA, ct$, cpw$, epsn)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Dp` | Number |
-| `rhoA` | Number |
-| `ct$` | String |
-| `cpw$` | String |
-| `epsn` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Dp` | Number | Propeller diameter [m]. |
+| `rhoA` | Number | Air density [kg/m^3]. |
+| `ct$` | String | Name of the thrust-coefficient table, advance ratio J → Ct. |
+| `cpw$` | String | Name of the power-coefficient table, advance ratio J → Cp. |
+| `epsn` | Number | Regularization added to n·D so J stays finite at rest [m/s]. |
 
 ## Constitutive Equations
 

@@ -28,10 +28,10 @@ HeatedDuct inst(fluid$, UA)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `UA` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Fluid name (e.g. Water, R134a, Air). |
+| `UA` | Number | Wall-to-stream conductance [W/K]. |
 
 ## Constitutive Equations
 

@@ -28,15 +28,15 @@ TirePacejka inst(r, Fz, B, C, D, E, epsv)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `r` | Number |
-| `Fz` | Number |
-| `B` | Number |
-| `C` | Number |
-| `D` | Number |
-| `E` | Number |
-| `epsv` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `r` | Number | Rolling radius [m]. |
+| `Fz` | Number | Normal load [N]. |
+| `B` | Number | Magic-formula stiffness factor [-]. |
+| `C` | Number | Magic-formula shape factor [-]. |
+| `D` | Number | Peak friction coefficient [-]. |
+| `E` | Number | Magic-formula curvature factor [-]. |
+| `epsv` | Number | Regularization of the slip denominator at standstill [m/s]. |
 
 ## Constitutive Equations
 

@@ -30,11 +30,11 @@ Radiator inst(cool$, UA_cool, eps_air)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `cool$` | String |
-| `UA_cool` | Number |
-| `eps_air` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `cool$` | String | Coolant name (e.g. EG50, Water). |
+| `UA_cool` | Number | Coolant-side conductance to the shared wall [W/K]. |
+| `eps_air` | Number | Air-side effectiveness against the wall temperature [-]. |
 
 ## Constitutive Equations
 

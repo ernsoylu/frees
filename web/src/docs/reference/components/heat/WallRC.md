@@ -28,13 +28,13 @@ WallRC inst(C1, C2, R, T10, T20)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `C1` | Number |
-| `C2` | Number |
-| `R` | Number |
-| `T10` | Number |
-| `T20` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `C1` | Number | Heat capacity of node 1 (side a) [J/K]. |
+| `C2` | Number | Heat capacity of node 2 (side b) [J/K]. |
+| `R` | Number | Conduction resistance between the nodes [K/W]. |
+| `T10` | Number | Initial temperature of node 1 [K]. |
+| `T20` | Number | Initial temperature of node 2 [K]. |
 
 ## Constitutive Equations
 

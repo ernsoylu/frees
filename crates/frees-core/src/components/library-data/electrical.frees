@@ -154,7 +154,7 @@ end
 // SOC and cell temperature are states; the `aging` variant adds Ah-throughput
 // capacity fade (Qcap = Q0·(1 − k_age·Ah)). Discharge current is positive
 // (I = −p.I, matching the Battery sign convention).
-function [p, n, heat] = BatteryCellMap(ocv$, dudt$, R0ref, Tref, Ea, Q0, C_th, SOC0, T0, k_age, R1, C1, k_cal, Ea_cal, model$ = static)
+function [p, n, heat] = BatteryCellMap(ocv$, dudt$, R0ref [ohm], Tref [K], Ea [J/mol], Q0 [-], C_th [J/K], SOC0 [-], T0 [K], k_age [-], R1 [ohm], C1 [farad], k_cal [1/s], Ea_cal [J/mol], model$ = static)
 port(p)
 port(n)
 port(heat)
@@ -197,7 +197,7 @@ end
 // Battery pack: Ns series × Np parallel of the map cell, lumped (uniform SOC
 // and temperature — the standard pack-level rung). C_th is the PACK thermal
 // mass; heat generation scales with the cell count.
-function [p, n, heat] = BatteryPack(Ns, Np, ocv$, dudt$, R0ref, Tref, Ea, Q0, C_th, SOC0, T0)
+function [p, n, heat] = BatteryPack(Ns [-], Np [-], ocv$, dudt$, R0ref [ohm], Tref [K], Ea [J/mol], Q0 [-], C_th [J/K], SOC0 [-], T0 [K])
 port(p)
 port(n)
 port(heat)
@@ -217,7 +217,7 @@ end
 // from a 2-D efficiency map eff$(ω, τ). Four-quadrant: motoring draws
 // P_mech/η from the DC bus, generating returns P_mech·η, blended smoothly
 // through zero mechanical power (width epsP [W]). Loss heat exits `heat`.
-function [p, n, shaft, heat, u] = MotorMap(eff$, epsP)
+function [p, n, shaft, heat, u] = MotorMap(eff$, epsP [W])
 port(p)
 port(n)
 port(shaft)
@@ -238,7 +238,7 @@ end
 // Series inverter loss element: conduction (device drop V0 + r·I) plus
 // switching loss folded into an equivalent drop Vsw = Esw·fsw·Vnom/(Iref·Vref)
 // — energy-consistent (Q = ΔV·I exactly), tanh-smooth through zero current.
-function [in_p, out_p, heat] = InverterLoss(V0, r, Esw, fsw, Iref, Vref, Vnom, epsI)
+function [in_p, out_p, heat] = InverterLoss(V0 [V], r [ohm], Esw [J], fsw [Hz], Iref [A], Vref [V], Vnom [V], epsI [A])
 port(in_p)
 port(out_p)
 port(heat)
@@ -253,7 +253,7 @@ end
 
 // Ideal-transformer DC/DC converter with a fixed voltage ratio and a
 // four-quadrant efficiency (forward power / eta, reverse power · eta).
-function [in_p, in_n, out_p, out_n] = DCDCConverter(ratio, eta, epsP)
+function [in_p, in_n, out_p, out_n] = DCDCConverter(ratio [-], eta [-], epsP [W])
 port(in_p)
 port(in_n)
 port(out_p)
@@ -268,7 +268,7 @@ port(out_n)
 end
 
 // Supercapacitor: ideal capacitance with an equivalent series resistance.
-function [p, n] = Supercapacitor(C, R_esr, V0)
+function [p, n] = Supercapacitor(C [farad], R_esr [ohm], V0 [V])
 port(p)
 port(n)
   der(Vc)   = p.I / C
@@ -280,7 +280,7 @@ end
 // CC-CV charger: sources Imax until the terminal voltage approaches Vmax,
 // then tapers (tanh, width epsV) — the constant-current / constant-voltage
 // profile with no mode switch.
-function [p, n] = ChargerCCCV(Imax, Vmax, epsV)
+function [p, n] = ChargerCCCV(Imax [A], Vmax [V], epsV [V])
 port(p)
 port(n)
   V   = p.V - n.V
@@ -290,7 +290,7 @@ end
 
 // Thermal fuse: the element resistance multiplies by (1 + kR) once |I|
 // exceeds the blow rating (tanh, width epsI) — a continuous overcurrent trip.
-function [p, n] = ThermalFuse(R0, Iblow, kR, epsI)
+function [p, n] = ThermalFuse(R0 [ohm], Iblow [A], kR [-], epsI [A])
 port(p)
 port(n)
   m         = 1 + kR * 0.5 * (1 + tanh((abs(p.I) - Iblow) / epsI))
@@ -300,7 +300,7 @@ end
 
 // Harness/busbar resistance with the copper temperature coefficient, sensing
 // its temperature on the heat port and dissipating I²R there.
-function [a, b, heat] = HarnessResistance(R20, alphaT)
+function [a, b, heat] = HarnessResistance(R20 [ohm], alphaT [1/K])
 port(a)
 port(b)
 port(heat)
@@ -314,7 +314,7 @@ end
 // PEM electrolyzer stack (reverse fuel cell): reversible potential + activation
 // (ln(i/i0 + 1), regular at zero current) + ohmic overpotentials; hydrogen
 // production from Faraday's law; heat above the thermoneutral voltage Eth.
-function [p, n, heat] = Electrolyzer(ncells, area, i0, Rohm, E0, alpha, Eth, T)
+function [p, n, heat] = Electrolyzer(ncells [-], area [m^2], i0 [A/m^2], Rohm [ohm-m^2], E0 [V], alpha [-], Eth [V], T [K])
 port(p)
 port(n)
 port(heat)
@@ -330,7 +330,7 @@ end
 
 // Solar array: photocurrent proportional to the irradiance signal G [W/m²],
 // with a smooth open-circuit clamp at Voc — the constant-current PV rung.
-function [p, n, G] = SolarArray(Isc_ref, Gref, Voc, epsV)
+function [p, n, G] = SolarArray(Isc_ref [A], Gref [W/m^2], Voc [V], epsV [V])
 port(p)
 port(n)
 port(G)
@@ -346,7 +346,7 @@ end
 // Single-diode PV module: I = Iph − I0·(exp(Vd/(n·Vt)) − 1) − Vd/Rsh with the
 // series-resistance diode voltage Vd = V + I·Rs — the physics rung above
 // SolarArray's clamp model. Current is signed out of p (sourcing).
-function [p, n, G] = PVSingleDiode(Isc_ref, Gref, I0d, n_d, Vt, Rs, Rsh)
+function [p, n, G] = PVSingleDiode(Isc_ref [A], Gref [W/m^2], I0d [A], n_d [-], Vt [V], Rs [ohm], Rsh [ohm])
 port(p)
 port(n)
 port(G)
@@ -361,7 +361,7 @@ end
 // PEM stack with a coolant jacket: the electrochemical stack's waste heat
 // crosses into a liquid loop through a UA wall (drop-in for FuelCellStack
 // when the thermal loop matters).
-function [p, n, cool_in, cool_out] = FuelCellStackCooled(ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T, fluid$, UA)
+function [p, n, cool_in, cool_out] = FuelCellStackCooled(ncells [-], area [m^2], i0 [A/m^2], ilim [A/m^2], Rohm [ohm-m^2], E0 [V], alpha [-], Eth [V], T [K], fluid$, UA [W/K])
 port(p)
 port(n)
 port(cool_in)
@@ -376,7 +376,7 @@ port(cool_out)
 end
 
 // Electrolyzer with a coolant jacket (same pattern as the cooled stack).
-function [p, n, cool_in, cool_out] = ElectrolyzerThermal(ncells, area, i0, Rohm, E0, alpha, Eth, T, fluid$, UA)
+function [p, n, cool_in, cool_out] = ElectrolyzerThermal(ncells [-], area [m^2], i0 [A/m^2], Rohm [ohm-m^2], E0 [V], alpha [-], Eth [V], T [K], fluid$, UA [W/K])
 port(p)
 port(n)
 port(cool_in)

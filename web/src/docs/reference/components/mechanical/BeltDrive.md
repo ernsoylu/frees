@@ -28,10 +28,10 @@ BeltDrive inst(ratio, eta)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ratio` | Number |
-| `eta` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ratio` | Number | Speed ratio, ω_a / ω_b [-]. |
+| `eta` | Number | Transmission efficiency [-]. |
 
 ## Constitutive Equations
 

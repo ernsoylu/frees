@@ -28,13 +28,13 @@ QuarterCar inst(ms, mu, ks, cs, kt)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ms` | Number |
-| `mu` | Number |
-| `ks` | Number |
-| `cs` | Number |
-| `kt` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ms` | Number | Sprung mass [kg]. |
+| `mu` | Number | Unsprung mass [kg]. |
+| `ks` | Number | Suspension stiffness [N/m]. |
+| `cs` | Number | Suspension damping [N-s/m]. |
+| `kt` | Number | Tyre vertical stiffness [N/m]. |
 
 ## Constitutive Equations
 

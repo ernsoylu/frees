@@ -28,10 +28,10 @@ AtmosphereSource inst(alt, mdot)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `alt` | Number |
-| `mdot` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `alt` | Number | Geometric altitude of the 1976 standard atmosphere [m]. |
+| `mdot` | Number | Mass flow delivered [kg/s]. |
 
 ## Constitutive Equations
 

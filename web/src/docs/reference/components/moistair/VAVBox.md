@@ -30,11 +30,11 @@ VAVBox inst(mdot_max, Qr_max, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `mdot_max` | Number |
-| `Qr_max` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `mdot_max` | Number | Air mass flow at full damper command [kg/s]. |
+| `Qr_max` | Number | Reheat duty at full reheat command [W]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

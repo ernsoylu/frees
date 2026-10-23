@@ -28,10 +28,10 @@ Freewheel inst(k, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `k` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `k` | Number | Torque per unit overrun speed when engaged [N-m-s]. |
+| `eps` | Number | Smoothing width of the engagement [rad/s]. |
 
 ## Constitutive Equations
 

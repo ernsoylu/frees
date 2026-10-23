@@ -28,14 +28,14 @@ PCMMass inst(m, cp, L, Tm, dTm, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `m` | Number |
-| `cp` | Number |
-| `L` | Number |
-| `Tm` | Number |
-| `dTm` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `m` | Number | Mass of phase-change material [kg]. |
+| `cp` | Number | Sensible specific heat [J/kg-K]. |
+| `L` | Number | Latent heat of fusion [J/kg]. |
+| `Tm` | Number | Melting temperature [K]. |
+| `dTm` | Number | Width of the mushy zone [K]. |
+| `T0` | Number | Initial temperature [K]. |
 
 ## Constitutive Equations
 

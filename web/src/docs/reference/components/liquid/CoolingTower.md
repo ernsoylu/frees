@@ -28,13 +28,13 @@ CoolingTower inst(fluid$, eps_t, mdot_a, Patm, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `eps_t` | Number |
-| `mdot_a` | Number |
-| `Patm` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Liquid name (e.g. Water, EG50). |
+| `eps_t` | Number | Tower effectiveness on the enthalpy potential [-]. |
+| `mdot_a` | Number | Air mass flow [kg/s]. |
+| `Patm` | Number | Atmospheric pressure [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

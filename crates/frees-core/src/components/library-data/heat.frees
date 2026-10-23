@@ -67,7 +67,7 @@ end
 
 // Two-node transient wall: capacitance–conduction–capacitance, the classic RC
 // warm-up wall between two heat ports.
-function [a, b] = WallRC(C1, C2, R, T10, T20)
+function [a, b] = WallRC(C1 [J/K], C2 [J/K], R [K/W], T10 [K], T20 [K])
 port(a)
 port(b)
   der(T1)  = (a.Qdot - (T1 - T2) / R) / C1
@@ -80,7 +80,7 @@ end
 
 // Two-surface radiation enclosure: surface resistances (1−ε)/(εA) in series
 // with the view-factor space resistance 1/(A1·F12), on the σ(T⁴−T⁴) potential.
-function [a, b] = RadiationTwoSurface(e1, e2, A1, A2, F12)
+function [a, b] = RadiationTwoSurface(e1 [-], e2 [-], A1 [m^2], A2 [m^2], F12 [-])
 port(a)
 port(b)
   Rrad   = (1 - e1) / (e1 * A1) + 1 / (A1 * F12) + (1 - e2) / (e2 * A2)
@@ -91,7 +91,7 @@ end
 // Heat pipe: a very high effective conductance saturating smoothly at the
 // transport limit Qmax (capillary/sonic), so overload degrades instead of
 // diverging.
-function [a, b] = HeatPipe(G, Qmax)
+function [a, b] = HeatPipe(G [W/K], Qmax [W])
 port(a)
 port(b)
   a.Qdot = Qmax * tanh(G * (a.T - b.T) / Qmax)
@@ -100,7 +100,7 @@ end
 
 // Phase-change-material mass: latent heat L released over a Gaussian mushy
 // zone of width dTm around the melt point (∫cp_eff dT = cp·ΔT + L exactly).
-function [port] = PCMMass(m, cp, L, Tm, dTm, T0)
+function [port] = PCMMass(m [kg], cp [J/kg-K], L [J/kg], Tm [K], dTm [K], T0 [K])
 port(port)
   cpe          = cp + (L / (dTm * 1.7724539)) * exp(-((port.T - Tm) / dTm)^2)
   der(port.T)  = port.Qdot / (m * cpe)
@@ -110,7 +110,7 @@ end
 // Peltier thermoelectric module: Seebeck voltage + ohmic drop electrically;
 // Peltier pumping ± half-Joule and back-conduction thermally. Energy-exact:
 // Q_hot − Q_cold = I·V.
-function [p, n, hot, cold] = PeltierTEC(Sab, Rel, Kth)
+function [p, n, hot, cold] = PeltierTEC(Sab [V/K], Rel [ohm], Kth [W/K])
 port(p)
 port(n)
 port(hot)
@@ -126,7 +126,7 @@ end
 
 // Thermal switch / bimetal thermostat: a conductance that engages smoothly
 // above the trip temperature (sensed on side a).
-function [a, b] = ThermalSwitch(G, Ton, band)
+function [a, b] = ThermalSwitch(G [W/K], Ton [K], band [K])
 port(a)
 port(b)
   u      = 0.5 * (1 + tanh((a.T - Ton) / band))
@@ -140,7 +140,7 @@ end
 // Cell-to-plate thermal path: contact/interface resistance into the cold-plate
 // mass — the network that makes pack gradients (cell hot spot vs plate) real.
 // (Direct equations: the plate node carries this component's own state.)
-function [cell, plate] = CellToPackThermal(Rcc, Cpl, T0)
+function [cell, plate] = CellToPackThermal(Rcc [K/W], Cpl [J/K], T0 [K])
 port(cell)
 port(plate)
   Q         = (cell.T - Tp) / Rcc
@@ -157,7 +157,7 @@ end
 // U·A conduction between them. The ports are resistive — they READ the zone
 // temperatures — so the wall composes directly with any temperature-setting
 // zone (CabinZone, MassGen) without C-C adjacency.
-function [a, b] = MultiZoneWall(h_a, h_b, U, A, C1, C2, T10, T20)
+function [a, b] = MultiZoneWall(h_a [W/m^2-K], h_b [W/m^2-K], U [W/m^2-K], A [m^2], C1 [J/K], C2 [J/K], T10 [K], T20 [K])
 port(a)
 port(b)
   qa       = h_a * A * (a.T - T1)

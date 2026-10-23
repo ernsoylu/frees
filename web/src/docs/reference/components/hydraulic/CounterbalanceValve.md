@@ -28,14 +28,14 @@ CounterbalanceValve inst(CdA_max, rho, P_set, R_p, eps_o, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `CdA_max` | Number |
-| `rho` | Number |
-| `P_set` | Number |
-| `R_p` | Number |
-| `eps_o` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `CdA_max` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `P_set` | Number | Cracking pressure [Pa]. |
+| `R_p` | Number | Pilot area ratio [-]. |
+| `eps_o` | Number | Width of the opening transition [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

@@ -30,11 +30,11 @@ TwoPhaseInternalHX inst(fluid$, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| `eps` | Number | Effectiveness on the vapour-side capacity rate [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

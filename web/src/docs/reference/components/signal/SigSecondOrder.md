@@ -28,12 +28,12 @@ SigSecondOrder inst(wn, zeta, y0, v0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `wn` | Number |
-| `zeta` | Number |
-| `y0` | Number |
-| `v0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `wn` | Number | Natural frequency [rad/s]. |
+| `zeta` | Number | Damping ratio [-]. |
+| `y0` | Number | Initial output, in the signal’s units. |
+| `v0` | Number | Initial output rate, in the signal’s units per second. |
 
 ## Constitutive Equations
 

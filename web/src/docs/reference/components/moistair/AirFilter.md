@@ -28,11 +28,11 @@ AirFilter inst(K, foul, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `K` | Number |
-| `foul` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `K` | Number | Clean-filter resistance, Δp per (mass flow)² [Pa-s^2/kg^2]. |
+| `foul` | Number | Fouling multiplier (1 = clean) [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

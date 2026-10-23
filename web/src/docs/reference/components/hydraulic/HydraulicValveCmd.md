@@ -28,11 +28,11 @@ HydraulicValveCmd inst(CdA_max, rho, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `CdA_max` | Number |
-| `rho` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `CdA_max` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

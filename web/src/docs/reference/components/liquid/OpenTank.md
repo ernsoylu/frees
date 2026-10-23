@@ -30,13 +30,13 @@ OpenTank inst(A_t, P0, rho, L0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `A_t` | Number |
-| `P0` | Number |
-| `rho` | Number |
-| `L0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `A_t` | Number | Tank cross-section [m^2]. |
+| `P0` | Number | Pressure on the free surface [Pa]. |
+| `rho` | Number | Liquid density [kg/m^3]. |
+| `L0` | Number | Initial liquid level [m]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

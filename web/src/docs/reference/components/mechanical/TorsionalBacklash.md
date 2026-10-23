@@ -28,12 +28,12 @@ TorsionalBacklash inst(k, half, eps, theta0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `k` | Number |
-| `half` | Number |
-| `eps` | Number |
-| `theta0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `k` | Number | Torsional stiffness, per radian, once the gap closes [N-m]. |
+| `half` | Number | Half of the backlash gap [rad]. |
+| `eps` | Number | Smoothing width of the gap edges [rad]. |
+| `theta0` | Number | Initial twist [rad]. |
 
 ## Constitutive Equations
 

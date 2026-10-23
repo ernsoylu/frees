@@ -28,12 +28,12 @@ ThermalFuse inst(R0, Iblow, kR, epsI)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `R0` | Number |
-| `Iblow` | Number |
-| `kR` | Number |
-| `epsI` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `R0` | Number | Intact resistance [ohm]. |
+| `Iblow` | Number | Blow current [A]. |
+| `kR` | Number | Fractional resistance rise once blown [-]. |
+| `epsI` | Number | Smoothing width of the blow transition [A]. |
 
 ## Constitutive Equations
 

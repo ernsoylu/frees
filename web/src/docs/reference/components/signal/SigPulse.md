@@ -28,13 +28,13 @@ SigPulse inst(t0, width, high, low, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `t0` | Number |
-| `width` | Number |
-| `high` | Number |
-| `low` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `t0` | Number | Pulse start time, in seconds of `time`. |
+| `width` | Number | Pulse duration, in seconds of `time`. |
+| `high` | Number | Level during the pulse, in the signal’s units. |
+| `low` | Number | Level outside the pulse, in the signal’s units. |
+| `eps` | Number | Edge smoothing width, in seconds of `time`. |
 
 ## Constitutive Equations
 

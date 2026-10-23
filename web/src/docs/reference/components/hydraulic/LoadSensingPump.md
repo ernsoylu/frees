@@ -28,15 +28,15 @@ LoadSensingPump inst(rho, Dv, w_p, dP_margin, tau, d0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `rho` | Number |
-| `Dv` | Number |
-| `w_p` | Number |
-| `dP_margin` | Number |
-| `tau` | Number |
-| `d0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `Dv` | Number | Displacement per revolution at full stroke [m^3]. |
+| `w_p` | Number | Shaft speed [rad/s]. |
+| `dP_margin` | Number | Margin held above the load-sense pressure [Pa]. |
+| `tau` | Number | Stroke-control time constant [s]. |
+| `d0` | Number | Initial stroke-control state [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

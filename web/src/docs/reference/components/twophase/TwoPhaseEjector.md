@@ -28,10 +28,10 @@ TwoPhaseEjector inst(PLR, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `PLR` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `PLR` | Number | Pressure lift ratio, outlet over suction pressure [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

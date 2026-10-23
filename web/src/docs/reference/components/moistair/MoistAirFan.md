@@ -28,11 +28,11 @@ MoistAirFan inst(dP, eta, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `dP` | Number |
-| `eta` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `dP` | Number | Pressure rise [Pa]. |
+| `eta` | Number | Fan efficiency [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

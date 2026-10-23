@@ -30,12 +30,12 @@ SensibleAirToAirHX inst(eff, eatr, oacf, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eff` | Number |
-| `eatr` | Number |
-| `oacf` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eff` | Number | Sensible effectiveness [-]. |
+| `eatr` | Number | Exhaust air transfer ratio [-]. |
+| `oacf` | Number | Outdoor air correction factor [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

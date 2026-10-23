@@ -28,11 +28,11 @@ TwoPhaseOilRider inst(oc_set, k_deg, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `oc_set` | Number |
-| `k_deg` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `oc_set` | Number | Oil circulation ratio imposed on the stream [-]. |
+| `k_deg` | Number | Fractional performance loss per unit oil circulation ratio [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

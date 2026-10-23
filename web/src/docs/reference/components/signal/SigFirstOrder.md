@@ -28,10 +28,10 @@ SigFirstOrder inst(tau, y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `tau` | Number |
-| `y0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `tau` | Number | Time constant [s]. |
+| `y0` | Number | Initial output, in the signal’s units. |
 
 ## Constitutive Equations
 

@@ -30,16 +30,16 @@ FewCellEvaporator inst(fluid$, V, Cc, UA, Kv, P0, h0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `V` | Number |
-| `Cc` | Number |
-| `UA` | Number |
-| `Kv` | Number |
-| `P0` | Number |
-| `h0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| `V` | Number | Refrigerant volume of each of the three cells [m^3]. |
+| `Cc` | Number | Mass capacitance of each cell [kg/Pa]. |
+| `UA` | Number | Wall conductance of each cell [W/K]. |
+| `Kv` | Number | Flow conductance between adjacent cells [kg/s-Pa]. |
+| `P0` | Number | Initial pressure of every cell [Pa]. |
+| `h0` | Number | Initial enthalpy of every cell [J/kg]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

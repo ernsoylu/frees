@@ -299,7 +299,7 @@ end
 
 // Heated duct: single-stream ε-NTU heat pickup from a wall node
 // (ε = 1 − e^(−UA/ṁcp)), the exact single-stream limit.
-function [in, out, wall] = HeatedDuct(fluid$, UA)
+function [in, out, wall] = HeatedDuct(fluid$, UA [W/K])
 port(in)
 port(out)
 port(wall)
@@ -315,7 +315,7 @@ end
 
 // Effectiveness-rated regenerator/recuperator: Q = ε·Cmin·(Th − Tc) with ε
 // given directly (rate it from the ε-NTU functions for a geometry design).
-function [hot_in, hot_out, cold_in, cold_out] = Regenerator(hot$, cold$, eps)
+function [hot_in, hot_out, cold_in, cold_out] = Regenerator(hot$, cold$, eps [-])
 port(hot_in)
 port(hot_out)
 port(cold_in)
@@ -335,7 +335,7 @@ end
 
 // Combustor: fuel mass addition with combustion efficiency on the lower
 // heating value and a rated pressure loss.
-function [in, out] = Combustor(mdot_f, LHV, eta_b, dP)
+function [in, out] = Combustor(mdot_f [kg/s], LHV [J/kg], eta_b [-], dP [Pa])
 port(in)
 port(out)
   out.mdot = in.mdot + mdot_f
@@ -345,7 +345,7 @@ end
 
 // ISA atmosphere boundary: the 1976 standard atmosphere state at altitude,
 // as a flow source (use with ram/propulsion models).
-function [out] = AtmosphereSource(alt, mdot)
+function [out] = AtmosphereSource(alt [m], mdot [kg/s])
 port(out)
   out.mdot = mdot
   out.P    = isa_P(alt)
@@ -355,7 +355,7 @@ end
 // Propeller (actuator-line map form): thrust Ct(J)·ρn²D⁴ and shaft power
 // Cp(J)·ρn³D⁵ from advance-ratio maps J = v/(nD) — bridges the shaft to the
 // vehicle's translational port.
-function [shaft, veh] = Propeller(Dp, rhoA, ct$, cpw$, epsn)
+function [shaft, veh] = Propeller(Dp [m], rhoA [kg/m^3], ct$, cpw$, epsn [m/s])
 port(shaft)
 port(veh)
   n         = shaft.w / (2 * pi#)
@@ -371,7 +371,7 @@ end
 // stream into the E3 species riders — CO2/H2O produced and O2 consumed by
 // stoichiometry per kg of fuel; N2 passes as the balance. Energy as in
 // Combustor (eta_b * LHV heat release).
-function [in, out] = CombustorSpecies(mdot_f, LHV, eta_b, dP, xC, yH, domain$ = gas)
+function [in, out] = CombustorSpecies(mdot_f [kg/s], LHV [J/kg], eta_b [-], dP [Pa], xC [-], yH [-], domain$ = gas)
 port(in)
 port(out)
   mfuel    = 12 * xC + yH

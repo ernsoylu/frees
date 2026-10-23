@@ -28,13 +28,13 @@ PneumaticCheckValve inst(fluid$, C, b, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `C` | Number |
-| `b` | Number |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| `C` | Number | ISO 6358 sonic conductance [m^3/s-Pa]. |
+| `b` | Number | ISO 6358 critical pressure ratio [-]. |
+| `eps` | Number | Width of the opening transition [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

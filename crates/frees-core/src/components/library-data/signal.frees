@@ -40,7 +40,7 @@ port(out)
 end
 
 // Sine: bias + amp·sin(2π·freq·t + phase). freq [Hz], phase [rad].
-function [out] = SigSine(amp, freq, phase, bias)
+function [out] = SigSine(amp, freq, phase [rad], bias)
 port(out)
   out.sig = bias + amp * sin(2 * pi# * freq * time + phase)
 end
@@ -168,7 +168,7 @@ port(out)
 end
 
 // First-order lag 1/(1+τs).
-function [in, out] = SigFirstOrder(tau, y0)
+function [in, out] = SigFirstOrder(tau [s], y0)
 port(in)
 port(out)
   der(y)  = (in.sig - y) / tau
@@ -178,7 +178,7 @@ end
 
 // Filtered derivative s/(1+τs): exact derivative in the limit τ→0, realizable
 // (proper) for τ>0. The state tracks the input; the output is the residual.
-function [in, out] = SigDerivative(tau, y0)
+function [in, out] = SigDerivative(tau [s], y0)
 port(in)
 port(out)
   der(y)  = (in.sig - y) / tau
@@ -187,7 +187,7 @@ port(out)
 end
 
 // Lead-lag (1+T1·s)/(1+T2·s), the classical compensator.
-function [in, out] = SigLeadLag(T1, T2, y0)
+function [in, out] = SigLeadLag(T1 [s], T2 [s], y0)
 port(in)
 port(out)
   der(x)  = (in.sig - x) / T2
@@ -196,7 +196,7 @@ port(out)
 end
 
 // Second-order tracking filter ωn²/(s² + 2ζωn·s + ωn²).
-function [in, out] = SigSecondOrder(wn, zeta, y0, v0)
+function [in, out] = SigSecondOrder(wn [rad/s], zeta [-], y0, v0)
 port(in)
 port(out)
   der(y)  = v
@@ -296,7 +296,7 @@ end
 // motor-lean operation driven by battery SOC around its reference — an honest
 // smooth surrogate for the argmin equivalence-cost rule (documented as such).
 // dem is the total demand; mot + eng always reconstruct it exactly.
-function [soc, dem, eng, mot] = SupervisoryECMS(soc_ref, eps)
+function [soc, dem, eng, mot] = SupervisoryECMS(soc_ref [-], eps [-])
 port(soc)
 port(dem)
 port(eng)
@@ -313,7 +313,7 @@ end
 // concentration while occupants generate. Signal-level block: vent carries the
 // volumetric airflow [m3/s], occ the occupant count; concentration in the
 // same unit family as c_amb/gen_occ (ppm with gen in ppm.m3/s, or kg/m3).
-function [vent, occ, out] = ZoneCO2(Vz, c_amb, gen_occ, c0)
+function [vent, occ, out] = ZoneCO2(Vz [m^3], c_amb, gen_occ, c0)
 port(vent)
 port(occ)
 port(out)

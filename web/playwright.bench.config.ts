@@ -25,10 +25,20 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:8933',
   },
-  webServer: {
-    command: 'python3 -m http.server 8933 --bind 127.0.0.1 --directory ..',
-    url: 'http://127.0.0.1:8933',
-    reuseExistingServer: true,
-    timeout: 30_000,
-  },
+  webServer: [
+    {
+      command: 'python3 -m http.server 8933 --bind 127.0.0.1 --directory ..',
+      url: 'http://127.0.0.1:8933',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+    // ui-bench.spec.ts times the built app, served like playwright.config.ts
+    // serves it (run `npm run build` first).
+    {
+      command: 'python3 ../tools/serve-dist.py dist 8934',
+      url: 'http://127.0.0.1:8934',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+  ],
 })

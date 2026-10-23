@@ -30,18 +30,18 @@ ThermalStorageTank inst(fluid$, m_node, cp_f, UA_loss, T_amb, kmix, T10, T20, T3
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `m_node` | Number |
-| `cp_f` | Number |
-| `UA_loss` | Number |
-| `T_amb` | Number |
-| `kmix` | Number |
-| `T10` | Number |
-| `T20` | Number |
-| `T30` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Liquid name (e.g. Water, EG50). |
+| `m_node` | Number | Liquid mass in each of the three nodes [kg]. |
+| `cp_f` | Number | Liquid specific heat [J/kg-K]. |
+| `UA_loss` | Number | Loss conductance of each node to ambient [W/K]. |
+| `T_amb` | Number | Ambient temperature [K]. |
+| `kmix` | Number | Mixing conductance between adjacent nodes [W/K]. |
+| `T10` | Number | Initial top-node temperature [K]. |
+| `T20` | Number | Initial middle-node temperature [K]. |
+| `T30` | Number | Initial bottom-node temperature [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

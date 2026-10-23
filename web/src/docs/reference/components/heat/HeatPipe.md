@@ -28,10 +28,10 @@ HeatPipe inst(G, Qmax)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `G` | Number |
-| `Qmax` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `G` | Number | Effective conductance below the transport limit [W/K]. |
+| `Qmax` | Number | Transport (capillary or sonic) limit [W]. |
 
 ## Constitutive Equations
 

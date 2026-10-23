@@ -28,14 +28,14 @@ HydraulicAccumulator inst(P0, V0, gamma, rho, Vg0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `P0` | Number |
-| `V0` | Number |
-| `gamma` | Number |
-| `rho` | Number |
-| `Vg0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `P0` | Number | Gas precharge pressure [Pa]. |
+| `V0` | Number | Gas volume at the precharge pressure [m^3]. |
+| `gamma` | Number | Polytropic exponent of the gas [-]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `Vg0` | Number | Initial gas volume [m^3]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

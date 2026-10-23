@@ -28,12 +28,12 @@ Diffuser inst(A1, A2, eta_rec, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `A1` | Number |
-| `A2` | Number |
-| `eta_rec` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `A1` | Number | Inlet area [m^2]. |
+| `A2` | Number | Outlet area [m^2]. |
+| `eta_rec` | Number | Static-pressure recovery efficiency [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

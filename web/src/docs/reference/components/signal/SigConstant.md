@@ -28,9 +28,9 @@ SigConstant inst(k)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `k` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `k` | Number | Output value, in the signal’s units. |
 
 ## Constitutive Equations
 

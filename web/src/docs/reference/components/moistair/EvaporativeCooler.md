@@ -28,10 +28,10 @@ EvaporativeCooler inst(eff, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eff` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eff` | Number | Saturation effectiveness [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

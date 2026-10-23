@@ -80,7 +80,7 @@ end
 // Signal-commanded EXV: identical orifice physics to EXV, but the opening
 // fraction arrives on a signal port `u` (u.sig ∈ [0,1]) so a controller
 // (SigPID, SigTable schedule, …) can drive it in closed loop.
-function [in, out, u] = EXVCmd(fluid$, CdA_max, domain$ = twophase)
+function [in, out, u] = EXVCmd(fluid$, CdA_max [m^2], domain$ = twophase)
 port(in)
 port(out)
 port(u)
@@ -94,7 +94,7 @@ end
 // node (hierarchical single-domain halves, per the §2.4 rule). Sized by the
 // coolant-side UA and an air-side effectiveness; UA from the hx correlation
 // functions for a geometry-resolved rating.
-function [cool_in, cool_out, air_in, air_out] = Radiator(cool$, UA_cool, eps_air)
+function [cool_in, cool_out, air_in, air_out] = Radiator(cool$, UA_cool [W/K], eps_air [-])
 port(cool_in)
 port(cool_out)
 port(air_in)
@@ -111,7 +111,7 @@ end
 // Heater core: the cabin-heating radiator — hot coolant warms the ventilation
 // air stream through the shared wall node. Same structure as Radiator, named
 // for the application (HVAC schematic clarity).
-function [cool_in, cool_out, air_in, air_out] = HeaterCore(cool$, UA_cool, eps_air)
+function [cool_in, cool_out, air_in, air_out] = HeaterCore(cool$, UA_cool [W/K], eps_air [-])
 port(cool_in)
 port(cool_out)
 port(air_in)

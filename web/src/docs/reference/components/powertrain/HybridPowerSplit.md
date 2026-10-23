@@ -30,12 +30,12 @@ HybridPowerSplit inst(g, eff1$, eff2$, epsP)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `g` | Number |
-| `eff1$` | String |
-| `eff2$` | String |
-| `epsP` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `g` | Number | Planetary ring-to-sun tooth ratio [-]. |
+| `eff1$` | String | Name of the MG1 efficiency table, (ω, τ) → η. |
+| `eff2$` | String | Name of the MG2 efficiency table, (ω, τ) → η. |
+| `epsP` | Number | Smoothing width of the motor/generator switch [W]. |
 
 ## Constitutive Equations
 

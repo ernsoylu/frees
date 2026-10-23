@@ -30,14 +30,14 @@ LiquidDesiccantContactor inst(eff_L, W_eq, eps_T, f_excess, domain$, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eff_L` | Number |
-| `W_eq` | Number |
-| `eps_T` | Number |
-| `f_excess` | Number |
-| `domain$` | String |
-| `model$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eff_L` | Number | Latent effectiveness toward W_eq [-]. |
+| `W_eq` | Number | Equilibrium humidity ratio over the solution [-]. |
+| `eps_T` | Number | Thermal effectiveness against the solution temperature (`cooled`) [-]. |
+| `f_excess` | Number | Dry-bulb gain beyond pure latent-to-sensible conversion, 0.20 to 0.30 (`adiabatic`) [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
+| `model$` | String | Variant — `cooled` (default) or `adiabatic`. |
 
 ## Constitutive Equations
 

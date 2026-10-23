@@ -28,10 +28,10 @@ SigSwitch inst(thresh, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `thresh` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `thresh` | Number | Control level above which in1 is routed, in the control signal’s units. |
+| `eps` | Number | Width of the blend, in the control signal’s units. |
 
 ## Constitutive Equations
 

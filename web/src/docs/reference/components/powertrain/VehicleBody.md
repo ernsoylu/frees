@@ -28,15 +28,15 @@ VehicleBody inst(m, Cd, Af, rhoA, Crr, grade, v0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `m` | Number |
-| `Cd` | Number |
-| `Af` | Number |
-| `rhoA` | Number |
-| `Crr` | Number |
-| `grade` | Number |
-| `v0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `m` | Number | Vehicle mass [kg]. |
+| `Cd` | Number | Aerodynamic drag coefficient [-]. |
+| `Af` | Number | Frontal area [m^2]. |
+| `rhoA` | Number | Air density [kg/m^3]. |
+| `Crr` | Number | Rolling-resistance coefficient [-]. |
+| `grade` | Number | Road grade angle [rad]. |
+| `v0` | Number | Initial speed [m/s]. |
 
 ## Constitutive Equations
 

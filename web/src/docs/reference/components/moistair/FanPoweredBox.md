@@ -30,11 +30,11 @@ FanPoweredBox inst(Q_fan, Q_reheat, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Q_fan` | Number |
-| `Q_reheat` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Q_fan` | Number | Fan heat added to the mixed air [W]. |
+| `Q_reheat` | Number | Reheat-coil duty [W]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

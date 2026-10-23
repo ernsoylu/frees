@@ -28,12 +28,12 @@ Infiltration inst(C_inf, n_exp, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `C_inf` | Number |
-| `n_exp` | Number |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `C_inf` | Number | Flow coefficient of the leakage path [kg/s-Pa]. |
+| `n_exp` | Number | Flow exponent (0.5 orifice to 1 laminar) [-]. |
+| `eps` | Number | Regularization of the pressure difference near zero [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

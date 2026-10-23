@@ -30,10 +30,10 @@ HeatPipeWrapAround inst(eff, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eff` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eff` | Number | Sensible effectiveness between precool and reheat streams [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

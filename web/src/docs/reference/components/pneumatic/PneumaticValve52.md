@@ -28,12 +28,12 @@ PneumaticValve52 inst(fluid$, C, b, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `C` | Number |
-| `b` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| `C` | Number | ISO 6358 sonic conductance [m^3/s-Pa]. |
+| `b` | Number | ISO 6358 critical pressure ratio [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

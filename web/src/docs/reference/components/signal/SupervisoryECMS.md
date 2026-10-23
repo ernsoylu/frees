@@ -30,10 +30,10 @@ SupervisoryECMS inst(soc_ref, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `soc_ref` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `soc_ref` | Number | Reference state of charge [-]. |
+| `eps` | Number | Width of the blend around soc_ref [-]. |
 
 ## Constitutive Equations
 

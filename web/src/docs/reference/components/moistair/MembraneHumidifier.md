@@ -28,11 +28,11 @@ MembraneHumidifier inst(eff_h, eff_w, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eff_h` | Number |
-| `eff_w` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eff_h` | Number | Enthalpy effectiveness [-]. |
+| `eff_w` | Number | Moisture effectiveness [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

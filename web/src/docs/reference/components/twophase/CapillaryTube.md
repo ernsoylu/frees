@@ -28,12 +28,12 @@ CapillaryTube inst(fluid$, C, n, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `C` | Number |
-| `n` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| `C` | Number | Mass flow at a 1 Pa effective pressure difference [kg/s]. |
+| `n` | Number | Exponent on the effective pressure difference [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

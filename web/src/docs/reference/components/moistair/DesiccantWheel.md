@@ -30,12 +30,12 @@ DesiccantWheel inst(eff_L, W_eq, f_carry, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eff_L` | Number |
-| `W_eq` | Number |
-| `f_carry` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eff_L` | Number | Latent effectiveness toward W_eq [-]. |
+| `W_eq` | Number | Equilibrium humidity ratio of the desiccant [-]. |
+| `f_carry` | Number | Fraction of the regeneration enthalpy difference carried into the process air [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

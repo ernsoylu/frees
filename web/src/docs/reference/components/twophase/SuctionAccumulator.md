@@ -30,11 +30,11 @@ SuctionAccumulator inst(fluid$, m0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `m0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| `m0` | Number | Initial liquid inventory [kg]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

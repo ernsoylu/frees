@@ -28,12 +28,12 @@ Combustor inst(mdot_f, LHV, eta_b, dP)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `mdot_f` | Number |
-| `LHV` | Number |
-| `eta_b` | Number |
-| `dP` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `mdot_f` | Number | Fuel mass flow [kg/s]. |
+| `LHV` | Number | Fuel lower heating value [J/kg]. |
+| `eta_b` | Number | Combustion efficiency [-]. |
+| `dP` | Number | Pressure loss across the combustor [Pa]. |
 
 ## Constitutive Equations
 

@@ -30,12 +30,12 @@ SigSine inst(amp, freq, phase, bias)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `amp` | Number |
-| `freq` | Number |
-| `phase` | Number |
-| `bias` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `amp` | Number | Amplitude, in the signal’s units. |
+| `freq` | Number | Frequency in hertz; left untyped so a steady document may pin a bare `time`. |
+| `phase` | Number | Phase offset [rad]. |
+| `bias` | Number | Mean value, in the signal’s units. |
 
 ## Constitutive Equations
 

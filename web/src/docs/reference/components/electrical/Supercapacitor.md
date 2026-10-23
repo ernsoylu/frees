@@ -28,11 +28,11 @@ Supercapacitor inst(C, R_esr, V0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `C` | Number |
-| `R_esr` | Number |
-| `V0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `C` | Number | Capacitance [farad]. |
+| `R_esr` | Number | Equivalent series resistance [ohm]. |
+| `V0` | Number | Initial capacitor voltage [V]. |
 
 ## Constitutive Equations
 

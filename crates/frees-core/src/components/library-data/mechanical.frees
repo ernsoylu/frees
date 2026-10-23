@@ -99,7 +99,7 @@ end
 
 // Signal-commanded clutch: engagement fraction from a signal port `u`
 // (u.sig ∈ [0,1]) instead of a fixed `eng` parameter — launch/shift schedules.
-function [a, b, u] = ClutchCmd(Tmax, eps)
+function [a, b, u] = ClutchCmd(Tmax [N-m], eps [rad/s])
 port(a)
 port(b)
 port(u)
@@ -112,7 +112,7 @@ end
 
 // Torsional backlash: a torsional spring dead over ±half of relative wind-up
 // (the C¹ two-hinge deadband, width eps) — gear lash, spline play.
-function [a, b] = TorsionalBacklash(k, half, eps, theta0)
+function [a, b] = TorsionalBacklash(k [N-m], half [rad], eps [rad], theta0 [rad])
 port(a)
 port(b)
   der(th)  = a.w - b.w
@@ -125,7 +125,7 @@ end
 
 // Translational end stop at x = gap: spring-damper contact engaged smoothly
 // beyond the gap (penetration hinge + tanh-gated damping).
-function [port] = EndStop(gap, k, c, eps, x0)
+function [port] = EndStop(gap [m], k [N/m], c [N-s/m], eps [m], x0 [m])
 port(port)
   der(x)  = port.vel
   init(x) = x0
@@ -134,7 +134,7 @@ port(port)
 end
 
 // Translational spring (the missing twin of TransDamper/TransMass).
-function [a, b] = TransSpring(k, x0)
+function [a, b] = TransSpring(k [N/m], x0 [m])
 port(a)
 port(b)
   der(x)  = a.vel - b.vel
@@ -145,7 +145,7 @@ end
 
 // Ideal power-conserving screw drive: lead [m/rev] couples rotation to
 // translation (τ·ω + F·v = 0).
-function [shaft, rod] = ScrewDrive(lead)
+function [shaft, rod] = ScrewDrive(lead [m])
 port(shaft)
 port(rod)
   rod.vel   = lead / (2 * pi#) * shaft.w
@@ -153,7 +153,7 @@ port(rod)
 end
 
 // Ideal rack and pinion of pitch radius r.
-function [shaft, rod] = RackPinion(r)
+function [shaft, rod] = RackPinion(r [m])
 port(shaft)
 port(rod)
   rod.vel   = r * shaft.w
@@ -161,7 +161,7 @@ port(rod)
 end
 
 // Ideal lever (translational ratio).
-function [a, b] = Lever(ratio)
+function [a, b] = Lever(ratio [-])
 port(a)
 port(b)
   a.vel = ratio * b.vel
@@ -170,7 +170,7 @@ end
 
 // Belt/chain drive: speed ratio with a torque-transfer efficiency
 // (Transmission's translational-free cousin, named for the application).
-function [a, b] = BeltDrive(ratio, eta)
+function [a, b] = BeltDrive(ratio [-], eta [-])
 port(a)
 port(b)
   a.w   = ratio * b.w
@@ -179,7 +179,7 @@ end
 
 // Commanded friction brake: clamp fraction from the signal port u scales the
 // capacity, tanh-smooth through zero slip. Ground b for a chassis brake.
-function [a, b, u] = Brake(Tmax, eps)
+function [a, b, u] = Brake(Tmax [N-m], eps [rad/s])
 port(a)
 port(b)
 port(u)
@@ -194,7 +194,7 @@ end
 // One-way clutch (freewheel/overrunning sprag): transmits a stiff viscous
 // torque only while the driver overruns the driven side (dw > 0) — the C1
 // smooth-max hinge of width eps; free in the reverse direction.
-function [a, b] = Freewheel(k, eps)
+function [a, b] = Freewheel(k [N-m-s], eps [rad/s])
 port(a)
 port(b)
   dw    = a.w - b.w
@@ -205,7 +205,7 @@ end
 // Cam: rotational-to-translational profile drive. The lift slope dl/dtheta
 // comes analytically from the profile table (dtable), so follower velocity is
 // exact and the reaction torque conserves power (tau*w = f*v virtual work).
-function [shaft, rod] = Cam(prof$, theta0)
+function [shaft, rod] = Cam(prof$, theta0 [rad])
 port(shaft)
 port(rod)
   der(theta)  = shaft.w
@@ -218,7 +218,7 @@ end
 
 // Spring-loaded cam follower: mass held on the profile by a preloaded return
 // spring to ground — pair with Cam for valvetrain/profile-driven kinematics.
-function [rod] = CamFollower(m, kspring, x0, v0)
+function [rod] = CamFollower(m [kg], kspring [N/m], x0 [m], v0 [m/s])
 port(rod)
   TransMass   M(m=m, v0=v0)
   TransSpring S(k=kspring, x0=x0)
@@ -230,7 +230,7 @@ end
 // Commanded friction brake with rotor thermal state and temperature fade:
 // friction power heats the rotor mass (convecting hA to ambient) and the
 // available torque derates through a C1 sigmoid above T_fade (fade studies).
-function [a, b, u] = WheelBrakeThermal(Tmax, eps, C, hA, T_amb, T_fade, k_fade, eps_f, T0)
+function [a, b, u] = WheelBrakeThermal(Tmax [N-m], eps [rad/s], C [J/K], hA [W/K], T_amb [K], T_fade [K], k_fade [-], eps_f [K], T0 [K])
 port(a)
 port(b)
 port(u)

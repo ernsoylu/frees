@@ -30,11 +30,11 @@ IndirectDirectEvaporativeCooler inst(wbde, eff_sec, eff_dir)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `wbde` | Number |
-| `eff_sec` | Number |
-| `eff_dir` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `wbde` | Number | Wet-bulb depression efficiency of the indirect stage [-]. |
+| `eff_sec` | Number | Saturation effectiveness of the secondary (wet) stream [-]. |
+| `eff_dir` | Number | Saturation effectiveness of the direct stage [-]. |
 
 ## Constitutive Equations
 

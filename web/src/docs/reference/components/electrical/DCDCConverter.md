@@ -28,11 +28,11 @@ DCDCConverter inst(ratio, eta, epsP)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ratio` | Number |
-| `eta` | Number |
-| `epsP` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ratio` | Number | Output-to-input voltage ratio [-]. |
+| `eta` | Number | Conversion efficiency [-]. |
+| `epsP` | Number | Smoothing width of the power-direction switch [W]. |
 
 ## Constitutive Equations
 

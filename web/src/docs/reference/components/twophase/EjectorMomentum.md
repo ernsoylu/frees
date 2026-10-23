@@ -30,12 +30,12 @@ EjectorMomentum inst(fluid$, eta_n, eta_m, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `eta_n` | Number |
-| `eta_m` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| `eta_n` | Number | Motive-nozzle isentropic efficiency [-]. |
+| `eta_m` | Number | Mixing momentum efficiency [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

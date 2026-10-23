@@ -30,12 +30,12 @@ SigStep inst(t0, before, after, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `t0` | Number |
-| `before` | Number |
-| `after` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `t0` | Number | Step time, in seconds of `time`. |
+| `before` | Number | Level before the step, in the signal’s units. |
+| `after` | Number | Level after the step, in the signal’s units. |
+| `eps` | Number | Edge smoothing width, in seconds of `time`. |
 
 ## Constitutive Equations
 

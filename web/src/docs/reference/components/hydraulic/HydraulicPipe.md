@@ -28,14 +28,14 @@ HydraulicPipe inst(rho, nu, L, D, rough, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `rho` | Number |
-| `nu` | Number |
-| `L` | Number |
-| `D` | Number |
-| `rough` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `nu` | Number | Kinematic viscosity [m^2/s]. |
+| `L` | Number | Length [m]. |
+| `D` | Number | Inner diameter [m]. |
+| `rough` | Number | Absolute wall roughness [m]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

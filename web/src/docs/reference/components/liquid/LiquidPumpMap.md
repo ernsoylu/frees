@@ -28,12 +28,12 @@ LiquidPumpMap inst(rho, eta, map$, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `rho` | Number |
-| `eta` | Number |
-| `map$` | String |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `rho` | Number | Liquid density [kg/m^3]. |
+| `eta` | Number | Pump efficiency [-]. |
+| `map$` | String | Name of the head table, volume flow in m³/s → head in m. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

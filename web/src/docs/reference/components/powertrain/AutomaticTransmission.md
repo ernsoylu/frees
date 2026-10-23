@@ -28,13 +28,13 @@ AutomaticTransmission inst(Kmap$, TRmap$, eta, Tlock, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Kmap$` | String |
-| `TRmap$` | String |
-| `eta` | Number |
-| `Tlock` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Kmap$` | String | Name of the capacity-factor table, speed ratio → K = ω_pump/√τ_pump. |
+| `TRmap$` | String | Name of the torque-ratio table, speed ratio → τ_turbine/τ_pump. |
+| `eta` | Number | Gearbox efficiency [-]. |
+| `Tlock` | Number | Lock-up clutch torque capacity at full command [N-m]. |
+| `eps` | Number | Lock-up clutch slip-speed smoothing width [rad/s]. |
 
 ## Constitutive Equations
 

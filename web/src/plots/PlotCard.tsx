@@ -493,8 +493,9 @@ function buildXyFigureFromSpec(spec: PlotSpec, inputs: FigureInputs, xVar: strin
   }
   const withUnit = (label: string, unit: string) =>
     showUnits && unit ? `${label} [${unit}]` : label
-  // For a single shared unit across all Y vars, label the axis with it.
-  const yUnits = new Set(spec.xy.yVars.map(unitOf).filter(Boolean))
+  // For a single shared unit across all Y vars, label the axis with it. An
+  // unknown unit stays in the set, so it never inherits a neighbour's label.
+  const yUnits = new Set(spec.xy.yVars.map(unitOf))
   const yUnit = yUnits.size === 1 ? [...yUnits][0] : ''
   return buildXYFigure(
     series,

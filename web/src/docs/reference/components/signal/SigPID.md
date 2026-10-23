@@ -30,15 +30,15 @@ SigPID inst(Kp, Ki, Kd, tau, i0, d0, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Kp` | Number |
-| `Ki` | Number |
-| `Kd` | Number |
-| `tau` | Number |
-| `i0` | Number |
-| `d0` | Number |
-| `model$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Kp` | Number | Proportional gain, output per unit error. |
+| `Ki` | Number | Integral gain, output per unit error per second. |
+| `Kd` | Number | Derivative gain, output per unit error rate. |
+| `tau` | Number | Derivative filter time constant, in seconds; untyped because the gains carry the signal’s units. |
+| `i0` | Number | Initial integral of the error. |
+| `d0` | Number | Initial derivative-filter state, in the error’s units. |
+| `model$` | String | Variant — `basic` (default) or `clamped`, which also requires `umin`, `umax` and the anti-windup reset time `Taw` in seconds. |
 
 ## Constitutive Equations
 

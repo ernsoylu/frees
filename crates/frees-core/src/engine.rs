@@ -2877,8 +2877,9 @@ fn declared_units(
 /// refused. Bodies are checked, never solved here: they stay out of the
 /// blocker and the equation balance.
 ///
-/// ponytail: array-state initials and method-of-lines `FOR` blocks are not
-/// checked; expand them here when a transient PDE example needs it.
+/// Method-of-lines `FOR` blocks and array-state initials enter through
+/// [`MolArrays`]: loop bounds such as `N` are solved values, unknown here, so
+/// each loop body is lowered once instead of expanded.
 pub(crate) fn unit_check(
     algebraic: &[Equation],
     dynamics: &[crate::ode::dynamic::DynamicSystem],
@@ -2892,25 +2893,63 @@ pub(crate) fn unit_check(
     } else {
         let mut all = algebraic.to_vec();
         for ds in dynamics {
-            all.extend(ds.body_equations.iter().cloned());
+            let mut body: Vec<(&Equation, BTreeSet<String>)> = ds
+                .body_equations
+                .iter()
+                .map(|eq| (eq, BTreeSet::new()))
+                .collect();
+            for fb in &ds.for_blocks {
+                collect_for_body(fb, &BTreeSet::new(), &mut body);
+            }
+            let mol = MolArrays::of(&body, ds);
+            all.extend(body.iter().map(|(eq, loops)| {
+                Equation::new(
+                    mol.lower(&eq.lhs, loops),
+                    mol.lower(&eq.rhs, loops),
+                    eq.source_text.clone(),
+                )
+            }));
             all.extend(
                 ds.initials
                     .iter()
-                    .filter(|ic| ic.indices.is_empty() && !is_bare_number(&ic.value))
+                    .filter(|ic| !is_bare_number(&ic.value))
                     .map(|ic| {
+                        // `t[2](`, or `t[` for a range or symbolic index.
+                        let literal: Option<Vec<String>> = ic
+                            .indices
+                            .iter()
+                            .map(|i| literal_index(i).map(|k| k.to_string()))
+                            .collect();
+                        let head = match literal {
+                            _ if ic.indices.is_empty() => format!("{}(", ic.state),
+                            Some(keys) => format!("{}[{}](", ic.state, keys.join(",")),
+                            None => format!("{}[", ic.state),
+                        };
                         let source = ds
                             .source_text
                             .lines()
                             .map(str::trim)
                             .find(|line| {
-                                line.to_ascii_lowercase()
-                                    .starts_with(&format!("{}(", ic.state))
+                                let line = line.to_ascii_lowercase().replace(' ', "");
+                                line.starts_with(&head)
+                                    && (ic.indices.is_empty() || line.contains("]("))
                             })
                             .map_or_else(
                                 || format!("{}({})", ic.state, ds.options.t0),
                                 str::to_string,
                             );
-                        Equation::new(Expr::var(&ic.state), ic.value.clone(), source)
+                        let state = if ic.indices.is_empty() {
+                            Expr::var(&ic.state)
+                        } else {
+                            mol.lower(
+                                &Expr::ArrayAccess {
+                                    name: ic.state.clone(),
+                                    indices: ic.indices.clone(),
+                                },
+                                &BTreeSet::new(),
+                            )
+                        };
+                        Equation::new(state, mol.lower(&ic.value, &BTreeSet::new()), source)
                     }),
             );
         }
@@ -2935,6 +2974,140 @@ fn is_bare_number(e: &Expr) -> bool {
         Expr::Neg(inner) => is_bare_number(inner),
         Expr::BinOp { left, right, .. } => is_bare_number(left) && is_bare_number(right),
         _ => false,
+    }
+}
+
+/// Every equation of a method-of-lines `FOR` block, with the loop variables in
+/// scope at it.
+fn collect_for_body<'a>(
+    block: &'a Statement,
+    loops: &BTreeSet<String>,
+    out: &mut Vec<(&'a Equation, BTreeSet<String>)>,
+) {
+    let Statement::For { var_name, body, .. } = block else {
+        return;
+    };
+    let mut inner = loops.clone();
+    inner.insert(var_name.to_ascii_lowercase());
+    for st in body {
+        match st {
+            Statement::Eq(eq) => out.push((eq, inner.clone())),
+            nested @ Statement::For { .. } => collect_for_body(nested, &inner, out),
+            _ => {}
+        }
+    }
+}
+
+/// How a `DYNAMIC` block's arrays read to the unit checker.
+///
+/// An array indexed anywhere by something other than a literal (`T[i]`,
+/// `T[N]`, `T[2:N]`) is one physical field, so all its elements, literal ones
+/// included, read as the single variable `t[]` and share one unit: the
+/// boundary `T[1] = T_left` and the initial `T[2](0) = T_init` then ground the
+/// loop body. An array only ever indexed by literals keeps one variable per
+/// element (`x[1]`, `x[2]`), because a state vector may mix position and
+/// velocity. A loop variable reads as a dimensionless `1`.
+struct MolArrays {
+    fields: BTreeSet<String>,
+}
+
+impl MolArrays {
+    fn of(body: &[(&Equation, BTreeSet<String>)], ds: &crate::ode::dynamic::DynamicSystem) -> Self {
+        fn walk(e: &Expr, fields: &mut BTreeSet<String>) {
+            match e {
+                Expr::ArrayAccess { name, indices } => {
+                    if indices.iter().any(|i| literal_index(i).is_none()) {
+                        fields.insert(name.to_ascii_lowercase());
+                    }
+                    indices.iter().for_each(|i| walk(i, fields));
+                }
+                Expr::BinOp { left, right, .. }
+                | Expr::Compare { left, right, .. }
+                | Expr::Logical { left, right, .. } => {
+                    walk(left, fields);
+                    walk(right, fields);
+                }
+                Expr::Range { start, end } => {
+                    walk(start, fields);
+                    walk(end, fields);
+                }
+                Expr::Neg(inner) | Expr::Not(inner) => walk(inner, fields),
+                Expr::Call { args, .. } => args.iter().for_each(|a| walk(a, fields)),
+                Expr::ArrayLiteral(items) => items.iter().for_each(|a| walk(a, fields)),
+                Expr::Num { .. } | Expr::Str(_) | Expr::Var(_) => {}
+            }
+        }
+        let mut fields = BTreeSet::new();
+        for (eq, _) in body {
+            walk(&eq.lhs, &mut fields);
+            walk(&eq.rhs, &mut fields);
+        }
+        for ic in &ds.initials {
+            if ic.indices.iter().any(|i| literal_index(i).is_none()) {
+                fields.insert(ic.state.clone());
+            }
+            walk(&ic.value, &mut fields);
+        }
+        MolArrays { fields }
+    }
+
+    fn lower(&self, e: &Expr, loops: &BTreeSet<String>) -> Expr {
+        let go = |inner: &Expr| Box::new(self.lower(inner, loops));
+        match e {
+            Expr::Var(name) if loops.contains(name) => Expr::num(1.0),
+            Expr::ArrayAccess { name, indices } => {
+                let name = name.to_ascii_lowercase();
+                if self.fields.contains(&name) {
+                    return Expr::var(format!("{name}[]"));
+                }
+                let literal: Option<Vec<String>> = indices
+                    .iter()
+                    .map(|i| literal_index(i).map(|k| k.to_string()))
+                    .collect();
+                match literal {
+                    Some(keys) => Expr::var(format!("{name}[{}]", keys.join(","))),
+                    None => e.clone(),
+                }
+            }
+            Expr::BinOp { op, left, right } => Expr::BinOp {
+                op: *op,
+                left: go(left),
+                right: go(right),
+            },
+            Expr::Compare { op, left, right } => Expr::Compare {
+                op: *op,
+                left: go(left),
+                right: go(right),
+            },
+            Expr::Logical { op, left, right } => Expr::Logical {
+                op: *op,
+                left: go(left),
+                right: go(right),
+            },
+            Expr::Neg(inner) => Expr::Neg(go(inner)),
+            Expr::Not(inner) => Expr::Not(go(inner)),
+            Expr::Call { function, args } => Expr::Call {
+                function: function.clone(),
+                args: args.iter().map(|a| self.lower(a, loops)).collect(),
+            },
+            Expr::Range { .. }
+            | Expr::ArrayLiteral(_)
+            | Expr::Num { .. }
+            | Expr::Str(_)
+            | Expr::Var(_) => e.clone(),
+        }
+    }
+}
+
+/// The integer a literal array subscript names (`T[3]`), if it is one.
+fn literal_index(e: &Expr) -> Option<i64> {
+    match e {
+        Expr::Num {
+            value,
+            unit: None,
+            is_imaginary: false,
+        } if value.fract() == 0.0 => Some(*value as i64),
+        _ => None,
     }
 }
 
@@ -5601,6 +5774,47 @@ mod tests {
             );
             assert_eq!(solved(&good).unit_warnings, Vec::<String>::new());
         }
+    }
+
+    #[test]
+    fn method_of_lines_bodies_and_array_initials_are_unit_checked() {
+        // The rod of transient-heat-rod.frees with units. Dropping `/dx^2`
+        // leaves m^2*K/s against der(T[i])'s K/s; the boundary `T[1]` and the
+        // initial `T[2](0)` are what ground T, so both must reach the checker.
+        let rod = |rate: &str| {
+            format!(
+                "N = 4\ndx = 0.5 [m]\nalpha = 0.05 [m^2/s]\nT_left = 100 [K]\nT_init = 0 [K]\n\
+                 DYNAMIC rod (method = ode23s, t = 0 .. 10)\n  FOR i = 2 TO N-1\n    \
+                 der(T[i]) = {rate}*(T[i-1] - 2*T[i] + T[i+1])\n  END\n  T[1] = T_left\n  \
+                 T[4] = T_left\n  T[2](0) = T_init\n  T[3](0) = T_init\nEND\n"
+            )
+        };
+        let bad = rod("alpha");
+        let warnings = check(&bad).expect("check").unit_warnings;
+        assert!(
+            warnings.iter().any(|w| w.contains("der(T[i])")),
+            "check missed the FOR body: {warnings:?}"
+        );
+        let good = rod("alpha/dx^2");
+        assert_eq!(
+            check(&good).expect("check").unit_warnings,
+            Vec::<String>::new()
+        );
+        assert_eq!(solved(&good).unit_warnings, Vec::<String>::new());
+
+        // A literal-indexed state vector keeps one unit per element.
+        let vector = "DYNAMIC osc (method = ode45, t = 0 .. 1)\n  der(x[1]) = x[2]\n  \
+                      der(x[2]) = -4 [1/s^2]*x[1]\n  x[1](0) = 1 [m]\n  x[2](0) = 0 [m/s]\nEND\n";
+        assert_eq!(
+            check(vector).expect("check").unit_warnings,
+            Vec::<String>::new()
+        );
+        let wrong = vector.replace("0 [m/s]", "0 [kg]");
+        let warnings = check(&wrong).expect("check").unit_warnings;
+        assert!(
+            warnings.iter().any(|w| w.contains("der(x[1])")),
+            "x[2](0) declares x[2] in kg, so der(x[1]) = x[2] warns: {warnings:?}"
+        );
     }
 
     #[test]

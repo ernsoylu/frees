@@ -30,10 +30,10 @@ ReversingValve inst(mode, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `mode` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `mode` | Number | Valve position, 0 for cooling and 1 for heating [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

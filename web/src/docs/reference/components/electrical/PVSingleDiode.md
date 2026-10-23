@@ -30,15 +30,15 @@ PVSingleDiode inst(Isc_ref, Gref, I0d, n_d, Vt, Rs, Rsh)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Isc_ref` | Number |
-| `Gref` | Number |
-| `I0d` | Number |
-| `n_d` | Number |
-| `Vt` | Number |
-| `Rs` | Number |
-| `Rsh` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Isc_ref` | Number | Short-circuit current at the reference irradiance [A]. |
+| `Gref` | Number | Reference irradiance [W/m^2]. |
+| `I0d` | Number | Diode saturation current [A]. |
+| `n_d` | Number | Diode ideality factor [-]. |
+| `Vt` | Number | Thermal voltage of the series-connected cells [V]. |
+| `Rs` | Number | Series resistance [ohm]. |
+| `Rsh` | Number | Shunt resistance [ohm]. |
 
 ## Constitutive Equations
 
