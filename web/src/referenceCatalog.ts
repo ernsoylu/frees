@@ -48147,7 +48147,7 @@ The name must be a quoted string. Recognized keys:
 - **property** — \`fluid\`, \`diagram\`, \`quality\`, \`isolines\`, \`overlaystates\`, \`connectstates\`, \`closecycle\`.
 - **psychro** — \`pressure\`, \`tmin\`, \`tmax\`, \`wetbulb\`, \`enthalpy\`, \`volume\`.
 - **bode / nyquist** — \`omega\`, \`mag\`, \`phase\`, \`real\`, \`imag\`.
-- **format** — \`title\`, \`xlabel\`, \`ylabel\`, \`xlog\`, \`ylog\`, \`grid\`, \`legend\`, \`fontsize\`, \`xmin\`, \`xmax\`, \`ymin\`, \`ymax\`.
+- **format** — \`title\`, \`xlabel\`, \`ylabel\`, \`xlog\`, \`ylog\`, \`y2log\`, \`grid\`, \`legend\`, \`fontsize\`, \`xmin\`, \`xmax\`, \`ymin\`, \`ymax\`.
 
 ## Examples
 

@@ -21,9 +21,12 @@ async function setEditorContent(page: Page, text: string) {
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+a' : 'Control+a')
   await page.keyboard.press('Backspace')
   await content.pressSequentially(text, { delay: 5 })
-  const firstLine = text.trim().split('\n')[0]
-  if (firstLine) {
-    await expect(content).toContainText(firstLine, { timeout: 10_000 })
+  // Wait for the LAST line: on a loaded runner keystrokes are still being
+  // applied after pressSequentially returns, and a Solve clicked before they
+  // land is (correctly) discarded as stale by the next keystroke's revision.
+  const lastLine = text.trim().split('\n').pop()?.trim()
+  if (lastLine) {
+    await expect(content).toContainText(lastLine, { timeout: 30_000 })
   }
   await page.waitForTimeout(300)
 }

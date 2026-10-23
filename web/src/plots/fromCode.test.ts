@@ -32,3 +32,10 @@ it('keeps a valid declaration silent', () => {
   expect(spec.format.grid).toBe(false)
   expect(spec.codeDiagnostics).toBeUndefined()
 })
+
+it('maps y2log onto the right axis', () => {
+  const spec = plotDefToSpec({ name: 'Dual', attributes: { x: ['t'], y: ['p'], y2: ['q'], y2log: ['on'] } })
+  expect(spec.xy.y2Vars).toEqual(['q'])
+  expect(spec.format.y2Log).toBe(true)
+  expect(spec.codeDiagnostics).toBeUndefined()
+})

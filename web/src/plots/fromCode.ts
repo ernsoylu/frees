@@ -115,6 +115,7 @@ function applyFormatAttrs(spec: PlotSpec, first: StrGet, bool: BoolGet, num: Num
   if (first('ylabel')) spec.format.yLabel = first('ylabel')!
   assignBool(bool('xlog'), (v) => (spec.format.xLog = v))
   assignBool(bool('ylog'), (v) => (spec.format.yLog = v))
+  assignBool(bool('y2log'), (v) => (spec.format.y2Log = v))
   assignBool(bool('grid'), (v) => (spec.format.grid = v))
   assignBool(bool('legend'), (v) => (spec.format.legend = v))
   assignNum(num('fontsize'), (v) => (spec.format.fontSize = v))
