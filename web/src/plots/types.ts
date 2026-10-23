@@ -47,6 +47,8 @@ export interface PlotFormat {
   legendAlign?: 'left' | 'center' | 'right'
   /** Title of the secondary (right) Y axis used by XYConfig.y2Vars. */
   y2Label?: string
+  /** Logarithmic secondary (right) Y axis. */
+  y2Log?: boolean
   fontSize: number
   celsius: boolean
   xMin?: number | null

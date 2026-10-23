@@ -90,6 +90,7 @@ import {
   newParamRow,
   newParamTable,
   ParamTableSpec,
+  sameParamInputs,
   saveTables,
   TableSpec,
   toFunctionTableDtos,
@@ -1888,10 +1889,8 @@ export default function App() {
   }
 
   function tableRequestCurrent(revision: number, snapshot: ParamTableSpec): boolean {
-    const current = tablesRef.current.find((t) => t.id === snapshot.id)
-    return modelRevisionRef.current.isCurrent(revision) && current?.kind === 'parametric'
-      && current.rows.length === snapshot.rows.length
-      && current.rows.every((row, i) => row.id === snapshot.rows[i].id)
+    return modelRevisionRef.current.isCurrent(revision)
+      && sameParamInputs(snapshot, tablesRef.current.find((t) => t.id === snapshot.id))
   }
 
   async function onCheckTable(tableIdArg?: string, overrideTbl?: ParamTableSpec): Promise<CheckResponse | null> {

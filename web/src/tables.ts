@@ -311,6 +311,21 @@ function interpolateColumn(rows: FillRow[], j: number, known: { x: number; y: nu
   }
 }
 
+/**
+ * True when `current` still holds exactly the inputs `snapshot` was solved
+ * from: the same columns, the same rows in order, and the same typed values.
+ * A table result is valid for those inputs only, so a late result is
+ * discarded on any difference — however the edit arrived.
+ */
+export function sameParamInputs(snapshot: ParamTableSpec, current: TableSpec | undefined): boolean {
+  return current?.kind === 'parametric'
+    && current.vars.length === snapshot.vars.length
+    && current.vars.every((v, i) => v === snapshot.vars[i])
+    && current.rows.length === snapshot.rows.length
+    && current.rows.every((row, i) => row.id === snapshot.rows[i].id
+      && snapshot.vars.every((v) => (row.values[v] ?? '') === (snapshot.rows[i].values[v] ?? '')))
+}
+
 /** Rows sorted ascending by numeric x (blank x rows sink to the bottom). */
 export function sortFunctionRows(table: FunctionTableSpec): FunctionTableSpec {
   const rows = [...table.rows].sort((a, b) => {

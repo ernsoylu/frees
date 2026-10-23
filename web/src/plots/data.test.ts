@@ -28,3 +28,15 @@ it('labels a shared Y unit only when every series knows it', () => {
   expect(yTitle({ x: 's', p: 'kPa' })).not.toContain('kPa')
   expect(yTitle({ x: 's', p: 'kPa', q: 'kPa' })).toContain('[kPa]')
 })
+
+it('draws the right Y axis logarithmic only when asked', () => {
+  const spec = { ...newPlotSpec('xy', 'dual'), source: { kind: 'table' as const, tableId: 'table', data: 'inputs' as const } }
+  spec.xy = { xVar: 'x', yVars: ['p'], y2Vars: ['q'] }
+  const tableRows = [1, 2].map((i) => ({ id: String(i), values: { x: String(i), p: String(i), q: String(10 ** i) } }))
+  const layout = () => buildFigure(spec, { ...inputs, tableRows })!.layout as { yaxis2: { type: string }; uirevision: string }
+  expect(layout().yaxis2.type).toBe('linear')
+  const linearRevision = layout().uirevision
+  spec.format = { ...spec.format, y2Log: true }
+  expect(layout().yaxis2.type).toBe('log')
+  expect(layout().uirevision).not.toBe(linearRevision)
+})

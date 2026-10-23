@@ -285,7 +285,7 @@ function baseLayout(
   const revPart = revision !== undefined ? `_${revision}` : ''
   return {
     ...(format.title ? { title: { text: format.title } } : {}),
-    uirevision: `${xLog}_${yLog}_${format.xUnit ?? ''}_${format.yUnit ?? ''}${revPart}`,
+    uirevision: `${xLog}_${yLog}_${format.y2Log ?? false}_${format.xUnit ?? ''}_${format.yUnit ?? ''}${revPart}`,
     paper_bgcolor: background,
     plot_bgcolor: background,
     font: { color: colors.font, size: format.fontSize },
@@ -930,7 +930,7 @@ export function buildXYFigure(
       title: { text: format.y2Label || y2Names.join(', ') },
       overlaying: 'y',
       side: 'right',
-      type: 'linear',
+      type: format.y2Log ? 'log' : 'linear',
       color: colors.font,
       showgrid: false,
       exponentformat: 'power',

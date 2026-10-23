@@ -868,6 +868,14 @@ function FormatSection({
             onChange={(e) => onChange({ ...format, yLog: e.currentTarget.checked })}
           />
         )}
+        {spec.kind === 'xy' && !isPie && !is3D && !isHistogram && (spec.xy.y2Vars?.length ?? 0) > 0 && (
+          <Checkbox
+            label="Log Y2"
+            size="xs"
+            checked={format.y2Log ?? false}
+            onChange={(e) => onChange({ ...format, y2Log: e.currentTarget.checked })}
+          />
+        )}
         {!isPie && (
           <Checkbox
             label="Grid"
