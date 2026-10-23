@@ -246,10 +246,12 @@ T_end = FinalValue('T')
   })
 
   test('Journey 5: an edit during an in-flight solve discards the stale result', async ({ page }) => {
-    // About a second of integration in chromium: long enough to land an edit
-    // while the worker is still busy.
+    // About two seconds of integration in chromium (roughly 40 in firefox):
+    // twice what landing the edit needs, so a loaded runner keeps the worker
+    // busy through it. The edit swaps in a one-line document, so the
+    // follow-up solve costs nothing.
     const slow = `k = 0.05 [1/s]
-DYNAMIC slow (time = 0 .. 100, points = 2000, method = ode45, rtol = 1e-10)
+DYNAMIC slow (time = 0 .. 200, points = 2000, method = ode45, rtol = 1e-10)
   der(x) = -k*x + sin(50 [1/s]*time)
   x(0) = 1
 END
@@ -261,12 +263,12 @@ x_end = FinalValue('x')
     await expect(solve).toHaveAttribute('aria-busy', 'true')
     const editor = page.locator('.cm-content')
     await editor.click()
-    await page.keyboard.press('Control+End')
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+a' : 'Control+a')
     await page.keyboard.insertText('y = 2\n')
     await expect(solve).toHaveAttribute('aria-busy', 'true')
 
     // The worker finishes for the old revision; nothing of it may surface.
-    await expect(solve).not.toHaveAttribute('aria-busy', 'true', { timeout: 60_000 })
+    await expect(solve).not.toHaveAttribute('aria-busy', 'true', { timeout: 120_000 })
     await page.waitForTimeout(500)
     await expect(page.getByText(/^Solved/)).toHaveCount(0)
 

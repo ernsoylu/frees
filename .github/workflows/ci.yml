@@ -470,8 +470,11 @@ jobs:
       # Wave D4, expanded in Phase 2.4 to full cross-browser matrix
       # (Chromium, Firefox, WebKit/Safari): asserts service worker precaching,
       # offline reload resilience, IndexedDB storage, and WASM runtime compatibility.
+      # Normally about a minute. On 2026-10-23 its apt step hung for 40 min
+      # before any test ran; fail fast instead so a rerun is one click.
       - name: Install Playwright browsers (chromium, firefox, webkit)
         working-directory: web
+        timeout-minutes: 10
         run: npx --no-install playwright install --with-deps chromium firefox webkit
 
       - name: Cross-browser E2E & offline proof (Playwright)
