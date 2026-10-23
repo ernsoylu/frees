@@ -542,6 +542,9 @@ export default function App() {
   // check lands instead of dropping the click.
   const solvePendingRef = useRef(false)
   const checkThenSolveRef = useRef<() => void>(() => {})
+  // The same for a table: the id whose Solve arrived during its check.
+  const tableSolvePendingRef = useRef<string | null>(null)
+  const checkThenSolveTableRef = useRef<(id: string) => void>(() => {})
   useEffect(() => () => {
     if (sliderTimer.current) clearTimeout(sliderTimer.current)
   }, [])
@@ -894,6 +897,14 @@ export default function App() {
       checkThenSolveRef.current()
     }
   }, [solving, checking])
+
+  useEffect(() => {
+    const pending = tableSolvePendingRef.current
+    if (pending !== null && checkingTableId === null && solvingTableId === null) {
+      tableSolvePendingRef.current = null
+      checkThenSolveTableRef.current(pending)
+    }
+  }, [checkingTableId, solvingTableId])
 
   // Mark the project dirty whenever content changes, unless the change came from
   // an explicit load/new/save (suppressDirtyRef lets those operations opt out).
@@ -2235,7 +2246,11 @@ export default function App() {
 
   async function checkThenSolveTable(tableIdArg?: string, overrideTbl?: ParamTableSpec): Promise<boolean> {
     const tableId = tableIdArg ?? activeParam?.id
-    if (solvingTableId !== null || checkingTableId !== null || !tableId) return false
+    if (solvingTableId !== null || !tableId) return false
+    if (checkingTableId !== null) {
+      tableSolvePendingRef.current = tableId
+      return false
+    }
     const tbl = overrideTbl ?? freshParamTable(tableId)
     if (!tbl || tbl.kind !== 'parametric') return false
     if (tbl.checkResult?.solvable === true) {
@@ -2247,6 +2262,8 @@ export default function App() {
     }
     return false
   }
+
+  checkThenSolveTableRef.current = (id) => { void checkThenSolveTable(id) }
 
   // From a read-only table's column selection: open the New X-Y plot modal
   // pre-filled with the time column as x and the selected columns as y.

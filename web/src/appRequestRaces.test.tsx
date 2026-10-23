@@ -14,6 +14,36 @@ import { DEFAULT_STOP_CRITERIA } from './api'
 import { newParamRow, newParamTable, sameParamInputs, type ParamTableSpec } from './tables'
 import { wasmCheck, wasmSolve, wasmSolveTable } from './wasm/engineClient'
 
+// dockview does not lay out in jsdom, so nothing ever becomes the active
+// window. This stand-in reports `dock.active` instead; the top bar, which
+// sits outside the dock, then behaves as it does in a browser.
+const dock = vi.hoisted(() => ({ active: 'equations' }))
+vi.mock('./workspace/WorkspaceDock', async () => {
+  const { useEffect } = await import('react')
+  const { TABLES_WORKBOOK_WINDOW_ID } = await import('./tablesGrid/tablesWorkbookBridge')
+  return {
+    WorkspaceDock: ({ onActiveChange, handleRef }: {
+      onActiveChange?: (w: { id: string; kind: string; title: string }) => void
+      handleRef?: { current: unknown }
+    }) => {
+      useEffect(() => {
+        if (handleRef) {
+          handleRef.current = {
+            open() {}, openInstance() {}, close() {}, setTitle() {}, isOpen: () => false,
+            reset() {}, restore() {}, applyPerspective() {},
+          }
+        }
+        const id = dock.active === 'table' ? TABLES_WORKBOOK_WINDOW_ID : dock.active
+        onActiveChange?.({ id, kind: dock.active, title: dock.active })
+        // Once, on mount, like dockview's first report: App passes a fresh
+        // callback every render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [])
+      return null
+    },
+  }
+})
+
 vi.mock('./wasm/engineClient', async (orig) => {
   const real = await orig<Record<string, unknown>>()
   const stubbed: Record<string, unknown> = {}
@@ -35,25 +65,35 @@ beforeEach(() => {
   Range.prototype.getBoundingClientRect = () => new DOMRect()
   // jsdom throws resolving some of Mantine's CSS lengths; layout is not what
   // this test is about, so an unreadable style reads as an empty one.
-  const computed = window.getComputedStyle.bind(window)
-  vi.stubGlobal('getComputedStyle', (el: Element, pseudo?: string | null) => {
+  // Both the global and the element's own window, where floating-ui reads it.
+  const view = document.defaultView!
+  const computed = view.getComputedStyle.bind(view)
+  const safe = (el: Element, pseudo?: string | null) => {
     try {
       return computed(el, pseudo)
     } catch {
       return document.createElement('div').style
     }
-  })
+  }
+  vi.stubGlobal('getComputedStyle', safe)
+  vi.spyOn(view, 'getComputedStyle').mockImplementation(safe)
+  dock.active = 'equations'
   localStorage.clear()
+  // A returning user: no first-run dialog over the workspace.
+  localStorage.setItem('frees.firstRunDismissed', 'true')
+  localStorage.setItem('frees.gettingStartedSeen', 'true')
 })
 
+// The style spy stays for the file: floating-ui can measure after a test's
+// own cleanup has run.
 afterEach(() => vi.unstubAllGlobals())
 
 /** A saved workspace holding one parametric table, restored on mount. */
-function seedProject(): void {
+function seedProject(extra: Record<string, unknown> = {}): void {
   const row = (x: string) => ({ ...newParamRow(), values: { x, y: '' } })
   const table = {
     id: 'sweep', kind: 'parametric', name: 'Sweep', vars: ['x', 'y'], rows: [row('1'), row('2')],
-    results: [], stats: null, checkResult: null, checkMessage: '',
+    results: [], stats: null, checkResult: null, checkMessage: '', ...extra,
   }
   const project = {
     version: 3, savedAt: new Date().toISOString(), text: 'y = 2*x\n', varDrafts: {},
@@ -136,4 +176,32 @@ it('runs a Solve pressed while a check is still in flight', async () => {
   expect(wasmSolve).not.toHaveBeenCalled()
   await act(async () => land())
   await waitFor(() => expect(wasmSolve).toHaveBeenCalledTimes(1))
+}, 30_000)
+
+it('runs an F2 pressed while the table is still being checked', async () => {
+  // Desktop, with the Tables window active, F2 is check-then-solve for the
+  // table. (The top bar's table Solve skips the check gate by design and so
+  // never waited on it; the phone layout disables Solve during a check.)
+  vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
+  dock.active = 'table'
+  // Hold every check from here on (the idle lint may run one too), then
+  // release them together.
+  const held: (() => void)[] = []
+  const real = vi.mocked(wasmCheck).getMockImplementation()!
+  const land = () => {
+    vi.mocked(wasmCheck).mockImplementation(real)
+    held.splice(0).forEach((release) => release())
+  }
+  seedProject()
+  vi.mocked(wasmSolveTable).mockReset().mockResolvedValue(solvedRows)
+  const { default: App } = await import('./App')
+  render(<MantineProvider env="test"><App /></MantineProvider>)
+  const check = await screen.findByRole('button', { name: 'Check' }, { timeout: 10_000 })
+  vi.mocked(wasmCheck).mockImplementation((...args) => new Promise((resolve) => { held.push(() => resolve(real(...args))) }))
+  fireEvent.click(check)
+  await waitFor(() => expect(held.length).toBeGreaterThan(0))
+  fireEvent.keyDown(window, { key: 'F2' })
+  expect(wasmSolveTable).not.toHaveBeenCalled()
+  await act(async () => land())
+  await waitFor(() => expect(wasmSolveTable).toHaveBeenCalledTimes(1))
 }, 30_000)
