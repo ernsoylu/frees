@@ -1,3 +1,6 @@
+// Request races at the App level: the real App, with the engine stubbed one
+// layer below api.ts so the real request/response mapping runs.
+//
 // T3: a table edit made while that table's solve is in flight must discard
 // the late result. Two guards decide it — the model revision, and the
 // table's own inputs compared against the snapshot the solve was sent. The
@@ -9,7 +12,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { DEFAULT_STOP_CRITERIA } from './api'
 import { newParamRow, newParamTable, sameParamInputs, type ParamTableSpec } from './tables'
-import { wasmSolveTable } from './wasm/engineClient'
+import { wasmCheck, wasmSolve, wasmSolveTable } from './wasm/engineClient'
 
 vi.mock('./wasm/engineClient', async (orig) => {
   const real = await orig<Record<string, unknown>>()
@@ -112,3 +115,25 @@ it('treats any change to the solved inputs as a different table', () => {
   expect(edit((t) => ({ ...t, vars: ['x'] }))).toBe(false)
   expect(sameParamInputs(base, undefined)).toBe(false)
 })
+
+it('runs a Solve pressed while a check is still in flight', async () => {
+  // Desktop: its Solve stays enabled while a check runs (the phone layout
+  // disables it), so the click reaches checkThenSolve mid-check.
+  vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
+  let land!: () => void
+  const real = vi.mocked(wasmCheck).getMockImplementation()!
+  vi.mocked(wasmCheck).mockImplementationOnce((...args) => new Promise((resolve) => { land = () => resolve(real(...args)) }))
+  localStorage.setItem('frees.project', JSON.stringify({
+    version: 3, savedAt: new Date().toISOString(), text: 'x = 2\n', varDrafts: {}, stopCriteria: DEFAULT_STOP_CRITERIA,
+    unitSystem: 'SI', fillMissing: false, stateUnitIds: {}, tables: [], plots: [], spreadsheets: [], analyzers: [],
+    digitizer: null, dockLayout: null,
+  }))
+  const { default: App } = await import('./App')
+  render(<MantineProvider env="test"><App /></MantineProvider>)
+  fireEvent.click(await screen.findByRole('button', { name: 'Check' }, { timeout: 10_000 }))
+  await waitFor(() => expect(wasmCheck).toHaveBeenCalled())
+  fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
+  expect(wasmSolve).not.toHaveBeenCalled()
+  await act(async () => land())
+  await waitFor(() => expect(wasmSolve).toHaveBeenCalledTimes(1))
+}, 30_000)

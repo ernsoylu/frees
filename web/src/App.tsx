@@ -538,6 +538,10 @@ export default function App() {
   // lint tick (another keystroke follows) but wrong here — the displayed
   // solution would stop matching the handle. Remember it and drain on idle.
   const sliderPendingRef = useRef(false)
+  // A Solve pressed while the live check is still running: run it once the
+  // check lands instead of dropping the click.
+  const solvePendingRef = useRef(false)
+  const checkThenSolveRef = useRef<() => void>(() => {})
   useEffect(() => () => {
     if (sliderTimer.current) clearTimeout(sliderTimer.current)
   }, [])
@@ -884,6 +888,10 @@ export default function App() {
     if (!solving && !checking && sliderPendingRef.current) {
       sliderPendingRef.current = false
       sliderSolveRef.current()
+    }
+    if (!solving && !checking && solvePendingRef.current) {
+      solvePendingRef.current = false
+      checkThenSolveRef.current()
     }
   }, [solving, checking])
 
@@ -2183,7 +2191,11 @@ export default function App() {
   // Check first and chain into Solve when it passes. The fresh CheckResponse is
   // passed through so the solve guard doesn't read stale `solvable` state.
   async function checkThenSolve(): Promise<'workspace' | 'table' | void> {
-    if (solving || checking) return
+    if (solving) return
+    if (checking) {
+      solvePendingRef.current = true
+      return
+    }
     flushTableEdits()
     const isCurrentSolvable = modelRevisionRef.current.isCheckValidAndSolvable()
     if (isCurrentSolvable && solvable) {
@@ -2206,6 +2218,8 @@ export default function App() {
       if (ok) return 'table'
     }
   }
+
+  checkThenSolveRef.current = () => { void checkThenSolve() }
 
   async function checkWithFallback() {
     if (checking || solving) return
