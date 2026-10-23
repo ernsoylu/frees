@@ -30,11 +30,11 @@ CellToPackThermal inst(Rcc, Cpl, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Rcc` | Number |
-| `Cpl` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Rcc` | Number | Cell-to-plate contact resistance [K/W]. |
+| `Cpl` | Number | Cold-plate heat capacity [J/K]. |
+| `T0` | Number | Initial plate temperature [K]. |
 
 ## Constitutive Equations
 

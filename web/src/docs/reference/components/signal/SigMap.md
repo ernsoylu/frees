@@ -30,9 +30,9 @@ SigMap inst(map$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `map$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `map$` | String | Name of the TABLE or FUNCTION mapping the input to the output. |
 
 ## Constitutive Equations
 

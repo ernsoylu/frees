@@ -28,13 +28,13 @@ HydraulicMotor inst(disp, rho, eta_v, eta_m, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `disp` | Number |
-| `rho` | Number |
-| `eta_v` | Number |
-| `eta_m` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `disp` | Number | Displacement per revolution [m^3]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `eta_v` | Number | Volumetric efficiency [-]. |
+| `eta_m` | Number | Mechanical efficiency [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

@@ -28,16 +28,16 @@ InverterLoss inst(V0, r, Esw, fsw, Iref, Vref, Vnom, epsI)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `V0` | Number |
-| `r` | Number |
-| `Esw` | Number |
-| `fsw` | Number |
-| `Iref` | Number |
-| `Vref` | Number |
-| `Vnom` | Number |
-| `epsI` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `V0` | Number | Switch threshold voltage drop [V]. |
+| `r` | Number | Conduction slope resistance [ohm]. |
+| `Esw` | Number | Switching energy per event at Iref and Vref [J]. |
+| `fsw` | Number | Switching frequency [Hz]. |
+| `Iref` | Number | Current at which Esw was measured [A]. |
+| `Vref` | Number | Voltage at which Esw was measured [V]. |
+| `Vnom` | Number | Operating DC-link voltage [V]. |
+| `epsI` | Number | Smoothing width of the current-direction switch [A]. |
 
 ## Constitutive Equations
 

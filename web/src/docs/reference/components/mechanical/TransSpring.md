@@ -28,10 +28,10 @@ TransSpring inst(k, x0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `k` | Number |
-| `x0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `k` | Number | Stiffness [N/m]. |
+| `x0` | Number | Initial deflection [m]. |
 
 ## Constitutive Equations
 

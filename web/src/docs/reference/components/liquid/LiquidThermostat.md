@@ -28,14 +28,14 @@ LiquidThermostat inst(fluid$, CdA, rho, Topen, Tband, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `CdA` | Number |
-| `rho` | Number |
-| `Topen` | Number |
-| `Tband` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Liquid name (e.g. Water, EG50). |
+| `CdA` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| `rho` | Number | Liquid density [kg/m^3]. |
+| `Topen` | Number | Opening temperature [K]. |
+| `Tband` | Number | Width of the opening transition [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

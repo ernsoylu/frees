@@ -28,13 +28,13 @@ EndStop inst(gap, k, c, eps, x0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `gap` | Number |
-| `k` | Number |
-| `c` | Number |
-| `eps` | Number |
-| `x0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `gap` | Number | Position where contact begins [m]. |
+| `k` | Number | Contact stiffness [N/m]. |
+| `c` | Number | Contact damping [N-s/m]. |
+| `eps` | Number | Smoothing width of the contact onset [m]. |
+| `x0` | Number | Initial position [m]. |
 
 ## Constitutive Equations
 

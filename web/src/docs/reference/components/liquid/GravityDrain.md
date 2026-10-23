@@ -28,12 +28,12 @@ GravityDrain inst(Cd, A_d, rho, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Cd` | Number |
-| `A_d` | Number |
-| `rho` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Cd` | Number | Discharge coefficient [-]. |
+| `A_d` | Number | Drain flow area [m^2]. |
+| `rho` | Number | Liquid density [kg/m^3]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

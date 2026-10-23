@@ -30,11 +30,11 @@ IndirectEvaporativeCooler inst(wbde, eff_sec, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `wbde` | Number |
-| `eff_sec` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `wbde` | Number | Wet-bulb depression efficiency [-]. |
+| `eff_sec` | Number | Saturation effectiveness of the secondary (wet) stream [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

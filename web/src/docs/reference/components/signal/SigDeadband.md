@@ -28,10 +28,10 @@ SigDeadband inst(w, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `w` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `w` | Number | Half-width of the dead zone, in the input’s units. |
+| `eps` | Number | Smoothing width of the hinges, in the input’s units. |
 
 ## Constitutive Equations
 

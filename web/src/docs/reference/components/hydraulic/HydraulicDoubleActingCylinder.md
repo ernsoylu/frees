@@ -30,17 +30,17 @@ HydraulicDoubleActingCylinder inst(Aa, Ab, rho, beta, Va0, Vb0, Pa0, Pb0, domain
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Aa` | Number |
-| `Ab` | Number |
-| `rho` | Number |
-| `beta` | Number |
-| `Va0` | Number |
-| `Vb0` | Number |
-| `Pa0` | Number |
-| `Pb0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Aa` | Number | Piston area on the cap side (port a) [m^2]. |
+| `Ab` | Number | Annulus area on the rod side (port b) [m^2]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `beta` | Number | Oil bulk modulus [Pa]. |
+| `Va0` | Number | Chamber volume on side a [m^3]. |
+| `Vb0` | Number | Chamber volume on side b [m^3]. |
+| `Pa0` | Number | Initial pressure in chamber a [Pa]. |
+| `Pb0` | Number | Initial pressure in chamber b [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

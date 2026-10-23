@@ -28,11 +28,11 @@ SigRateLimiter inst(rate, tau, y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `rate` | Number |
-| `tau` | Number |
-| `y0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `rate` | Number | Maximum rate of change, in the signal’s units per second. |
+| `tau` | Number | Tracking time constant inside the linear zone, in seconds; untyped because `rate` carries the signal’s units. |
+| `y0` | Number | Initial output, in the signal’s units. |
 
 ## Constitutive Equations
 

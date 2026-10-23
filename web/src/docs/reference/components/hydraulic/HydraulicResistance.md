@@ -28,12 +28,12 @@ HydraulicResistance inst(K, rho, D, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `K` | Number |
-| `rho` | Number |
-| `D` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `K` | Number | Loss coefficient on the dynamic pressure [-]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `D` | Number | Reference diameter [m]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

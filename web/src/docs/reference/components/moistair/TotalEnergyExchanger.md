@@ -30,13 +30,13 @@ TotalEnergyExchanger inst(eps_s, eps_L, eatr, oacf, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eps_s` | Number |
-| `eps_L` | Number |
-| `eatr` | Number |
-| `oacf` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eps_s` | Number | Sensible effectiveness [-]. |
+| `eps_L` | Number | Latent effectiveness [-]. |
+| `eatr` | Number | Exhaust air transfer ratio [-]. |
+| `oacf` | Number | Outdoor air correction factor [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

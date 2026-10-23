@@ -28,15 +28,15 @@ CatalystLightOff inst(fluid$, C, UA, T50, k, q_exo, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `C` | Number |
-| `UA` | Number |
-| `T50` | Number |
-| `k` | Number |
-| `q_exo` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Exhaust gas name (e.g. Air). |
+| `C` | Number | Brick heat capacity [J/K]. |
+| `UA` | Number | Gas-to-brick conductance [W/K]. |
+| `T50` | Number | Light-off temperature, 50 % conversion [K]. |
+| `k` | Number | Width of the light-off transition [K]. |
+| `q_exo` | Number | Exotherm released per kilogram of exhaust at full conversion [J/kg]. |
+| `T0` | Number | Initial brick temperature [K]. |
 
 ## Constitutive Equations
 

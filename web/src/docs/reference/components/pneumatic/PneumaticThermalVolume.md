@@ -28,16 +28,16 @@ PneumaticThermalVolume inst(fluid$, V, R, cv, cp, m0, T0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `V` | Number |
-| `R` | Number |
-| `cv` | Number |
-| `cp` | Number |
-| `m0` | Number |
-| `T0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| `V` | Number | Volume [m^3]. |
+| `R` | Number | Specific gas constant [J/kg-K]. |
+| `cv` | Number | Specific heat at constant volume [J/kg-K]. |
+| `cp` | Number | Specific heat at constant pressure [J/kg-K]. |
+| `m0` | Number | Initial gas mass [kg]. |
+| `T0` | Number | Initial gas temperature [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

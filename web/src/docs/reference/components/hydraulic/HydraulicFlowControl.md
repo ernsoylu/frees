@@ -28,11 +28,11 @@ HydraulicFlowControl inst(Qset, rho, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Qset` | Number |
-| `rho` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Qset` | Number | Regulated volume flow [m^3/s]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

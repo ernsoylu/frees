@@ -28,13 +28,13 @@ MoistAirDuct inst(L, D, rough, mu_a, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `L` | Number |
-| `D` | Number |
-| `rough` | Number |
-| `mu_a` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `L` | Number | Length [m]. |
+| `D` | Number | Hydraulic diameter [m]. |
+| `rough` | Number | Absolute wall roughness [m]. |
+| `mu_a` | Number | Air dynamic viscosity [Pa-s]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

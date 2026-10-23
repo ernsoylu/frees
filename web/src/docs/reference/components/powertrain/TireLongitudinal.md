@@ -30,14 +30,14 @@ TireLongitudinal inst(r, Fz, B, C, D, epsv)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `r` | Number |
-| `Fz` | Number |
-| `B` | Number |
-| `C` | Number |
-| `D` | Number |
-| `epsv` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `r` | Number | Rolling radius [m]. |
+| `Fz` | Number | Normal load [N]. |
+| `B` | Number | Magic-formula stiffness factor [-]. |
+| `C` | Number | Magic-formula shape factor [-]. |
+| `D` | Number | Peak friction coefficient [-]. |
+| `epsv` | Number | Regularization of the slip denominator at standstill [m/s]. |
 
 ## Constitutive Equations
 

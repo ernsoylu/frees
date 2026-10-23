@@ -28,9 +28,9 @@ SigGain inst(k)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `k` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `k` | Number | Gain, output per unit input. |
 
 ## Constitutive Equations
 

@@ -28,9 +28,9 @@ GasMixerN inst(domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

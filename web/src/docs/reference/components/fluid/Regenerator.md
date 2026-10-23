@@ -28,11 +28,11 @@ Regenerator inst(hot$, cold$, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `hot$` | String |
-| `cold$` | String |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `hot$` | String | Hot-stream fluid name. |
+| `cold$` | String | Cold-stream fluid name. |
+| `eps` | Number | Effectiveness on the minimum capacity rate [-]. |
 
 ## Constitutive Equations
 

@@ -30,12 +30,12 @@ SigRelay inst(thresh, low, high, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `thresh` | Number |
-| `low` | Number |
-| `high` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `thresh` | Number | Switching threshold, in the input’s units. |
+| `low` | Number | Output below the threshold. |
+| `high` | Number | Output above the threshold. |
+| `eps` | Number | Width of the transition, in the input’s units. |
 
 ## Constitutive Equations
 

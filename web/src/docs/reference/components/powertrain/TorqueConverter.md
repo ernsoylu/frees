@@ -28,10 +28,10 @@ TorqueConverter inst(Kmap$, TRmap$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Kmap$` | String |
-| `TRmap$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Kmap$` | String | Name of the capacity-factor table, speed ratio → K = ω_pump/√τ_pump. |
+| `TRmap$` | String | Name of the torque-ratio table, speed ratio → τ_turbine/τ_pump. |
 
 ## Constitutive Equations
 

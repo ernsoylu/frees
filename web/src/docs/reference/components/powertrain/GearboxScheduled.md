@@ -28,9 +28,9 @@ GearboxScheduled inst(eta)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eta` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eta` | Number | Gearbox efficiency; the ratio arrives on the signal port u [-]. |
 
 ## Constitutive Equations
 

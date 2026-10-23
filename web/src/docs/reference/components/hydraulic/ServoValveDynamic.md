@@ -28,14 +28,14 @@ ServoValveDynamic inst(CdA_max, rho, wn, zeta, xs0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `CdA_max` | Number |
-| `rho` | Number |
-| `wn` | Number |
-| `zeta` | Number |
-| `xs0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `CdA_max` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `wn` | Number | Spool natural frequency [rad/s]. |
+| `zeta` | Number | Spool damping ratio [-]. |
+| `xs0` | Number | Initial spool opening [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

@@ -28,14 +28,14 @@ AHU inst(Kf, foul, Tc, Qh, dPfan, eta_fan)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Kf` | Number |
-| `foul` | Number |
-| `Tc` | Number |
-| `Qh` | Number |
-| `dPfan` | Number |
-| `eta_fan` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Kf` | Number | Clean-filter resistance, Δp per (mass flow)² [Pa-s^2/kg^2]. |
+| `foul` | Number | Filter fouling multiplier (1 = clean) [-]. |
+| `Tc` | Number | Cooling-coil leaving air temperature [K]. |
+| `Qh` | Number | Heating-coil duty [W]. |
+| `dPfan` | Number | Fan pressure rise [Pa]. |
+| `eta_fan` | Number | Fan efficiency [-]. |
 
 ## Constitutive Equations
 

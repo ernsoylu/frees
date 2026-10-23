@@ -30,16 +30,16 @@ ExhaustPipeThermal inst(fluid$, UA, hA, C1, C2, R, T10, T20)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `UA` | Number |
-| `hA` | Number |
-| `C1` | Number |
-| `C2` | Number |
-| `R` | Number |
-| `T10` | Number |
-| `T20` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Exhaust gas name (e.g. Air). |
+| `UA` | Number | Gas-to-wall conductance [W/K]. |
+| `hA` | Number | Outer-wall-to-ambient conductance [W/K]. |
+| `C1` | Number | Heat capacity of the inner wall node [J/K]. |
+| `C2` | Number | Heat capacity of the outer wall node [J/K]. |
+| `R` | Number | Conduction resistance through the wall [K/W]. |
+| `T10` | Number | Initial inner-wall temperature [K]. |
+| `T20` | Number | Initial outer-wall temperature [K]. |
 
 ## Constitutive Equations
 

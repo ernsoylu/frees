@@ -30,10 +30,10 @@ Cam inst(prof$, theta0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `prof$` | String |
-| `theta0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `prof$` | String | Name of the lift table, cam angle in rad → lift in m. |
+| `theta0` | Number | Initial cam angle [rad]. |
 
 ## Constitutive Equations
 

@@ -28,13 +28,13 @@ HydraulicSequenceValve inst(Pset, CdA, rho, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Pset` | Number |
-| `CdA` | Number |
-| `rho` | Number |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Pset` | Number | Inlet pressure at which the valve opens [Pa]. |
+| `CdA` | Number | Open discharge coefficient times flow area [m^2]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `eps` | Number | Width of the opening transition [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

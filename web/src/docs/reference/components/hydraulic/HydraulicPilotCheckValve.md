@@ -30,13 +30,13 @@ HydraulicPilotCheckValve inst(CdA, rho, rp, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `CdA` | Number |
-| `rho` | Number |
-| `rp` | Number |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `CdA` | Number | Open discharge coefficient times flow area [m^2]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `rp` | Number | Pilot area ratio [-]. |
+| `eps` | Number | Width of the opening transition [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

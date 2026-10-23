@@ -28,9 +28,9 @@ SigIntegrator inst(y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `y0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `y0` | Number | Initial output, in the output’s units. |
 
 ## Constitutive Equations
 

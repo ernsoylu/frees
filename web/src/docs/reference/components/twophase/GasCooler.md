@@ -28,12 +28,12 @@ GasCooler inst(fluid$, UA, dP, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `UA` | Number |
-| `dP` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| `UA` | Number | Refrigerant-to-wall conductance [W/K]. |
+| `dP` | Number | Pressure drop [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

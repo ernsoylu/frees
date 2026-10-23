@@ -28,17 +28,17 @@ PneumaticDoubleActingCylinder inst(Aa, Ab, R, T, Va0, Vb0, Pa0, Pb0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Aa` | Number |
-| `Ab` | Number |
-| `R` | Number |
-| `T` | Number |
-| `Va0` | Number |
-| `Vb0` | Number |
-| `Pa0` | Number |
-| `Pb0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Aa` | Number | Piston area on the cap side (port a) [m^2]. |
+| `Ab` | Number | Annulus area on the rod side (port b) [m^2]. |
+| `R` | Number | Specific gas constant [J/kg-K]. |
+| `T` | Number | Gas temperature, held isothermal [K]. |
+| `Va0` | Number | Chamber volume on side a [m^3]. |
+| `Vb0` | Number | Chamber volume on side b [m^3]. |
+| `Pa0` | Number | Initial pressure in chamber a [Pa]. |
+| `Pb0` | Number | Initial pressure in chamber b [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

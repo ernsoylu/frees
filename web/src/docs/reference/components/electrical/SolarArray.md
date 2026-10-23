@@ -28,12 +28,12 @@ SolarArray inst(Isc_ref, Gref, Voc, epsV)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Isc_ref` | Number |
-| `Gref` | Number |
-| `Voc` | Number |
-| `epsV` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Isc_ref` | Number | Short-circuit current at the reference irradiance [A]. |
+| `Gref` | Number | Reference irradiance [W/m^2]. |
+| `Voc` | Number | Open-circuit voltage [V]. |
+| `epsV` | Number | Smoothing width of the knee near Voc [V]. |
 
 ## Constitutive Equations
 

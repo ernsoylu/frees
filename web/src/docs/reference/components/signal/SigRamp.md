@@ -28,11 +28,11 @@ SigRamp inst(t0, slope, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `t0` | Number |
-| `slope` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `t0` | Number | Ramp start time, in seconds of `time`. |
+| `slope` | Number | Ramp rate, in the signal’s units per second. |
+| `eps` | Number | Smoothing width of the hinge at t0, in seconds of `time`. |
 
 ## Constitutive Equations
 

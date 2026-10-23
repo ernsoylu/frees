@@ -28,19 +28,19 @@ FuelCellStackCooled inst(ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T, fluid$
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ncells` | Number |
-| `area` | Number |
-| `i0` | Number |
-| `ilim` | Number |
-| `Rohm` | Number |
-| `E0` | Number |
-| `alpha` | Number |
-| `Eth` | Number |
-| `T` | Number |
-| `fluid$` | String |
-| `UA` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ncells` | Number | Cells in the stack [-]. |
+| `area` | Number | Active area per cell [m^2]. |
+| `i0` | Number | Exchange current density [A/m^2]. |
+| `ilim` | Number | Limiting current density [A/m^2]. |
+| `Rohm` | Number | Area-specific ohmic resistance [ohm-m^2]. |
+| `E0` | Number | Reversible cell voltage [V]. |
+| `alpha` | Number | Charge-transfer coefficient [-]. |
+| `Eth` | Number | Thermoneutral cell voltage [V]. |
+| `T` | Number | Stack temperature [K]. |
+| `fluid$` | String | Coolant name (e.g. Water, EG50). |
+| `UA` | Number | Stack-to-coolant conductance [W/K]. |
 
 ## Constitutive Equations
 

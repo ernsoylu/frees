@@ -28,11 +28,11 @@ ChargerCCCV inst(Imax, Vmax, epsV)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Imax` | Number |
-| `Vmax` | Number |
-| `epsV` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Imax` | Number | Constant-current charging limit [A]. |
+| `Vmax` | Number | Constant-voltage set point [V]. |
+| `epsV` | Number | Smoothing width of the CC-to-CV taper [V]. |
 
 ## Constitutive Equations
 

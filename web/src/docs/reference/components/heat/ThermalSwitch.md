@@ -28,11 +28,11 @@ ThermalSwitch inst(G, Ton, band)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `G` | Number |
-| `Ton` | Number |
-| `band` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `G` | Number | Conductance when engaged [W/K]. |
+| `Ton` | Number | Trip temperature, sensed on side a [K]. |
+| `band` | Number | Width of the engagement transition [K]. |
 
 ## Constitutive Equations
 

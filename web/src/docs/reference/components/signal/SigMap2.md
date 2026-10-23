@@ -28,9 +28,9 @@ SigMap2 inst(map$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `map$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `map$` | String | Name of the TABLE or FUNCTION of two arguments, (in1, in2) → out. |
 
 ## Constitutive Equations
 

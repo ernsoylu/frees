@@ -28,9 +28,9 @@ Lever inst(ratio)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ratio` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ratio` | Number | Velocity ratio, v_a / v_b [-]. |
 
 ## Constitutive Equations
 

@@ -28,17 +28,17 @@ WheelBrakeThermal inst(Tmax, eps, C, hA, T_amb, T_fade, k_fade, eps_f, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Tmax` | Number |
-| `eps` | Number |
-| `C` | Number |
-| `hA` | Number |
-| `T_amb` | Number |
-| `T_fade` | Number |
-| `k_fade` | Number |
-| `eps_f` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Tmax` | Number | Braking torque at full command, before fade [N-m]. |
+| `eps` | Number | Slip-speed smoothing width [rad/s]. |
+| `C` | Number | Rotor heat capacity [J/K]. |
+| `hA` | Number | Rotor-to-ambient conductance [W/K]. |
+| `T_amb` | Number | Ambient temperature [K]. |
+| `T_fade` | Number | Rotor temperature where fade sets in [K]. |
+| `k_fade` | Number | Fraction of torque lost once fully faded [-]. |
+| `eps_f` | Number | Width of the fade transition [K]. |
+| `T0` | Number | Initial rotor temperature [K]. |
 
 ## Constitutive Equations
 

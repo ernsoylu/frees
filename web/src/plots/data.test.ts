@@ -19,3 +19,12 @@ it('renders Y-only histogram samples and aligns array mesh channels by index', (
   expect(buildFigure(spec, { ...inputs, variables })!.data[0]).toMatchObject({ type: 'mesh3d', x: [0, 1, 0], y: [0, 0, 1], z: [2, 3, 4] })
   expect(buildFigure(spec, { ...inputs, variables: variables.filter((v) => v.name !== 'z[2]') })!.data).toHaveLength(0)
 })
+
+it('labels a shared Y unit only when every series knows it', () => {
+  const spec = { ...newPlotSpec('xy', 'units'), source: { kind: 'table' as const, tableId: 'table', data: 'inputs' as const } }
+  spec.xy = { xVar: 'x', yVars: ['p', 'q'] }
+  const tableRows = [1, 2].map((i) => ({ id: String(i), values: { x: String(i), p: String(i), q: String(i) } }))
+  const yTitle = (tableUnits: Record<string, string>) => JSON.stringify((buildFigure(spec, { ...inputs, tableRows, tableUnits })!.layout as { yaxis: unknown }).yaxis)
+  expect(yTitle({ x: 's', p: 'kPa' })).not.toContain('kPa')
+  expect(yTitle({ x: 's', p: 'kPa', q: 'kPa' })).toContain('[kPa]')
+})

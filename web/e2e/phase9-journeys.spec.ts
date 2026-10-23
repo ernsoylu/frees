@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 
 async function dismissWelcomeIfOpen(page: Page) {
@@ -160,5 +161,114 @@ connect(R2.b, V1.n, G1.port)
 
     // Restore desktop viewport
     await page.setViewportSize({ width: 1280, height: 800 })
+  })
+})
+
+// Cross-layer acceptance: one model through every layer a user touches —
+// editor, worker solve, plot, file export, project file, reopen — with non-SI
+// inputs, and an edit that must invalidate the solved result it follows.
+test.describe('Cross-layer journey', () => {
+  // The FS Access pickers cannot be driven headlessly; without them the app
+  // takes its own fallbacks — an anchor download to save, the hidden file
+  // input to open — which is exactly what Firefox and Safari users get.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      delete (window as { showSaveFilePicker?: unknown }).showSaveFilePicker
+      delete (window as { showOpenFilePicker?: unknown }).showOpenFilePicker
+    })
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: 'Solve', exact: true })).toBeVisible({ timeout: 60_000 })
+    await dismissWelcomeIfOpen(page)
+  })
+
+  test('Journey 4: edit → solve → plot → export → save → reopen', async ({ page }, testInfo) => {
+    const doc = `k = 0.05 [1/s]
+T_amb = 20 [C]
+DYNAMIC cooldown (time = 0 .. 60, points = 61)
+  der(T) = -k * (T - T_amb)
+  T(0) = 90 [C]
+END
+PLOT 'Cooling curve'
+  kind = xy
+  x = time
+  y = T
+END
+T_end = FinalValue('T')
+`
+    await setEditorContent(page, doc)
+    await page.getByRole('button', { name: 'Solve', exact: true }).click()
+    await expect(page.getByText(/^Solved$/).first()).toBeVisible({ timeout: 30_000 })
+
+    // Plot: the code-declared plot is listed and renders a trace.
+    await page.getByRole('button', { name: 'Plots windows' }).click()
+    await page.getByRole('menuitem', { name: /Cooling curve/ }).click()
+    const chart = page.locator('.js-plotly-plot').first()
+    await expect(chart.locator('.scatterlayer .trace').first()).toBeVisible({ timeout: 30_000 })
+
+    // Export: the figure leaves as a real SVG file.
+    await page.getByRole('button', { name: 'Export', exact: true }).first().click()
+    const [svg] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('menuitem', { name: 'SVG (vector)' }).click(),
+    ])
+    const svgPath = testInfo.outputPath('cooling.svg')
+    await svg.saveAs(svgPath)
+    expect(readFileSync(svgPath, 'utf-8')).toContain('<svg')
+
+    // Save: the project file carries the document verbatim.
+    await page.getByRole('button', { name: 'File', exact: true }).click()
+    const [saved] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('menuitem', { name: 'Save Project', exact: true }).click(),
+    ])
+    const projectPath = testInfo.outputPath('journey.frees')
+    await saved.saveAs(projectPath)
+    expect(JSON.parse(readFileSync(projectPath, 'utf-8')).text).toContain("PLOT 'Cooling curve'")
+
+    // New project: the solved model is gone.
+    await page.getByRole('button', { name: 'File', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'New Project', exact: true }).click()
+    await expect(page.locator('.cm-content')).not.toContainText('Cooling curve')
+
+    // Reopen: the file restores the document and solves to the same answer.
+    await page.getByRole('button', { name: 'File', exact: true }).click()
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.getByRole('menuitem', { name: 'Open Project…', exact: true }).click(),
+    ])
+    await chooser.setFiles(projectPath)
+    await expect(page.locator('.cm-content')).toContainText("PLOT 'Cooling curve'", { timeout: 15_000 })
+    await page.getByRole('button', { name: 'Solve', exact: true }).click()
+    await expect(page.getByText(/^Solved$/).first()).toBeVisible({ timeout: 30_000 })
+  })
+
+  test('Journey 5: an edit during an in-flight solve discards the stale result', async ({ page }) => {
+    // About a second of integration in chromium: long enough to land an edit
+    // while the worker is still busy.
+    const slow = `k = 0.05 [1/s]
+DYNAMIC slow (time = 0 .. 100, points = 2000, method = ode45, rtol = 1e-10)
+  der(x) = -k*x + sin(50 [1/s]*time)
+  x(0) = 1
+END
+x_end = FinalValue('x')
+`
+    await setEditorContent(page, slow)
+    const solve = page.getByRole('button', { name: 'Solve', exact: true })
+    await solve.click()
+    await expect(solve).toHaveAttribute('aria-busy', 'true')
+    const editor = page.locator('.cm-content')
+    await editor.click()
+    await page.keyboard.press('Control+End')
+    await page.keyboard.insertText('y = 2\n')
+    await expect(solve).toHaveAttribute('aria-busy', 'true')
+
+    // The worker finishes for the old revision; nothing of it may surface.
+    await expect(solve).not.toHaveAttribute('aria-busy', 'true', { timeout: 60_000 })
+    await page.waitForTimeout(500)
+    await expect(page.getByText(/^Solved/)).toHaveCount(0)
+
+    // The edited document solves on its own.
+    await solve.click()
+    await expect(page.getByText(/^Solved$/).first()).toBeVisible({ timeout: 60_000 })
   })
 })

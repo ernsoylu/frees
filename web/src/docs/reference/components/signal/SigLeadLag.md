@@ -28,11 +28,11 @@ SigLeadLag inst(T1, T2, y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `T1` | Number |
-| `T2` | Number |
-| `y0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `T1` | Number | Lead (numerator) time constant [s]. |
+| `T2` | Number | Lag (denominator) time constant [s]. |
+| `y0` | Number | Initial state, in the signal’s units. |
 
 ## Constitutive Equations
 

@@ -30,12 +30,12 @@ ApparatusDewPointCoil inst(T_adp, BF, domain$, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `T_adp` | Number |
-| `BF` | Number |
-| `domain$` | String |
-| `model$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `T_adp` | Number | Apparatus dew point (`wet`) or mean surface temperature (`dry`) [K]. |
+| `BF` | Number | Bypass factor [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
+| `model$` | String | Variant — `wet` (default) or `dry`. |
 
 ## Constitutive Equations
 

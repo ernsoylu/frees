@@ -28,9 +28,9 @@ SigBias inst(b)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `b` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `b` | Number | Offset added to the input, in the signal’s units. |
 
 ## Constitutive Equations
 

@@ -75,7 +75,7 @@ end
 // Signal-commanded servo valve: ISO 6358 flow with the sonic conductance
 // scaled by the spool command u.sig ∈ [0,1] — the closed-loop counterpart of
 // PneumaticServoValve.
-function [in, out, u] = PneumaticServoValveCmd(fluid$, Cmax, b, domain$ = gas)
+function [in, out, u] = PneumaticServoValveCmd(fluid$, Cmax [m^3/s-Pa], b [-], domain$ = gas)
 port(in)
 port(out)
 port(u)
@@ -88,7 +88,7 @@ end
 // ── Fluid-power pro set (Wave 5) ───────────────────────────────────────────
 
 // Pneumatic check valve: ISO 6358 flow gated to forward ΔP.
-function [in, out] = PneumaticCheckValve(fluid$, C, b, eps, domain$ = gas)
+function [in, out] = PneumaticCheckValve(fluid$, C [m^3/s-Pa], b [-], eps [Pa], domain$ = gas)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -100,7 +100,7 @@ end
 
 // 3/2 directional valve: the spool command u blends supply->work (u·C) against
 // work->exhaust ((1-u)·C), both ISO 6358 paths — u=1 pressurizes, u=0 vents.
-function [sup_in, work, exh_out, u] = PneumaticValve32(fluid$, C, b, domain$ = gas)
+function [sup_in, work, exh_out, u] = PneumaticValve32(fluid$, C [m^3/s-Pa], b [-], domain$ = gas)
 port(sup_in)
 port(work)
 port(exh_out)
@@ -118,7 +118,7 @@ end
 
 // 5/2 directional valve: u=1 routes supply->A and B->exhaust; u=0 routes
 // supply->B and A->exhaust (four ISO 6358 paths, complementary commands).
-function [sup_in, wa, wb, ea_out, eb_out, u] = PneumaticValve52(fluid$, C, b, domain$ = gas)
+function [sup_in, wa, wb, ea_out, eb_out, u] = PneumaticValve52(fluid$, C [m^3/s-Pa], b [-], domain$ = gas)
 port(sup_in)
 port(wa)
 port(wb)
@@ -145,7 +145,7 @@ end
 
 // Double-acting pneumatic cylinder: two isothermal ideal-gas chambers at
 // mid-stroke volumes and the rod force balance.
-function [a, b, rod] = PneumaticDoubleActingCylinder(Aa, Ab, R, T, Va0, Vb0, Pa0, Pb0, domain$ = gas)
+function [a, b, rod] = PneumaticDoubleActingCylinder(Aa [m^2], Ab [m^2], R [J/kg-K], T [K], Va0 [m^3], Vb0 [m^3], Pa0 [Pa], Pb0 [Pa], domain$ = gas)
 port(a)
 port(b)
 port(rod)
@@ -159,7 +159,7 @@ end
 // Thermal gas volume: mass AND temperature states with a heat port — the
 // non-isothermal receiver (charge heating, blow-down cooling); pressure from
 // the ideal-gas law.
-function [in, out, wall] = PneumaticThermalVolume(fluid$, V, R, cv, cp, m0, T0, domain$ = gas)
+function [in, out, wall] = PneumaticThermalVolume(fluid$, V [m^3], R [J/kg-K], cv [J/kg-K], cp [J/kg-K], m0 [kg], T0 [K], domain$ = gas)
 port(in)
 port(out)
 port(wall)
@@ -176,7 +176,7 @@ end
 
 // Vacuum ejector: motive ISO 6358 flow entrains ER times its mass flow from
 // the suction port; mass and energy mix exactly at the exhaust.
-function [sup_in, suc_in, exh_out] = VacuumEjector(fluid$, C, b, ER, domain$ = gas)
+function [sup_in, suc_in, exh_out] = VacuumEjector(fluid$, C [m^3/s-Pa], b [-], ER [-], domain$ = gas)
 port(sup_in)
 port(suc_in)
 port(exh_out)
@@ -200,7 +200,7 @@ end
 
 // Anode recirculation: the supply ejector entrains stack return (H2 loop) —
 // the VacuumEjector law as a named balance-of-plant stage (direct equations).
-function [sup_in, ret_in, out] = AnodeRecirc(fluid$, C, b, ER, domain$ = gas)
+function [sup_in, ret_in, out] = AnodeRecirc(fluid$, C [m^3/s-Pa], b [-], ER [-], domain$ = gas)
 port(sup_in)
 port(ret_in)
 port(out)

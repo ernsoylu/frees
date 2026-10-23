@@ -28,9 +28,9 @@ RackPinion inst(r)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `r` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `r` | Number | Pinion pitch radius [m]. |
 
 ## Constitutive Equations
 

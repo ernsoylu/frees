@@ -28,10 +28,10 @@ ClutchCmd inst(Tmax, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Tmax` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Tmax` | Number | Transmissible torque at full command [N-m]. |
+| `eps` | Number | Slip-speed smoothing width [rad/s]. |
 
 ## Constitutive Equations
 

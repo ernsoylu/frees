@@ -28,12 +28,12 @@ CamFollower inst(m, kspring, x0, v0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `m` | Number |
-| `kspring` | Number |
-| `x0` | Number |
-| `v0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `m` | Number | Follower mass [kg]. |
+| `kspring` | Number | Return-spring stiffness [N/m]. |
+| `x0` | Number | Initial spring deflection [m]. |
+| `v0` | Number | Initial follower velocity [m/s]. |
 
 ## Constitutive Equations
 

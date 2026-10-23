@@ -30,19 +30,19 @@ HydraulicThermalVolume inst(V, rho, cp_o, beta, hA, P0, T0, Pvap, eps_c, model$,
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `V` | Number |
-| `rho` | Number |
-| `cp_o` | Number |
-| `beta` | Number |
-| `hA` | Number |
-| `P0` | Number |
-| `T0` | Number |
-| `Pvap` | Number |
-| `eps_c` | Number |
-| `model$` | String |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `V` | Number | Volume [m^3]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `cp_o` | Number | Oil specific heat [J/kg-K]. |
+| `beta` | Number | Oil bulk modulus [Pa]. |
+| `hA` | Number | Oil-to-wall conductance [W/K]. |
+| `P0` | Number | Initial pressure [Pa]. |
+| `T0` | Number | Initial oil temperature [K]. |
+| `Pvap` | Number | Vapour pressure where the bulk modulus collapses (`cav`) [Pa]. |
+| `eps_c` | Number | Width of the cavitation transition (`cav`) [Pa]. |
+| `model$` | String | Variant — `stiff` (default) or `cav`. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

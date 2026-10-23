@@ -30,14 +30,14 @@ RadiantPanel inst(A, C, n, eps_dT, W_room, P_room)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `A` | Number |
-| `C` | Number |
-| `n` | Number |
-| `eps_dT` | Number |
-| `W_room` | Number |
-| `P_room` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `A` | Number | Panel area [m^2]. |
+| `C` | Number | Panel output coefficient [W/m^2-K]. |
+| `n` | Number | Output exponent on the temperature difference [-]. |
+| `eps_dT` | Number | Regularization of the temperature difference near zero [K]. |
+| `W_room` | Number | Room humidity ratio, for the dew-point margin [-]. |
+| `P_room` | Number | Room pressure, for the dew-point margin [Pa]. |
 
 ## Constitutive Equations
 

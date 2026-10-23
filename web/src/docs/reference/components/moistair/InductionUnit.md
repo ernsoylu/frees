@@ -30,11 +30,11 @@ InductionUnit inst(ratio, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ratio` | Number |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ratio` | Number | Induced-to-primary mass flow ratio [-]. |
+| `eps` | Number | Coil effectiveness on the induced air against the wall temperature [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

@@ -30,13 +30,13 @@ FanCoilUnit inst(K, foul, dP, eta, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `K` | Number |
-| `foul` | Number |
-| `dP` | Number |
-| `eta` | Number |
-| `eps` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `K` | Number | Clean-filter resistance, Δp per (mass flow)² [Pa-s^2/kg^2]. |
+| `foul` | Number | Filter fouling multiplier (1 = clean) [-]. |
+| `dP` | Number | Fan pressure rise [Pa]. |
+| `eta` | Number | Fan efficiency [-]. |
+| `eps` | Number | Coil effectiveness against the wall temperature [-]. |
 
 ## Constitutive Equations
 

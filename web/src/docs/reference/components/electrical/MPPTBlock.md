@@ -28,9 +28,9 @@ MPPTBlock inst(vmp$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `vmp$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `vmp$` | String | Name of the table mapping irradiance to the maximum-power-point voltage. |
 
 ## Constitutive Equations
 

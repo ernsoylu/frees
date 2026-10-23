@@ -30,16 +30,16 @@ MultiZoneWall inst(h_a, h_b, U, A, C1, C2, T10, T20)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `h_a` | Number |
-| `h_b` | Number |
-| `U` | Number |
-| `A` | Number |
-| `C1` | Number |
-| `C2` | Number |
-| `T10` | Number |
-| `T20` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `h_a` | Number | Film coefficient on side a [W/m^2-K]. |
+| `h_b` | Number | Film coefficient on side b [W/m^2-K]. |
+| `U` | Number | Conductance between the two face masses, per area [W/m^2-K]. |
+| `A` | Number | Wall area [m^2]. |
+| `C1` | Number | Heat capacity of face 1 (side a) [J/K]. |
+| `C2` | Number | Heat capacity of face 2 (side b) [J/K]. |
+| `T10` | Number | Initial temperature of face 1 [K]. |
+| `T20` | Number | Initial temperature of face 2 [K]. |
 
 ## Constitutive Equations
 

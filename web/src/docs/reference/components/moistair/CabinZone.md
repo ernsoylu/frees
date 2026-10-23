@@ -30,16 +30,16 @@ CabinZone inst(Vz, T0, W0, n_occ, q_sens, mw_occ, Q_aux, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Vz` | Number |
-| `T0` | Number |
-| `W0` | Number |
-| `n_occ` | Number |
-| `q_sens` | Number |
-| `mw_occ` | Number |
-| `Q_aux` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Vz` | Number | Zone air volume [m^3]. |
+| `T0` | Number | Initial zone temperature [K]. |
+| `W0` | Number | Initial zone humidity ratio [-]. |
+| `n_occ` | Number | Number of occupants [-]. |
+| `q_sens` | Number | Sensible heat per occupant [W]. |
+| `mw_occ` | Number | Moisture release per occupant [kg/s]. |
+| `Q_aux` | Number | Other internal sensible gains [W]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

@@ -28,10 +28,10 @@ SigSaturation inst(lo, hi)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `lo` | Number |
-| `hi` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `lo` | Number | Lower limit, in the signal’s units. |
+| `hi` | Number | Upper limit, in the signal’s units. |
 
 ## Constitutive Equations
 

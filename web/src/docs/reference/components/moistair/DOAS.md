@@ -30,13 +30,13 @@ DOAS inst(eff_h, eff_w, T_adp, BF, Q_reheat)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eff_h` | Number |
-| `eff_w` | Number |
-| `T_adp` | Number |
-| `BF` | Number |
-| `Q_reheat` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eff_h` | Number | Energy-recovery wheel enthalpy effectiveness [-]. |
+| `eff_w` | Number | Energy-recovery wheel moisture effectiveness [-]. |
+| `T_adp` | Number | Cooling-coil apparatus dew point [K]. |
+| `BF` | Number | Cooling-coil bypass factor [-]. |
+| `Q_reheat` | Number | Reheat-coil duty [W]. |
 
 ## Constitutive Equations
 

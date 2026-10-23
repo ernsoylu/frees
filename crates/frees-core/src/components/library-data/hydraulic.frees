@@ -72,7 +72,7 @@ end
 
 // Signal-commanded proportional valve: spool command u.sig ∈ [0,1] scales the
 // orifice CdA — the closed-loop counterpart of HydraulicValve.
-function [in, out, u] = HydraulicValveCmd(CdA_max, rho, domain$ = oil)
+function [in, out, u] = HydraulicValveCmd(CdA_max [m^2], rho [kg/m^3], domain$ = oil)
 port(in)
 port(out)
 port(u)
@@ -84,7 +84,7 @@ end
 // ── Fluid-power pro set (Wave 5) ───────────────────────────────────────────
 
 // Check valve: square-law orifice gated smoothly to forward ΔP (width eps).
-function [in, out] = HydraulicCheckValve(CdA, rho, eps, domain$ = oil)
+function [in, out] = HydraulicCheckValve(CdA [m^2], rho [kg/m^3], eps [Pa], domain$ = oil)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -97,7 +97,7 @@ end
 // Pilot-operated check valve: a pilot pressure (ratio rp) can hold the poppet
 // open against reverse ΔP — the load-holding valve. The pilot port draws no
 // flow.
-function [in, out, pilot] = HydraulicPilotCheckValve(CdA, rho, rp, eps, domain$ = oil)
+function [in, out, pilot] = HydraulicPilotCheckValve(CdA [m^2], rho [kg/m^3], rp [-], eps [Pa], domain$ = oil)
 port(in)
 port(out)
 port(pilot)
@@ -111,7 +111,7 @@ end
 
 // Gas-charged accumulator: precharge P0 filling gas volume V0; the oil drives
 // the gas polytropically (P·V^γ = P0·V0^γ) with the gas volume as the state.
-function [port] = HydraulicAccumulator(P0, V0, gamma, rho, Vg0, domain$ = oil)
+function [port] = HydraulicAccumulator(P0 [Pa], V0 [m^3], gamma [-], rho [kg/m^3], Vg0 [m^3], domain$ = oil)
 port(port)
   der(Vg)  = -port.mdot / rho
   init(Vg) = Vg0
@@ -120,7 +120,7 @@ end
 
 // Fixed-displacement motor: the exact dual of HydraulicPump (volumetric slip
 // divides the flow, mechanical efficiency multiplies the torque).
-function [in, out, shaft] = HydraulicMotor(disp, rho, eta_v, eta_m, domain$ = oil)
+function [in, out, shaft] = HydraulicMotor(disp [m^3], rho [kg/m^3], eta_v [-], eta_m [-], domain$ = oil)
 port(in)
 port(out)
 port(shaft)
@@ -133,7 +133,7 @@ end
 
 // Standalone bulk-modulus volume (the hydraulic C-node): der(P) from the net
 // flow against the oil stiffness beta.
-function [in, out] = HydraulicVolume(V, beta, rho, P0, domain$ = oil)
+function [in, out] = HydraulicVolume(V [m^3], beta [Pa], rho [kg/m^3], P0 [Pa], domain$ = oil)
 port(in)
 port(out)
   out.P      = in.P
@@ -144,7 +144,7 @@ end
 
 // Hydraulic line with Darcy friction on the oil kinematic viscosity
 // (laminar-turbulent via the Colebrook friction factor, sign-safe).
-function [in, out] = HydraulicPipe(rho, nu, L, D, rough, domain$ = oil)
+function [in, out] = HydraulicPipe(rho [kg/m^3], nu [m^2/s], L [m], D [m], rough [m], domain$ = oil)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -158,7 +158,7 @@ end
 
 // Ideal pressure-compensated flow control: holds the set volumetric flow
 // regardless of ΔP (within authority — rate it against the circuit).
-function [in, out] = HydraulicFlowControl(Qset, rho, domain$ = oil)
+function [in, out] = HydraulicFlowControl(Qset [m^3/s], rho [kg/m^3], domain$ = oil)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -168,7 +168,7 @@ end
 
 // Ideal spool flow divider: forces the flow split frac/(1-frac) regardless of
 // the branch loads; the inlet pressure is the power-conserving mix.
-function [in, outa, outb] = HydraulicFlowDivider(frac, domain$ = oil)
+function [in, outa, outb] = HydraulicFlowDivider(frac [-], domain$ = oil)
 port(in)
 port(outa)
 port(outb)
@@ -181,7 +181,7 @@ end
 
 // Sequence valve: passes flow to the secondary circuit only above the primary
 // pressure setpoint (tanh gate).
-function [in, out] = HydraulicSequenceValve(Pset, CdA, rho, eps, domain$ = oil)
+function [in, out] = HydraulicSequenceValve(Pset [Pa], CdA [m^2], rho [kg/m^3], eps [Pa], domain$ = oil)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -193,7 +193,7 @@ end
 // Double-acting cylinder: two bulk-modulus chambers (piston/rod areas Aa, Ab)
 // and the rod force balance. Chamber volumes are taken at mid-stroke (Va0,
 // Vb0) — the standard lumped rung.
-function [a, b, rod] = HydraulicDoubleActingCylinder(Aa, Ab, rho, beta, Va0, Vb0, Pa0, Pb0, domain$ = oil)
+function [a, b, rod] = HydraulicDoubleActingCylinder(Aa [m^2], Ab [m^2], rho [kg/m^3], beta [Pa], Va0 [m^3], Vb0 [m^3], Pa0 [Pa], Pb0 [Pa], domain$ = oil)
 port(a)
 port(b)
 port(rod)
@@ -206,7 +206,7 @@ end
 
 // Generic K-factor resistance (bend, tee, sudden expansion — set K from the
 // standard flow-network loss correlations).
-function [in, out] = HydraulicResistance(K, rho, D, domain$ = oil)
+function [in, out] = HydraulicResistance(K [-], rho [kg/m^3], D [m], domain$ = oil)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -222,7 +222,7 @@ end
 // Servo valve with 2nd-order spool dynamics: the spool position tracks the
 // command through (wn, zeta) and gates the odd-symmetric square-law flow —
 // the dynamic rung above HydraulicValveCmd.
-function [in, out, u] = ServoValveDynamic(CdA_max, rho, wn, zeta, xs0, domain$ = oil)
+function [in, out, u] = ServoValveDynamic(CdA_max [m^2], rho [kg/m^3], wn [rad/s], zeta [-], xs0 [-], domain$ = oil)
 port(in)
 port(out)
 port(u)
@@ -238,7 +238,7 @@ end
 // Counterbalance (overcenter) valve: opens on the spring-referenced blend of
 // load pressure and pilot assist (ratio R_p), then meters with the square
 // law — controlled load lowering.
-function [in, out, pilot] = CounterbalanceValve(CdA_max, rho, P_set, R_p, eps_o, domain$ = oil)
+function [in, out, pilot] = CounterbalanceValve(CdA_max [m^2], rho [kg/m^3], P_set [Pa], R_p [-], eps_o [Pa], domain$ = oil)
 port(in)
 port(out)
 port(pilot)
@@ -252,7 +252,7 @@ end
 // Load-sensing pump: the displacement fraction integrates the compensator
 // error (LS pressure + margin vs outlet), soft-clamped to 0..1 by a logistic;
 // delivery is the effective displacement at the drive speed.
-function [in, out, ls] = LoadSensingPump(rho, Dv, w_p, dP_margin, tau, d0, domain$ = oil)
+function [in, out, ls] = LoadSensingPump(rho [kg/m^3], Dv [m^3], w_p [rad/s], dP_margin [Pa], tau [s], d0 [-], domain$ = oil)
 port(in)
 port(out)
 port(ls)
@@ -269,7 +269,7 @@ end
 // thermal-hydraulic node for warm-up and cooling-loop studies. The cav
 // variant collapses the effective bulk modulus as pressure approaches vapor
 // (aeration/cavitation clamp).
-function [in, out, wall] = HydraulicThermalVolume(V, rho, cp_o, beta, hA, P0, T0, Pvap, eps_c, model$ = stiff, domain$ = oil)
+function [in, out, wall] = HydraulicThermalVolume(V [m^3], rho [kg/m^3], cp_o [J/kg-K], beta [Pa], hA [W/K], P0 [Pa], T0 [K], Pvap [Pa], eps_c [Pa], model$ = stiff, domain$ = oil)
 port(in)
 port(out)
 port(wall)

@@ -28,13 +28,13 @@ RadiationTwoSurface inst(e1, e2, A1, A2, F12)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `e1` | Number |
-| `e2` | Number |
-| `A1` | Number |
-| `A2` | Number |
-| `F12` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `e1` | Number | Emissivity of surface 1 [-]. |
+| `e2` | Number | Emissivity of surface 2 [-]. |
+| `A1` | Number | Area of surface 1 [m^2]. |
+| `A2` | Number | Area of surface 2 [m^2]. |
+| `F12` | Number | View factor from surface 1 to surface 2 [-]. |
 
 ## Constitutive Equations
 

@@ -28,10 +28,10 @@ MoistAirDamper inst(u, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `u` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `u` | Number | Fraction of the inflow sent to outa, 0 to 1 [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

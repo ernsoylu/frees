@@ -30,13 +30,13 @@ LiquidTank inst(fluid$, m, UA, T0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `m` | Number |
-| `UA` | Number |
-| `T0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Liquid name (e.g. Water, EG50). |
+| `m` | Number | Liquid mass held in the tank [kg]. |
+| `UA` | Number | Tank-to-wall conductance [W/K]. |
+| `T0` | Number | Initial tank temperature [K]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

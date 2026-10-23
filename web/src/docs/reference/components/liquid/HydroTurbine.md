@@ -28,13 +28,13 @@ HydroTurbine inst(fluid$, rho, eta$, epsw, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `rho` | Number |
-| `eta$` | String |
-| `epsw` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Liquid name (e.g. Water, EG50). |
+| `rho` | Number | Liquid density [kg/m^3]. |
+| `eta$` | String | Name of the efficiency table, mass flow → η. |
+| `epsw` | Number | Regularization added to the shaft speed so torque stays finite at rest [rad/s]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

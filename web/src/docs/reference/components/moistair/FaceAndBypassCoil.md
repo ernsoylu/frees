@@ -30,11 +30,11 @@ FaceAndBypassCoil inst(u_face, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `u_face` | Number |
-| `eps` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `u_face` | Number | Fraction of the air sent across the coil face [-]. |
+| `eps` | Number | Coil effectiveness against the wall temperature [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

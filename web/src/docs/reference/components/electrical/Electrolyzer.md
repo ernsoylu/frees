@@ -28,16 +28,16 @@ Electrolyzer inst(ncells, area, i0, Rohm, E0, alpha, Eth, T)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `ncells` | Number |
-| `area` | Number |
-| `i0` | Number |
-| `Rohm` | Number |
-| `E0` | Number |
-| `alpha` | Number |
-| `Eth` | Number |
-| `T` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `ncells` | Number | Cells in the stack [-]. |
+| `area` | Number | Active area per cell [m^2]. |
+| `i0` | Number | Exchange current density [A/m^2]. |
+| `Rohm` | Number | Area-specific ohmic resistance [ohm-m^2]. |
+| `E0` | Number | Reversible cell voltage [V]. |
+| `alpha` | Number | Charge-transfer coefficient [-]. |
+| `Eth` | Number | Thermoneutral cell voltage [V]. |
+| `T` | Number | Stack temperature [K]. |
 
 ## Constitutive Equations
 

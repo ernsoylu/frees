@@ -95,7 +95,7 @@ end
 
 // Blower: fixed pressure rise dP with motor+aero inefficiency heating the
 // stream (shaft power = V̇·ΔP/η, all of it ends up in the air).
-function [in, out] = MoistAirFan(dP, eta, domain$ = moistair)
+function [in, out] = MoistAirFan(dP [Pa], eta [-], domain$ = moistair)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -109,7 +109,7 @@ end
 
 // Diverting damper: routes fraction u of the air to outa, the rest to outb
 // (both riders carried).
-function [in, outa, outb] = MoistAirDamper(u, domain$ = moistair)
+function [in, outa, outb] = MoistAirDamper(u [-], domain$ = moistair)
 port(in)
 port(outa)
 port(outb)
@@ -127,7 +127,7 @@ end
 // saturation with effectiveness eff (eff=1 reaches the adiabatic-saturation
 // state, W directly from the (h, P, R=1) property call — no implicit outlet
 // temperature to iterate).
-function [in, out] = EvaporativeCooler(eff, domain$ = moistair)
+function [in, out] = EvaporativeCooler(eff [-], domain$ = moistair)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -141,7 +141,7 @@ end
 // STATES, occupant sensible/moisture loads, a solar/auxiliary heat input, and
 // a wall heat port (couple it to ThermalMass walls or an evaporator AirCoil).
 // Ventilation air flows through (in → out at the zone state).
-function [in, out, wall] = CabinZone(Vz, T0, W0, n_occ, q_sens, mw_occ, Q_aux, domain$ = moistair)
+function [in, out, wall] = CabinZone(Vz [m^3], T0 [K], W0 [-], n_occ [-], q_sens [W], mw_occ [kg/s], Q_aux [W], domain$ = moistair)
 port(in)
 port(out)
 port(wall)
@@ -165,7 +165,7 @@ end
 // Membrane humidifier: effectiveness exchange of BOTH enthalpy and moisture
 // between a wet (cathode exhaust) and a dry (supply) stream; water and energy
 // balances close exactly on the dry-air basis.
-function [dry_in, dry_out, wet_in, wet_out] = MembraneHumidifier(eff_h, eff_w, domain$ = moistair)
+function [dry_in, dry_out, wet_in, wet_out] = MembraneHumidifier(eff_h [-], eff_w [-], domain$ = moistair)
 port(dry_in)
 port(dry_out)
 port(wet_in)
@@ -185,7 +185,7 @@ end
 
 // Humid-air duct: Darcy friction pressure drop on the total (moist) mass flow;
 // composition and enthalpy pass through.
-function [in, out] = MoistAirDuct(L, D, rough, mu_a, domain$ = moistair)
+function [in, out] = MoistAirDuct(L [m], D [m], rough [m], mu_a [Pa-s], domain$ = moistair)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -201,7 +201,7 @@ end
 
 // Air filter: quadratic loss with a fouling multiplier (foul = 1 clean; scale
 // it up as the filter loads — fan-energy studies).
-function [in, out] = AirFilter(K, foul, domain$ = moistair)
+function [in, out] = AirFilter(K [Pa-s^2/kg^2], foul [-], domain$ = moistair)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -212,7 +212,7 @@ end
 
 // Diffuser/recovery section: converts velocity head to static pressure with a
 // recovery efficiency between inlet area A1 and outlet area A2.
-function [in, out] = Diffuser(A1, A2, eta_rec, domain$ = moistair)
+function [in, out] = Diffuser(A1 [m^2], A2 [m^2], eta_rec [-], domain$ = moistair)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -227,7 +227,7 @@ end
 // the supply flow directly (u in 0..1 of mdot_max) and the reheat command adds
 // coil heat. Like a speed source, it imposes flow and leaves the pressures to
 // the neighbouring plenum/zone volumes.
-function [in, out, u, ur] = VAVBox(mdot_max, Qr_max, domain$ = moistair)
+function [in, out, u, ur] = VAVBox(mdot_max [kg/s], Qr_max [W], domain$ = moistair)
 port(in)
 port(out)
 port(u)
@@ -242,7 +242,7 @@ end
 // moisture between exhaust and supply streams; water and energy balances
 // close exactly on the dry-air basis (same exchange math as the membrane
 // humidifier, wheel-rated effectivenesses).
-function [sup_in, sup_out, exh_in, exh_out] = EnthalpyWheel(eff_h, eff_w, domain$ = moistair)
+function [sup_in, sup_out, exh_in, exh_out] = EnthalpyWheel(eff_h [-], eff_w [-], domain$ = moistair)
 port(sup_in)
 port(sup_out)
 port(exh_in)
@@ -259,7 +259,7 @@ end
 
 // Infiltration: pressure-driven leakage path (power-law crack flow, C1-smooth
 // odd law) between two humid-air nodes — zone to ambient, zone to zone.
-function [in, out] = Infiltration(C_inf, n_exp, eps, domain$ = moistair)
+function [in, out] = Infiltration(C_inf [kg/s-Pa], n_exp [-], eps [Pa], domain$ = moistair)
 port(in)
 port(out)
   dP       = in.P - out.P
@@ -271,7 +271,7 @@ end
 
 // Air-handling unit: mixing box + filter + cooling coil + reheat coil + supply
 // fan in one block (all stateless stages, replaceable by editing the source).
-function [ret_in, oa_in, sup_out] = AHU(Kf, foul, Tc, Qh, dPfan, eta_fan)
+function [ret_in, oa_in, sup_out] = AHU(Kf [Pa-s^2/kg^2], foul [-], Tc [K], Qh [W], dPfan [Pa], eta_fan [-])
 port(ret_in)
 port(oa_in)
 port(sup_out)
@@ -322,7 +322,7 @@ end
 // supply fan must be oversized by. What leaks out of the supply side joins the
 // exhaust, so the moisture and energy balances close over the whole device
 // rather than per stream.
-function [sup_in, sup_out, exh_in, exh_out] = SensibleAirToAirHX(eff, eatr, oacf, domain$ = moistair)
+function [sup_in, sup_out, exh_in, exh_out] = SensibleAirToAirHX(eff [-], eatr [-], oacf [-], domain$ = moistair)
 port(sup_in)
 port(sup_out)
 port(exh_in)
@@ -362,7 +362,7 @@ end
 // contactor has no regeneration port to take the gap against.)
 // Moisture and energy leave on the regeneration stream; both balances close on
 // the dry-air basis.
-function [proc_in, proc_out, reg_in, reg_out] = DesiccantWheel(eff_L, W_eq, f_carry, domain$ = moistair)
+function [proc_in, proc_out, reg_in, reg_out] = DesiccantWheel(eff_L [-], W_eq [-], f_carry [-], domain$ = moistair)
 port(proc_in)
 port(proc_out)
 port(reg_in)
@@ -386,7 +386,7 @@ end
 // efficiency, typically 60–80%: the primary approaches the secondary's ENTERING
 // WET BULB, not its dry bulb, which is why indirect cooling still works in
 // climates where the dry-bulb approach would be useless.
-function [pri_in, pri_out, sec_in, sec_out] = IndirectEvaporativeCooler(wbde, eff_sec, domain$ = moistair)
+function [pri_in, pri_out, sec_in, sec_out] = IndirectEvaporativeCooler(wbde [-], eff_sec [-], domain$ = moistair)
 port(pri_in)
 port(pri_out)
 port(sec_in)
@@ -414,7 +414,7 @@ end
 // The process slope is dh/dW = h_g of the injected steam, which is what makes
 // the line near-vertical on the chart — as opposed to the adiabatic humidifier,
 // which runs up a constant wet-bulb line.
-function [in, out] = SteamHumidifier(W_set, h_steam, domain$ = moistair)
+function [in, out] = SteamHumidifier(W_set [-], h_steam [J/kg], domain$ = moistair)
 port(in)
 port(out)
   out.mdot = in.mdot
@@ -432,7 +432,7 @@ end
 // the water temperature the beam condenses onto the room, which is the failure
 // mode that makes a DOAS (drying the ventilation air upstream) a requirement
 // rather than a preference. margin_dp < 0 means the design is condensing.
-function [in, out, wall] = ChilledBeam(eps, domain$ = moistair)
+function [in, out, wall] = ChilledBeam(eps [-], domain$ = moistair)
 port(in)
 port(out)
 port(wall)
@@ -453,7 +453,7 @@ end
 // parallel boxes differ in whether the fan sees the mixed stream or only the
 // induced stream; both reduce to this mix-then-heat form for a psychrometric
 // design calculation.
-function [pri_in, ind_in, out] = FanPoweredBox(Q_fan, Q_reheat, domain$ = moistair)
+function [pri_in, ind_in, out] = FanPoweredBox(Q_fan [W], Q_reheat [W], domain$ = moistair)
 port(pri_in)
 port(ind_in)
 port(out)
@@ -497,7 +497,7 @@ end
 // that humidifies. The `dry` rung is the coil in that regime, and `margin_adp`
 // (entering dew point less T_adp) is the number that says which rung a design
 // belongs on rather than leaving it to judgement.
-function [in, out] = ApparatusDewPointCoil(T_adp, BF, domain$ = moistair, model$ = wet)
+function [in, out] = ApparatusDewPointCoil(T_adp [K], BF [-], domain$ = moistair, model$ = wet)
 port(in)
 port(out)
   out.mdot   = in.mdot
@@ -541,7 +541,7 @@ end
 // face the leaving air sits far from saturation on the mixing line between the
 // coil condition and the entering state — a leaving state no single-path coil
 // model produces.
-function [in, out, wall] = FaceAndBypassCoil(u_face, eps, domain$ = moistair)
+function [in, out, wall] = FaceAndBypassCoil(u_face [-], eps [-], domain$ = moistair)
 port(in)
 port(out)
 port(wall)
@@ -574,7 +574,7 @@ end
 // the enthalpy the precool leg gave up rather than on a second effectiveness —
 // a temperature-effectiveness pair would leave a small residual loop energy
 // that is precisely what a passive device cannot have.
-function [pre_in, pre_out, re_in, re_out] = HeatPipeWrapAround(eff, domain$ = moistair)
+function [pre_in, pre_out, re_in, re_out] = HeatPipeWrapAround(eff [-], domain$ = moistair)
 port(pre_in)
 port(pre_out)
 port(re_in)
@@ -624,7 +624,7 @@ end
 // therefore the factor the supply fan has to be oversized by. Both are required
 // rather than defaulted: leaving them implicit is the omission this component
 // exists to prevent.
-function [sup_in, sup_out, exh_in, exh_out] = TotalEnergyExchanger(eps_s, eps_L, eatr, oacf, domain$ = moistair)
+function [sup_in, sup_out, exh_in, exh_out] = TotalEnergyExchanger(eps_s [-], eps_L [-], eatr [-], oacf [-], domain$ = moistair)
 port(sup_in)
 port(sup_out)
 port(exh_in)
@@ -674,7 +674,7 @@ end
 //
 // The absorbed water leaves with the solution carrying its own liquid enthalpy,
 // so that term is taken out of the air rather than left in the balance.
-function [in, out, wall] = LiquidDesiccantContactor(eff_L, W_eq, eps_T, f_excess, domain$ = moistair, model$ = cooled)
+function [in, out, wall] = LiquidDesiccantContactor(eff_L [-], W_eq [-], eps_T [-], f_excess [-], domain$ = moistair, model$ = cooled)
 port(in)
 port(out)
 port(wall)
@@ -717,7 +717,7 @@ end
 // direct stage could. That is the whole point of staging — a direct cooler can
 // never go below the entering wet bulb, so the way to go lower is to move the
 // wet bulb first.
-function [pri_in, pri_out, sec_in, sec_out] = IndirectDirectEvaporativeCooler(wbde, eff_sec, eff_dir)
+function [pri_in, pri_out, sec_in, sec_out] = IndirectDirectEvaporativeCooler(wbde [-], eff_sec [-], eff_dir [-])
 port(pri_in)
 port(pri_out)
 port(sec_in)
@@ -750,7 +750,7 @@ end
 // f_oa is exported because the operating-hours question — how much of the year
 // the economizer actually runs against real weather — is the reason to model one
 // at all.
-function [oa_in, ret_in, mix_out] = Economizer(mdot_sup, f_min, lim, band, domain$ = moistair, model$ = drybulb)
+function [oa_in, ret_in, mix_out] = Economizer(mdot_sup [kg/s], f_min [-], lim, band, domain$ = moistair, model$ = drybulb)
 port(oa_in)
 port(ret_in)
 port(mix_out)
@@ -793,7 +793,7 @@ end
 //
 // The passive counterpart is `ChilledBeam`: no primary air, no induction, room
 // air moved by buoyancy alone.
-function [pri_in, ind_in, out, wall] = InductionUnit(ratio, eps, domain$ = moistair)
+function [pri_in, ind_in, out, wall] = InductionUnit(ratio [-], eps [-], domain$ = moistair)
 port(pri_in)
 port(ind_in)
 port(out)
@@ -826,7 +826,7 @@ end
 // Unlike a chilled beam or an induction unit, a fan coil is built WITH a drain
 // pan, so its coil may run wet and carry latent duty. That is the reason a fan
 // coil can serve a space with no upstream dew-point control and a beam cannot.
-function [in, out, wall] = FanCoilUnit(K, foul, dP, eta, eps)
+function [in, out, wall] = FanCoilUnit(K [Pa-s^2/kg^2], foul [-], dP [Pa], eta [-], eps [-])
 port(in)
 port(out)
 port(wall)
@@ -856,7 +856,7 @@ end
 // SENSIBLE ONLY, with no drain anywhere: `margin_dp` against the design room
 // state is not a diagnostic here but the sizing constraint. A chilled ceiling
 // below the room dew point rains on the occupants.
-function [zone, wall] = RadiantPanel(A, C, n, eps_dT, W_room, P_room)
+function [zone, wall] = RadiantPanel(A [m^2], C [W/m^2-K], n [-], eps_dT [K], W_room [-], P_room [Pa])
 port(zone)
 port(wall)
   dT        = zone.T - wall.T
@@ -880,7 +880,7 @@ end
 // chilled beams, radiant panels, fan coils run dry, VRF. A tool that assumes one
 // coil serves both loads cannot represent this at all, and neither can a
 // terminal-unit model without a dew-point margin to check against.
-function [oa_in, sup_out, exh_in, exh_out] = DOAS(eff_h, eff_w, T_adp, BF, Q_reheat)
+function [oa_in, sup_out, exh_in, exh_out] = DOAS(eff_h [-], eff_w [-], T_adp [K], BF [-], Q_reheat [W])
 port(oa_in)
 port(sup_out)
 port(exh_in)

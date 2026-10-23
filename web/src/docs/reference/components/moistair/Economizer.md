@@ -30,14 +30,14 @@ Economizer inst(mdot_sup, f_min, lim, band, domain$, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `mdot_sup` | Number |
-| `f_min` | Number |
-| `lim` | Number |
-| `band` | Number |
-| `domain$` | String |
-| `model$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `mdot_sup` | Number | Supply air mass flow [kg/s]. |
+| `f_min` | Number | Minimum outdoor-air fraction [-]. |
+| `lim` | Number | High limit — outdoor dry-bulb temperature in K (`drybulb`) or outdoor enthalpy in J/kg (`enthalpy`); left untyped because the unit depends on the variant. |
+| `band` | Number | Width of the switching transitions, in the unit of `lim`. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
+| `model$` | String | Variant — `drybulb` (default) or `enthalpy`. |
 
 ## Constitutive Equations
 

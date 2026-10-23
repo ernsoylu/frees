@@ -30,11 +30,11 @@ SteamHumidifier inst(W_set, h_steam, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `W_set` | Number |
-| `h_steam` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `W_set` | Number | Leaving humidity ratio set point [-]. |
+| `h_steam` | Number | Enthalpy of the injected steam [J/kg]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

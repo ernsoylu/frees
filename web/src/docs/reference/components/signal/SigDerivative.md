@@ -30,10 +30,10 @@ SigDerivative inst(tau, y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `tau` | Number |
-| `y0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `tau` | Number | Derivative filter time constant [s]. |
+| `y0` | Number | Initial filter state, in the input’s units. |
 
 ## Constitutive Equations
 

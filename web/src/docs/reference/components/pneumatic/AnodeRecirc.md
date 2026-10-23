@@ -28,13 +28,13 @@ AnodeRecirc inst(fluid$, C, b, ER, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `C` | Number |
-| `b` | Number |
-| `ER` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| `C` | Number | ISO 6358 sonic conductance [m^3/s-Pa]. |
+| `b` | Number | ISO 6358 critical pressure ratio [-]. |
+| `ER` | Number | Entrainment ratio, recirculated per supplied mass flow [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

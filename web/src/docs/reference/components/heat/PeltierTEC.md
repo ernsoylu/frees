@@ -30,11 +30,11 @@ PeltierTEC inst(Sab, Rel, Kth)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Sab` | Number |
-| `Rel` | Number |
-| `Kth` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Sab` | Number | Module Seebeck coefficient [V/K]. |
+| `Rel` | Number | Module electrical resistance [ohm]. |
+| `Kth` | Number | Module thermal conductance [W/K]. |
 
 ## Constitutive Equations
 

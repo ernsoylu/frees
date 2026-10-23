@@ -28,10 +28,10 @@ HarnessResistance inst(R20, alphaT)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `R20` | Number |
-| `alphaT` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `R20` | Number | Resistance at 20 °C [ohm]. |
+| `alphaT` | Number | Temperature coefficient of resistance [1/K]. |
 
 ## Constitutive Equations
 

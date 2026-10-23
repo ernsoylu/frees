@@ -64,7 +64,7 @@ end
 // Longitudinal tire (Pacejka-lite magic formula on longitudinal slip): bridges
 // the wheel (rotational) to the vehicle (translational). Fx = Fz·D·sin(C·atan(B·s)),
 // s = (rω − v)/(|v| + epsv). Drive torque reaction r·Fx loads the wheel.
-function [wheel, veh] = TireLongitudinal(r, Fz, B, C, D, epsv)
+function [wheel, veh] = TireLongitudinal(r [m], Fz [N], B [-], C [-], D [-], epsv [m/s])
 port(wheel)
 port(veh)
   v_w       = r * wheel.w
@@ -76,7 +76,7 @@ end
 
 // Longitudinal vehicle body: mass with aero drag, rolling resistance
 // (tanh-signed) and grade load; velocity is the state.
-function [port] = VehicleBody(m, Cd, Af, rhoA, Crr, grade, v0)
+function [port] = VehicleBody(m [kg], Cd [-], Af [m^2], rhoA [kg/m^3], Crr [-], grade [rad], v0 [m/s])
 port(port)
   F_res = 0.5 * rhoA * Cd * Af * port.vel * abs(port.vel) + m * 9.80665 [m/s^2] * (Crr * tanh(port.vel / 0.1 [m/s]) + sin(grade))
   der(port.vel)  = (port.f - F_res) / m
@@ -92,7 +92,7 @@ end
 
 // Open differential: splits torque evenly, averages speeds through the final
 // ratio (power-conserving).
-function [in, left, right] = Differential(ratio)
+function [in, left, right] = Differential(ratio [-])
 port(in)
 port(left)
 port(right)
@@ -104,7 +104,7 @@ end
 // Quarter-car suspension: sprung/unsprung masses, suspension spring+damper,
 // tire stiffness — a composite of the translational primitives; excite `road`
 // with a speed source or drive-cycle profile.
-function [road] = QuarterCar(ms, mu, ks, cs, kt)
+function [road] = QuarterCar(ms [kg], mu [kg], ks [N/m], cs [N-s/m], kt [N/m])
 port(road)
   TransMass   MS(m=ms, v0=0)
   TransMass   MU(m=mu, v0=0)
@@ -121,7 +121,7 @@ end
 
 // Scheduled gearbox: the ratio arrives on a signal port (a shift schedule via
 // SigMap on speed, or any command source); torque transfer with efficiency.
-function [in, out, u] = GearboxScheduled(eta)
+function [in, out, u] = GearboxScheduled(eta [-])
 port(in)
 port(out)
 port(u)
@@ -131,7 +131,7 @@ end
 
 // Automatic transmission: torque converter + scheduled gearbox + a commanded
 // lockup clutch bridging pump and turbine (lock = 0 open, 1 locked).
-function [in, out, gear, lock] = AutomaticTransmission(Kmap$, TRmap$, eta, Tlock, eps)
+function [in, out, gear, lock] = AutomaticTransmission(Kmap$, TRmap$, eta [-], Tlock [N-m], eps [rad/s])
 port(in)
 port(out)
 port(gear)
@@ -149,7 +149,7 @@ end
 // Full Pacejka magic formula on longitudinal slip (B stiffness, C shape,
 // D peak, E curvature) — the fidelity rung above TireLongitudinal, which is
 // recovered exactly at E = 0.
-function [wheel, veh] = TirePacejka(r, Fz, B, C, D, E, epsv)
+function [wheel, veh] = TirePacejka(r [m], Fz [N], B [-], C [-], D [-], E [-], epsv [m/s])
 port(wheel)
 port(veh)
   v_w       = r * wheel.w
@@ -163,7 +163,7 @@ end
 // Road grade vs distance: the travelled distance integrates from the vehicle
 // speed and the grade (rad) is looked up from a profile TABLE over distance —
 // hilly-route load without scripting time profiles.
-function [port] = GradeProfile(m, g, map$, s0)
+function [port] = GradeProfile(m [kg], g [m/s^2], map$, s0 [m])
 port(port)
   der(s)  = port.vel
   init(s) = s0
@@ -175,7 +175,7 @@ end
 // is a C1 sigmoid in brick temperature. The gas-to-brick link is the exact
 // isothermal-wall effectiveness ε = 1 − exp(−UA/ṁc_p), so the gas never
 // leaves colder than the brick it heats.
-function [in, out] = CatalystLightOff(fluid$, C, UA, T50, k, q_exo, T0)
+function [in, out] = CatalystLightOff(fluid$, C [J/K], UA [W/K], T50 [K], k [K], q_exo [J/kg], T0 [K])
 port(in)
 port(out)
   T_g      = Temperature(fluid$, P=in.P, h=in.h)
@@ -195,7 +195,7 @@ end
 // whose outer face convects (hA) to the ambient heat port (underhood soak
 // studies). The convective link is what lets the ambient side be a plain
 // temperature source — the wall faces are states and must never be T-pinned.
-function [in, out, amb] = ExhaustPipeThermal(fluid$, UA, hA, C1, C2, R, T10, T20)
+function [in, out, amb] = ExhaustPipeThermal(fluid$, UA [W/K], hA [W/K], C1 [J/K], C2 [J/K], R [K/W], T10 [K], T20 [K])
 port(in)
 port(out)
 port(amb)
@@ -212,7 +212,7 @@ end
 // Power-split e-CVT: planetary with the engine on the carrier, MG1 on the sun
 // (speeder) and MG2 on the ring/output (torquer), both motors on one DC bus.
 // u1/u2 command the motor torques; heat collects both machines' losses.
-function [eng, out, sun, p, n, u1, u2, heat] = HybridPowerSplit(g, eff1$, eff2$, epsP)
+function [eng, out, sun, p, n, u1, u2, heat] = HybridPowerSplit(g [-], eff1$, eff2$, epsP [W])
 port(eng)
 port(out)
 port(sun)
@@ -239,7 +239,7 @@ end
 
 // Wind rotor: Cp(λ, pitch) from a 2-D map turns the swept-area wind power
 // into shaft torque; tip-speed ratio and torque are eps-regularized at rest.
-function [shaft, wind, pitch] = WindRotor(rho, R, cp$, epsv, epsw)
+function [shaft, wind, pitch] = WindRotor(rho [kg/m^3], R [m], cp$, epsv [m/s], epsw [rad/s])
 port(shaft)
 port(wind)
 port(pitch)

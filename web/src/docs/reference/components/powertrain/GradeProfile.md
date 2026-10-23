@@ -28,12 +28,12 @@ GradeProfile inst(m, g, map$, s0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `m` | Number |
-| `g` | Number |
-| `map$` | String |
-| `s0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `m` | Number | Vehicle mass [kg]. |
+| `g` | Number | Gravitational acceleration [m/s^2]. |
+| `map$` | String | Name of the TABLE or FUNCTION mapping distance in m to grade angle in rad. |
+| `s0` | Number | Initial distance along the route [m]. |
 
 ## Constitutive Equations
 

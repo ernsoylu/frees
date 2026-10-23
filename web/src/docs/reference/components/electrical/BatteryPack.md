@@ -30,19 +30,19 @@ BatteryPack inst(Ns, Np, ocv$, dudt$, R0ref, Tref, Ea, Q0, C_th, SOC0, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Ns` | Number |
-| `Np` | Number |
-| `ocv$` | String |
-| `dudt$` | String |
-| `R0ref` | Number |
-| `Tref` | Number |
-| `Ea` | Number |
-| `Q0` | Number |
-| `C_th` | Number |
-| `SOC0` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Ns` | Number | Cells in series [-]. |
+| `Np` | Number | Parallel strings [-]. |
+| `ocv$` | String | Name of the cell open-circuit-voltage table, SOC → V. |
+| `dudt$` | String | Name of the cell entropic-coefficient table, SOC → dU/dT in V/K. |
+| `R0ref` | Number | Cell ohmic resistance at the reference temperature [ohm]. |
+| `Tref` | Number | Reference temperature of R0ref [K]. |
+| `Ea` | Number | Arrhenius activation energy of the ohmic resistance [J/mol]. |
+| `Q0` | Number | Cell rated capacity in ampere-hours, as a bare number [-]. |
+| `C_th` | Number | Pack heat capacity [J/K]. |
+| `SOC0` | Number | Initial state of charge, 0 to 1 [-]. |
+| `T0` | Number | Initial pack temperature [K]. |
 
 ## Constitutive Equations
 

@@ -28,10 +28,10 @@ HydraulicFlowDivider inst(frac, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `frac` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `frac` | Number | Fraction of the inflow sent to outa [-]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

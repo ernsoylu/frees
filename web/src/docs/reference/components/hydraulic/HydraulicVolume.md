@@ -28,13 +28,13 @@ HydraulicVolume inst(V, beta, rho, P0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `V` | Number |
-| `beta` | Number |
-| `rho` | Number |
-| `P0` | Number |
-| `domain$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `V` | Number | Volume [m^3]. |
+| `beta` | Number | Oil bulk modulus [Pa]. |
+| `rho` | Number | Oil density [kg/m^3]. |
+| `P0` | Number | Initial pressure [Pa]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 

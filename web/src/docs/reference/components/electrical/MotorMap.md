@@ -30,10 +30,10 @@ MotorMap inst(eff$, epsP)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `eff$` | String |
-| `epsP` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eff$` | String | Name of the efficiency table, (ω, τ) → η. |
+| `epsP` | Number | Smoothing width of the motor/generator switch [W]. |
 
 ## Constitutive Equations
 

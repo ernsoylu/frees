@@ -28,16 +28,16 @@ IceStorageBrine inst(fluid$, UA, m, cp_p, L, Tm, dTm, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `fluid$` | String |
-| `UA` | Number |
-| `m` | Number |
-| `cp_p` | Number |
-| `L` | Number |
-| `Tm` | Number |
-| `dTm` | Number |
-| `T0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `fluid$` | String | Brine name (e.g. EG50). |
+| `UA` | Number | Brine-to-ice conductance [W/K]. |
+| `m` | Number | Mass of the storage medium [kg]. |
+| `cp_p` | Number | Sensible specific heat of the storage medium [J/kg-K]. |
+| `L` | Number | Latent heat of fusion [J/kg]. |
+| `Tm` | Number | Melting temperature [K]. |
+| `dTm` | Number | Width of the mushy zone [K]. |
+| `T0` | Number | Initial storage temperature [K]. |
 
 ## Constitutive Equations
 

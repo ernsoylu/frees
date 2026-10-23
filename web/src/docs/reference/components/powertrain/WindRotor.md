@@ -28,13 +28,13 @@ WindRotor inst(rho, R, cp$, epsv, epsw)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `rho` | Number |
-| `R` | Number |
-| `cp$` | String |
-| `epsv` | Number |
-| `epsw` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `rho` | Number | Air density [kg/m^3]. |
+| `R` | Number | Rotor radius [m]. |
+| `cp$` | String | Name of the power-coefficient table, (tip-speed ratio, pitch) → Cp. |
+| `epsv` | Number | Regularization added to the wind speed [m/s]. |
+| `epsw` | Number | Regularization added to the shaft speed [rad/s]. |
 
 ## Constitutive Equations
 

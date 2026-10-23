@@ -30,12 +30,12 @@ ZoneCO2 inst(Vz, c_amb, gen_occ, c0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `Vz` | Number |
-| `c_amb` | Number |
-| `gen_occ` | Number |
-| `c0` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `Vz` | Number | Zone air volume [m^3]. |
+| `c_amb` | Number | Ambient concentration, e.g. ppm or kg/m³. |
+| `gen_occ` | Number | Generation per occupant, in concentration × m³/s. |
+| `c0` | Number | Initial zone concentration, in the unit of c_amb. |
 
 ## Constitutive Equations
 

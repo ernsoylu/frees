@@ -2873,11 +2873,11 @@ EXVCmd inst(fluid$, CdA_max, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`CdA_max\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R1234yf). |
+| \`CdA_max\` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -2965,11 +2965,11 @@ HeaterCore inst(cool$, UA_cool, eps_air)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`cool$\` | String |
-| \`UA_cool\` | Number |
-| \`eps_air\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`cool$\` | String | Coolant name (e.g. EG50, Water). |
+| \`UA_cool\` | Number | Coolant-side conductance to the shared wall [W/K]. |
+| \`eps_air\` | Number | Air-side effectiveness against the wall temperature [-]. |
 
 ## Constitutive Equations
 
@@ -3054,11 +3054,11 @@ Radiator inst(cool$, UA_cool, eps_air)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`cool$\` | String |
-| \`UA_cool\` | Number |
-| \`eps_air\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`cool$\` | String | Coolant name (e.g. EG50, Water). |
+| \`UA_cool\` | Number | Coolant-side conductance to the shared wall [W/K]. |
+| \`eps_air\` | Number | Air-side effectiveness against the wall temperature [-]. |
 
 ## Constitutive Equations
 
@@ -3484,19 +3484,23 @@ BatteryCellMap inst(ocv$, dudt$, R0ref, Tref, Ea, Q0, C_th, SOC0, T0, k_age, mod
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ocv$\` | String |
-| \`dudt$\` | String |
-| \`R0ref\` | Number |
-| \`Tref\` | Number |
-| \`Ea\` | Number |
-| \`Q0\` | Number |
-| \`C_th\` | Number |
-| \`SOC0\` | Number |
-| \`T0\` | Number |
-| \`k_age\` | Number |
-| \`model$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ocv$\` | String | Name of the open-circuit-voltage table, SOC → V. |
+| \`dudt$\` | String | Name of the entropic-coefficient table, SOC → dU/dT in V/K. |
+| \`R0ref\` | Number | Ohmic resistance at the reference temperature [ohm]. |
+| \`Tref\` | Number | Reference temperature of R0ref [K]. |
+| \`Ea\` | Number | Arrhenius activation energy of the ohmic resistance [J/mol]. |
+| \`Q0\` | Number | Rated capacity in ampere-hours, as a bare number [-]. |
+| \`C_th\` | Number | Cell heat capacity [J/K]. |
+| \`SOC0\` | Number | Initial state of charge, 0 to 1 [-]. |
+| \`T0\` | Number | Initial cell temperature [K]. |
+| \`k_age\` | Number | Capacity lost per ampere-hour of throughput (\`aging\`, \`aging_cal\`) [-]. |
+| \`R1\` | Number | RC-branch resistance (\`rc_map\`) [ohm]. |
+| \`C1\` | Number | RC-branch capacitance (\`rc_map\`) [farad]. |
+| \`k_cal\` | Number | Calendar-fade rate prefactor (\`aging_cal\`) [1/s]. |
+| \`Ea_cal\` | Number | Calendar-fade activation energy (\`aging_cal\`) [J/mol]. |
+| \`model$\` | String | Variant — \`static\` (default), \`aging\`, \`rc_map\` or \`aging_cal\`. |
 
 ## Constitutive Equations
 
@@ -3617,19 +3621,19 @@ BatteryPack inst(Ns, Np, ocv$, dudt$, R0ref, Tref, Ea, Q0, C_th, SOC0, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Ns\` | Number |
-| \`Np\` | Number |
-| \`ocv$\` | String |
-| \`dudt$\` | String |
-| \`R0ref\` | Number |
-| \`Tref\` | Number |
-| \`Ea\` | Number |
-| \`Q0\` | Number |
-| \`C_th\` | Number |
-| \`SOC0\` | Number |
-| \`T0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Ns\` | Number | Cells in series [-]. |
+| \`Np\` | Number | Parallel strings [-]. |
+| \`ocv$\` | String | Name of the cell open-circuit-voltage table, SOC → V. |
+| \`dudt$\` | String | Name of the cell entropic-coefficient table, SOC → dU/dT in V/K. |
+| \`R0ref\` | Number | Cell ohmic resistance at the reference temperature [ohm]. |
+| \`Tref\` | Number | Reference temperature of R0ref [K]. |
+| \`Ea\` | Number | Arrhenius activation energy of the ohmic resistance [J/mol]. |
+| \`Q0\` | Number | Cell rated capacity in ampere-hours, as a bare number [-]. |
+| \`C_th\` | Number | Pack heat capacity [J/K]. |
+| \`SOC0\` | Number | Initial state of charge, 0 to 1 [-]. |
+| \`T0\` | Number | Initial pack temperature [K]. |
 
 ## Constitutive Equations
 
@@ -4059,11 +4063,11 @@ ChargerCCCV inst(Imax, Vmax, epsV)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Imax\` | Number |
-| \`Vmax\` | Number |
-| \`epsV\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Imax\` | Number | Constant-current charging limit [A]. |
+| \`Vmax\` | Number | Constant-voltage set point [V]. |
+| \`epsV\` | Number | Smoothing width of the CC-to-CV taper [V]. |
 
 ## Constitutive Equations
 
@@ -4261,11 +4265,11 @@ DCDCConverter inst(ratio, eta, epsP)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ratio\` | Number |
-| \`eta\` | Number |
-| \`epsP\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ratio\` | Number | Output-to-input voltage ratio [-]. |
+| \`eta\` | Number | Conversion efficiency [-]. |
+| \`epsP\` | Number | Smoothing width of the power-direction switch [W]. |
 
 ## Constitutive Equations
 
@@ -4566,16 +4570,16 @@ Electrolyzer inst(ncells, area, i0, Rohm, E0, alpha, Eth, T)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ncells\` | Number |
-| \`area\` | Number |
-| \`i0\` | Number |
-| \`Rohm\` | Number |
-| \`E0\` | Number |
-| \`alpha\` | Number |
-| \`Eth\` | Number |
-| \`T\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ncells\` | Number | Cells in the stack [-]. |
+| \`area\` | Number | Active area per cell [m^2]. |
+| \`i0\` | Number | Exchange current density [A/m^2]. |
+| \`Rohm\` | Number | Area-specific ohmic resistance [ohm-m^2]. |
+| \`E0\` | Number | Reversible cell voltage [V]. |
+| \`alpha\` | Number | Charge-transfer coefficient [-]. |
+| \`Eth\` | Number | Thermoneutral cell voltage [V]. |
+| \`T\` | Number | Stack temperature [K]. |
 
 ## Constitutive Equations
 
@@ -4704,18 +4708,18 @@ ElectrolyzerThermal inst(ncells, area, i0, Rohm, E0, alpha, Eth, T, fluid$, UA)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ncells\` | Number |
-| \`area\` | Number |
-| \`i0\` | Number |
-| \`Rohm\` | Number |
-| \`E0\` | Number |
-| \`alpha\` | Number |
-| \`Eth\` | Number |
-| \`T\` | Number |
-| \`fluid$\` | String |
-| \`UA\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ncells\` | Number | Cells in the stack [-]. |
+| \`area\` | Number | Active area per cell [m^2]. |
+| \`i0\` | Number | Exchange current density [A/m^2]. |
+| \`Rohm\` | Number | Area-specific ohmic resistance [ohm-m^2]. |
+| \`E0\` | Number | Reversible cell voltage [V]. |
+| \`alpha\` | Number | Charge-transfer coefficient [-]. |
+| \`Eth\` | Number | Thermoneutral cell voltage [V]. |
+| \`T\` | Number | Stack temperature [K]. |
+| \`fluid$\` | String | Coolant name (e.g. Water, EG50). |
+| \`UA\` | Number | Stack-to-coolant conductance [W/K]. |
 
 ## Constitutive Equations
 
@@ -4897,19 +4901,19 @@ FuelCellStackCooled inst(ncells, area, i0, ilim, Rohm, E0, alpha, Eth, T, fluid$
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ncells\` | Number |
-| \`area\` | Number |
-| \`i0\` | Number |
-| \`ilim\` | Number |
-| \`Rohm\` | Number |
-| \`E0\` | Number |
-| \`alpha\` | Number |
-| \`Eth\` | Number |
-| \`T\` | Number |
-| \`fluid$\` | String |
-| \`UA\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ncells\` | Number | Cells in the stack [-]. |
+| \`area\` | Number | Active area per cell [m^2]. |
+| \`i0\` | Number | Exchange current density [A/m^2]. |
+| \`ilim\` | Number | Limiting current density [A/m^2]. |
+| \`Rohm\` | Number | Area-specific ohmic resistance [ohm-m^2]. |
+| \`E0\` | Number | Reversible cell voltage [V]. |
+| \`alpha\` | Number | Charge-transfer coefficient [-]. |
+| \`Eth\` | Number | Thermoneutral cell voltage [V]. |
+| \`T\` | Number | Stack temperature [K]. |
+| \`fluid$\` | String | Coolant name (e.g. Water, EG50). |
+| \`UA\` | Number | Stack-to-coolant conductance [W/K]. |
 
 ## Constitutive Equations
 
@@ -5066,10 +5070,10 @@ HarnessResistance inst(R20, alphaT)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`R20\` | Number |
-| \`alphaT\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`R20\` | Number | Resistance at 20 °C [ohm]. |
+| \`alphaT\` | Number | Temperature coefficient of resistance [1/K]. |
 
 ## Constitutive Equations
 
@@ -5362,16 +5366,16 @@ InverterLoss inst(V0, r, Esw, fsw, Iref, Vref, Vnom, epsI)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`V0\` | Number |
-| \`r\` | Number |
-| \`Esw\` | Number |
-| \`fsw\` | Number |
-| \`Iref\` | Number |
-| \`Vref\` | Number |
-| \`Vnom\` | Number |
-| \`epsI\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`V0\` | Number | Switch threshold voltage drop [V]. |
+| \`r\` | Number | Conduction slope resistance [ohm]. |
+| \`Esw\` | Number | Switching energy per event at Iref and Vref [J]. |
+| \`fsw\` | Number | Switching frequency [Hz]. |
+| \`Iref\` | Number | Current at which Esw was measured [A]. |
+| \`Vref\` | Number | Voltage at which Esw was measured [V]. |
+| \`Vnom\` | Number | Operating DC-link voltage [V]. |
+| \`epsI\` | Number | Smoothing width of the current-direction switch [A]. |
 
 ## Constitutive Equations
 
@@ -5513,10 +5517,10 @@ MotorMap inst(eff$, epsP)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eff$\` | String |
-| \`epsP\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eff$\` | String | Name of the efficiency table, (ω, τ) → η. |
+| \`epsP\` | Number | Smoothing width of the motor/generator switch [W]. |
 
 ## Constitutive Equations
 
@@ -5659,9 +5663,9 @@ MPPTBlock inst(vmp$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`vmp$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`vmp$\` | String | Name of the table mapping irradiance to the maximum-power-point voltage. |
 
 ## Constitutive Equations
 
@@ -5833,15 +5837,15 @@ PVSingleDiode inst(Isc_ref, Gref, I0d, n_d, Vt, Rs, Rsh)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Isc_ref\` | Number |
-| \`Gref\` | Number |
-| \`I0d\` | Number |
-| \`n_d\` | Number |
-| \`Vt\` | Number |
-| \`Rs\` | Number |
-| \`Rsh\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Isc_ref\` | Number | Short-circuit current at the reference irradiance [A]. |
+| \`Gref\` | Number | Reference irradiance [W/m^2]. |
+| \`I0d\` | Number | Diode saturation current [A]. |
+| \`n_d\` | Number | Diode ideality factor [-]. |
+| \`Vt\` | Number | Thermal voltage of the series-connected cells [V]. |
+| \`Rs\` | Number | Series resistance [ohm]. |
+| \`Rsh\` | Number | Shunt resistance [ohm]. |
 
 ## Constitutive Equations
 
@@ -6008,12 +6012,12 @@ SolarArray inst(Isc_ref, Gref, Voc, epsV)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Isc_ref\` | Number |
-| \`Gref\` | Number |
-| \`Voc\` | Number |
-| \`epsV\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Isc_ref\` | Number | Short-circuit current at the reference irradiance [A]. |
+| \`Gref\` | Number | Reference irradiance [W/m^2]. |
+| \`Voc\` | Number | Open-circuit voltage [V]. |
+| \`epsV\` | Number | Smoothing width of the knee near Voc [V]. |
 
 ## Constitutive Equations
 
@@ -6138,11 +6142,11 @@ Supercapacitor inst(C, R_esr, V0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`C\` | Number |
-| \`R_esr\` | Number |
-| \`V0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`C\` | Number | Capacitance [farad]. |
+| \`R_esr\` | Number | Equivalent series resistance [ohm]. |
+| \`V0\` | Number | Initial capacitor voltage [V]. |
 
 ## Constitutive Equations
 
@@ -6221,12 +6225,12 @@ ThermalFuse inst(R0, Iblow, kR, epsI)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`R0\` | Number |
-| \`Iblow\` | Number |
-| \`kR\` | Number |
-| \`epsI\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`R0\` | Number | Intact resistance [ohm]. |
+| \`Iblow\` | Number | Blow current [A]. |
+| \`kR\` | Number | Fractional resistance rise once blown [-]. |
+| \`epsI\` | Number | Smoothing width of the blow transition [A]. |
 
 ## Constitutive Equations
 
@@ -6511,10 +6515,10 @@ AtmosphereSource inst(alt, mdot)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`alt\` | Number |
-| \`mdot\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`alt\` | Number | Geometric altitude of the 1976 standard atmosphere [m]. |
+| \`mdot\` | Number | Mass flow delivered [kg/s]. |
 
 ## Constitutive Equations
 
@@ -6661,12 +6665,12 @@ Combustor inst(mdot_f, LHV, eta_b, dP)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`mdot_f\` | Number |
-| \`LHV\` | Number |
-| \`eta_b\` | Number |
-| \`dP\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`mdot_f\` | Number | Fuel mass flow [kg/s]. |
+| \`LHV\` | Number | Fuel lower heating value [J/kg]. |
+| \`eta_b\` | Number | Combustion efficiency [-]. |
+| \`dP\` | Number | Pressure loss across the combustor [Pa]. |
 
 ## Constitutive Equations
 
@@ -6746,15 +6750,15 @@ CombustorSpecies inst(mdot_f, LHV, eta_b, dP, xC, yH, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`mdot_f\` | Number |
-| \`LHV\` | Number |
-| \`eta_b\` | Number |
-| \`dP\` | Number |
-| \`xC\` | Number |
-| \`yH\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`mdot_f\` | Number | Fuel mass flow [kg/s]. |
+| \`LHV\` | Number | Fuel lower heating value [J/kg]. |
+| \`eta_b\` | Number | Combustion efficiency [-]. |
+| \`dP\` | Number | Pressure loss across the combustor [Pa]. |
+| \`xC\` | Number | Carbon atoms per molecule of the CxHy fuel [-]. |
+| \`yH\` | Number | Hydrogen atoms per molecule of the CxHy fuel [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -7634,10 +7638,10 @@ HeatedDuct inst(fluid$, UA)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`UA\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Fluid name (e.g. Water, R134a, Air). |
+| \`UA\` | Number | Wall-to-stream conductance [W/K]. |
 
 ## Constitutive Equations
 
@@ -8046,13 +8050,13 @@ Propeller inst(Dp, rhoA, ct$, cpw$, epsn)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Dp\` | Number |
-| \`rhoA\` | Number |
-| \`ct$\` | String |
-| \`cpw$\` | String |
-| \`epsn\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Dp\` | Number | Propeller diameter [m]. |
+| \`rhoA\` | Number | Air density [kg/m^3]. |
+| \`ct$\` | String | Name of the thrust-coefficient table, advance ratio J → Ct. |
+| \`cpw$\` | String | Name of the power-coefficient table, advance ratio J → Cp. |
+| \`epsn\` | Number | Regularization added to n·D so J stays finite at rest [m/s]. |
 
 ## Constitutive Equations
 
@@ -8308,11 +8312,11 @@ Regenerator inst(hot$, cold$, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`hot$\` | String |
-| \`cold$\` | String |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`hot$\` | String | Hot-stream fluid name. |
+| \`cold$\` | String | Cold-stream fluid name. |
+| \`eps\` | Number | Effectiveness on the minimum capacity rate [-]. |
 
 ## Constitutive Equations
 
@@ -9051,11 +9055,11 @@ CellToPackThermal inst(Rcc, Cpl, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Rcc\` | Number |
-| \`Cpl\` | Number |
-| \`T0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Rcc\` | Number | Cell-to-plate contact resistance [K/W]. |
+| \`Cpl\` | Number | Cold-plate heat capacity [J/K]. |
+| \`T0\` | Number | Initial plate temperature [K]. |
 
 ## Constitutive Equations
 
@@ -9377,10 +9381,10 @@ HeatPipe inst(G, Qmax)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`G\` | Number |
-| \`Qmax\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`G\` | Number | Effective conductance below the transport limit [W/K]. |
+| \`Qmax\` | Number | Transport (capillary or sonic) limit [W]. |
 
 ## Constitutive Equations
 
@@ -9699,16 +9703,16 @@ MultiZoneWall inst(h_a, h_b, U, A, C1, C2, T10, T20)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`h_a\` | Number |
-| \`h_b\` | Number |
-| \`U\` | Number |
-| \`A\` | Number |
-| \`C1\` | Number |
-| \`C2\` | Number |
-| \`T10\` | Number |
-| \`T20\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`h_a\` | Number | Film coefficient on side a [W/m^2-K]. |
+| \`h_b\` | Number | Film coefficient on side b [W/m^2-K]. |
+| \`U\` | Number | Conductance between the two face masses, per area [W/m^2-K]. |
+| \`A\` | Number | Wall area [m^2]. |
+| \`C1\` | Number | Heat capacity of face 1 (side a) [J/K]. |
+| \`C2\` | Number | Heat capacity of face 2 (side b) [J/K]. |
+| \`T10\` | Number | Initial temperature of face 1 [K]. |
+| \`T20\` | Number | Initial temperature of face 2 [K]. |
 
 ## Constitutive Equations
 
@@ -9794,14 +9798,14 @@ PCMMass inst(m, cp, L, Tm, dTm, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`m\` | Number |
-| \`cp\` | Number |
-| \`L\` | Number |
-| \`Tm\` | Number |
-| \`dTm\` | Number |
-| \`T0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`m\` | Number | Mass of phase-change material [kg]. |
+| \`cp\` | Number | Sensible specific heat [J/kg-K]. |
+| \`L\` | Number | Latent heat of fusion [J/kg]. |
+| \`Tm\` | Number | Melting temperature [K]. |
+| \`dTm\` | Number | Width of the mushy zone [K]. |
+| \`T0\` | Number | Initial temperature [K]. |
 
 ## Constitutive Equations
 
@@ -9877,11 +9881,11 @@ PeltierTEC inst(Sab, Rel, Kth)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Sab\` | Number |
-| \`Rel\` | Number |
-| \`Kth\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Sab\` | Number | Module Seebeck coefficient [V/K]. |
+| \`Rel\` | Number | Module electrical resistance [ohm]. |
+| \`Kth\` | Number | Module thermal conductance [W/K]. |
 
 ## Constitutive Equations
 
@@ -10086,13 +10090,13 @@ RadiationTwoSurface inst(e1, e2, A1, A2, F12)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`e1\` | Number |
-| \`e2\` | Number |
-| \`A1\` | Number |
-| \`A2\` | Number |
-| \`F12\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`e1\` | Number | Emissivity of surface 1 [-]. |
+| \`e2\` | Number | Emissivity of surface 2 [-]. |
+| \`A1\` | Number | Area of surface 1 [m^2]. |
+| \`A2\` | Number | Area of surface 2 [m^2]. |
+| \`F12\` | Number | View factor from surface 1 to surface 2 [-]. |
 
 ## Constitutive Equations
 
@@ -10430,11 +10434,11 @@ ThermalSwitch inst(G, Ton, band)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`G\` | Number |
-| \`Ton\` | Number |
-| \`band\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`G\` | Number | Conductance when engaged [W/K]. |
+| \`Ton\` | Number | Trip temperature, sensed on side a [K]. |
+| \`band\` | Number | Width of the engagement transition [K]. |
 
 ## Constitutive Equations
 
@@ -10552,13 +10556,13 @@ WallRC inst(C1, C2, R, T10, T20)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`C1\` | Number |
-| \`C2\` | Number |
-| \`R\` | Number |
-| \`T10\` | Number |
-| \`T20\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`C1\` | Number | Heat capacity of node 1 (side a) [J/K]. |
+| \`C2\` | Number | Heat capacity of node 2 (side b) [J/K]. |
+| \`R\` | Number | Conduction resistance between the nodes [K/W]. |
+| \`T10\` | Number | Initial temperature of node 1 [K]. |
+| \`T20\` | Number | Initial temperature of node 2 [K]. |
 
 ## Constitutive Equations
 
@@ -10645,14 +10649,14 @@ CounterbalanceValve inst(CdA_max, rho, P_set, R_p, eps_o, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`CdA_max\` | Number |
-| \`rho\` | Number |
-| \`P_set\` | Number |
-| \`R_p\` | Number |
-| \`eps_o\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`CdA_max\` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`P_set\` | Number | Cracking pressure [Pa]. |
+| \`R_p\` | Number | Pilot area ratio [-]. |
+| \`eps_o\` | Number | Width of the opening transition [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -10733,14 +10737,14 @@ HydraulicAccumulator inst(P0, V0, gamma, rho, Vg0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`P0\` | Number |
-| \`V0\` | Number |
-| \`gamma\` | Number |
-| \`rho\` | Number |
-| \`Vg0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`P0\` | Number | Gas precharge pressure [Pa]. |
+| \`V0\` | Number | Gas volume at the precharge pressure [m^3]. |
+| \`gamma\` | Number | Polytropic exponent of the gas [-]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`Vg0\` | Number | Initial gas volume [m^3]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -10816,12 +10820,12 @@ HydraulicCheckValve inst(CdA, rho, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`CdA\` | Number |
-| \`rho\` | Number |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`CdA\` | Number | Open discharge coefficient times flow area [m^2]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`eps\` | Number | Width of the opening transition [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -11050,17 +11054,17 @@ HydraulicDoubleActingCylinder inst(Aa, Ab, rho, beta, Va0, Vb0, Pa0, Pb0, domain
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Aa\` | Number |
-| \`Ab\` | Number |
-| \`rho\` | Number |
-| \`beta\` | Number |
-| \`Va0\` | Number |
-| \`Vb0\` | Number |
-| \`Pa0\` | Number |
-| \`Pb0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Aa\` | Number | Piston area on the cap side (port a) [m^2]. |
+| \`Ab\` | Number | Annulus area on the rod side (port b) [m^2]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`beta\` | Number | Oil bulk modulus [Pa]. |
+| \`Va0\` | Number | Chamber volume on side a [m^3]. |
+| \`Vb0\` | Number | Chamber volume on side b [m^3]. |
+| \`Pa0\` | Number | Initial pressure in chamber a [Pa]. |
+| \`Pb0\` | Number | Initial pressure in chamber b [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -11146,11 +11150,11 @@ HydraulicFlowControl inst(Qset, rho, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Qset\` | Number |
-| \`rho\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Qset\` | Number | Regulated volume flow [m^3/s]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -11292,10 +11296,10 @@ HydraulicFlowDivider inst(frac, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`frac\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`frac\` | Number | Fraction of the inflow sent to outa [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -11439,13 +11443,13 @@ HydraulicMotor inst(disp, rho, eta_v, eta_m, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`disp\` | Number |
-| \`rho\` | Number |
-| \`eta_v\` | Number |
-| \`eta_m\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`disp\` | Number | Displacement per revolution [m^3]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`eta_v\` | Number | Volumetric efficiency [-]. |
+| \`eta_m\` | Number | Mechanical efficiency [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -11609,13 +11613,13 @@ HydraulicPilotCheckValve inst(CdA, rho, rp, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`CdA\` | Number |
-| \`rho\` | Number |
-| \`rp\` | Number |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`CdA\` | Number | Open discharge coefficient times flow area [m^2]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`rp\` | Number | Pilot area ratio [-]. |
+| \`eps\` | Number | Width of the opening transition [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -11698,14 +11702,14 @@ HydraulicPipe inst(rho, nu, L, D, rough, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`rho\` | Number |
-| \`nu\` | Number |
-| \`L\` | Number |
-| \`D\` | Number |
-| \`rough\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`nu\` | Number | Kinematic viscosity [m^2/s]. |
+| \`L\` | Number | Length [m]. |
+| \`D\` | Number | Inner diameter [m]. |
+| \`rough\` | Number | Absolute wall roughness [m]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -11938,12 +11942,12 @@ HydraulicResistance inst(K, rho, D, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`K\` | Number |
-| \`rho\` | Number |
-| \`D\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`K\` | Number | Loss coefficient on the dynamic pressure [-]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`D\` | Number | Reference diameter [m]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -12087,13 +12091,13 @@ HydraulicSequenceValve inst(Pset, CdA, rho, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Pset\` | Number |
-| \`CdA\` | Number |
-| \`rho\` | Number |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Pset\` | Number | Inlet pressure at which the valve opens [Pa]. |
+| \`CdA\` | Number | Open discharge coefficient times flow area [m^2]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`eps\` | Number | Width of the opening transition [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -12387,19 +12391,19 @@ HydraulicThermalVolume inst(V, rho, cp_o, beta, hA, P0, T0, Pvap, eps_c, model$,
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`V\` | Number |
-| \`rho\` | Number |
-| \`cp_o\` | Number |
-| \`beta\` | Number |
-| \`hA\` | Number |
-| \`P0\` | Number |
-| \`T0\` | Number |
-| \`Pvap\` | Number |
-| \`eps_c\` | Number |
-| \`model$\` | String |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`V\` | Number | Volume [m^3]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`cp_o\` | Number | Oil specific heat [J/kg-K]. |
+| \`beta\` | Number | Oil bulk modulus [Pa]. |
+| \`hA\` | Number | Oil-to-wall conductance [W/K]. |
+| \`P0\` | Number | Initial pressure [Pa]. |
+| \`T0\` | Number | Initial oil temperature [K]. |
+| \`Pvap\` | Number | Vapour pressure where the bulk modulus collapses (\`cav\`) [Pa]. |
+| \`eps_c\` | Number | Width of the cavitation transition (\`cav\`) [Pa]. |
+| \`model$\` | String | Variant — \`stiff\` (default) or \`cav\`. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -12591,11 +12595,11 @@ HydraulicValveCmd inst(CdA_max, rho, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`CdA_max\` | Number |
-| \`rho\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`CdA_max\` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -12674,13 +12678,13 @@ HydraulicVolume inst(V, beta, rho, P0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`V\` | Number |
-| \`beta\` | Number |
-| \`rho\` | Number |
-| \`P0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`V\` | Number | Volume [m^3]. |
+| \`beta\` | Number | Oil bulk modulus [Pa]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`P0\` | Number | Initial pressure [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -12763,15 +12767,15 @@ LoadSensingPump inst(rho, Dv, w_p, dP_margin, tau, d0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`rho\` | Number |
-| \`Dv\` | Number |
-| \`w_p\` | Number |
-| \`dP_margin\` | Number |
-| \`tau\` | Number |
-| \`d0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`Dv\` | Number | Displacement per revolution at full stroke [m^3]. |
+| \`w_p\` | Number | Shaft speed [rad/s]. |
+| \`dP_margin\` | Number | Margin held above the load-sense pressure [Pa]. |
+| \`tau\` | Number | Stroke-control time constant [s]. |
+| \`d0\` | Number | Initial stroke-control state [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -12934,14 +12938,14 @@ ServoValveDynamic inst(CdA_max, rho, wn, zeta, xs0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`CdA_max\` | Number |
-| \`rho\` | Number |
-| \`wn\` | Number |
-| \`zeta\` | Number |
-| \`xs0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`CdA_max\` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| \`rho\` | Number | Oil density [kg/m^3]. |
+| \`wn\` | Number | Spool natural frequency [rad/s]. |
+| \`zeta\` | Number | Spool damping ratio [-]. |
+| \`xs0\` | Number | Initial spool opening [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -13025,13 +13029,13 @@ CoolingTower inst(fluid$, eps_t, mdot_a, Patm, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`eps_t\` | Number |
-| \`mdot_a\` | Number |
-| \`Patm\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Liquid name (e.g. Water, EG50). |
+| \`eps_t\` | Number | Tower effectiveness on the enthalpy potential [-]. |
+| \`mdot_a\` | Number | Air mass flow [kg/s]. |
+| \`Patm\` | Number | Atmospheric pressure [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -13113,12 +13117,12 @@ GravityDrain inst(Cd, A_d, rho, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Cd\` | Number |
-| \`A_d\` | Number |
-| \`rho\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Cd\` | Number | Discharge coefficient [-]. |
+| \`A_d\` | Number | Drain flow area [m^2]. |
+| \`rho\` | Number | Liquid density [kg/m^3]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -13196,13 +13200,13 @@ HydroTurbine inst(fluid$, rho, eta$, epsw, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`rho\` | Number |
-| \`eta$\` | String |
-| \`epsw\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Liquid name (e.g. Water, EG50). |
+| \`rho\` | Number | Liquid density [kg/m^3]. |
+| \`eta$\` | String | Name of the efficiency table, mass flow → η. |
+| \`epsw\` | Number | Regularization added to the shaft speed so torque stays finite at rest [rad/s]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -13295,16 +13299,16 @@ IceStorageBrine inst(fluid$, UA, m, cp_p, L, Tm, dTm, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`UA\` | Number |
-| \`m\` | Number |
-| \`cp_p\` | Number |
-| \`L\` | Number |
-| \`Tm\` | Number |
-| \`dTm\` | Number |
-| \`T0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Brine name (e.g. EG50). |
+| \`UA\` | Number | Brine-to-ice conductance [W/K]. |
+| \`m\` | Number | Mass of the storage medium [kg]. |
+| \`cp_p\` | Number | Sensible specific heat of the storage medium [J/kg-K]. |
+| \`L\` | Number | Latent heat of fusion [J/kg]. |
+| \`Tm\` | Number | Melting temperature [K]. |
+| \`dTm\` | Number | Width of the mushy zone [K]. |
+| \`T0\` | Number | Initial storage temperature [K]. |
 
 ## Constitutive Equations
 
@@ -13382,12 +13386,12 @@ LiquidCheckValve inst(CdA, rho, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`CdA\` | Number |
-| \`rho\` | Number |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`CdA\` | Number | Open discharge coefficient times flow area [m^2]. |
+| \`rho\` | Number | Liquid density [kg/m^3]. |
+| \`eps\` | Number | Width of the opening transition [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -13598,10 +13602,10 @@ LiquidExpansionTank inst(P, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`P\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`P\` | Number | Pressure the tank holds at its port [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -14059,12 +14063,12 @@ LiquidPumpMap inst(rho, eta, map$, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`rho\` | Number |
-| \`eta\` | Number |
-| \`map$\` | String |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`rho\` | Number | Liquid density [kg/m^3]. |
+| \`eta\` | Number | Pump efficiency [-]. |
+| \`map$\` | String | Name of the head table, volume flow in m³/s → head in m. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -14364,13 +14368,13 @@ LiquidTank inst(fluid$, m, UA, T0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`m\` | Number |
-| \`UA\` | Number |
-| \`T0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Liquid name (e.g. Water, EG50). |
+| \`m\` | Number | Liquid mass held in the tank [kg]. |
+| \`UA\` | Number | Tank-to-wall conductance [W/K]. |
+| \`T0\` | Number | Initial tank temperature [K]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -14453,14 +14457,14 @@ LiquidThermostat inst(fluid$, CdA, rho, Topen, Tband, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`CdA\` | Number |
-| \`rho\` | Number |
-| \`Topen\` | Number |
-| \`Tband\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Liquid name (e.g. Water, EG50). |
+| \`CdA\` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| \`rho\` | Number | Liquid density [kg/m^3]. |
+| \`Topen\` | Number | Opening temperature [K]. |
+| \`Tband\` | Number | Width of the opening transition [K]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -14595,10 +14599,10 @@ LiquidThreeWayValve inst(u, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`u\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`u\` | Number | Fraction of the inflow sent to outa, 0 to 1 [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -14865,13 +14869,13 @@ OpenTank inst(A_t, P0, rho, L0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`A_t\` | Number |
-| \`P0\` | Number |
-| \`rho\` | Number |
-| \`L0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`A_t\` | Number | Tank cross-section [m^2]. |
+| \`P0\` | Number | Pressure on the free surface [Pa]. |
+| \`rho\` | Number | Liquid density [kg/m^3]. |
+| \`L0\` | Number | Initial liquid level [m]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -14954,18 +14958,18 @@ ThermalStorageTank inst(fluid$, m_node, cp_f, UA_loss, T_amb, kmix, T10, T20, T3
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`m_node\` | Number |
-| \`cp_f\` | Number |
-| \`UA_loss\` | Number |
-| \`T_amb\` | Number |
-| \`kmix\` | Number |
-| \`T10\` | Number |
-| \`T20\` | Number |
-| \`T30\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Liquid name (e.g. Water, EG50). |
+| \`m_node\` | Number | Liquid mass in each of the three nodes [kg]. |
+| \`cp_f\` | Number | Liquid specific heat [J/kg-K]. |
+| \`UA_loss\` | Number | Loss conductance of each node to ambient [W/K]. |
+| \`T_amb\` | Number | Ambient temperature [K]. |
+| \`kmix\` | Number | Mixing conductance between adjacent nodes [W/K]. |
+| \`T10\` | Number | Initial top-node temperature [K]. |
+| \`T20\` | Number | Initial middle-node temperature [K]. |
+| \`T30\` | Number | Initial bottom-node temperature [K]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -15051,10 +15055,10 @@ BeltDrive inst(ratio, eta)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ratio\` | Number |
-| \`eta\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ratio\` | Number | Speed ratio, ω_a / ω_b [-]. |
+| \`eta\` | Number | Transmission efficiency [-]. |
 
 ## Constitutive Equations
 
@@ -15192,10 +15196,10 @@ Brake inst(Tmax, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Tmax\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Tmax\` | Number | Braking torque at full command [N-m]. |
+| \`eps\` | Number | Slip-speed smoothing width [rad/s]. |
 
 ## Constitutive Equations
 
@@ -15334,10 +15338,10 @@ Cam inst(prof$, theta0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`prof$\` | String |
-| \`theta0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`prof$\` | String | Name of the lift table, cam angle in rad → lift in m. |
+| \`theta0\` | Number | Initial cam angle [rad]. |
 
 ## Constitutive Equations
 
@@ -15425,12 +15429,12 @@ CamFollower inst(m, kspring, x0, v0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`m\` | Number |
-| \`kspring\` | Number |
-| \`x0\` | Number |
-| \`v0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`m\` | Number | Follower mass [kg]. |
+| \`kspring\` | Number | Return-spring stiffness [N/m]. |
+| \`x0\` | Number | Initial spring deflection [m]. |
+| \`v0\` | Number | Initial follower velocity [m/s]. |
 
 ## Constitutive Equations
 
@@ -15588,10 +15592,10 @@ ClutchCmd inst(Tmax, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Tmax\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Tmax\` | Number | Transmissible torque at full command [N-m]. |
+| \`eps\` | Number | Slip-speed smoothing width [rad/s]. |
 
 ## Constitutive Equations
 
@@ -15672,13 +15676,13 @@ EndStop inst(gap, k, c, eps, x0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`gap\` | Number |
-| \`k\` | Number |
-| \`c\` | Number |
-| \`eps\` | Number |
-| \`x0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`gap\` | Number | Position where contact begins [m]. |
+| \`k\` | Number | Contact stiffness [N/m]. |
+| \`c\` | Number | Contact damping [N-s/m]. |
+| \`eps\` | Number | Smoothing width of the contact onset [m]. |
+| \`x0\` | Number | Initial position [m]. |
 
 ## Constitutive Equations
 
@@ -15837,10 +15841,10 @@ Freewheel inst(k, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`k\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`k\` | Number | Torque per unit overrun speed when engaged [N-m-s]. |
+| \`eps\` | Number | Smoothing width of the engagement [rad/s]. |
 
 ## Constitutive Equations
 
@@ -16164,9 +16168,9 @@ Lever inst(ratio)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ratio\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ratio\` | Number | Velocity ratio, v_a / v_b [-]. |
 
 ## Constitutive Equations
 
@@ -16450,9 +16454,9 @@ RackPinion inst(r)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`r\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`r\` | Number | Pinion pitch radius [m]. |
 
 ## Constitutive Equations
 
@@ -16745,9 +16749,9 @@ ScrewDrive inst(lead)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`lead\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`lead\` | Number | Axial travel per revolution [m]. |
 
 ## Constitutive Equations
 
@@ -17031,12 +17035,12 @@ TorsionalBacklash inst(k, half, eps, theta0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`k\` | Number |
-| \`half\` | Number |
-| \`eps\` | Number |
-| \`theta0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`k\` | Number | Torsional stiffness, per radian, once the gap closes [N-m]. |
+| \`half\` | Number | Half of the backlash gap [rad]. |
+| \`eps\` | Number | Smoothing width of the gap edges [rad]. |
+| \`theta0\` | Number | Initial twist [rad]. |
 
 ## Constitutive Equations
 
@@ -17343,10 +17347,10 @@ TransSpring inst(k, x0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`k\` | Number |
-| \`x0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`k\` | Number | Stiffness [N/m]. |
+| \`x0\` | Number | Initial deflection [m]. |
 
 ## Constitutive Equations
 
@@ -17426,17 +17430,17 @@ WheelBrakeThermal inst(Tmax, eps, C, hA, T_amb, T_fade, k_fade, eps_f, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Tmax\` | Number |
-| \`eps\` | Number |
-| \`C\` | Number |
-| \`hA\` | Number |
-| \`T_amb\` | Number |
-| \`T_fade\` | Number |
-| \`k_fade\` | Number |
-| \`eps_f\` | Number |
-| \`T0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Tmax\` | Number | Braking torque at full command, before fade [N-m]. |
+| \`eps\` | Number | Slip-speed smoothing width [rad/s]. |
+| \`C\` | Number | Rotor heat capacity [J/K]. |
+| \`hA\` | Number | Rotor-to-ambient conductance [W/K]. |
+| \`T_amb\` | Number | Ambient temperature [K]. |
+| \`T_fade\` | Number | Rotor temperature where fade sets in [K]. |
+| \`k_fade\` | Number | Fraction of torque lost once fully faded [-]. |
+| \`eps_f\` | Number | Width of the fade transition [K]. |
+| \`T0\` | Number | Initial rotor temperature [K]. |
 
 ## Constitutive Equations
 
@@ -17525,14 +17529,14 @@ AHU inst(Kf, foul, Tc, Qh, dPfan, eta_fan)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Kf\` | Number |
-| \`foul\` | Number |
-| \`Tc\` | Number |
-| \`Qh\` | Number |
-| \`dPfan\` | Number |
-| \`eta_fan\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Kf\` | Number | Clean-filter resistance, Δp per (mass flow)² [Pa-s^2/kg^2]. |
+| \`foul\` | Number | Filter fouling multiplier (1 = clean) [-]. |
+| \`Tc\` | Number | Cooling-coil leaving air temperature [K]. |
+| \`Qh\` | Number | Heating-coil duty [W]. |
+| \`dPfan\` | Number | Fan pressure rise [Pa]. |
+| \`eta_fan\` | Number | Fan efficiency [-]. |
 
 ## Constitutive Equations
 
@@ -17622,11 +17626,11 @@ AirFilter inst(K, foul, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`K\` | Number |
-| \`foul\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`K\` | Number | Clean-filter resistance, Δp per (mass flow)² [Pa-s^2/kg^2]. |
+| \`foul\` | Number | Fouling multiplier (1 = clean) [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -17706,12 +17710,12 @@ ApparatusDewPointCoil inst(T_adp, BF, domain$, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`T_adp\` | Number |
-| \`BF\` | Number |
-| \`domain$\` | String |
-| \`model$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`T_adp\` | Number | Apparatus dew point (\`wet\`) or mean surface temperature (\`dry\`) [K]. |
+| \`BF\` | Number | Bypass factor [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
+| \`model$\` | String | Variant — \`wet\` (default) or \`dry\`. |
 
 ## Constitutive Equations
 
@@ -17818,16 +17822,16 @@ CabinZone inst(Vz, T0, W0, n_occ, q_sens, mw_occ, Q_aux, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Vz\` | Number |
-| \`T0\` | Number |
-| \`W0\` | Number |
-| \`n_occ\` | Number |
-| \`q_sens\` | Number |
-| \`mw_occ\` | Number |
-| \`Q_aux\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Vz\` | Number | Zone air volume [m^3]. |
+| \`T0\` | Number | Initial zone temperature [K]. |
+| \`W0\` | Number | Initial zone humidity ratio [-]. |
+| \`n_occ\` | Number | Number of occupants [-]. |
+| \`q_sens\` | Number | Sensible heat per occupant [W]. |
+| \`mw_occ\` | Number | Moisture release per occupant [kg/s]. |
+| \`Q_aux\` | Number | Other internal sensible gains [W]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -17928,10 +17932,10 @@ ChilledBeam inst(eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eps\` | Number | Effectiveness against the chilled-water wall temperature [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -18093,12 +18097,12 @@ DesiccantWheel inst(eff_L, W_eq, f_carry, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eff_L\` | Number |
-| \`W_eq\` | Number |
-| \`f_carry\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eff_L\` | Number | Latent effectiveness toward W_eq [-]. |
+| \`W_eq\` | Number | Equilibrium humidity ratio of the desiccant [-]. |
+| \`f_carry\` | Number | Fraction of the regeneration enthalpy difference carried into the process air [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -18179,12 +18183,12 @@ Diffuser inst(A1, A2, eta_rec, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`A1\` | Number |
-| \`A2\` | Number |
-| \`eta_rec\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`A1\` | Number | Inlet area [m^2]. |
+| \`A2\` | Number | Outlet area [m^2]. |
+| \`eta_rec\` | Number | Static-pressure recovery efficiency [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -18266,13 +18270,13 @@ DOAS inst(eff_h, eff_w, T_adp, BF, Q_reheat)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eff_h\` | Number |
-| \`eff_w\` | Number |
-| \`T_adp\` | Number |
-| \`BF\` | Number |
-| \`Q_reheat\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eff_h\` | Number | Energy-recovery wheel enthalpy effectiveness [-]. |
+| \`eff_w\` | Number | Energy-recovery wheel moisture effectiveness [-]. |
+| \`T_adp\` | Number | Cooling-coil apparatus dew point [K]. |
+| \`BF\` | Number | Cooling-coil bypass factor [-]. |
+| \`Q_reheat\` | Number | Reheat-coil duty [W]. |
 
 ## Constitutive Equations
 
@@ -18354,14 +18358,14 @@ Economizer inst(mdot_sup, f_min, lim, band, domain$, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`mdot_sup\` | Number |
-| \`f_min\` | Number |
-| \`lim\` | Number |
-| \`band\` | Number |
-| \`domain$\` | String |
-| \`model$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`mdot_sup\` | Number | Supply air mass flow [kg/s]. |
+| \`f_min\` | Number | Minimum outdoor-air fraction [-]. |
+| \`lim\` | Number | High limit — outdoor dry-bulb temperature in K (\`drybulb\`) or outdoor enthalpy in J/kg (\`enthalpy\`); left untyped because the unit depends on the variant. |
+| \`band\` | Number | Width of the switching transitions, in the unit of \`lim\`. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
+| \`model$\` | String | Variant — \`drybulb\` (default) or \`enthalpy\`. |
 
 ## Constitutive Equations
 
@@ -18465,11 +18469,11 @@ EnthalpyWheel inst(eff_h, eff_w, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eff_h\` | Number |
-| \`eff_w\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eff_h\` | Number | Enthalpy effectiveness [-]. |
+| \`eff_w\` | Number | Moisture effectiveness [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -18558,10 +18562,10 @@ EvaporativeCooler inst(eff, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eff\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eff\` | Number | Saturation effectiveness [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -18644,11 +18648,11 @@ FaceAndBypassCoil inst(u_face, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`u_face\` | Number |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`u_face\` | Number | Fraction of the air sent across the coil face [-]. |
+| \`eps\` | Number | Coil effectiveness against the wall temperature [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -18732,13 +18736,13 @@ FanCoilUnit inst(K, foul, dP, eta, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`K\` | Number |
-| \`foul\` | Number |
-| \`dP\` | Number |
-| \`eta\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`K\` | Number | Clean-filter resistance, Δp per (mass flow)² [Pa-s^2/kg^2]. |
+| \`foul\` | Number | Filter fouling multiplier (1 = clean) [-]. |
+| \`dP\` | Number | Fan pressure rise [Pa]. |
+| \`eta\` | Number | Fan efficiency [-]. |
+| \`eps\` | Number | Coil effectiveness against the wall temperature [-]. |
 
 ## Constitutive Equations
 
@@ -18816,11 +18820,11 @@ FanPoweredBox inst(Q_fan, Q_reheat, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Q_fan\` | Number |
-| \`Q_reheat\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Q_fan\` | Number | Fan heat added to the mixed air [W]. |
+| \`Q_reheat\` | Number | Reheat-coil duty [W]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -18981,10 +18985,10 @@ HeatPipeWrapAround inst(eff, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eff\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eff\` | Number | Sensible effectiveness between precool and reheat streams [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -19150,11 +19154,11 @@ IndirectDirectEvaporativeCooler inst(wbde, eff_sec, eff_dir)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`wbde\` | Number |
-| \`eff_sec\` | Number |
-| \`eff_dir\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`wbde\` | Number | Wet-bulb depression efficiency of the indirect stage [-]. |
+| \`eff_sec\` | Number | Saturation effectiveness of the secondary (wet) stream [-]. |
+| \`eff_dir\` | Number | Saturation effectiveness of the direct stage [-]. |
 
 ## Constitutive Equations
 
@@ -19234,11 +19238,11 @@ IndirectEvaporativeCooler inst(wbde, eff_sec, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`wbde\` | Number |
-| \`eff_sec\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`wbde\` | Number | Wet-bulb depression efficiency [-]. |
+| \`eff_sec\` | Number | Saturation effectiveness of the secondary (wet) stream [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -19326,11 +19330,11 @@ InductionUnit inst(ratio, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ratio\` | Number |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ratio\` | Number | Induced-to-primary mass flow ratio [-]. |
+| \`eps\` | Number | Coil effectiveness on the induced air against the wall temperature [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -19415,12 +19419,12 @@ Infiltration inst(C_inf, n_exp, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`C_inf\` | Number |
-| \`n_exp\` | Number |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`C_inf\` | Number | Flow coefficient of the leakage path [kg/s-Pa]. |
+| \`n_exp\` | Number | Flow exponent (0.5 orifice to 1 laminar) [-]. |
+| \`eps\` | Number | Regularization of the pressure difference near zero [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -19502,14 +19506,14 @@ LiquidDesiccantContactor inst(eff_L, W_eq, eps_T, f_excess, domain$, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eff_L\` | Number |
-| \`W_eq\` | Number |
-| \`eps_T\` | Number |
-| \`f_excess\` | Number |
-| \`domain$\` | String |
-| \`model$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eff_L\` | Number | Latent effectiveness toward W_eq [-]. |
+| \`W_eq\` | Number | Equilibrium humidity ratio over the solution [-]. |
+| \`eps_T\` | Number | Thermal effectiveness against the solution temperature (\`cooled\`) [-]. |
+| \`f_excess\` | Number | Dry-bulb gain beyond pure latent-to-sensible conversion, 0.20 to 0.30 (\`adiabatic\`) [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
+| \`model$\` | String | Variant — \`cooled\` (default) or \`adiabatic\`. |
 
 ## Constitutive Equations
 
@@ -19614,11 +19618,11 @@ MembraneHumidifier inst(eff_h, eff_w, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eff_h\` | Number |
-| \`eff_w\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eff_h\` | Number | Enthalpy effectiveness [-]. |
+| \`eff_w\` | Number | Moisture effectiveness [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -19790,10 +19794,10 @@ MoistAirDamper inst(u, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`u\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`u\` | Number | Fraction of the inflow sent to outa, 0 to 1 [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -19876,13 +19880,13 @@ MoistAirDuct inst(L, D, rough, mu_a, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`L\` | Number |
-| \`D\` | Number |
-| \`rough\` | Number |
-| \`mu_a\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`L\` | Number | Length [m]. |
+| \`D\` | Number | Hydraulic diameter [m]. |
+| \`rough\` | Number | Absolute wall roughness [m]. |
+| \`mu_a\` | Number | Air dynamic viscosity [Pa-s]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -19966,11 +19970,11 @@ MoistAirFan inst(dP, eta, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`dP\` | Number |
-| \`eta\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`dP\` | Number | Pressure rise [Pa]. |
+| \`eta\` | Number | Fan efficiency [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -20304,14 +20308,14 @@ RadiantPanel inst(A, C, n, eps_dT, W_room, P_room)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`A\` | Number |
-| \`C\` | Number |
-| \`n\` | Number |
-| \`eps_dT\` | Number |
-| \`W_room\` | Number |
-| \`P_room\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`A\` | Number | Panel area [m^2]. |
+| \`C\` | Number | Panel output coefficient [W/m^2-K]. |
+| \`n\` | Number | Output exponent on the temperature difference [-]. |
+| \`eps_dT\` | Number | Regularization of the temperature difference near zero [K]. |
+| \`W_room\` | Number | Room humidity ratio, for the dew-point margin [-]. |
+| \`P_room\` | Number | Room pressure, for the dew-point margin [Pa]. |
 
 ## Constitutive Equations
 
@@ -20387,12 +20391,12 @@ SensibleAirToAirHX inst(eff, eatr, oacf, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eff\` | Number |
-| \`eatr\` | Number |
-| \`oacf\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eff\` | Number | Sensible effectiveness [-]. |
+| \`eatr\` | Number | Exhaust air transfer ratio [-]. |
+| \`oacf\` | Number | Outdoor air correction factor [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -20482,11 +20486,11 @@ SteamHumidifier inst(W_set, h_steam, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`W_set\` | Number |
-| \`h_steam\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`W_set\` | Number | Leaving humidity ratio set point [-]. |
+| \`h_steam\` | Number | Enthalpy of the injected steam [J/kg]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -20562,13 +20566,13 @@ TotalEnergyExchanger inst(eps_s, eps_L, eatr, oacf, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eps_s\` | Number |
-| \`eps_L\` | Number |
-| \`eatr\` | Number |
-| \`oacf\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eps_s\` | Number | Sensible effectiveness [-]. |
+| \`eps_L\` | Number | Latent effectiveness [-]. |
+| \`eatr\` | Number | Exhaust air transfer ratio [-]. |
+| \`oacf\` | Number | Outdoor air correction factor [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -20655,11 +20659,11 @@ VAVBox inst(mdot_max, Qr_max, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`mdot_max\` | Number |
-| \`Qr_max\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`mdot_max\` | Number | Air mass flow at full damper command [kg/s]. |
+| \`Qr_max\` | Number | Reheat duty at full reheat command [W]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -20740,13 +20744,13 @@ AnodeRecirc inst(fluid$, C, b, ER, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`C\` | Number |
-| \`b\` | Number |
-| \`ER\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| \`C\` | Number | ISO 6358 sonic conductance [m^3/s-Pa]. |
+| \`b\` | Number | ISO 6358 critical pressure ratio [-]. |
+| \`ER\` | Number | Entrainment ratio, recirculated per supplied mass flow [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -20902,9 +20906,9 @@ GasMixerN inst(domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -21310,13 +21314,13 @@ PneumaticCheckValve inst(fluid$, C, b, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`C\` | Number |
-| \`b\` | Number |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| \`C\` | Number | ISO 6358 sonic conductance [m^3/s-Pa]. |
+| \`b\` | Number | ISO 6358 critical pressure ratio [-]. |
+| \`eps\` | Number | Width of the opening transition [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -21396,17 +21400,17 @@ PneumaticDoubleActingCylinder inst(Aa, Ab, R, T, Va0, Vb0, Pa0, Pb0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Aa\` | Number |
-| \`Ab\` | Number |
-| \`R\` | Number |
-| \`T\` | Number |
-| \`Va0\` | Number |
-| \`Vb0\` | Number |
-| \`Pa0\` | Number |
-| \`Pb0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Aa\` | Number | Piston area on the cap side (port a) [m^2]. |
+| \`Ab\` | Number | Annulus area on the rod side (port b) [m^2]. |
+| \`R\` | Number | Specific gas constant [J/kg-K]. |
+| \`T\` | Number | Gas temperature, held isothermal [K]. |
+| \`Va0\` | Number | Chamber volume on side a [m^3]. |
+| \`Vb0\` | Number | Chamber volume on side b [m^3]. |
+| \`Pa0\` | Number | Initial pressure in chamber a [Pa]. |
+| \`Pb0\` | Number | Initial pressure in chamber b [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -21659,12 +21663,12 @@ PneumaticServoValveCmd inst(fluid$, Cmax, b, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`Cmax\` | Number |
-| \`b\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| \`Cmax\` | Number | ISO 6358 sonic conductance at full command [m^3/s-Pa]. |
+| \`b\` | Number | ISO 6358 critical pressure ratio [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -21825,16 +21829,16 @@ PneumaticThermalVolume inst(fluid$, V, R, cv, cp, m0, T0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`V\` | Number |
-| \`R\` | Number |
-| \`cv\` | Number |
-| \`cp\` | Number |
-| \`m0\` | Number |
-| \`T0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| \`V\` | Number | Volume [m^3]. |
+| \`R\` | Number | Specific gas constant [J/kg-K]. |
+| \`cv\` | Number | Specific heat at constant volume [J/kg-K]. |
+| \`cp\` | Number | Specific heat at constant pressure [J/kg-K]. |
+| \`m0\` | Number | Initial gas mass [kg]. |
+| \`T0\` | Number | Initial gas temperature [K]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -21929,12 +21933,12 @@ PneumaticValve32 inst(fluid$, C, b, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`C\` | Number |
-| \`b\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| \`C\` | Number | ISO 6358 sonic conductance [m^3/s-Pa]. |
+| \`b\` | Number | ISO 6358 critical pressure ratio [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -22023,12 +22027,12 @@ PneumaticValve52 inst(fluid$, C, b, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`C\` | Number |
-| \`b\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| \`C\` | Number | ISO 6358 sonic conductance [m^3/s-Pa]. |
+| \`b\` | Number | ISO 6358 critical pressure ratio [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -22218,13 +22222,13 @@ VacuumEjector inst(fluid$, C, b, ER, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`C\` | Number |
-| \`b\` | Number |
-| \`ER\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Gas name (e.g. Air, Nitrogen, Hydrogen). |
+| \`C\` | Number | ISO 6358 sonic conductance [m^3/s-Pa]. |
+| \`b\` | Number | ISO 6358 critical pressure ratio [-]. |
+| \`ER\` | Number | Entrainment ratio, suction per supply mass flow [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -22307,13 +22311,13 @@ AutomaticTransmission inst(Kmap$, TRmap$, eta, Tlock, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Kmap$\` | String |
-| \`TRmap$\` | String |
-| \`eta\` | Number |
-| \`Tlock\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Kmap$\` | String | Name of the capacity-factor table, speed ratio → K = ω_pump/√τ_pump. |
+| \`TRmap$\` | String | Name of the torque-ratio table, speed ratio → τ_turbine/τ_pump. |
+| \`eta\` | Number | Gearbox efficiency [-]. |
+| \`Tlock\` | Number | Lock-up clutch torque capacity at full command [N-m]. |
+| \`eps\` | Number | Lock-up clutch slip-speed smoothing width [rad/s]. |
 
 ## Constitutive Equations
 
@@ -22415,15 +22419,15 @@ CatalystLightOff inst(fluid$, C, UA, T50, k, q_exo, T0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`C\` | Number |
-| \`UA\` | Number |
-| \`T50\` | Number |
-| \`k\` | Number |
-| \`q_exo\` | Number |
-| \`T0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Exhaust gas name (e.g. Air). |
+| \`C\` | Number | Brick heat capacity [J/K]. |
+| \`UA\` | Number | Gas-to-brick conductance [W/K]. |
+| \`T50\` | Number | Light-off temperature, 50 % conversion [K]. |
+| \`k\` | Number | Width of the light-off transition [K]. |
+| \`q_exo\` | Number | Exotherm released per kilogram of exhaust at full conversion [J/kg]. |
+| \`T0\` | Number | Initial brick temperature [K]. |
 
 ## Constitutive Equations
 
@@ -22518,9 +22522,9 @@ Differential inst(ratio)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ratio\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ratio\` | Number | Final-drive ratio, input speed over mean wheel speed [-]. |
 
 ## Constitutive Equations
 
@@ -22628,9 +22632,9 @@ DriveCycleSource inst(map$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`map$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`map$\` | String | Name of the TABLE or FUNCTION mapping time in s to vehicle speed in m/s. |
 
 ## Constitutive Equations
 
@@ -22812,16 +22816,16 @@ ExhaustPipeThermal inst(fluid$, UA, hA, C1, C2, R, T10, T20)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`UA\` | Number |
-| \`hA\` | Number |
-| \`C1\` | Number |
-| \`C2\` | Number |
-| \`R\` | Number |
-| \`T10\` | Number |
-| \`T20\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Exhaust gas name (e.g. Air). |
+| \`UA\` | Number | Gas-to-wall conductance [W/K]. |
+| \`hA\` | Number | Outer-wall-to-ambient conductance [W/K]. |
+| \`C1\` | Number | Heat capacity of the inner wall node [J/K]. |
+| \`C2\` | Number | Heat capacity of the outer wall node [J/K]. |
+| \`R\` | Number | Conduction resistance through the wall [K/W]. |
+| \`T10\` | Number | Initial inner-wall temperature [K]. |
+| \`T20\` | Number | Initial outer-wall temperature [K]. |
 
 ## Constitutive Equations
 
@@ -22911,9 +22915,9 @@ GearboxScheduled inst(eta)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`eta\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`eta\` | Number | Gearbox efficiency; the ratio arrives on the signal port u [-]. |
 
 ## Constitutive Equations
 
@@ -23031,12 +23035,12 @@ GradeProfile inst(m, g, map$, s0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`m\` | Number |
-| \`g\` | Number |
-| \`map$\` | String |
-| \`s0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`m\` | Number | Vehicle mass [kg]. |
+| \`g\` | Number | Gravitational acceleration [m/s^2]. |
+| \`map$\` | String | Name of the TABLE or FUNCTION mapping distance in m to grade angle in rad. |
+| \`s0\` | Number | Initial distance along the route [m]. |
 
 ## Constitutive Equations
 
@@ -23204,12 +23208,12 @@ HybridPowerSplit inst(g, eff1$, eff2$, epsP)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`g\` | Number |
-| \`eff1$\` | String |
-| \`eff2$\` | String |
-| \`epsP\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`g\` | Number | Planetary ring-to-sun tooth ratio [-]. |
+| \`eff1$\` | String | Name of the MG1 efficiency table, (ω, τ) → η. |
+| \`eff2$\` | String | Name of the MG2 efficiency table, (ω, τ) → η. |
+| \`epsP\` | Number | Smoothing width of the motor/generator switch [W]. |
 
 ## Constitutive Equations
 
@@ -23404,13 +23408,13 @@ QuarterCar inst(ms, mu, ks, cs, kt)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`ms\` | Number |
-| \`mu\` | Number |
-| \`ks\` | Number |
-| \`cs\` | Number |
-| \`kt\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`ms\` | Number | Sprung mass [kg]. |
+| \`mu\` | Number | Unsprung mass [kg]. |
+| \`ks\` | Number | Suspension stiffness [N/m]. |
+| \`cs\` | Number | Suspension damping [N-s/m]. |
+| \`kt\` | Number | Tyre vertical stiffness [N/m]. |
 
 ## Constitutive Equations
 
@@ -23568,14 +23572,14 @@ TireLongitudinal inst(r, Fz, B, C, D, epsv)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`r\` | Number |
-| \`Fz\` | Number |
-| \`B\` | Number |
-| \`C\` | Number |
-| \`D\` | Number |
-| \`epsv\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`r\` | Number | Rolling radius [m]. |
+| \`Fz\` | Number | Normal load [N]. |
+| \`B\` | Number | Magic-formula stiffness factor [-]. |
+| \`C\` | Number | Magic-formula shape factor [-]. |
+| \`D\` | Number | Peak friction coefficient [-]. |
+| \`epsv\` | Number | Regularization of the slip denominator at standstill [m/s]. |
 
 ## Constitutive Equations
 
@@ -23682,15 +23686,15 @@ TirePacejka inst(r, Fz, B, C, D, E, epsv)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`r\` | Number |
-| \`Fz\` | Number |
-| \`B\` | Number |
-| \`C\` | Number |
-| \`D\` | Number |
-| \`E\` | Number |
-| \`epsv\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`r\` | Number | Rolling radius [m]. |
+| \`Fz\` | Number | Normal load [N]. |
+| \`B\` | Number | Magic-formula stiffness factor [-]. |
+| \`C\` | Number | Magic-formula shape factor [-]. |
+| \`D\` | Number | Peak friction coefficient [-]. |
+| \`E\` | Number | Magic-formula curvature factor [-]. |
+| \`epsv\` | Number | Regularization of the slip denominator at standstill [m/s]. |
 
 ## Constitutive Equations
 
@@ -23798,10 +23802,10 @@ TorqueConverter inst(Kmap$, TRmap$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Kmap$\` | String |
-| \`TRmap$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Kmap$\` | String | Name of the capacity-factor table, speed ratio → K = ω_pump/√τ_pump. |
+| \`TRmap$\` | String | Name of the torque-ratio table, speed ratio → τ_turbine/τ_pump. |
 
 ## Constitutive Equations
 
@@ -23989,15 +23993,15 @@ VehicleBody inst(m, Cd, Af, rhoA, Crr, grade, v0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`m\` | Number |
-| \`Cd\` | Number |
-| \`Af\` | Number |
-| \`rhoA\` | Number |
-| \`Crr\` | Number |
-| \`grade\` | Number |
-| \`v0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`m\` | Number | Vehicle mass [kg]. |
+| \`Cd\` | Number | Aerodynamic drag coefficient [-]. |
+| \`Af\` | Number | Frontal area [m^2]. |
+| \`rhoA\` | Number | Air density [kg/m^3]. |
+| \`Crr\` | Number | Rolling-resistance coefficient [-]. |
+| \`grade\` | Number | Road grade angle [rad]. |
+| \`v0\` | Number | Initial speed [m/s]. |
 
 ## Constitutive Equations
 
@@ -24077,13 +24081,13 @@ WindRotor inst(rho, R, cp$, epsv, epsw)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`rho\` | Number |
-| \`R\` | Number |
-| \`cp$\` | String |
-| \`epsv\` | Number |
-| \`epsw\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`rho\` | Number | Air density [kg/m^3]. |
+| \`R\` | Number | Rotor radius [m]. |
+| \`cp$\` | String | Name of the power-coefficient table, (tip-speed ratio, pitch) → Cp. |
+| \`epsv\` | Number | Regularization added to the wind speed [m/s]. |
+| \`epsw\` | Number | Regularization added to the shaft speed [rad/s]. |
 
 ## Constitutive Equations
 
@@ -24244,9 +24248,9 @@ SigBias inst(b)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`b\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`b\` | Number | Offset added to the input, in the signal’s units. |
 
 ## Constitutive Equations
 
@@ -24343,9 +24347,9 @@ SigConstant inst(k)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`k\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`k\` | Number | Output value, in the signal’s units. |
 
 ## Constitutive Equations
 
@@ -24417,10 +24421,10 @@ SigDeadband inst(w, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`w\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`w\` | Number | Half-width of the dead zone, in the input’s units. |
+| \`eps\` | Number | Smoothing width of the hinges, in the input’s units. |
 
 ## Constitutive Equations
 
@@ -24521,10 +24525,10 @@ SigDerivative inst(tau, y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`tau\` | Number |
-| \`y0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`tau\` | Number | Derivative filter time constant [s]. |
+| \`y0\` | Number | Initial filter state, in the input’s units. |
 
 ## Constitutive Equations
 
@@ -24761,10 +24765,10 @@ SigFirstOrder inst(tau, y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`tau\` | Number |
-| \`y0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`tau\` | Number | Time constant [s]. |
+| \`y0\` | Number | Initial output, in the signal’s units. |
 
 ## Constitutive Equations
 
@@ -24838,9 +24842,9 @@ SigGain inst(k)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`k\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`k\` | Number | Gain, output per unit input. |
 
 ## Constitutive Equations
 
@@ -24910,9 +24914,9 @@ SigIntegrator inst(y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`y0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`y0\` | Number | Initial output, in the output’s units. |
 
 ## Constitutive Equations
 
@@ -24986,11 +24990,11 @@ SigLeadLag inst(T1, T2, y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`T1\` | Number |
-| \`T2\` | Number |
-| \`y0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`T1\` | Number | Lead (numerator) time constant [s]. |
+| \`T2\` | Number | Lag (denominator) time constant [s]. |
+| \`y0\` | Number | Initial state, in the signal’s units. |
 
 ## Constitutive Equations
 
@@ -25066,9 +25070,9 @@ SigMap inst(map$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`map$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`map$\` | String | Name of the TABLE or FUNCTION mapping the input to the output. |
 
 ## Constitutive Equations
 
@@ -25152,9 +25156,9 @@ SigMap2 inst(map$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`map$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`map$\` | String | Name of the TABLE or FUNCTION of two arguments, (in1, in2) → out. |
 
 ## Constitutive Equations
 
@@ -25406,15 +25410,15 @@ SigPID inst(Kp, Ki, Kd, tau, i0, d0, model$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Kp\` | Number |
-| \`Ki\` | Number |
-| \`Kd\` | Number |
-| \`tau\` | Number |
-| \`i0\` | Number |
-| \`d0\` | Number |
-| \`model$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Kp\` | Number | Proportional gain, output per unit error. |
+| \`Ki\` | Number | Integral gain, output per unit error per second. |
+| \`Kd\` | Number | Derivative gain, output per unit error rate. |
+| \`tau\` | Number | Derivative filter time constant, in seconds; untyped because the gains carry the signal’s units. |
+| \`i0\` | Number | Initial integral of the error. |
+| \`d0\` | Number | Initial derivative-filter state, in the error’s units. |
+| \`model$\` | String | Variant — \`basic\` (default) or \`clamped\`, which also requires \`umin\`, \`umax\` and the anti-windup reset time \`Taw\` in seconds. |
 
 ## Constitutive Equations
 
@@ -25582,13 +25586,13 @@ SigPulse inst(t0, width, high, low, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`t0\` | Number |
-| \`width\` | Number |
-| \`high\` | Number |
-| \`low\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`t0\` | Number | Pulse start time, in seconds of \`time\`. |
+| \`width\` | Number | Pulse duration, in seconds of \`time\`. |
+| \`high\` | Number | Level during the pulse, in the signal’s units. |
+| \`low\` | Number | Level outside the pulse, in the signal’s units. |
+| \`eps\` | Number | Edge smoothing width, in seconds of \`time\`. |
 
 ## Constitutive Equations
 
@@ -25660,11 +25664,11 @@ SigRamp inst(t0, slope, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`t0\` | Number |
-| \`slope\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`t0\` | Number | Ramp start time, in seconds of \`time\`. |
+| \`slope\` | Number | Ramp rate, in the signal’s units per second. |
+| \`eps\` | Number | Smoothing width of the hinge at t0, in seconds of \`time\`. |
 
 ## Constitutive Equations
 
@@ -25737,11 +25741,11 @@ SigRateLimiter inst(rate, tau, y0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`rate\` | Number |
-| \`tau\` | Number |
-| \`y0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`rate\` | Number | Maximum rate of change, in the signal’s units per second. |
+| \`tau\` | Number | Tracking time constant inside the linear zone, in seconds; untyped because \`rate\` carries the signal’s units. |
+| \`y0\` | Number | Initial output, in the signal’s units. |
 
 ## Constitutive Equations
 
@@ -25818,12 +25822,12 @@ SigRelay inst(thresh, low, high, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`thresh\` | Number |
-| \`low\` | Number |
-| \`high\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`thresh\` | Number | Switching threshold, in the input’s units. |
+| \`low\` | Number | Output below the threshold. |
+| \`high\` | Number | Output above the threshold. |
+| \`eps\` | Number | Width of the transition, in the input’s units. |
 
 ## Constitutive Equations
 
@@ -25910,10 +25914,10 @@ SigSaturation inst(lo, hi)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`lo\` | Number |
-| \`hi\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`lo\` | Number | Lower limit, in the signal’s units. |
+| \`hi\` | Number | Upper limit, in the signal’s units. |
 
 ## Constitutive Equations
 
@@ -25990,12 +25994,12 @@ SigSecondOrder inst(wn, zeta, y0, v0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`wn\` | Number |
-| \`zeta\` | Number |
-| \`y0\` | Number |
-| \`v0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`wn\` | Number | Natural frequency [rad/s]. |
+| \`zeta\` | Number | Damping ratio [-]. |
+| \`y0\` | Number | Initial output, in the signal’s units. |
+| \`v0\` | Number | Initial output rate, in the signal’s units per second. |
 
 ## Constitutive Equations
 
@@ -26074,12 +26078,12 @@ SigSine inst(amp, freq, phase, bias)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`amp\` | Number |
-| \`freq\` | Number |
-| \`phase\` | Number |
-| \`bias\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`amp\` | Number | Amplitude, in the signal’s units. |
+| \`freq\` | Number | Frequency in hertz; left untyped so a steady document may pin a bare \`time\`. |
+| \`phase\` | Number | Phase offset [rad]. |
+| \`bias\` | Number | Mean value, in the signal’s units. |
 
 ## Constitutive Equations
 
@@ -26224,12 +26228,12 @@ SigStep inst(t0, before, after, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`t0\` | Number |
-| \`before\` | Number |
-| \`after\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`t0\` | Number | Step time, in seconds of \`time\`. |
+| \`before\` | Number | Level before the step, in the signal’s units. |
+| \`after\` | Number | Level after the step, in the signal’s units. |
+| \`eps\` | Number | Edge smoothing width, in seconds of \`time\`. |
 
 ## Constitutive Equations
 
@@ -26367,10 +26371,10 @@ SigSwitch inst(thresh, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`thresh\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`thresh\` | Number | Control level above which in1 is routed, in the control signal’s units. |
+| \`eps\` | Number | Width of the blend, in the control signal’s units. |
 
 ## Constitutive Equations
 
@@ -26460,9 +26464,9 @@ SigTable inst(map$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`map$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`map$\` | String | Name of the TABLE or FUNCTION mapping time to the output. |
 
 ## Constitutive Equations
 
@@ -26748,10 +26752,10 @@ SupervisoryECMS inst(soc_ref, eps)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`soc_ref\` | Number |
-| \`eps\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`soc_ref\` | Number | Reference state of charge [-]. |
+| \`eps\` | Number | Width of the blend around soc_ref [-]. |
 
 ## Constitutive Equations
 
@@ -26862,12 +26866,12 @@ ZoneCO2 inst(Vz, c_amb, gen_occ, c0)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`Vz\` | Number |
-| \`c_amb\` | Number |
-| \`gen_occ\` | Number |
-| \`c0\` | Number |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Vz\` | Number | Zone air volume [m^3]. |
+| \`c_amb\` | Number | Ambient concentration, e.g. ppm or kg/m³. |
+| \`gen_occ\` | Number | Generation per occupant, in concentration × m³/s. |
+| \`c0\` | Number | Initial zone concentration, in the unit of c_amb. |
 
 ## Constitutive Equations
 
@@ -27353,12 +27357,12 @@ CapillaryTube inst(fluid$, C, n, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`C\` | Number |
-| \`n\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`C\` | Number | Mass flow at a 1 Pa effective pressure difference [kg/s]. |
+| \`n\` | Number | Exponent on the effective pressure difference [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -27448,12 +27452,12 @@ EjectorMomentum inst(fluid$, eta_n, eta_m, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`eta_n\` | Number |
-| \`eta_m\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`eta_n\` | Number | Motive-nozzle isentropic efficiency [-]. |
+| \`eta_m\` | Number | Mixing momentum efficiency [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -27539,16 +27543,16 @@ FewCellCondenser inst(fluid$, V, Cc, UA, Kv, P0, h0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`V\` | Number |
-| \`Cc\` | Number |
-| \`UA\` | Number |
-| \`Kv\` | Number |
-| \`P0\` | Number |
-| \`h0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`V\` | Number | Refrigerant volume of each of the three cells [m^3]. |
+| \`Cc\` | Number | Mass capacitance of each cell [kg/Pa]. |
+| \`UA\` | Number | Wall conductance of each cell [W/K]. |
+| \`Kv\` | Number | Flow conductance between adjacent cells [kg/s-Pa]. |
+| \`P0\` | Number | Initial pressure of every cell [Pa]. |
+| \`h0\` | Number | Initial enthalpy of every cell [J/kg]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -27661,16 +27665,16 @@ FewCellEvaporator inst(fluid$, V, Cc, UA, Kv, P0, h0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`V\` | Number |
-| \`Cc\` | Number |
-| \`UA\` | Number |
-| \`Kv\` | Number |
-| \`P0\` | Number |
-| \`h0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`V\` | Number | Refrigerant volume of each of the three cells [m^3]. |
+| \`Cc\` | Number | Mass capacitance of each cell [kg/Pa]. |
+| \`UA\` | Number | Wall conductance of each cell [W/K]. |
+| \`Kv\` | Number | Flow conductance between adjacent cells [kg/s-Pa]. |
+| \`P0\` | Number | Initial pressure of every cell [Pa]. |
+| \`h0\` | Number | Initial enthalpy of every cell [J/kg]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -27781,10 +27785,10 @@ FlashTank inst(fluid$, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -27868,12 +27872,12 @@ GasCooler inst(fluid$, UA, dP, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`UA\` | Number |
-| \`dP\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`UA\` | Number | Refrigerant-to-wall conductance [W/K]. |
+| \`dP\` | Number | Pressure drop [Pa]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -28149,11 +28153,11 @@ OilSeparator inst(fluid$, f, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`f\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`f\` | Number | Fraction of the inflow bled off as saturated liquid [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -28374,10 +28378,10 @@ ReversingValve inst(mode, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`mode\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`mode\` | Number | Valve position, 0 for cooling and 1 for heating [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -28568,11 +28572,11 @@ SuctionAccumulator inst(fluid$, m0, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`m0\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`m0\` | Number | Initial liquid inventory [kg]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -28751,11 +28755,11 @@ TranscriticalBackPressureValve inst(fluid$, CdA_max, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`CdA_max\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`CdA_max\` | Number | Fully open discharge coefficient times flow area [m^2]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -29403,10 +29407,10 @@ TwoPhaseEjector inst(PLR, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`PLR\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`PLR\` | Number | Pressure lift ratio, outlet over suction pressure [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -29968,11 +29972,11 @@ TwoPhaseInternalHX inst(fluid$, eps, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`eps\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`eps\` | Number | Effectiveness on the vapour-side capacity rate [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -30264,11 +30268,11 @@ TwoPhaseOilRider inst(oc_set, k_deg, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`oc_set\` | Number |
-| \`k_deg\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`oc_set\` | Number | Oil circulation ratio imposed on the stream [-]. |
+| \`k_deg\` | Number | Fractional performance loss per unit oil circulation ratio [-]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -30770,11 +30774,11 @@ TwoPhaseShortTube inst(fluid$, CdA, domain$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| \`fluid$\` | String |
-| \`CdA\` | Number |
-| \`domain$\` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`fluid$\` | String | Refrigerant name (e.g. R134a, R744, R1234yf). |
+| \`CdA\` | Number | Discharge coefficient times flow area [m^2]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 

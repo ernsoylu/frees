@@ -30,9 +30,9 @@ SigTable inst(map$)
 
 ## Parameters
 
-| Parameter | Type |
-| --- | --- |
-| `map$` | String |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `map$` | String | Name of the TABLE or FUNCTION mapping time to the output. |
 
 ## Constitutive Equations
 
