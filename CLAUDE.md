@@ -152,7 +152,7 @@ npm run build
 Keep enduring engineering information in the three top-level documents linked
 by `README.md`, not in separate report/decision folders:
 
-- `ARCHITECTURE_AND_REQUIREMENTS.md`: architecture, language contract, compatibility constraints and the retained rationale of D1–D12.
+- `ARCHITECTURE_AND_REQUIREMENTS.md`: architecture, language contract, compatibility constraints and the retained rationale of D1–D13.
 - `CLAUDE.md`: development instructions, authoritative source locations and maintenance rules.
 - `NEXT_STEPS.md`: signed milestones, unresolved findings and acceptance criteria. Label historical findings that have not been reverified; do not turn an old review into a claim that a bug remains open.
 

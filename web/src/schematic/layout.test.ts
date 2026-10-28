@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { framedGroups, layoutSchematic, routeEdge, type Connection, type SchematicNode } from './layout'
+import { arrangeDeltas, connectedTo, crossingHops, focusOf, framedGroups, HOP, nearestInDirection, pathOf, routeAll, layoutSchematic, routeEdge, type Connection, type SchematicEdge, type SchematicNode } from './layout'
 import { boxesEntered } from '../test/schematicPaths'
 
 const conn = (domain: string, ...endpoints: string[]): Connection => ({ domain, endpoints })
@@ -411,5 +411,133 @@ describe('framedGroups', () => {
     expect(frame.x).toBe(laid.x)
     expect(frame.x + frame.w).toBeGreaterThan(laid.x + laid.w)
     expect(moved.y - frame.y).toBeGreaterThanOrEqual(22)
+  })
+})
+
+describe('focusOf', () => {
+  // Water loop A–J–{B,C}, with B also on an air line B–D–E; F stands apart.
+  const node = (id: string, group: string, kind: 'instance' | 'junction' = 'instance') =>
+    ({ id, group, kind }) as SchematicNode
+  const nodes = [node('a', 'w'), node('j', 'w', 'junction'), node('b', 'w'), node('c', 'w'), node('d', 'air'), node('e', 'air'), node('f', 'x')]
+  const edge = (id: string, from: string, to: string, lineId: string) => ({ id, from, to, lineId }) as SchematicEdge
+  const edges = [
+    edge('aj', 'a', 'j', 'water'),
+    edge('jb', 'j', 'b', 'water'),
+    edge('jc', 'j', 'c', 'water'),
+    edge('bd', 'b', 'd', 'air'),
+    edge('de', 'd', 'e', 'air'),
+  ]
+  const ids = (s: Set<string>) => [...s].sort()
+
+  it('neighbours pass through a junction but stop at the next block', () => {
+    const f = focusOf('neighbours', 'a', nodes, edges)
+    expect(ids(f.nodes)).toEqual(['a', 'b', 'c', 'j'])
+    expect(ids(f.edges)).toEqual(['aj', 'jb', 'jc'])
+    expect(ids(focusOf('neighbours', 'b', nodes, edges).nodes)).toEqual(['a', 'b', 'c', 'd', 'j'])
+  })
+
+  it('trace follows every line the block sits on, and only those', () => {
+    expect(ids(focusOf('trace', 'b', nodes, edges).nodes)).toEqual(['a', 'b', 'c', 'd', 'e', 'j'])
+    expect(ids(focusOf('trace', 'a', nodes, edges).nodes)).toEqual(['a', 'b', 'c', 'j'])
+  })
+
+  it('circuit keeps the block\'s own frame and the wires inside it', () => {
+    const f = focusOf('circuit', 'b', nodes, edges)
+    expect(ids(f.nodes)).toEqual(['a', 'b', 'c', 'j'])
+    expect(ids(f.edges)).toEqual(['aj', 'jb', 'jc'])
+  })
+})
+
+describe('selection geometry', () => {
+  const boxes = [
+    { id: 'a', x: 0, y: 0, w: 100, h: 50 },
+    { id: 'b', x: 150, y: 30, w: 60, h: 50 },
+    { id: 'c', x: 400, y: 10, w: 80, h: 50 },
+  ]
+  const after = (op: Parameters<typeof arrangeDeltas>[0]) => {
+    const d = arrangeDeltas(op, boxes)
+    return boxes.map((b) => ({ id: b.id, x: b.x + d.get(b.id)!.dx, y: b.y + d.get(b.id)!.dy, w: b.w, h: b.h }))
+  }
+
+  it('aligns on the shared edge or centre line of the bounding box', () => {
+    expect(after('left').map((b) => b.x)).toEqual([0, 0, 0])
+    expect(after('right').map((b) => b.x + b.w)).toEqual([480, 480, 480])
+    expect(after('centre').map((b) => b.x + b.w / 2)).toEqual([240, 240, 240])
+    expect(after('top').map((b) => b.y)).toEqual([0, 0, 0])
+    expect(after('bottom').map((b) => b.y + b.h)).toEqual([80, 80, 80])
+    expect(after('middle').map((b) => b.y + b.h / 2)).toEqual([40, 40, 40])
+    expect(after('top').map((b) => b.x)).toEqual([0, 150, 400]) // the other axis is untouched
+  })
+
+  it('spreads with equal gaps, keeping the outermost two in place', () => {
+    const s = after('spread-x')
+    expect(s.map((b) => b.x)).toEqual([0, 220, 400]) // gaps (480 - 240) / 2 = 120: a ends at 100, b starts at 220
+    expect(arrangeDeltas('spread-x', boxes.slice(0, 2)).size).toBe(0)
+  })
+
+  it('finds the nearest block in an arrow direction', () => {
+    expect(nearestInDirection(boxes[0], 'right', boxes)).toBe('b')
+    expect(nearestInDirection(boxes[1], 'right', boxes)).toBe('c')
+    expect(nearestInDirection(boxes[1], 'left', boxes)).toBe('a')
+    expect(nearestInDirection(boxes[0], 'up', boxes)).toBeNull()
+  })
+
+  it('collects everything connected, across lines', () => {
+    const edges = [
+      { id: '1', from: 'a', to: 'j', lineId: 'w' },
+      { id: '2', from: 'j', to: 'b', lineId: 'w' },
+      { id: '3', from: 'b', to: 'd', lineId: 'air' },
+      { id: '4', from: 'x', to: 'y', lineId: 'w' },
+    ] as SchematicEdge[]
+    expect([...connectedTo(['a'], edges)].sort()).toEqual(['a', 'b', 'd', 'j'])
+  })
+})
+
+describe('wire semantics', () => {
+  // Polylines: port, stub end, …, stub end, port.
+  const h = [{ x: 0, y: 50 }, { x: 10, y: 50 }, { x: 190, y: 50 }, { x: 200, y: 50 }]
+  const v = [{ x: 100, y: 0 }, { x: 100, y: 10 }, { x: 100, y: 90 }, { x: 100, y: 100 }]
+
+  it('hops a horizontal wire over an unrelated vertical one, and only then', () => {
+    const wires = new Map([['h', h], ['v', v]])
+    expect(crossingHops(wires, (id) => id).get('h')).toEqual([{ x: 100, y: 50 }])
+    expect(crossingHops(wires, (id) => id).has('v')).toBe(false)
+    expect(crossingHops(wires, () => 'same set').size).toBe(0)
+  })
+
+  it('never hops on a port stub: the lane crossing it hops instead', () => {
+    const stubCross = [{ x: 95, y: 50 }, { x: 105, y: 50 }, { x: 105, y: 80 }, { x: 110, y: 80 }]
+    const hops = crossingHops(new Map([['s', stubCross], ['v', v]]), (id) => id)
+    expect(hops.has('s')).toBe(false)
+    expect(hops.get('v')).toEqual([{ x: 100, y: 50 }])
+    expect(pathOf(v, hops.get('v'))).toBe(`M 100 0 L 100 10 V ${50 - HOP} A ${HOP} ${HOP} 0 0 1 100 ${50 + HOP} V 90 L 100 100`)
+  })
+
+  it('treats a straight run as one line across the lane–stub seam', () => {
+    // h's lane ends at x=100 and its stub carries straight on: v crosses there.
+    const seam = [{ x: 40, y: 50 }, { x: 54, y: 50 }, { x: 100, y: 50 }, { x: 114, y: 50 }]
+    expect(crossingHops(new Map([['h', seam], ['v', v]]), (id) => id).get('v')).toEqual([{ x: 100, y: 50 }])
+  })
+
+  it('draws a hop as an arc that leaves the line and comes back to it', () => {
+    const d = pathOf(h, [{ x: 100, y: 50 }])
+    expect(d).toBe(`M 0 50 L 10 50 H ${100 - HOP} A ${HOP} ${HOP} 0 0 1 ${100 + HOP} 50 H 190 L 200 50`)
+    // Right to left the arc sweeps the other way, so it still bulges up.
+    expect(pathOf([...h].reverse(), [{ x: 100, y: 50 }])).toContain(`A ${HOP} ${HOP} 0 0 0 ${100 - HOP} 50`)
+  })
+
+  it('lays two different connection sets on separate tracks, one set on one', () => {
+    // Two pairs whose cheapest route is the same vertical lane.
+    const n = (id: string, x: number, y: number) =>
+      ({ id, label: id, kind: 'instance', group: 'g', shape: 'pipe', terminal: false, x, y, w: 104, h: 52, ports: [] }) as unknown as SchematicNode
+    const nodes = new Map([n('a', 0, 0), n('b', 400, 300), n('c', 0, 20), n('d', 400, 320)].map((x) => [x.id, x]))
+    const edge = (id: string, from: string, to: string) => ({ id, from, to, lineId: 'w' }) as SchematicEdge
+    const lanes = (r: Map<string, { x: number; y: number }[]>, id: string) =>
+      r.get(id)!.slice(1, -1).flatMap((p, i, a) => (i > 0 && a[i - 1].x === p.x ? [p.x] : []))
+    const apart = routeAll([edge('c1', 'a', 'b'), edge('c2', 'c', 'd')], nodes, [...nodes.values()])
+    expect(lanes(apart, 'c1')).toHaveLength(1)
+    expect(lanes(apart, 'c1')[0]).not.toBe(lanes(apart, 'c2')[0])
+    const together = routeAll([edge('c1_0', 'a', 'b'), edge('c1_1', 'c', 'd')], nodes, [...nodes.values()])
+    expect(lanes(together, 'c1_0')[0]).toBe(lanes(together, 'c1_1')[0])
   })
 })

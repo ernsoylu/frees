@@ -290,7 +290,7 @@ To maintain an MIT-compatible license and eliminate heavy third-party CAS depend
 
 ## 11. Retained Architectural Decisions
 
-These are the enduring constraints consolidated from decisions D1–D12. Old
+These are the enduring constraints consolidated from decisions D1–D13. Old
 measurements and superseded implementation plans are historical evidence, not
 instructions to restore removed features.
 
@@ -318,6 +318,12 @@ instructions to restore removed features.
 - **D10:** Tables uses the existing Glide grid, not a general spreadsheet engine. Free-form spreadsheets and `ssheet()` are removed. Preserve legacy spreadsheet cell data and analyzer payloads inert on project load/save, with a notice; never silently discard user data or guess a conversion.
 - Keep the persisted `table:univer-workbook` dock identifier for layout compatibility. Legacy formula text remains read-only with a conversion hint; it must not attach to a different row after edits. Workbook flush must remain synchronous so a just-entered value reaches the next solve.
 - For injected lookup definitions, document definitions win on the solve/check path; request tables win in the REPL's cached definitions. Do not advertise a GUI table as overriding a same-named document definition everywhere.
+
+### Schematic canvas and presentation
+
+- **D13 (2026-10-28):** the schematic stays a custom SVG/React canvas; React Flow was spiked against it on the humid-air, 26-component EV and 100-instance floor models and not adopted. Drag frame rates and per-move cost matched (≈18 ms per move on EV, ≈43 ms on the floor, dominated by the shared obstacle router either way), while React Flow added 63 KB gzipped, rendered blocks as HTML (losing native SVG export) and offered no keyboard connect; its adapter already needed 115 lines without label level-of-detail, frames, areas, guides, locks or export, against roughly 350 lines of pan/zoom/drag/minimap/marquee code it would replace. Reconsider when 01c's handle-drag connection and edge reconnection would cost more than that code, or when the 500-component budget fails in rendering rather than routing. ELK auto-layout was not evaluated.
+- The schematic presentation (positions, locks, areas, view settings) is display state in the project file, never model text. Changing it must not bump the model revision, check, solve or stale a result.
+- Project v4 stores absolute positions. v3 `{dx,dy}` offsets are carried as `legacyOffsets` and resolved once against the legacy auto-layout when topology is available; unmatched entries are kept and reported, not discarded. Malformed entries are dropped and counted with a load notice; the model is unaffected.
 
 ### Table and plot integrity
 

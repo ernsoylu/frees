@@ -24,6 +24,7 @@ import {
   writeAutosaveMirror,
 } from './projectStore'
 import type { ExpectedRev, LibraryChange, SaveOutcome } from './projectStore'
+import { EMPTY_PRESENTATION } from './schematic/presentation'
 
 /** Save and assert it was written, returning the new revision. */
 async function saveOk(name: string, p: FreesProject, expected: ExpectedRev = 'overwrite'): Promise<number> {
@@ -49,7 +50,7 @@ const SLICES: ProjectSlices = {
   spreadsheets: [],
   analyzers: [],
   sliders: [],
-  schematic: {},
+  schematic: EMPTY_PRESENTATION,
 }
 
 function project(text = SLICES.text, savedAt?: string): FreesProject {

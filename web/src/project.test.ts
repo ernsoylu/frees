@@ -7,9 +7,9 @@
 // round-trip through a build that can no longer show it. That is what the
 // first group asserts, and it is the compatibility policy in test form.
 //
-// v3 `schematic` slice: where the user has dragged each block on the rendered
-// schematic. The drawing itself is always regenerated from the document, so
-// only the offsets are saved.
+// v3 `schematic` slice: where the user had dragged each block, as offsets from
+// the layout. v4 replaces it with the presentation (absolute positions, locks,
+// areas, view settings); v3 offsets carry over for migration.
 
 import { describe, expect, it, beforeEach } from 'vitest'
 import { DEFAULT_STOP_CRITERIA } from './api'
@@ -23,6 +23,7 @@ import {
   type ProjectSlices,
 } from './project'
 import { DEFAULT_DRAFT } from './VariableInfoModal'
+import { EMPTY_PRESENTATION, type SchematicPresentation } from './schematic/presentation'
 
 // A real Phase-2 analyzer session, in the shape the removed feature wrote it.
 const analyzer: AnalyzerSpec = {
@@ -60,7 +61,7 @@ beforeEach(() => localStorage.clear())
 describe('project v2 analyzers slice (inert since D11)', () => {
   it('buildProject carries the analyzers slice at the current version', () => {
     const p = buildProject(slices)
-    expect(p.version).toBe(3)
+    expect(p.version).toBe(4)
     expect(p.analyzers).toEqual([analyzer])
   })
 
@@ -81,7 +82,7 @@ describe('project v2 analyzers slice (inert since D11)', () => {
     const v1 = { ...buildProject({ ...slices, analyzers: [] }), version: 1 } as Record<string, unknown>
     delete v1.analyzers
     const p = await readProjectFile(asFile(v1))
-    expect(p.version).toBe(3)
+    expect(p.version).toBe(4)
     expect(p.analyzers).toEqual([])
   })
 
@@ -91,55 +92,83 @@ describe('project v2 analyzers slice (inert since D11)', () => {
   })
 })
 
-describe('project v3 schematic slice', () => {
-  const dragged = { bcp: { dx: 60, dy: 240 }, batt: { dx: -12.5, dy: 0 } }
+describe('project v4 schematic presentation', () => {
+  const placed: SchematicPresentation = {
+    ...EMPTY_PRESENTATION,
+    positions: { bcp: { x: 60, y: 240 }, batt: { x: -12.5, y: 0 } },
+    locked: ['bcp'],
+    areas: [{ id: 'a1', label: 'Battery loop', members: ['bcp', 'batt'] }],
+    view: { ...EMPTY_PRESENTATION.view, orientation: 'vertical', snap: true },
+  }
 
-  it('round-trips dragged block positions through the autosave', () => {
-    saveProjectLocal(buildProject({ ...slices, schematic: dragged }))
-    expect(loadProjectLocal()?.schematic).toEqual(dragged)
+  it('round-trips positions, locks, areas and view settings through the autosave', () => {
+    saveProjectLocal(buildProject({ ...slices, schematic: placed }))
+    expect(loadProjectLocal()?.schematic).toEqual(placed)
   })
 
   it('round-trips through a saved file', async () => {
-    const p = await readProjectFile(asFile(buildProject({ ...slices, schematic: dragged })))
-    expect(p.schematic).toEqual(dragged)
+    const p = await readProjectFile(asFile(buildProject({ ...slices, schematic: placed })))
+    expect(p.schematic).toEqual(placed)
+    expect(p.schematicRepaired).toBeUndefined()
   })
 
-  it('migrates a pre-v3 file to an empty arrangement', async () => {
+  it('carries v3 offsets over for migration against the legacy layout', async () => {
+    const v3 = { ...buildProject(slices), version: 3, schematic: { bcp: { dx: 60, dy: 240 } } }
+    const p = await readProjectFile(asFile(v3))
+    expect(p.version).toBe(4)
+    expect(p.schematic).toEqual({ ...EMPTY_PRESENTATION, legacyOffsets: { bcp: { dx: 60, dy: 240 } } })
+  })
+
+  it('validates v3 offsets as v3 did: finite pairs only, absurd ones clamped', async () => {
+    const p = await readProjectFile(
+      asFile({
+        ...buildProject(slices),
+        version: 3,
+        schematic: { good: { dx: 1, dy: 2 }, nan: { dx: Number.NaN, dy: 2 }, text: { dx: '10', dy: 2 }, nul: null, far: { dx: 1e12, dy: -1e12 } },
+      }),
+    )
+    expect(p.schematic?.legacyOffsets).toEqual({ good: { dx: 1, dy: 2 }, far: { dx: 100_000, dy: -100_000 } })
+    expect(p.schematicRepaired).toBe(3)
+  })
+
+  it('migrates a pre-v3 file to an empty presentation', async () => {
     const v2 = { ...buildProject(slices), version: 2 } as Record<string, unknown>
     delete v2.schematic
     const p = await readProjectFile(asFile(v2))
-    expect(p.schematic).toEqual({})
+    expect(p.schematic).toEqual(EMPTY_PRESENTATION)
   })
 
-  it('drops entries that are not a finite pair of numbers', async () => {
-    // Coordinates from a project file reach an SVG viewBox; a NaN or a string
-    // there breaks the whole drawing rather than one block.
+  it('drops and counts malformed v4 entries, keeping the valid ones and the document', async () => {
     const p = await readProjectFile(
       asFile({
         ...buildProject(slices),
         schematic: {
-          good: { dx: 1, dy: 2 },
-          nan: { dx: Number.NaN, dy: 2 },
-          text: { dx: '10', dy: 2 },
-          missing: { dx: 3 },
-          nul: null,
+          positions: { good: { x: 1, y: 2 }, inf: { x: Infinity, y: 0 }, far: { x: 1e9, y: 0 }, text: { x: '1', y: 2 } },
+          locked: ['good', 7],
+          areas: [{ id: 'a', label: 'ok', members: ['good'] }, { id: 'b', label: 'bad', members: [1] }],
+          view: { orientation: 'diagonal', grid: 16, snap: 'yes' },
         },
       }),
     )
-    expect(p.schematic).toEqual({ good: { dx: 1, dy: 2 } })
+    expect(p.text).toBe(slices.text)
+    expect(p.schematic).toEqual({
+      ...EMPTY_PRESENTATION,
+      positions: { good: { x: 1, y: 2 } },
+      locked: ['good'],
+      areas: [{ id: 'a', label: 'ok', members: ['good'] }],
+    })
+    expect(p.schematicRepaired).toBe(3 + 1 + 1 + 2)
   })
 
-  it('clamps an absurd offset instead of letting it blow up the canvas', async () => {
-    const p = await readProjectFile(
-      asFile({ ...buildProject(slices), schematic: { far: { dx: 1e12, dy: -1e12 } } }),
-    )
-    expect(p.schematic?.far).toEqual({ dx: 100_000, dy: -100_000 })
+  it('never saves the repair count', () => {
+    saveProjectLocal({ ...buildProject(slices), schematicRepaired: 4 })
+    expect(loadProjectLocal()?.schematicRepaired).toBeUndefined()
   })
 
   it('ignores a non-object schematic slice', async () => {
     for (const bad of [[], 'nope', 42]) {
       const p = await readProjectFile(asFile({ ...buildProject(slices), schematic: bad }))
-      expect(p.schematic).toEqual({})
+      expect(p.schematic).toEqual(EMPTY_PRESENTATION)
     }
   })
 })
@@ -154,7 +183,7 @@ describe('projectOnlyNotes', () => {
       ...slices,
       varDrafts: { x: { ...DEFAULT_DRAFT, guess: '2' } },
       tables: [{ id: 't1', name: 'map', kind: 'function', columns: [], rows: [] } as never],
-      schematic: { p1: { dx: 1, dy: 0 } },
+      schematic: { ...EMPTY_PRESENTATION, positions: { p1: { x: 1, y: 0 } } },
     })
     expect(notes.join(' ')).toMatch(/Variable Information/)
     expect(notes.join(' ')).toMatch(/GUI table/)

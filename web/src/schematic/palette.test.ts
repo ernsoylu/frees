@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLineStyles, lineId, lineLabel, type LineKey } from './palette'
+import { buildLineStyles, contrast, lineId, lineLabel, SCHEMATIC_INK, type LineKey } from './palette'
 
 const fluid = (connector: string, f: string): LineKey => ({ domain: 'fluid', connector, fluid: f })
 
@@ -66,7 +66,45 @@ describe('buildLineStyles', () => {
     const style = buildLineStyles([{ domain: 'signal' }]).get('signal')
     expect(style?.dash).toBeTruthy()
     expect(style?.width).toBeLessThan(2)
-    expect(buildLineStyles([{ domain: 'heat' }]).get('heat')?.dash).toBeUndefined()
+  })
+
+  // CFG-02: colour plus a dash cue, readable in both themes.
+  const every: LineKey[] = [
+    ...['liquid', 'twophase', 'fluid', 'gas', 'oil', 'moistair'].flatMap((c) => [fluid(c, 'a'), fluid(c, 'b'), fluid(c, 'c')]),
+    ...['heat', 'electrical', 'mechanical', 'signal'].map((domain) => ({ domain })),
+  ]
+
+  it('tells every domain and connector apart without colour', () => {
+    const patterns = new Map<string, string>()
+    for (const key of every) {
+      const s = buildLineStyles(every).get(lineId(key))!
+      const family = key.domain === 'fluid' ? key.connector! : key.domain
+      patterns.set(family, `${s.dash ?? 'solid'} ${s.width} ${s.cap ?? ''}`)
+    }
+    expect(new Set(patterns.values()).size).toBe(patterns.size)
+  })
+
+  it('keeps every line readable as text on both canvases', () => {
+    for (const scheme of ['dark', 'light'] as const) {
+      const styles = buildLineStyles(every, scheme)
+      for (const [id, s] of styles) {
+        expect(contrast(s.color, SCHEMATIC_INK[scheme].canvas), `${scheme} ${id}`).toBeGreaterThanOrEqual(4.5)
+      }
+      // A second fluid on a connector is a different colour from the first.
+      expect(new Set([...styles.values()].map((s) => s.color)).size).toBe(styles.size)
+    }
+  })
+
+  it('keeps block text at 4.5:1 and outlines at 3:1 in both themes', () => {
+    for (const ink of Object.values(SCHEMATIC_INK)) {
+      for (const text of [ink.text, ink.subtext, ink.badge]) {
+        expect(contrast(text, ink.block)).toBeGreaterThanOrEqual(4.5)
+      }
+      expect(contrast(ink.portName, ink.canvas)).toBeGreaterThanOrEqual(4.5)
+      for (const mark of [ink.border, ink.highlight, ink.active]) {
+        expect(contrast(mark, ink.canvas)).toBeGreaterThanOrEqual(3)
+      }
+    }
   })
 })
 

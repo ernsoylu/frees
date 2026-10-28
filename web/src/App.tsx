@@ -113,7 +113,7 @@ import { applyColumnFill } from './tablesGrid/tableGridModel'
 const SchematicTab = lazy(() => import('./schematic/SchematicTab'))
 import { declaredInstances } from './schematic/declaration'
 import { instancesInDiagnosis, LOCAL_ENGINE_FAILURE } from './schematic/wiring'
-import type { SchematicOffsets } from './schematic/layout'
+import { EMPTY_PRESENTATION, type SchematicPresentation } from './schematic/presentation'
 const DigitizerTab = lazy(() =>
   import('./DigitizerTab').then((m) => ({ default: m.DigitizerTab })),
 )
@@ -774,12 +774,11 @@ export default function App() {
   // never destroyed (ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions, compatibility
   // policy). A one-time notice tells the user the data is preserved.
   const analyzersRef = useRef<AnalyzerSpec[]>(boot?.analyzers ?? [])
-  // Blocks the user has dragged on the rendered schematic, as offsets from the
-  // auto-layout. The drawing itself is always derived from the document, so
-  // this is the only part of it that has to be saved.
-  const [schematicOffsets, setSchematicOffsets] = useState<SchematicOffsets>(
-    () => boot?.schematic ?? {},
-  )
+  // How the schematic is presented (positions, locks, areas, view settings).
+  // The network itself is always derived from the document; this is the part
+  // of the drawing that has to be saved. Not a semantic change: it never
+  // touches the model revision (RUN-10).
+  const [schematic, setSchematic] = useState<SchematicPresentation>(() => boot?.schematic ?? EMPTY_PRESENTATION)
   // One-line self-dismissing notice (e.g. the D10/D11 "the data is preserved
   // in the file but not shown" line after a project load).
   const [loadNotice, setLoadNotice] = useState<string | null>(null)
@@ -849,12 +848,12 @@ export default function App() {
       spreadsheets: spreadsheetsRef.current,
       analyzers: analyzersRef.current,
       sliders: pinnedSliders,
-      schematic: schematicOffsets,
+      schematic,
     }),
     // `text` stays a dependency so the autosave effect keyed on this callback
     // still refreshes when the (deferred) editor document state lands.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, pinnedSliders, schematicOffsets],
+    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, pinnedSliders, schematic],
   )
 
   // Debounced autosave of the entire workspace to a single localStorage key,
@@ -916,7 +915,7 @@ export default function App() {
     }
     isDirtyRef.current = true
 
-  }, [text, tables, plots, varDrafts, pinnedSliders, schematicOffsets])
+  }, [text, tables, plots, varDrafts, pinnedSliders, schematic])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -942,13 +941,15 @@ export default function App() {
     spreadsheetsRef.current = p.spreadsheets ?? []
     analyzersRef.current = p.analyzers ?? []
     setPinnedSliders(p.sliders ?? [])
-    setSchematicOffsets(p.schematic ?? {})
+    setSchematic(p.schematic ?? EMPTY_PRESENTATION)
     // D10/D11 compatibility notices: the spreadsheet and Data Analyzer
     // features are removed, but the data in the file is preserved (inert),
     // never destroyed.
-    const notices = [spreadsheetNotice(p.spreadsheets), analyzerNotice(p.analyzers)].filter(
-      (n) => n !== null,
-    )
+    const notices = [
+      spreadsheetNotice(p.spreadsheets),
+      analyzerNotice(p.analyzers),
+      p.schematicRepaired ? `${p.schematicRepaired} malformed schematic layout entries in this file were ignored; the model is unaffected.` : null,
+    ].filter((n) => n !== null)
     setLoadNotice(notices.length > 0 ? notices.join(' ') : null)
     setResult(null)
     setCheckResult(null)
@@ -1436,7 +1437,7 @@ export default function App() {
     setPlots([])
     spreadsheetsRef.current = []
     analyzersRef.current = []
-    setSchematicOffsets({})
+    setSchematic(EMPTY_PRESENTATION)
     setResult(null)
     setCheckResult(null)
     setProjectName('untitled')
@@ -1612,7 +1613,7 @@ export default function App() {
     setPlots([])
     spreadsheetsRef.current = []
     analyzersRef.current = []
-    setSchematicOffsets({})
+    setSchematic(EMPTY_PRESENTATION)
     setResult(null)
     setCheckResult(null)
     setLastSolvedWithFillMissing(false)
@@ -2810,8 +2811,8 @@ export default function App() {
             onSelectLine={selectLine}
             onEmitStatement={emitFromSchematic}
             onInsertBlock={insertComponentBlock}
-            offsets={schematicOffsets}
-            onOffsetsChange={setSchematicOffsets}
+            presentation={schematic}
+            onPresentationChange={setSchematic}
             highlightIds={instancesInDiagnosis(checkResult?.message ?? '')}
           />
         </Suspense>
