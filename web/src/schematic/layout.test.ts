@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { layoutSchematic, routeEdge, type Connection, type SchematicNode } from './layout'
+import { framedGroups, layoutSchematic, routeEdge, type Connection, type SchematicNode } from './layout'
+import { boxesEntered } from '../test/schematicPaths'
 
 const conn = (domain: string, ...endpoints: string[]): Connection => ({ domain, endpoints })
 const fluidConn = (connector: string, fluid: string, ...endpoints: string[]): Connection => ({
@@ -356,11 +357,22 @@ describe('routeEdge', () => {
     expect(path).not.toEqual(routeEdge(node('a'), node('b'), 'out', 'in'))
   })
 
-  it('moves the shared lane around an intervening block', () => {
-    const blocker = { ...node('a'), id: 'blocker', x: 150, y: node('a').y, w: 104 }
-    const path = routeEdge(node('a'), node('b'), 'out', 'in', [blocker])
+  it('moves the route around an intervening block', () => {
+    const a = node('a')
+    const b = { ...node('b'), x: a.x + a.w + 400, y: a.y }
+    const blocker = { ...a, id: 'blocker', x: a.x + a.w + 150, w: 104 }
+    const path = routeEdge(a, b, 'out', 'in', [a, b, blocker])
     expect(path).toContain('V')
-    expect(path).toMatch(/M [\d.-]+ [\d.-]+/)
+    expect(boxesEntered(path, [a, b, blocker])).toEqual([])
+  })
+
+  it('takes a backward loop round both of its own blocks', () => {
+    // b sits left of a and the wire runs a.out (right face) → b.in (left face):
+    // the straight midline would cut through both.
+    const a = node('a')
+    const b = { ...node('b'), x: a.x - 300, y: a.y }
+    const path = routeEdge(a, b, 'out', 'in', [a, b])
+    expect(boxesEntered(path, [a, b])).toEqual([])
   })
 })
 
@@ -376,5 +388,28 @@ describe('unwired instances', () => {
   it('does not duplicate an instance that is already wired', () => {
     const out = layoutSchematic([conn('fluid', 'a.out', 'b.in')], new Map(), ['a', 'b'])
     expect(out.nodes.filter((n) => n.kind === 'instance')).toHaveLength(2)
+  })
+})
+
+describe('framedGroups', () => {
+  const out = layoutSchematic([conn('fluid', 'a.out', 'b.in')], new Map(), ['a', 'b'])
+  const inside = (n: SchematicNode, g: { x: number; y: number; w: number; h: number }) =>
+    n.x >= g.x && n.y >= g.y && n.x + n.w <= g.x + g.w && n.y + n.h <= g.y + g.h
+
+  it('keeps the laid-out frames when nothing has moved', () => {
+    expect(framedGroups(out.groups, out.nodes)).toEqual(out.groups)
+  })
+
+  it('grows a frame to enclose a member dragged past it, and leaves its extent otherwise', () => {
+    const b = out.nodes.find((n) => n.id === 'b')!
+    const moved = { ...b, x: b.x + 900, y: b.y - 400 }
+    const [frame] = framedGroups(out.groups, out.nodes.map((n) => (n.id === 'b' ? moved : n)))
+    const laid = out.groups.find((g) => g.id === b.group)!
+    expect(frame.id).toBe(laid.id)
+    expect(inside(moved, frame)).toBe(true)
+    // Still covers what it covered before; the title row stays above the node.
+    expect(frame.x).toBe(laid.x)
+    expect(frame.x + frame.w).toBeGreaterThan(laid.x + laid.w)
+    expect(moved.y - frame.y).toBeGreaterThanOrEqual(22)
   })
 })

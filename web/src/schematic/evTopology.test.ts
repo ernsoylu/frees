@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EV_TOPOLOGY } from './evTopology.fixture'
 import { layoutSchematic, routeEdge, type SchematicNode } from './layout'
+import { boxesEntered } from '../test/schematicPaths'
 import { buildLineStyles, lineId } from './palette'
 
 /**
@@ -177,6 +178,16 @@ describe('EV thermal-management example', () => {
       const path = routeEdge(a, b, e.fromPort, e.toPort)
       expect(path).toMatch(/^M [\d.-]+ [\d.-]+/)
       expect(path).not.toMatch(/NaN|Infinity/)
+    }
+  })
+
+  it('routes no wire through a component box', () => {
+    const blocks = layout.nodes.filter((n) => n.kind === 'instance')
+    for (const e of layout.edges) {
+      const a = layout.nodes.find((n) => n.id === e.from) as SchematicNode
+      const b = layout.nodes.find((n) => n.id === e.to) as SchematicNode
+      const path = routeEdge(a, b, e.fromPort, e.toPort, layout.nodes)
+      expect(boxesEntered(path, blocks), `${e.from}.${e.fromPort} → ${e.to}.${e.toPort}: ${path}`).toEqual([])
     }
   })
 

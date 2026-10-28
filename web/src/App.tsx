@@ -2300,6 +2300,12 @@ export default function App() {
     setTimeout(() => editorRef.current?.goToLine(lineNo), 50)
   }, [])
 
+  // Linked selection: move the editor's selection to a line without bringing
+  // its tab forward or taking focus, so the view the user clicked stays put.
+  const selectLine = useCallback((lineNo: number) => {
+    editorRef.current?.goToLine(lineNo, { focus: false })
+  }, [])
+
   const handleGoToTableDeclaration = useCallback((tableName: string) => {
     const lower = tableName.toLowerCase()
     const regex = new RegExp(String.raw`^\s*(TABLE|PARAMETRIC)\s+${lower}\b`, 'i')
@@ -2801,6 +2807,7 @@ export default function App() {
             variables={result?.variables}
             text={textRef.current}
             onRevealLine={goToLine}
+            onSelectLine={selectLine}
             onEmitStatement={emitFromSchematic}
             onInsertBlock={insertComponentBlock}
             offsets={schematicOffsets}

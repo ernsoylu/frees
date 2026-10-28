@@ -1,0 +1,874 @@
+{
+  "fileKey": "SHIyfVVicYxMCbXqzedk8Z",
+  "pageId": "77:2",
+  "date": "2026-10-28",
+  "scope": [
+    "desktop",
+    "tablet landscape",
+    "tablet portrait",
+    "all current engineering domains",
+    "equation visualization"
+  ],
+  "excludedDevices": [
+    "phone"
+  ],
+  "frames": [
+    {
+      "id": "77:3",
+      "name": "00 Start & coverage",
+      "width": 1920,
+      "height": 1460,
+      "children": 13
+    },
+    {
+      "id": "77:4",
+      "name": "01 Humid-air workspace",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:5",
+      "name": "02 Empty & library",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:6",
+      "name": "03 Configure component",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:7",
+      "name": "04 Connect ports",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:8",
+      "name": "05 Net & route editing",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:9",
+      "name": "06 Source ↔ canvas",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:10",
+      "name": "07 Arrange & appearance",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:11",
+      "name": "08 Create subsystem",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:12",
+      "name": "09 Inside subsystem",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:13",
+      "name": "10 Diagnostics & repair",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:14",
+      "name": "11 Results & watches",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:15",
+      "name": "12 Playback & scenarios",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:16",
+      "name": "13 Views & export",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:17",
+      "name": "14 Save & recover",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:18",
+      "name": "15 Tablet authoring",
+      "width": 1024,
+      "height": 768,
+      "children": 4
+    },
+    {
+      "id": "77:19",
+      "name": "16 Equation workspace",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "77:20",
+      "name": "17 Tools & menus",
+      "width": 1920,
+      "height": 1760,
+      "children": 5
+    },
+    {
+      "id": "77:21",
+      "name": "18 States & behavior",
+      "width": 1920,
+      "height": 1610,
+      "children": 6
+    },
+    {
+      "id": "88:1068",
+      "name": "19 EV thermal management (real model)",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "88:1264",
+      "name": "20 Tablet connection list",
+      "width": 768,
+      "height": 1024,
+      "children": 7
+    },
+    {
+      "id": "88:1323",
+      "name": "21 Advanced component configuration",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "88:1468",
+      "name": "22 Symbol and view configuration",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "89:1253",
+      "name": "23 Wide desktop",
+      "width": 1920,
+      "height": 1080,
+      "children": 4
+    },
+    {
+      "id": "89:1488",
+      "name": "24 Light theme",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "93:1463",
+      "name": "25 Net semantics and insertion",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    },
+    {
+      "id": "128:2930",
+      "name": "26 Dense model (100 components)",
+      "width": 1440,
+      "height": 960,
+      "children": 4
+    }
+  ],
+  "componentBoard": "79:13",
+  "prototype": {
+    "crossScreenReactions": 977,
+    "brokenDestinations": 0,
+    "emptyFrames": 0,
+    "autoLayoutChildOverflows": 0,
+    "validation": "Figma API structural audit after the 2026-10-28 revisions (977 reactions, 0 broken, 0 self-links, 0 auto-layout overflows); representative screenshots visually inspected; not an exhaustive interactive usability test"
+  },
+  "requirements": [
+    {
+      "requirement": "SYNC-01",
+      "frames": [
+        "77:4",
+        "77:9"
+      ],
+      "note": "Split view and revision contract; engine behavior is specified.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "SYNC-02",
+      "frames": [
+        "77:6",
+        "77:8",
+        "77:11",
+        "77:17"
+      ],
+      "note": "Command coverage across inspector, wiring, subsystem and impact review.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "SYNC-03",
+      "frames": [
+        "77:9"
+      ],
+      "note": "Minimal source-edit preview; source preservation requires implementation tests.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "SYNC-04",
+      "frames": [
+        "77:9",
+        "77:21"
+      ],
+      "note": "Scoped identity and rename are behavioral contracts, not an executable refactor.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "SYNC-05",
+      "frames": [
+        "77:9",
+        "77:15",
+        "77:21"
+      ],
+      "note": "Stale/run states and obsolete-response behavior.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "SYNC-06",
+      "frames": [
+        "77:21",
+        "77:9"
+      ],
+      "note": "Invalid-source recovery annotation plus source navigation.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "SYNC-07",
+      "frames": [
+        "77:20",
+        "77:9",
+        "77:11"
+      ],
+      "note": "Undo controls and atomic-operation annotations.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "SYNC-08",
+      "frames": [
+        "77:21",
+        "77:12"
+      ],
+      "note": "Generated/definition ownership annotations.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "SYNC-09",
+      "frames": [
+        "77:9"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "SYNC-10",
+      "frames": [
+        "77:19"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01d"
+    },
+    {
+      "requirement": "COMP-01",
+      "frames": [
+        "77:5",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "COMP-02",
+      "frames": [
+        "77:5",
+        "77:18"
+      ],
+      "note": "Insertion controls and cancel contract; free drag is not simulated.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "COMP-03",
+      "frames": [
+        "77:5",
+        "77:6"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "COMP-04",
+      "frames": [
+        "77:6",
+        "88:1323"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "COMP-05",
+      "frames": [
+        "77:21",
+        "77:17"
+      ],
+      "note": "Copy/paste dependency behavior is annotated.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "COMP-06",
+      "frames": [
+        "77:17",
+        "77:21"
+      ],
+      "note": "Impact-review pattern; arbitrary deletion is not simulated.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "COMP-07",
+      "frames": [
+        "77:10",
+        "88:1468"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01d"
+    },
+    {
+      "requirement": "COMP-08",
+      "frames": [
+        "88:1468",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "Backlog"
+    },
+    {
+      "requirement": "WIRE-01",
+      "frames": [
+        "77:7",
+        "77:18",
+        "88:1264"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "WIRE-02",
+      "frames": [
+        "77:7",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "WIRE-03",
+      "frames": [
+        "77:7",
+        "88:1264"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "WIRE-04",
+      "frames": [
+        "93:1463"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "WIRE-05",
+      "frames": [
+        "77:8",
+        "93:1463",
+        "77:17"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "WIRE-06",
+      "frames": [
+        "93:1463",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "WIRE-07",
+      "frames": [
+        "77:8",
+        "77:20"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "WIRE-08",
+      "frames": [
+        "77:8",
+        "77:21"
+      ],
+      "note": "Locked-route conflict annotation; no routing engine in Figma.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "WIRE-09",
+      "frames": [
+        "93:1463"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "WIRE-10",
+      "frames": [
+        "77:14",
+        "88:1068"
+      ],
+      "note": "Metric/flow display example and semantic restrictions.",
+      "phase": "01d"
+    },
+    {
+      "requirement": "WIRE-11",
+      "frames": [
+        "93:1463",
+        "88:1468"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "Backlog"
+    },
+    {
+      "requirement": "VIEW-01",
+      "frames": [
+        "77:4",
+        "77:18",
+        "89:1253"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "VIEW-02",
+      "frames": [
+        "77:10",
+        "77:20"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "VIEW-03",
+      "frames": [
+        "77:10",
+        "88:1468"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "VIEW-04",
+      "frames": [
+        "77:10"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "VIEW-05",
+      "frames": [
+        "77:4",
+        "88:1068"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "VIEW-06",
+      "frames": [
+        "77:4",
+        "77:21",
+        "88:1068"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "VIEW-07",
+      "frames": [
+        "77:20",
+        "77:21"
+      ],
+      "note": "Find entry and command/menu pattern; full search results are specified behavior.",
+      "phase": "01d"
+    },
+    {
+      "requirement": "VIEW-08",
+      "frames": [
+        "77:16",
+        "88:1468"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01d"
+    },
+    {
+      "requirement": "VIEW-09",
+      "frames": [
+        "77:16",
+        "77:19",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01d"
+    },
+    {
+      "requirement": "VIEW-10",
+      "frames": [
+        "88:1468",
+        "77:16"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "Backlog"
+    },
+    {
+      "requirement": "HIER-01",
+      "frames": [
+        "77:12"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "HIER-02",
+      "frames": [
+        "77:11",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "HIER-03",
+      "frames": [
+        "77:11",
+        "77:12"
+      ],
+      "note": "Extraction preview and destination state; equivalence must be tested in engine.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "HIER-04",
+      "frames": [
+        "77:12",
+        "77:11",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "HIER-05",
+      "frames": [
+        "88:1323",
+        "77:16",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "RUN-01",
+      "frames": [
+        "77:4",
+        "77:6",
+        "77:7",
+        "77:13",
+        "77:21"
+      ],
+      "note": "Some run statuses are state-board annotations.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "RUN-02",
+      "frames": [
+        "77:6",
+        "77:14",
+        "88:1323"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "RUN-03",
+      "frames": [
+        "77:14",
+        "88:1468"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01d"
+    },
+    {
+      "requirement": "RUN-04",
+      "frames": [
+        "77:14",
+        "88:1068"
+      ],
+      "note": "Metric legend pattern; production must derive colors from real compatible values.",
+      "phase": "01d"
+    },
+    {
+      "requirement": "RUN-05",
+      "frames": [
+        "77:15"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "Backlog"
+    },
+    {
+      "requirement": "RUN-06",
+      "frames": [
+        "77:14",
+        "77:20",
+        "77:21"
+      ],
+      "note": "Handoff commands link to explanatory states; existing analysis tools are reused.",
+      "phase": "01d"
+    },
+    {
+      "requirement": "RUN-07",
+      "frames": [
+        "77:15",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "Backlog"
+    },
+    {
+      "requirement": "RUN-08",
+      "frames": [
+        "77:13"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "RUN-09",
+      "frames": [
+        "77:13",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "RUN-10",
+      "frames": [
+        "77:10",
+        "77:15"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "CFG-01",
+      "frames": [
+        "88:1468",
+        "77:17"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "CFG-02",
+      "frames": [
+        "89:1488",
+        "88:1468"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "CFG-03",
+      "frames": [
+        "77:17",
+        "77:21"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01a"
+    },
+    {
+      "requirement": "CFG-04",
+      "frames": [
+        "77:16",
+        "77:17"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "CFG-05",
+      "frames": [
+        "77:16"
+      ],
+      "note": "Visible controls and/or documented interaction state.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "CFG-06",
+      "frames": [
+        "77:16",
+        "77:21"
+      ],
+      "note": "Round-trip contract and source-only warning; no importer implemented.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "CFG-07",
+      "frames": [
+        "77:21",
+        "77:17"
+      ],
+      "note": "Offline/storage-failure behavior annotation; file validation is an engineering requirement.",
+      "phase": "01b"
+    },
+    {
+      "requirement": "CFG-08",
+      "frames": [
+        "88:1264",
+        "77:20"
+      ],
+      "note": "Structured list, touch alternatives and keyboard contract; assistive-tech testing pending.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "CFG-09",
+      "frames": [
+        "77:18",
+        "88:1264",
+        "89:1253"
+      ],
+      "note": "Landscape/portrait tablet examples share the full command set with desktop.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "CFG-10",
+      "frames": [
+        "77:20"
+      ],
+      "note": "Menu/shortcut inventory; command search and remapping behavior are specified.",
+      "phase": "01c"
+    },
+    {
+      "requirement": "CFG-11",
+      "frames": [
+        "77:16",
+        "77:17"
+      ],
+      "note": "File/view handoff; real-time collaboration remains outside scope.",
+      "phase": "Backlog"
+    }
+  ],
+  "components": {
+    "Button": "existing states plus State=Danger (99:1521) for destructive commands",
+    "IconButton": "99:1531 — Default/Selected with Icon instance swap",
+    "Mode switcher": "99:1757 — Select/Pan/Connect/Probe/Note",
+    "View switch": "99:1779 — Source/Split/Schematic",
+    "Badge": "79:243 — tinted pill",
+    "Port": "79:280 — State × Domain (fluid circle, thermal square, electrical diamond, rotational triangle, signal arrow)",
+    "Library item": "79:285 — dense row with Symbol swap and Meta line",
+    "Node": "79:276 — Style=Card or Style=Symbol",
+    "Field": "local set",
+    "Data row": "local set",
+    "Menu item": "116:2709 — Default/Hover/Danger/Disabled, label + optional shortcut",
+    "Tree row": "116:2726 — Kind=Group/Leaf × State=Default/Selected, label + dimmed type",
+    "Node compact": "119:2844 — Default/Selected/Stale, 108×48, symbol + name + one result; Size=Regular (108×48) or Size=Chip (24 px high, hugs width) with a Has value toggle"
+  },
+  "phases": {
+    "01a": "Readable canvas",
+    "01b": "Editing foundation",
+    "01c": "Complete authoring",
+    "01d": "Explain and present",
+    "Backlog": "Triggered, not committed"
+  },
+  "realModels": {
+    "88:1068": {
+      "source": "web/src/defaultExample.ts EV_THERMAL_EXAMPLE_TEXT",
+      "instances": 26,
+      "connectionSets": 25,
+      "values": "frees-cli solve at 51a2ea2 (Run A, steady state)"
+    },
+    "128:2930": {
+      "source": "web/e2e/schematic-baseline.spec.ts DENSE_FLOOR (library components only)",
+      "instances": 100,
+      "connectionSets": 83,
+      "values": "frees-cli solve at 51a2ea2 (Run A, steady state)"
+    },
+    "humid-air frames": {
+      "frames": [
+        "77:4",
+        "77:6",
+        "77:7",
+        "77:8",
+        "77:9",
+        "77:12",
+        "77:13",
+        "77:14",
+        "77:15",
+        "77:18",
+        "88:1468",
+        "89:1253",
+        "89:1488"
+      ],
+      "source": "document shown in frame 06 (eff_hp 0.45, W 0.011, FAN eta 0.55; Run B eta 0.60)",
+      "values": "frees-cli solve at 51a2ea2; frame 12 temperature trace remains illustrative"
+    }
+  },
+  "browserBaseline": {
+    "spec": "web/e2e/schematic-baseline.spec.ts",
+    "recorded": "2026-10-28",
+    "revision": "51a2ea2",
+    "browser": "Chromium 151 / Playwright 1.62.1",
+    "findings": "docs/schematic-workspace-change-request.md section 2",
+    "models": [
+      "humid-air (5)",
+      "ev-thermal (26)",
+      "dense-floor (100)"
+    ]
+  }
+}
