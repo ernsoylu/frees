@@ -1,8 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActionIcon, Badge, Button, Group, Paper, Select, Stack, Text, TextInput, Tooltip } from '@mantine/core'
 import {
+  ActionIcon,
+  Badge,
+  Button,
+  Group,
+  Kbd,
+  Menu,
+  Paper,
+  Popover,
+  SegmentedControl,
+  Select,
+  Stack,
+  Switch,
+  Text,
+  TextInput,
+  Tooltip,
+  useComputedColorScheme,
+} from '@mantine/core'
+import {
+  IconAdjustments,
   IconArrowsMaximize,
   IconDownload,
+  IconLock,
   IconLayoutGrid,
   IconZoomIn,
   IconZoomOut,
@@ -14,20 +33,39 @@ import {
   declaredComponentTypes,
   declaredInstances,
 } from './declaration'
-import { buildLineStyles, lineId, lineLabel, type LineStyle } from './palette'
+import { buildLineStyles, lineId, lineLabel, SCHEMATIC_INK, type LineStyle, type SchematicInk } from './palette'
 import {
-  framedGroups,
+  arrangeDeltas,
+  connectedTo,
+  focusOf,
   LAYER_GAP,
   layoutSchematic,
-  routeEdge,
+  crossingHops,
+  nearestInDirection,
+  pathOf,
+  routeAll,
+  netOf,
+  type ArrangeOp,
+  type FocusKind,
+  type PortSide,
   type SchematicEdge,
   type SchematicNode,
-  type SchematicOffsets,
 } from './layout'
 import { glyphFillPath, glyphPath, SHAPE_LABELS } from './symbols'
 import { encapsulateSelection } from './encapsulation'
 import { badgeFor, formatCompact, indexVariables, readoutFor, type NodeReadout } from './readouts'
 import { COMPONENT_CATALOG } from '../componentCatalog'
+import { boxAround, contains, frameBox, visibleBox, zoomAbout, type Box, type View } from './viewport'
+import {
+  arrangeBase,
+  EMPTY_PRESENTATION,
+  framesFor,
+  guideSnap,
+  resolveLegacy,
+  snapToGrid,
+  type SchematicPresentation,
+  type ViewSettings,
+} from './presentation'
 import {
   alreadyConnected,
   connectStatement,
@@ -46,6 +84,39 @@ const MIN_LABEL_PX = 12
 const CHIP_GAP_PX = 6
 /** Furthest a chip name may run past its block on either side. */
 const CHIP_OVERHANG = LAYER_GAP
+const ARROWS: Partial<Record<string, 'left' | 'right' | 'up' | 'down'>> = {
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+}
+const ARRANGE_ITEMS: ({ op: ArrangeOp; label: string } | null)[] = [
+  { op: 'left', label: 'Align left' },
+  { op: 'centre', label: 'Align centres' },
+  { op: 'right', label: 'Align right' },
+  null,
+  { op: 'top', label: 'Align top' },
+  { op: 'middle', label: 'Align middles' },
+  { op: 'bottom', label: 'Align bottom' },
+  null,
+  { op: 'spread-x', label: 'Distribute horizontally' },
+  { op: 'spread-y', label: 'Distribute vertically' },
+]
+const VIEW_CHOICES: { key: 'background' | 'grid' | 'spacing' | 'orientation' | 'grouping' | 'detail'; label: string; data: string[][] }[] = [
+  { key: 'orientation', label: 'Flow', data: [['horizontal', 'Left to right'], ['vertical', 'Top to bottom']] },
+  { key: 'spacing', label: 'Spacing', data: [['compact', 'Compact'], ['normal', 'Normal'], ['roomy', 'Roomy']] },
+  { key: 'grouping', label: 'Frames', data: [['circuit', 'Circuit'], ['domain', 'Domain'], ['none', 'None']] },
+  { key: 'detail', label: 'Blocks', data: [['full', 'Full'], ['names', 'Names only']] },
+  { key: 'background', label: 'Background', data: [['plain', 'Plain'], ['dots', 'Dots'], ['grid', 'Grid']] },
+  { key: 'grid', label: 'Grid size', data: [['8', '8'], ['16', '16'], ['32', '32']] },
+]
+/** Snap and guide pull, in screen pixels. */
+const GUIDE_PX = 6
+const FOCUS_TITLES: Record<FocusKind, string> = {
+  neighbours: 'Neighbours of',
+  trace: 'Net through',
+  circuit: 'Circuit of',
+}
 
 interface Props {
   /** The check response holding the connection topology; it outlives the
@@ -68,16 +139,16 @@ interface Props {
    *  Absent = the canvas stays read-only. */
   onEmitStatement?: (statement: string) => void
   onInsertBlock?: (block: string) => void
-  /** Where the user has dragged each block, owned by the workspace so it rides
-   *  the project file — the drawing is regenerated from the document on every
-   *  check, so these offsets are the only part of it worth saving. */
-  offsets?: SchematicOffsets
-  onOffsetsChange?: (next: SchematicOffsets) => void
+  /** How the drawing is presented — placed blocks, locks, areas, view
+   *  settings — owned by the workspace so it rides the project file; the
+   *  network itself is regenerated from the document on every check. */
+  presentation?: SchematicPresentation
+  onPresentationChange?: (next: SchematicPresentation) => void
   /** Instance ids to emphasize from a Check diagnosis (free quantities). */
   highlightIds?: readonly string[]
 }
 
-type Offsets = SchematicOffsets
+type Positions = SchematicPresentation['positions']
 
 /**
  * Rendered schematic of the component network, drawn as a circuit: each
@@ -95,26 +166,35 @@ export default function SchematicTab({
   onSelectLine,
   onEmitStatement,
   onInsertBlock,
-  offsets: savedOffsets,
-  onOffsetsChange,
+  presentation: saved,
+  onPresentationChange,
   highlightIds = [],
 }: Readonly<Props>) {
   const svgRef = useRef<SVGSVGElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
-  const [zoom, setZoom] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [view, setView] = useState<View>({ zoom: 1, x: 0, y: 0 })
+  const zoom = view.zoom
   // Dragging updates many times a second; routing every pointermove through
   // the workspace would re-render the app and restart its autosave debounce
   // once per frame. The canvas therefore owns the live value — seeded from the
   // workspace — and publishes upward once, when the drag ends. The ref mirrors
   // the state so the commit can read the final value without waiting for a
   // render.
-  const offsetsRef = useRef<Offsets>(savedOffsets ?? {})
-  const [offsets, setOffsets] = useState<Offsets>(savedOffsets ?? {})
-  const applyOffsets = useCallback((next: Offsets) => {
-    offsetsRef.current = next
-    setOffsets(next)
+  const presRef = useRef<SchematicPresentation>(saved ?? EMPTY_PRESENTATION)
+  const [pres, setPres] = useState(saved ?? EMPTY_PRESENTATION)
+  const applyPres = useCallback((next: SchematicPresentation) => {
+    presRef.current = next
+    setPres(next)
   }, [])
+  /** Change the presentation and publish it at once — anything but a drag frame. */
+  const updatePres = (change: (p: SchematicPresentation) => SchematicPresentation) => {
+    const next = change(presRef.current)
+    applyPres(next)
+    onPresentationChange?.(next)
+  }
+  const settings = pres.view
+  const setSettings = (change: (v: ViewSettings) => ViewSettings) => updatePres((p) => ({ ...p, view: change(p.view) }))
+  const lockedIds = useMemo(() => new Set(pres.locked), [pres.locked])
   const [hovered, setHovered] = useState<string | null>(null)
   const [pinned, setPinned] = useState<string | null>(null)
   const [pendingPort, setPendingPort] = useState<{ instance: string; port: string } | null>(null)
@@ -122,7 +202,15 @@ export default function SchematicTab({
   const [selectFrom, setSelectFrom] = useState<string | null>(null)
   const [selectTo, setSelectTo] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // An explicit context command (VIEW-06); plain selection never fades anything.
+  const [focus, setFocus] = useState<{ kind: FocusKind; id: string } | null>(null)
   const [componentName, setComponentName] = useState('CustomComponent')
+  const toggle = (key: 'snap' | 'guides' | 'portLabels', on: boolean) => setSettings((s) => ({ ...s, [key]: on }))
+  // A user area being named (VIEW-05), and v3 positions that matched no block.
+  const [areaName, setAreaName] = useState<string | null>(null)
+  const [unresolved, setUnresolved] = useState(0)
+  // Alignment lines shown while a drag sits on one.
+  const [guides, setGuides] = useState<{ xs: number[]; ys: number[] } | null>(null)
   const lastEmitted = useRef<{ a: string; b: string } | null>(null)
 
   const connections = useMemo(() => checkResult?.connections ?? [], [checkResult])
@@ -144,6 +232,9 @@ export default function SchematicTab({
   }, [checkResult, components, text])
 
   const declaredIds = useMemo(() => [...documentInstances(text).keys()], [text])
+  // The canvas element exists only while there is something to draw; effects
+  // that attach to it re-run when it appears.
+  const drawn = connections.length > 0 || declaredIds.length > 0
 
   // The document wires components but the canvas has no topology. Either no
   // check has run since the last edit (checkResult is null), or one ran and
@@ -180,7 +271,7 @@ export default function SchematicTab({
     return out
   }, [components])
 
-  const layout = useMemo(
+  const rawLayout = useMemo(
     () =>
       layoutSchematic(connections, labels, declaredIds, portsByInstance, (key, index) => {
         const base = lineLabel(key, fluidSpelling)
@@ -188,26 +279,78 @@ export default function SchematicTab({
       }),
     [connections, labels, declaredIds, portsByInstance, fluidSpelling],
   )
-
-  const styles = useMemo(() => buildLineStyles(layout.lines), [layout.lines])
-  const styleOf = useCallback(
-    (id: string): LineStyle => styles.get(id) ?? { color: '#adb5bd', width: 1.8 },
-    [styles],
+  // Placed blocks keep their absolute positions whatever the flow or spacing;
+  // only the blocks the layout places move with it.
+  const layout = useMemo(
+    () => arrangeBase(rawLayout, { spacing: settings.spacing, orientation: settings.orientation }),
+    [rawLayout, settings.spacing, settings.orientation],
   )
 
-  // A drag moves a node; the layout stays the authority for where it started.
+  const scheme = useComputedColorScheme('dark')
+  const ink = SCHEMATIC_INK[scheme]
+  const styles = useMemo(() => buildLineStyles(layout.lines, scheme), [layout.lines, scheme])
+  const styleOf = useCallback(
+    (id: string): LineStyle => styles.get(id) ?? { color: ink.borderTerminal, width: 1.8 },
+    [styles, ink],
+  )
+
+  // A block the user placed sits where they put it; the rest where the layout puts them.
   const positioned = useMemo(() => {
     const map = new Map<string, SchematicNode>()
     for (const n of layout.nodes) {
-      const o = offsets[n.id]
-      map.set(n.id, o ? { ...n, x: n.x + o.dx, y: n.y + o.dy } : n)
+      const p = pres.positions[n.id]
+      map.set(n.id, p ? { ...n, x: p.x, y: p.y } : n)
     }
     return map
-  }, [layout.nodes, offsets])
+  }, [layout.nodes, pres.positions])
 
-  const groups = useMemo(() => framedGroups(layout.groups, positioned.values()), [layout.groups, positioned])
+  // v3 files saved offsets from the plain layout of the checked network; once
+  // a Check has drawn that network, they become absolute positions.
+  const hasLegacy = Object.keys(pres.legacyOffsets).length > 0
+  useEffect(() => {
+    if (!hasLegacy || !checkResult || connections.length === 0) {
+      return
+    }
+    const r = resolveLegacy(presRef.current, rawLayout.nodes)
+    applyPres(r.presentation)
+    onPresentationChange?.(r.presentation)
+    setUnresolved(r.unresolved)
+  }, [hasLegacy, checkResult, connections.length, rawLayout.nodes, applyPres, onPresentationChange])
+
+  const groups = useMemo(() => {
+    const domains = new Map(layout.edges.map((e) => [e.lineId, e.domain]))
+    return framesFor(settings.grouping, layout.groups, positioned.values(), (line) => domains.get(line) ?? line)
+  }, [settings.grouping, layout.groups, layout.edges, positioned])
+  // User areas (VIEW-05) are sized to their members wherever those are drawn,
+  // with a title row above them.
+  const areaFrames = useMemo(
+    () =>
+      pres.areas.flatMap((a) => {
+        const b = boxAround(a.members.flatMap((id) => positioned.get(id) ?? []), 14, 14)
+        return b ? [{ ...a, x: b.minX, y: b.minY - 16, w: b.w, h: b.h + 16 }] : []
+      }),
+    [pres.areas, positioned],
+  )
+  const shown = useMemo(
+    () => (focus && positioned.has(focus.id) ? focusOf(focus.kind, focus.id, layout.nodes, layout.edges) : null),
+    [focus, positioned, layout.nodes, layout.edges],
+  )
+  // Isolating a circuit hides the rest; neighbours and trace fade it.
+  const isolating = shown !== null && focus?.kind === 'circuit'
   // Routes avoid nodes where they are drawn now, not where the layout put them.
   const placed = useMemo(() => [...positioned.values()], [positioned])
+  // Every wire routed once per arrangement, against the blocks and each other.
+  const routes = useMemo(() => routeAll(layout.edges, positioned, placed), [layout.edges, positioned, placed])
+  const edgeNet = useMemo(() => new Map(layout.edges.map((e) => [e.id, netOf(e)])), [layout.edges])
+  // Hop over drawn wires only: an isolated circuit has nothing to hop.
+  const hops = useMemo(
+    () =>
+      crossingHops(
+        isolating ? new Map([...routes].filter(([id]) => shown.edges.has(id))) : routes,
+        (id) => edgeNet.get(id) ?? id,
+      ),
+    [routes, edgeNet, isolating, shown],
+  )
 
   // Free drawing units left and right of each block, to its nearest neighbour
   // in the same row: the space a chip name may share with that neighbour.
@@ -238,7 +381,7 @@ export default function SchematicTab({
     let minY = 0
     let maxX = layout.width
     let maxY = layout.height
-    for (const g of groups) {
+    for (const g of [...groups, ...areaFrames]) {
       minX = Math.min(minX, g.x)
       minY = Math.min(minY, g.y)
       maxX = Math.max(maxX, g.x + g.w)
@@ -252,7 +395,7 @@ export default function SchematicTab({
       maxY = Math.max(maxY, n.y + n.h + 20)
     }
     return { minX, minY, w: maxX - minX, h: maxY - minY }
-  }, [layout.width, layout.height, groups, positioned])
+  }, [layout.width, layout.height, groups, areaFrames, positioned])
 
   const values = useMemo(
     () => indexVariables(variables, checkResult?.inferredUnits),
@@ -289,7 +432,7 @@ export default function SchematicTab({
     })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [drawn])
 
   const fitTo = useCallback(
     (w: number, h: number) => {
@@ -298,9 +441,7 @@ export default function SchematicTab({
       }
       // MIN_ZOOM is the floor for manual zoom-out only; Fit must frame the
       // whole drawing however large it is, dragged nodes included.
-      const next = Math.min(w / bounds.w, h / bounds.h, MAX_ZOOM)
-      setZoom(next)
-      setPan({ x: -bounds.minX * next, y: -bounds.minY * next })
+      setView(frameBox(bounds, w, h, MAX_ZOOM))
     },
     [layout.width, layout.height, bounds],
   )
@@ -321,29 +462,45 @@ export default function SchematicTab({
   const takeControl = useCallback(() => {
     userAdjusted.current = true
   }, [])
+  /** Zoom by `factor` about a viewport point (its centre by default). */
+  const zoomBy = useCallback(
+    (factor: number, at?: { x: number; y: number }) => {
+      takeControl()
+      setView((v) => zoomAbout(v, factor, at ?? { x: viewport.w / 2, y: viewport.h / 2 }, minZoom, MAX_ZOOM))
+    },
+    [takeControl, viewport.w, viewport.h, minZoom],
+  )
+  const frame = useCallback(
+    (box: Box | null) => {
+      if (box && viewport.w > 0) {
+        takeControl()
+        setView(frameBox(box, viewport.w, viewport.h, MAX_ZOOM))
+      }
+    },
+    [takeControl, viewport.w, viewport.h],
+  )
+  // Fit selection frames the shift-selected blocks, or the pinned one.
+  const selection = [...selected, ...(pinned && !selected.has(pinned) ? [pinned] : [])]
+  const fitSelection = () =>
+    frame(boxAround(selection.flatMap((id) => positioned.get(id) ?? []), CHIP_OVERHANG + 5, 20))
 
   const nodeKey = layout.nodes.map((n) => n.id).join(',')
 
   /**
    * Hands the current arrangement to the workspace, so it rides the project
-   * file. Offsets for blocks the document no longer declares are dropped here
+   * file. Positions of blocks the document no longer declares are dropped here
    * rather than as the network changes: a stale entry is harmless to draw (no
    * node looks it up), and pruning at save time means editing a document never
    * discards a position the user set on a block that survives the edit.
    */
-  const commitOffsets = useCallback(() => {
-    if (!onOffsetsChange) {
+  const commit = useCallback(() => {
+    if (!onPresentationChange) {
       return
     }
     const alive = new Set(nodeKey.split(','))
-    const live: Offsets = {}
-    for (const [id, offset] of Object.entries(offsetsRef.current)) {
-      if (alive.has(id)) {
-        live[id] = offset
-      }
-    }
-    onOffsetsChange(live)
-  }, [nodeKey, onOffsetsChange])
+    const positions = Object.fromEntries(Object.entries(presRef.current.positions).filter(([id]) => alive.has(id)))
+    onPresentationChange({ ...presRef.current, positions })
+  }, [nodeKey, onPresentationChange])
 
   // Keep the whole network framed as the panel settles and the document
   // changes, so the user opens onto the drawing rather than its top-left
@@ -442,33 +599,56 @@ export default function SchematicTab({
       if (e.key === 'Escape') {
         setPendingPort(null)
         setWireNote(null)
-        return
+        setFocus(null)
       }
-      if (!pinned) {
-        return
-      }
-      const focusInSchematic = viewportRef.current?.contains(document.activeElement)
-      if (!focusInSchematic) {
-        return
-      }
-      const step = e.shiftKey ? 20 : 8
-      let dx = 0
-      let dy = 0
-      if (e.key === 'ArrowLeft') dx = -step
-      else if (e.key === 'ArrowRight') dx = step
-      else if (e.key === 'ArrowUp') dy = -step
-      else if (e.key === 'ArrowDown') dy = step
-      else return
-      e.preventDefault()
-      takeControl()
-      const cur = offsetsRef.current[pinned] ?? { dx: 0, dy: 0 }
-      const next = { ...offsetsRef.current, [pinned]: { dx: cur.dx + dx, dy: cur.dy + dy } }
-      applyOffsets(next)
-      onOffsetsChange?.(next)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [pinned, applyOffsets, onOffsetsChange, takeControl])
+  }, [])
+
+  /** Move blocks by per-block drawing-unit deltas, as one workspace update; locked blocks stay. */
+  const moveBlocks = (deltas: ReadonlyMap<string, { dx: number; dy: number }>) => {
+    const positions = { ...presRef.current.positions }
+    for (const [id, d] of deltas) {
+      const n = positioned.get(id)
+      if (n && !lockedIds.has(id)) {
+        positions[id] = { x: n.x + d.dx, y: n.y + d.dy }
+      }
+    }
+    takeControl()
+    updatePres((p) => ({ ...p, positions }))
+  }
+  /** Lock (or unlock) the selection where it is drawn now. */
+  const lockSelection = (on: boolean) =>
+    updatePres((p) => ({
+      ...p,
+      positions: on ? { ...p.positions, ...Object.fromEntries(selection.flatMap((id) => { const n = positioned.get(id); return n ? [[id, { x: n.x, y: n.y }]] : [] })) } : p.positions,
+      locked: on ? [...new Set([...p.locked, ...selection])] : p.locked.filter((id) => !selection.includes(id)),
+    }))
+  const addArea = (label: string) => {
+    updatePres((p) => ({ ...p, areas: [...p.areas, { id: `area-${Date.now().toString(36)}`, label, members: selection }] }))
+    setAreaName(null)
+  }
+  const removeAreas = () => updatePres((p) => ({ ...p, areas: p.areas.filter((a) => !a.members.some((m) => selection.includes(m))) }))
+  const nudge = (dx: number, dy: number) => moveBlocks(new Map(selection.map((id) => [id, { dx, dy }])))
+  const arrange = (op: ArrangeOp) => moveBlocks(arrangeDeltas(op, selection.flatMap((id) => positioned.get(id) ?? [])))
+  const instanceIds = (ids: Iterable<string>) => [...ids].filter((id) => positioned.get(id)?.kind === 'instance')
+  const select = (ids: Iterable<string>) => {
+    setSelected(new Set(instanceIds(ids)))
+    setPinned(null)
+  }
+  const selectAll = () => select(positioned.keys())
+  const selectConnected = () => select(connectedTo(selection, layout.edges))
+  // Same domain: every block on a connection of a domain the selection uses.
+  const selectDomain = () => {
+    const ids = new Set(selection)
+    const domains = new Set(layout.edges.filter((e) => ids.has(e.from) || ids.has(e.to)).map((e) => e.domain))
+    select(layout.edges.filter((e) => domains.has(e.domain)).flatMap((e) => [e.from, e.to]).concat(selection))
+  }
+  const clearSelection = () => {
+    setSelected(new Set())
+    setPinned(null)
+  }
 
   const exportSvg = () => {
     const svg = svgRef.current
@@ -479,6 +659,7 @@ export default function SchematicTab({
     // whole drawing, including anything the user has dragged out of view.
     const { minX, minY, w, h } = bounds
     const clone = svg.cloneNode(true) as SVGSVGElement
+    clone.querySelector('[data-background]')?.remove()
     clone.setAttribute('viewBox', `${minX} ${minY} ${w} ${h}`)
     clone.setAttribute('width', String(Math.round(w)))
     clone.setAttribute('height', String(Math.round(h)))
@@ -494,13 +675,92 @@ export default function SchematicTab({
     URL.revokeObjectURL(url)
   }
 
-  const drag = useDragging(zoom, offsetsRef, applyOffsets, setPan, commitOffsets, takeControl)
+  /**
+   * Place dragged blocks at their start positions plus the pointer's travel. The
+   * dragged group's box lands on an alignment guide when one is within reach,
+   * otherwise on the grid when snapping is on — per axis.
+   */
+  const dragTo = (ids: readonly string[], start: Positions, dx: number, dy: number) => {
+    const box = boxAround(
+      ids.flatMap((id) => {
+        const n = positioned.get(id)
+        return n && start[id] ? [{ ...n, x: start[id].x + dx, y: start[id].y + dy }] : []
+      }),
+    )
+    if (box) {
+      const others = placed.filter((n) => n.kind === 'instance' && !ids.includes(n.id))
+      const g = settings.guides
+        ? guideSnap({ x: box.minX, y: box.minY, w: box.w, h: box.h }, others, GUIDE_PX / zoom)
+        : { dx: 0, dy: 0, xs: [], ys: [] }
+      const grid = (v: number) => (settings.snap ? snapToGrid(v, settings.grid) - v : 0)
+      dx += g.xs.length > 0 ? g.dx : grid(box.minX)
+      dy += g.ys.length > 0 ? g.dy : grid(box.minY)
+      setGuides(g.xs.length + g.ys.length > 0 ? { xs: g.xs, ys: g.ys } : null)
+    }
+    const positions = { ...presRef.current.positions }
+    for (const id of ids) {
+      if (start[id]) {
+        positions[id] = { x: start[id].x + dx, y: start[id].y + dy }
+      }
+    }
+    applyPres({ ...presRef.current, positions })
+  }
+  const endDrag = useCallback(() => {
+    setGuides(null)
+    commit()
+  }, [commit])
+  const drag = useDragging(zoom, dragTo, setView, endDrag, takeControl, clearSelection)
+  // Shift+drag on empty canvas: a marquee, in viewport pixels, adding every
+  // block it touches to the selection.
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
+  const marqueeRef = useRef(marquee)
+  const marqueeOn = marquee !== null
+  useEffect(() => {
+    const el = viewportRef.current
+    if (!marqueeOn || !el) {
+      return
+    }
+    const local = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect()
+      return { x: e.clientX - r.left, y: e.clientY - r.top }
+    }
+    const move = (e: PointerEvent) => {
+      const p = local(e)
+      marqueeRef.current = marqueeRef.current && { ...marqueeRef.current, x1: p.x, y1: p.y }
+      setMarquee(marqueeRef.current)
+    }
+    const up = () => {
+      const m = marqueeRef.current
+      marqueeRef.current = null
+      setMarquee(null)
+      if (!m) {
+        return
+      }
+      const [x0, x1] = [Math.min(m.x0, m.x1), Math.max(m.x0, m.x1)].map((x) => (x - view.x) / view.zoom)
+      const [y0, y1] = [Math.min(m.y0, m.y1), Math.max(m.y0, m.y1)].map((y) => (y - view.y) / view.zoom)
+      const hit = placed.filter((n) => n.kind === 'instance' && n.x < x1 && n.x + n.w > x0 && n.y < y1 && n.y + n.h > y0)
+      setSelected((cur) => new Set([...cur, ...hit.map((n) => n.id)]))
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+  }, [marqueeOn, view, placed])
+  usePanZoom(viewportRef, drawn, zoomBy, setView, takeControl, drag.cancel)
+
+  // The background doubles its pitch until it stays at least 8 px apart.
+  let pitch = settings.grid
+  while (pitch * zoom < 8) {
+    pitch *= 2
+  }
 
   const active = pinned ?? hovered
   const activeNode = active ? positioned.get(active) : undefined
   const activeReadout = active ? readouts.get(active) : undefined
 
-  if (connections.length === 0 && declaredIds.length === 0) {
+  if (!drawn) {
     return (
       <Stack gap="xs" p="md" align="center" justify="center" h="100%">
         <Text size="sm" c="dimmed" ta="center" maw={430}>
@@ -520,16 +780,9 @@ export default function SchematicTab({
           const style = styleOf(id)
           return (
             <Group key={id} gap={4}>
-              <span
-                style={{
-                  width: 16,
-                  height: 3,
-                  borderRadius: 2,
-                  background: style.dash ? 'none' : style.color,
-                  borderTop: style.dash ? `3px dashed ${style.color}` : undefined,
-                  display: 'inline-block',
-                }}
-              />
+              <svg width={26} height={6} aria-hidden>
+                <line x1={1} y1={3} x2={25} y2={3} stroke={style.color} strokeWidth={style.width} strokeDasharray={style.dash} strokeLinecap={style.cap} />
+              </svg>
               <Text size="xs" c="dimmed">
                 {lineLabel(key, fluidSpelling)}
               </Text>
@@ -593,7 +846,7 @@ export default function SchematicTab({
             </Button>
           </Group>
         )}
-        {onInsertBlock && selected.size > 0 && (
+        {onInsertBlock && selected.size > 1 && (
           <Group gap={4} wrap="nowrap">
             <TextInput size="xs" value={componentName} onChange={(e) => setComponentName(e.currentTarget.value)} w={150} aria-label="Custom component name" />
             <Button size="compact-xs" onClick={() => {
@@ -606,24 +859,157 @@ export default function SchematicTab({
             }}>Encapsulate</Button>
           </Group>
         )}
+        {areaName !== null && (
+          <Group gap={4} wrap="nowrap">
+            <TextInput
+              size="xs"
+              value={areaName}
+              onChange={(e) => setAreaName(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && areaName.trim()) addArea(areaName.trim())
+                if (e.key === 'Escape') setAreaName(null)
+              }}
+              w={150}
+              aria-label="Area name"
+              data-autofocus
+              autoFocus
+            />
+            <Button size="compact-xs" disabled={!areaName.trim()} onClick={() => addArea(areaName.trim())}>
+              Add area
+            </Button>
+            <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setAreaName(null)}>
+              Cancel
+            </Button>
+          </Group>
+        )}
+        {unresolved > 0 && (
+          <Text size="xs" c="orange">
+            {unresolved} saved block position{unresolved === 1 ? '' : 's'} from an older file match no block; kept in the project for recovery
+          </Text>
+        )}
         <Group gap={2} ml="auto">
+          {selection.length > 1 && (
+            <Badge size="xs" variant="light" color="yellow" mr={4}>
+              {selection.length} selected
+            </Badge>
+          )}
+          <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+              <Button size="compact-xs" variant="subtle" color="gray">
+                Select
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Shift+click or Shift+drag adds</Menu.Label>
+              <Menu.Item onClick={selectAll} rightSection={<Kbd size="xs">Ctrl A</Kbd>}>
+                All
+              </Menu.Item>
+              <Menu.Item onClick={selectConnected} disabled={selection.length === 0}>
+                Connected
+              </Menu.Item>
+              <Menu.Item onClick={selectDomain} disabled={selection.length === 0}>
+                Same domain
+              </Menu.Item>
+              <Menu.Item onClick={clearSelection} disabled={selection.length === 0} rightSection={<Kbd size="xs">Esc</Kbd>}>
+                None
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+              <Button size="compact-xs" variant="subtle" color="gray" disabled={selection.length === 0}>
+                Arrange
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {ARRANGE_ITEMS.map((item) =>
+                item === null ? (
+                  <Menu.Divider key="divider" />
+                ) : (
+                  <Menu.Item
+                    key={item.op}
+                    onClick={() => arrange(item.op)}
+                    disabled={selection.length < (item.op.startsWith('spread') ? 3 : 2)}
+                  >
+                    {item.label}
+                  </Menu.Item>
+                )
+              )}
+              <Menu.Divider />
+              {selection.every((id) => lockedIds.has(id)) ? (
+                <Menu.Item onClick={() => lockSelection(false)}>Unlock position</Menu.Item>
+              ) : (
+                <Menu.Item onClick={() => lockSelection(true)}>Lock position</Menu.Item>
+              )}
+              <Menu.Item onClick={() => setAreaName(`Area ${pres.areas.length + 1}`)}>Frame as area…</Menu.Item>
+              <Menu.Item onClick={removeAreas} disabled={!pres.areas.some((a) => a.members.some((m) => selection.includes(m)))}>
+                Remove area
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Popover position="bottom-end" withinPortal shadow="md">
+            <Popover.Target>
+              <ActionIcon size="sm" variant="subtle" aria-label="View settings" title="View settings">
+                <IconAdjustments size={15} />
+              </ActionIcon>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <Stack gap={6} w={270}>
+                {VIEW_CHOICES.map((c) => (
+                  <div key={c.key}>
+                    <Text size="xs" c="dimmed" mb={2}>
+                      {c.label}
+                    </Text>
+                    <SegmentedControl
+                      size="xs"
+                      fullWidth
+                      aria-label={c.label}
+                      value={String(settings[c.key])}
+                      data={c.data.map(([value, label]) => ({ value, label }))}
+                      onChange={(v) => setSettings((s) => ({ ...s, [c.key]: c.key === 'grid' ? Number(v) : v }) as ViewSettings)}
+                    />
+                  </div>
+                ))}
+                <Switch size="xs" label="Snap to grid" checked={settings.snap} onChange={(e) => toggle('snap', e.currentTarget.checked)} />
+                <Switch size="xs" label="Alignment guides" checked={settings.guides} onChange={(e) => toggle('guides', e.currentTarget.checked)} />
+                <Switch size="xs" label="Port names" checked={settings.portLabels} onChange={(e) => toggle('portLabels', e.currentTarget.checked)} />
+              </Stack>
+            </Popover.Dropdown>
+          </Popover>
           <Tooltip label="Zoom out">
-            <ActionIcon size="sm" variant="subtle" aria-label="Zoom out" onClick={() => {
-                takeControl()
-                setZoom((z) => Math.max(minZoom, z / 1.25))
-              }}>
+            <ActionIcon size="sm" variant="subtle" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.25)}>
               <IconZoomOut size={15} />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Zoom in">
-            <ActionIcon size="sm" variant="subtle" aria-label="Zoom in" onClick={() => {
-                takeControl()
-                setZoom((z) => Math.min(MAX_ZOOM, z * 1.25))
-              }}>
+            <ActionIcon size="sm" variant="subtle" aria-label="Zoom in" onClick={() => zoomBy(1.25)}>
               <IconZoomIn size={15} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Fit to window">
+          <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+              <Button size="compact-xs" variant="subtle" color="gray" aria-label="Zoom level" miw={48}>
+                {Math.round(zoom * 100)}%
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item onClick={fit} rightSection={<Kbd size="xs">⇧1</Kbd>}>Fit all</Menu.Item>
+              <Menu.Item onClick={fitSelection} disabled={selection.length === 0} rightSection={<Kbd size="xs">⇧2</Kbd>}>
+                Fit selection
+              </Menu.Item>
+              <Menu.Divider />
+              {[0.5, 1, 2].map((z) => (
+                <Menu.Item
+                  key={z}
+                  onClick={() => zoomBy(z / zoom)}
+                  rightSection={z === 1 ? <Kbd size="xs">⇧0</Kbd> : undefined}
+                >
+                  {z * 100}%
+                </Menu.Item>
+              ))}
+            </Menu.Dropdown>
+          </Menu>
+          <Tooltip label="Fit all (Shift+1)">
             <ActionIcon size="sm" variant="subtle" aria-label="Fit to window" onClick={fit}>
               <IconArrowsMaximize size={15} />
             </ActionIcon>
@@ -634,9 +1020,8 @@ export default function SchematicTab({
               variant="subtle"
               aria-label="Reset layout"
               onClick={() => {
-                applyOffsets({})
-                onOffsetsChange?.({})
-                setPan({ x: 0, y: 0 })
+                // Locked blocks keep their place; v3 positions not yet placed are dropped.
+                updatePres((p) => ({ ...p, positions: Object.fromEntries(Object.entries(p.positions).filter(([id]) => lockedIds.has(id))), legacyOffsets: {} }))
                 fit()
               }}
             >
@@ -653,34 +1038,106 @@ export default function SchematicTab({
 
       <div
         ref={viewportRef}
-        style={{ flex: 1, minHeight: 0, overflow: 'hidden', cursor: drag.panning ? 'grabbing' : 'grab' }}
+        tabIndex={-1}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+          position: 'relative',
+          outline: 'none',
+          background: ink.canvas,
+          touchAction: 'none',
+          userSelect: 'none', // Shift+drag is a marquee, not a text selection
+          cursor: drag.panning ? 'grabbing' : 'grab',
+        }}
         onPointerDown={(e) => {
+          if (e.shiftKey && e.button === 0 && e.isPrimary) {
+            e.preventDefault()
+            const r = e.currentTarget.getBoundingClientRect()
+            const p = { x: e.clientX - r.left, y: e.clientY - r.top }
+            marqueeRef.current = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }
+            setMarquee(marqueeRef.current)
+            return
+          }
           takeControl()
           drag.startPan(e)
         }}
-        onWheel={(e) => {
-          if (!e.ctrlKey && !e.metaKey) {
+        onKeyDown={(e) => {
+          // e.code: Shift+1 types "!" on most layouts.
+          const command = e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
+            ? { Digit1: fit, Digit2: fitSelection, Digit0: () => zoomBy(1 / zoom) }[e.code]
+            : undefined
+          if (command) {
+            e.preventDefault()
+            command()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+            e.preventDefault()
+            selectAll()
+            return
+          }
+          if (e.key === 'Escape') {
+            clearSelection()
+            return
+          }
+          const dir = ARROWS[e.key]
+          if (!dir) {
             return
           }
           e.preventDefault()
-          takeControl()
-          setZoom((z) => Math.min(MAX_ZOOM, Math.max(minZoom, z * (e.deltaY < 0 ? 1.1 : 1 / 1.1))))
+          // Alt+arrow moves keyboard focus to the nearest block that way.
+          if (e.altKey) {
+            const from = positioned.get((document.activeElement as Element | null)?.getAttribute('data-node') ?? '')
+            const to = from && nearestInDirection(from, dir, placed.filter((n) => n.kind === 'instance'))
+            if (to) {
+              viewportRef.current?.querySelector<SVGGElement>(`[data-node="${CSS.escape(to)}"]`)?.focus()
+            }
+            return
+          }
+          const step = settings.snap ? settings.grid : e.shiftKey ? 20 : 8
+          nudge(dir === 'left' ? -step : dir === 'right' ? step : 0, dir === 'up' ? -step : dir === 'down' ? step : 0)
         }}
       >
         <svg
           ref={svgRef}
           width="100%"
           height="100%"
-          viewBox={`${-pan.x / zoom} ${-pan.y / zoom} ${(viewport.w || layout.width) / zoom} ${(viewport.h || layout.height) / zoom}`}
+          viewBox={`${-view.x / zoom} ${-view.y / zoom} ${(viewport.w || layout.width) / zoom} ${(viewport.h || layout.height) / zoom}`}
           xmlns="http://www.w3.org/2000/svg"
           role="application"
           aria-label="Component network schematic. Tab to nodes and ports. Enter connects or inspects. Escape cancels wiring. Arrow keys nudge a focused node."
         >
+          {settings.background !== 'plain' && (
+            <>
+              <defs>
+                <pattern id="schematic-bg" width={pitch} height={pitch} patternUnits="userSpaceOnUse">
+                  {settings.background === 'dots' ? (
+                    <circle cx={0} cy={0} r={1.1 / zoom} fill={ink.dot} />
+                  ) : (
+                    <path d={`M ${pitch} 0 H 0 V ${pitch}`} fill="none" stroke={ink.gridLine} strokeWidth={1 / zoom} />
+                  )}
+                </pattern>
+              </defs>
+              <rect
+                data-background={settings.background}
+                x={-view.x / zoom}
+                y={-view.y / zoom}
+                width={viewport.w / zoom}
+                height={viewport.h / zoom}
+                fill="url(#schematic-bg)"
+                pointerEvents="none"
+              />
+            </>
+          )}
           {/* Circuit bands: one frame per fluid loop / coupling network, so two
               circuits that share a bond-graph domain still read apart. */}
           <g>
             {groups.map((g) => {
               const style = styleOf(g.lineId)
+              if (isolating && !layout.nodes.some((n) => (n.group === g.id || g.id === `domain:${g.label}`) && shown?.nodes.has(n.id))) {
+                return null
+              }
               return (
                 <g key={g.id}>
                   <rect
@@ -699,27 +1156,42 @@ export default function SchematicTab({
                 </g>
               )
             })}
+            {areaFrames.map((a) =>
+              isolating && !a.members.some((m) => shown?.nodes.has(m)) ? null : (
+                <g key={a.id} data-area={a.label}>
+                  <rect x={a.x} y={a.y} width={a.w} height={a.h} rx={8} fill="none" stroke={ink.subtext} strokeWidth={1.2} strokeDasharray="6 4" />
+                  <text x={a.x + 10} y={a.y + 13} fontSize={11} fontWeight={600} fill={ink.subtext}>
+                    {a.label}
+                  </text>
+                </g>
+              ),
+            )}
           </g>
 
           <g>
             {layout.edges.map((e) => {
-              const a = positioned.get(e.from)
-              const b = positioned.get(e.to)
-              if (!a || !b) {
+              const pts = routes.get(e.id)
+              if (!pts) {
                 return null
               }
               const style = styleOf(e.lineId)
               const lit = active !== null && (e.from === active || e.to === active)
+              const out = shown !== null && !shown.edges.has(e.id)
+              if (out && isolating) {
+                return null
+              }
               return (
                 <path
                   key={e.id}
-                  d={routeEdge(a, b, e.fromPort, e.toPort, placed)}
+                  data-net={netOf(e)}
+                  d={pathOf(pts, hops.get(e.id))}
                   fill="none"
                   stroke={style.color}
                   strokeWidth={lit ? style.width + 1.2 : style.width}
                   strokeDasharray={style.dash}
+                  strokeLinecap={style.cap}
                   strokeLinejoin="round"
-                  strokeOpacity={0.95}
+                  strokeOpacity={out ? 0.15 : 0.95}
                 >
                   <title>{edgeTitle(e)}</title>
                 </path>
@@ -730,22 +1202,34 @@ export default function SchematicTab({
           <g>
             {layout.nodes.map((base) => {
               const n = positioned.get(base.id) ?? base
+              const out = shown !== null && !shown.nodes.has(n.id)
+              if (out && isolating) {
+                return null
+              }
               return n.kind === 'junction' ? (
                 <circle
                   key={n.id}
+                  data-ends={layout.edges.filter((e) => e.from === n.id || e.to === n.id).length}
+                  data-net={edgeNet.get(layout.edges.find((e) => e.from === n.id || e.to === n.id)?.id ?? '')}
+                  opacity={out ? 0.2 : undefined}
                   cx={n.x + n.w / 2}
                   cy={n.y + n.h / 2}
                   r={n.w / 2}
                   fill={styleOf(layout.edges.find((e) => e.from === n.id || e.to === n.id)?.lineId ?? '').color}
-                  stroke="#1a1b1e"
+                  stroke={ink.halo}
                   strokeWidth={1.5}
                 />
               ) : (
                 <NodeBlock
                   key={n.id}
                   node={n}
+                  faded={out}
                   zoom={zoom}
                   room={chipRoom.get(n.id) ?? { left: Infinity, right: Infinity }}
+                  ink={ink}
+                  locked={lockedIds.has(n.id)}
+                  namesOnly={settings.detail === 'names'}
+                  portLabels={settings.portLabels}
                   badge={badgeFor(n, readouts.get(n.id) ?? { ports: [], outputs: [], params: [] })}
                   active={active === n.id}
                   styleOf={styleOf}
@@ -754,7 +1238,9 @@ export default function SchematicTab({
                   highlighted={highlightIds.includes(n.id) || selected.has(n.id)}
                   onPointerDown={(e) => {
                     takeControl()
-                    drag.startNode(e, n.id)
+                    // Dragging a selected block carries the whole selection; locked blocks stay.
+                    const ids = (selection.includes(n.id) ? selection : [n.id]).filter((id) => !lockedIds.has(id))
+                    drag.startNode(e, ids, Object.fromEntries(ids.flatMap((id) => { const p = positioned.get(id); return p ? [[id, { x: p.x, y: p.y }]] : [] })))
                   }}
                   onClick={(shiftKey) => {
                     if (drag.moved()) {
@@ -771,6 +1257,7 @@ export default function SchematicTab({
                     }
                     // Selecting links to the declaration but keeps the canvas
                     // in front; the readout card's reveal action navigates.
+                    setSelected(new Set([n.id]))
                     setPinned((p) => (p === n.id ? null : n.id))
                     const line = declarationOf(n)
                     if (line !== null) {
@@ -784,7 +1271,79 @@ export default function SchematicTab({
               )
             })}
           </g>
+          {guides && (
+            <g data-testid="schematic-guides" pointerEvents="none" stroke={ink.guide} strokeWidth={1 / zoom} strokeDasharray={`${4 / zoom} ${3 / zoom}`}>
+              {guides.xs.map((x) => (
+                <line key={`x${x}`} x1={x} x2={x} y1={bounds.minY} y2={bounds.minY + bounds.h} />
+              ))}
+              {guides.ys.map((y) => (
+                <line key={`y${y}`} x1={bounds.minX} x2={bounds.minX + bounds.w} y1={y} y2={y} />
+              ))}
+            </g>
+          )}
         </svg>
+        {marquee && (
+          <div
+            data-testid="schematic-marquee"
+            style={{
+              position: 'absolute',
+              left: Math.min(marquee.x0, marquee.x1),
+              top: Math.min(marquee.y0, marquee.y1),
+              width: Math.abs(marquee.x1 - marquee.x0),
+              height: Math.abs(marquee.y1 - marquee.y0),
+              border: `1px dashed ${ink.marquee}`,
+              background: ink.marqueeFill,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+        {shown && focus && (
+          <Paper
+            withBorder
+            shadow="sm"
+            px="xs"
+            py={4}
+            radius="sm"
+            role="status"
+            style={{
+              position: 'absolute',
+              top: 8,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 'max-content',
+              maxWidth: 'calc(100% - 16px)',
+              zIndex: 6,
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <Group gap="xs" wrap="nowrap">
+              <Text size="xs">
+                {FOCUS_TITLES[focus.kind]} {positioned.get(focus.id)?.label}: showing{' '}
+                {layout.nodes.filter((n) => n.kind === 'instance' && shown.nodes.has(n.id)).length} of{' '}
+                {layout.nodes.filter((n) => n.kind === 'instance').length} components
+                {isolating ? ' (the rest hidden)' : ''}
+              </Text>
+              <Button size="compact-xs" variant="light" onClick={() => setFocus(null)}>
+                Show all
+              </Button>
+              <Kbd size="xs">Esc</Kbd>
+            </Group>
+          </Paper>
+        )}
+        {/* An isolated circuit is the whole drawing for now; no overview of the hidden rest. */}
+        {!isolating && (
+          <Minimap
+            ink={ink}
+            nodes={placed}
+            bounds={bounds}
+            view={view}
+            viewport={viewport}
+            onCenter={(p) => {
+              takeControl()
+              setView((v) => ({ ...v, x: viewport.w / 2 - p.x * v.zoom, y: viewport.h / 2 - p.y * v.zoom }))
+            }}
+          />
+        )}
       </div>
 
       {activeNode && activeReadout && (
@@ -797,20 +1356,22 @@ export default function SchematicTab({
             false
           }
           onReveal={() => revealInstance(activeNode)}
-          onNudge={
+          onFocus={
             pinned === activeNode.id
-              ? (dx, dy) => {
-                  takeControl()
-                  const cur = offsetsRef.current[activeNode.id] ?? { dx: 0, dy: 0 }
-                  const next = {
-                    ...offsetsRef.current,
-                    [activeNode.id]: { dx: cur.dx + dx, dy: cur.dy + dy },
+              ? (kind) => {
+                  // The card would cover what the command shows; the banner
+                  // now carries the state and its way back.
+                  setPinned(null)
+                  setFocus({ kind, id: activeNode.id })
+                  // Frame what an isolated circuit leaves on screen.
+                  if (kind === 'circuit') {
+                    const keep = focusOf(kind, activeNode.id, layout.nodes, layout.edges).nodes
+                    frame(boxAround(placed.filter((n) => keep.has(n.id)), CHIP_OVERHANG + 5, 40))
                   }
-                  applyOffsets(next)
-                  onOffsetsChange?.(next)
                 }
               : undefined
           }
+          onNudge={pinned === activeNode.id ? nudge : undefined}
         />
       )}
     </Stack>
@@ -868,12 +1429,21 @@ interface BlockProps {
   zoom: number
   /** Free drawing units each side of the block, shared with a row neighbour. */
   room: { left: number; right: number }
+  ink: SchematicInk
+  /** Drags, nudges and Arrange leave it where it is. */
+  locked?: boolean
+  /** Draw the name-only chip at every zoom. */
+  namesOnly?: boolean
+  /** Name each port beside it, at full detail. */
+  portLabels?: boolean
   badge: { label: string; value: number; units: string } | null
   active: boolean
   styleOf: (id: string) => LineStyle
   wiring: boolean
   pendingPort: { instance: string; port: string } | null
   highlighted?: boolean
+  /** Outside an explicit trace / neighbours command. */
+  faded?: boolean
   onPointerDown: (e: React.PointerEvent) => void
   onClick: (shiftKey?: boolean) => void
   onEnter: () => void
@@ -887,12 +1457,17 @@ function NodeBlock({
   node,
   zoom,
   room,
+  ink,
+  locked = false,
+  namesOnly = false,
+  portLabels = false,
   badge,
   active,
   styleOf,
   wiring,
   pendingPort,
   highlighted = false,
+  faded = false,
   onPointerDown,
   onClick,
   onEnter,
@@ -903,7 +1478,7 @@ function NodeBlock({
   const GLYPH = 20
   // Level of detail: once the full card's name would draw below MIN_LABEL_PX,
   // show only the name, held at MIN_LABEL_PX on screen whatever the zoom.
-  const chip = zoom * LABEL_FONT < MIN_LABEL_PX
+  const chip = namesOnly || zoom * LABEL_FONT < MIN_LABEL_PX
   const chipFont = MIN_LABEL_PX / zoom
   // A name may take half the gap to each neighbour, less a visible margin, and
   // shifts toward the freer side when centring would not fit.
@@ -915,12 +1490,13 @@ function NodeBlock({
   const activate = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      onClick(false)
+      onClick(e.shiftKey)
     }
   }
   return (
     <g
       transform={`translate(${node.x}, ${node.y})`}
+      opacity={faded ? 0.25 : undefined}
       onPointerDown={onPointerDown}
       onClick={(e) => onClick(e.shiftKey)}
       onMouseEnter={onEnter}
@@ -928,16 +1504,20 @@ function NodeBlock({
       onKeyDown={activate}
       tabIndex={0}
       role="button"
+      data-node={node.id}
+      aria-pressed={highlighted}
       aria-label={`${node.type ?? 'component'} ${node.label}`}
-      style={{ cursor: 'move' }}
+      aria-description={locked ? 'position locked' : undefined}
+      data-locked={locked || undefined}
+      style={{ cursor: locked ? 'default' : 'move' }}
     >
       <title>{`${node.type ?? ''} ${node.label} — ${SHAPE_LABELS[node.shape]}`}</title>
       <rect
         width={node.w}
         height={node.h}
         rx={node.terminal ? 3 : 7}
-        fill={active ? '#2b3138' : '#25292e'}
-        stroke={highlighted ? '#fab005' : active ? '#12b886' : borderOf(node)}
+        fill={active ? ink.blockActive : ink.block}
+        stroke={highlighted ? ink.highlight : active ? ink.active : node.terminal ? ink.borderTerminal : ink.border}
         strokeWidth={highlighted || active ? 2.2 : 1.2}
         strokeDasharray={node.terminal ? '4 2' : undefined}
       />
@@ -949,8 +1529,8 @@ function NodeBlock({
           fontWeight={600}
           textAnchor="middle"
           dominantBaseline="central"
-          fill="#e9ecef"
-          stroke="#1a1b1e"
+          fill={ink.text}
+          stroke={ink.halo}
           strokeWidth={3 / zoom}
           paintOrder="stroke"
         >
@@ -958,7 +1538,7 @@ function NodeBlock({
         </text>
       )}
       {!chip && glyph && (
-        <g color="#12b886" transform={`translate(6, ${(node.h - GLYPH) / 2}) scale(${GLYPH})`}>
+        <g color={ink.glyph} transform={`translate(6, ${(node.h - GLYPH) / 2}) scale(${GLYPH})`}>
           <path
             d={glyph}
             fill="none"
@@ -970,23 +1550,24 @@ function NodeBlock({
         </g>
       )}
       {!chip && (
-        <text x={GLYPH + 12} y={badge ? 19 : 22} fontSize={LABEL_FONT} fontWeight={600} fill="#e9ecef">
+        <text x={GLYPH + 12} y={badge ? 19 : 22} fontSize={LABEL_FONT} fontWeight={600} fill={ink.text}>
           {node.label}
         </text>
       )}
       {!chip && (
-        <text x={GLYPH + 12} y={badge ? 31 : 36} fontSize={10} fill="#909296">
+        <text x={GLYPH + 12} y={badge ? 31 : 36} fontSize={10} fill={ink.subtext}>
           {node.type}
         </text>
       )}
       {!chip && badge && (
-        <text x={GLYPH + 12} y={44} fontSize={10.5} fontWeight={600} fill="#63e6be">
+        <text x={GLYPH + 12} y={44} fontSize={10.5} fontWeight={600} fill={ink.badge}>
           {badgeText(badge)}
         </text>
       )}
+      {locked && <IconLock x={node.w - 13} y={2} size={11} color={ink.subtext} aria-hidden />}
       {node.ports.map((p) => {
         const armed = pendingPort?.instance === node.id && pendingPort?.port === p.port
-        const color = p.lineId ? styleOf(p.lineId).color : '#495057'
+        const color = p.lineId ? styleOf(p.lineId).color : ink.portIdle
         return (
           <g
             key={p.port}
@@ -1017,14 +1598,30 @@ function NodeBlock({
               cx={p.dx}
               cy={p.dy}
               r={armed ? 5 : 3.2}
-              fill={armed ? '#12b886' : color}
-              stroke="#1a1b1e"
+              fill={armed ? ink.active : color}
+              stroke={ink.halo}
               strokeWidth={1}
             />
+            {portLabels && !chip && <PortName side={p.side} x={p.dx} y={p.dy} name={p.port} color={ink.portName} />}
           </g>
         )
       })}
     </g>
+  )
+}
+
+/** A port's name outside its block, beside the stub rather than on it. */
+function PortName({ side, x, y, name, color }: Readonly<{ side: PortSide; x: number; y: number; name: string; color: string }>) {
+  const at = {
+    left: { x: x - 4, y: y - 5, anchor: 'end' },
+    right: { x: x + 4, y: y - 5, anchor: 'start' },
+    top: { x: x + 5, y: y - 6, anchor: 'start' },
+    bottom: { x: x + 5, y: y + 12, anchor: 'start' },
+  }[side] as { x: number; y: number; anchor: 'start' | 'end' }
+  return (
+    <text x={at.x} y={at.y} textAnchor={at.anchor} fontSize={8.5} fill={color} pointerEvents="none">
+      {name}
+    </text>
   )
 }
 
@@ -1037,6 +1634,7 @@ function ReadoutCard({
   localType = false,
   onNudge,
   onReveal,
+  onFocus,
 }: Readonly<{
   node: SchematicNode
   readout: NodeReadout
@@ -1044,6 +1642,7 @@ function ReadoutCard({
   localType?: boolean
   onNudge?: (dx: number, dy: number) => void
   onReveal?: () => void
+  onFocus?: (kind: FocusKind) => void
 }>) {
   const empty = readout.ports.length === 0 && readout.outputs.length === 0 && readout.params.length === 0
   return (
@@ -1086,6 +1685,19 @@ function ReadoutCard({
           </Button>
         )}
       </Group>
+      {onFocus && (
+        <Group gap={4} mb={4}>
+          <Button size="compact-xs" variant="default" onClick={() => onFocus('neighbours')}>
+            Neighbours
+          </Button>
+          <Button size="compact-xs" variant="default" onClick={() => onFocus('trace')}>
+            Trace net
+          </Button>
+          <Button size="compact-xs" variant="default" onClick={() => onFocus('circuit')}>
+            Isolate circuit
+          </Button>
+        </Group>
+      )}
       {onNudge && (
         <Group gap={4} mb={4}>
           <Button size="compact-xs" variant="default" aria-label="Nudge up" onClick={() => onNudge(0, -8)}>
@@ -1177,13 +1789,27 @@ function ReadoutCard({
  */
 function useDragging(
   zoom: number,
-  offsetsRef: React.RefObject<Offsets>,
-  applyOffsets: (next: Offsets) => void,
-  setPan: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>,
+  onMove: (ids: readonly string[], start: Positions, dx: number, dy: number) => void,
+  setView: React.Dispatch<React.SetStateAction<View>>,
   onDragEnd: () => void,
   takeControl: () => void,
+  onBackgroundClick: () => void,
 ) {
-  const state = useRef<{ id: string | null; x: number; y: number; moved: boolean } | null>(null)
+  // `ids` null is a pan; otherwise the blocks being dragged together, from
+  // their positions when the drag began (x0, y0).
+  const state = useRef<{
+    ids: string[] | null
+    x: number
+    y: number
+    x0: number
+    y0: number
+    start: Positions
+    moved: boolean
+  } | null>(null)
+  const latest = useRef({ onBackgroundClick, onMove })
+  useEffect(() => {
+    latest.current = { onBackgroundClick, onMove }
+  })
   const [panning, setPanning] = useState(false)
 
   useEffect(() => {
@@ -1194,7 +1820,7 @@ function useDragging(
       }
       const dx = e.clientX - s.x
       const dy = e.clientY - s.y
-      if (Math.abs(dx) + Math.abs(dy) > 3) {
+      if (Math.abs(e.clientX - s.x0) + Math.abs(e.clientY - s.y0) > 3) {
         s.moved = true
       }
       // A drag or pan is the user taking the view; auto-fit must not chase it.
@@ -1203,21 +1829,21 @@ function useDragging(
       }
       s.x = e.clientX
       s.y = e.clientY
-      if (s.id === null) {
-        setPan((p) => ({ x: p.x + dx, y: p.y + dy }))
+      if (s.ids === null) {
+        setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy }))
         return
       }
-      const id = s.id
-      const current = offsetsRef.current
-      applyOffsets({
-        ...current,
-        [id]: { dx: (current[id]?.dx ?? 0) + dx / zoom, dy: (current[id]?.dy ?? 0) + dy / zoom },
-      })
+      if (s.moved) {
+        latest.current.onMove(s.ids, s.start, (e.clientX - s.x0) / zoom, (e.clientY - s.y0) / zoom)
+      }
     }
     const up = () => {
       const s = state.current
-      if (s?.id === null) {
+      if (s?.ids === null) {
         setPanning(false)
+        if (!s.moved) {
+          latest.current.onBackgroundClick()
+        }
       } else if (s?.moved) {
         // One workspace update per drag, not per frame.
         onDragEnd()
@@ -1233,26 +1859,195 @@ function useDragging(
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
     }
-  }, [zoom, offsetsRef, applyOffsets, setPan, onDragEnd, takeControl])
+  }, [zoom, setView, onDragEnd, takeControl])
 
   return {
     panning,
     moved: () => state.current?.moved === true,
+    /** Drop a pan in progress: a second finger turns it into a pinch. */
+    cancel: () => {
+      if (state.current?.ids === null) {
+        state.current = null
+        setPanning(false)
+      }
+    },
     startPan: (e: React.PointerEvent) => {
-      if (e.button !== 0 || state.current) {
+      // Only the first finger pans; a second one is a pinch (usePanZoom).
+      if (e.button !== 0 || !e.isPrimary || state.current) {
         return
       }
-      state.current = { id: null, x: e.clientX, y: e.clientY, moved: false }
+      state.current = { ids: null, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, start: {}, moved: false }
       setPanning(true)
     },
-    startNode: (e: React.PointerEvent, id: string) => {
-      if (e.button !== 0) {
+    startNode: (e: React.PointerEvent, ids: string[], start: Positions) => {
+      if (e.button !== 0 || !e.isPrimary) {
         return
       }
       e.stopPropagation()
-      state.current = { id, x: e.clientX, y: e.clientY, moved: false }
+      state.current = { ids, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, start, moved: false }
     },
   }
+}
+
+/**
+ * Overview of the whole drawing with the visible area outlined, shown only
+ * while part of the drawing is out of view. Click or drag on it to move there.
+ * Mouse-only by design: Fit all / Fit selection are the keyboard route.
+ */
+function Minimap({
+  ink,
+  nodes,
+  bounds,
+  view,
+  viewport,
+  onCenter,
+}: Readonly<{
+  ink: SchematicInk
+  nodes: readonly SchematicNode[]
+  bounds: Box
+  view: View
+  viewport: { w: number; h: number }
+  onCenter: (p: { x: number; y: number }) => void
+}>) {
+  const visible = visibleBox(view, viewport.w, viewport.h)
+  if (viewport.w === 0 || contains(visible, bounds)) {
+    return null
+  }
+  const v = { x: visible.minX, y: visible.minY, w: visible.w, h: visible.h }
+  const world = boxAround([{ x: bounds.minX, y: bounds.minY, w: bounds.w, h: bounds.h }, v])!
+  const scale = Math.min(160 / world.w, 120 / world.h)
+  const toWorld = (e: React.PointerEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    onCenter({ x: world.minX + (e.clientX - r.left) / scale, y: world.minY + (e.clientY - r.top) / scale })
+  }
+  return (
+    <svg
+      aria-hidden
+      data-testid="schematic-minimap"
+      width={world.w * scale}
+      height={world.h * scale}
+      viewBox={`${world.minX} ${world.minY} ${world.w} ${world.h}`}
+      style={{
+        position: 'absolute',
+        left: 8, // the readout card holds the bottom-right corner
+        bottom: 8,
+        background: ink.minimap,
+        border: `1px solid ${ink.border}`,
+        borderRadius: 4,
+        cursor: 'pointer',
+      }}
+      onPointerDown={(e) => {
+        e.stopPropagation()
+        e.currentTarget.setPointerCapture(e.pointerId)
+        toWorld(e)
+      }}
+      onPointerMove={(e) => {
+        if (e.buttons === 1) {
+          toWorld(e)
+        }
+      }}
+    >
+      {nodes.map((n) => (
+        <rect key={n.id} x={n.x} y={n.y} width={n.w} height={n.h} fill={ink.minimapNode} />
+      ))}
+      <rect
+        x={v.x}
+        y={v.y}
+        width={v.w}
+        height={v.h}
+        fill={ink.marqueeFill}
+        stroke={ink.marquee}
+        strokeWidth={1.5}
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Wheel and touch navigation. Ctrl/⌘+wheel — which is also what a trackpad
+ * pinch sends — zooms about the pointer; a plain wheel or two-finger scroll
+ * pans. Two touch pointers pinch-zoom about their midpoint and pan with it.
+ * The wheel listener is native because React's is passive and cannot stop the
+ * browser zooming the whole page.
+ */
+function usePanZoom(
+  viewportRef: React.RefObject<HTMLDivElement | null>,
+  drawn: boolean,
+  zoomBy: (factor: number, at: { x: number; y: number }) => void,
+  setView: React.Dispatch<React.SetStateAction<View>>,
+  takeControl: () => void,
+  cancelPan: () => void,
+) {
+  const zoomRef = useRef(zoomBy)
+  const cancelRef = useRef(cancelPan)
+  useEffect(() => {
+    zoomRef.current = zoomBy
+    cancelRef.current = cancelPan
+  })
+  useEffect(() => {
+    const el = viewportRef.current
+    if (!el) {
+      return
+    }
+    const local = (e: { clientX: number; clientY: number }) => {
+      const r = el.getBoundingClientRect()
+      return { x: e.clientX - r.left, y: e.clientY - r.top }
+    }
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault()
+      if (e.ctrlKey || e.metaKey) {
+        // A mouse notch (~100) is one 10 % step; a pinch sends small deltas.
+        zoomRef.current(1.001 ** -Math.max(-100, Math.min(100, e.deltaY)), local(e))
+      } else {
+        takeControl()
+        setView((v) => ({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }))
+      }
+    }
+    const touches = new Map<number, { x: number; y: number }>()
+    const spread = () => {
+      const [a, b] = [...touches.values()]
+      return { d: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } }
+    }
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        touches.set(e.pointerId, local(e))
+        if (touches.size === 2) {
+          cancelRef.current()
+        }
+      }
+    }
+    const move = (e: PointerEvent) => {
+      if (!touches.has(e.pointerId)) {
+        return
+      }
+      if (touches.size !== 2) {
+        touches.set(e.pointerId, local(e))
+        return
+      }
+      const before = spread()
+      touches.set(e.pointerId, local(e))
+      const after = spread()
+      takeControl()
+      setView((v) => ({ ...v, x: v.x + after.mid.x - before.mid.x, y: v.y + after.mid.y - before.mid.y }))
+      if (before.d > 0) {
+        zoomRef.current(after.d / before.d, after.mid)
+      }
+    }
+    const up = (e: PointerEvent) => touches.delete(e.pointerId)
+    el.addEventListener('wheel', wheel, { passive: false })
+    el.addEventListener('pointerdown', down)
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => {
+      el.removeEventListener('wheel', wheel)
+      el.removeEventListener('pointerdown', down)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+  }, [viewportRef, drawn, setView, takeControl])
 }
 
 /** "a.out → b.in  (EG50 · liquid)" — the hover description of one connection. */
@@ -1277,10 +2072,6 @@ function lineDescription(e: SchematicEdge): string {
 
 /** Terminals (sources, sinks, grounds) get a lighter outline to go with their
  *  dashed border — they bound the model rather than being part of it. */
-function borderOf(node: SchematicNode): string {
-  return node.terminal ? '#6c757d' : '#4a4f55'
-}
-
 /** "q = 6444.3 W" — the one number printed on a block. */
 function badgeText(badge: { label: string; value: number; units: string }): string {
   const unit = badge.units ? ` ${badge.units}` : ''

@@ -15,7 +15,7 @@ import { DEFAULT_DRAFT, type VariableDraft } from './VariableInfoModal'
 import type { TableSpec } from './tables'
 import type { PlotSpec } from './plots/types'
 import type { PinnedSlider } from './sliders'
-import type { SchematicOffsets } from './schematic/layout'
+import { fromV3, sanitizePresentation, type SchematicPresentation } from './schematic/presentation'
 
 // v2 (Data Analyzer Phase 2): + `analyzers` slice — layout, signal
 // assignments and measurement file REFS only ("template mode", §2.5b in
@@ -25,7 +25,11 @@ import type { SchematicOffsets } from './schematic/layout'
 // v3: + `schematic` slice — where the user has dragged each block on the
 // rendered schematic. Earlier files migrate by defaulting it to {}, which is
 // exactly "nothing dragged yet".
-const PROJECT_VERSION = 3
+// v4: `schematic` becomes the presentation (CFG-03): absolute positions, locks,
+// user areas and view settings. v3 offsets carry over as `legacyOffsets`, made
+// absolute against the layout they were measured from once the network is
+// checked (`resolveLegacy`).
+const PROJECT_VERSION = 4
 const PROJECT_KEY = 'frees.project'
 
 /**
@@ -96,15 +100,17 @@ export interface ProjectSlices {
   analyzers: AnalyzerSpec[]
   /** Parameters pinned to the workspace slider strip. */
   sliders?: PinnedSlider[]
-  /** Blocks the user has moved on the schematic, as offsets from the
-   *  auto-layout. The drawing itself is always derived from the document, so
-   *  this is the only part of it worth saving. */
-  schematic?: SchematicOffsets
+  /** How the schematic is presented: where the user put blocks, locks,
+   *  areas and view settings. The network itself is always derived from the
+   *  document. */
+  schematic?: SchematicPresentation
 }
 
 export interface FreesProject extends ProjectSlices {
   version: number
   savedAt: string
+  /** Malformed schematic entries dropped while this was read; never saved. */
+  schematicRepaired?: number
   // Bridged from child-owned localStorage; opaque to App.
   digitizer: unknown
   dockLayout: unknown
@@ -166,40 +172,6 @@ function finiteNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
 
-/** How far from its auto-layout position a block may be saved, and how many
- *  blocks may carry an offset. A schematic is bounded by the network it draws;
- *  anything past these is a malformed or hostile file, not a real drawing. */
-const MAX_OFFSET = 100_000
-const MAX_OFFSET_ENTRIES = 5_000
-
-/**
- * Validate the schematic's drag offsets. Coordinates from a project file reach
- * an SVG viewBox and the export's bounding box, so a non-finite or absurd value
- * would render the drawing unusable rather than merely wrong — each is required
- * to be a finite number and clamped to a plausible canvas.
- */
-function sanitizeOffsets(value: unknown): SchematicOffsets {
-  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-    return {}
-  }
-  const out: SchematicOffsets = {}
-  const clamp = (n: number) => Math.min(MAX_OFFSET, Math.max(-MAX_OFFSET, n))
-  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    if (Object.keys(out).length >= MAX_OFFSET_ENTRIES) {
-      break
-    }
-    if (raw == null || typeof raw !== 'object') {
-      continue
-    }
-    const { dx, dy } = raw as { dx?: unknown; dy?: unknown }
-    if (typeof dx !== 'number' || typeof dy !== 'number' || !Number.isFinite(dx) || !Number.isFinite(dy)) {
-      continue
-    }
-    out[key] = { dx: clamp(dx), dy: clamp(dy) }
-  }
-  return out
-}
-
 /**
  * Validate and normalize a project into the plain, schema-shaped payload that is
  * safe to persist. Every field is checked against its expected type — and the
@@ -232,7 +204,7 @@ function sanitizeProject(project: FreesProject): FreesProject | null {
     spreadsheets: Array.isArray(project.spreadsheets) ? plainJson(project.spreadsheets) : [],
     analyzers: Array.isArray(project.analyzers) ? plainJson(project.analyzers) : [],
     sliders: Array.isArray(project.sliders) ? plainJson(project.sliders) : [],
-    schematic: sanitizeOffsets(project.schematic),
+    schematic: sanitizePresentation(project.schematic).presentation,
     digitizer: plainJson(project.digitizer),
     dockLayout: plainJson(project.dockLayout),
   }
@@ -274,6 +246,9 @@ export function clearProjectLocal() {
 
 /** Normalize a parsed project to the current version, filling missing slices. */
 function migrate(p: FreesProject): FreesProject {
+  // Pre-v3 files predate saved schematic positions (nothing dragged); v3 saved
+  // offsets; v4 saves the presentation.
+  const schematic = (p.version ?? 0) < 4 ? fromV3(p.schematic) : sanitizePresentation(p.schematic)
   return {
     version: PROJECT_VERSION,
     savedAt: p.savedAt ?? new Date().toISOString(),
@@ -288,8 +263,8 @@ function migrate(p: FreesProject): FreesProject {
     spreadsheets: p.spreadsheets ?? [],
     analyzers: p.analyzers ?? [],
     sliders: p.sliders ?? [],
-    // Pre-v3 files predate saved schematic positions; nothing dragged.
-    schematic: sanitizeOffsets(p.schematic),
+    schematic: schematic.presentation,
+    ...(schematic.repaired > 0 ? { schematicRepaired: schematic.repaired } : {}),
     digitizer: p.digitizer ?? null,
     dockLayout: p.dockLayout ?? null,
   }
@@ -328,8 +303,9 @@ export function projectOnlyNotes(slices: ProjectSlices & { digitizer?: unknown }
   if ((slices.sliders ?? []).length) {
     notes.push(`${slices.sliders!.length} slider override(s)`)
   }
-  if (slices.schematic && Object.keys(slices.schematic).length) {
-    notes.push('schematic layout offsets')
+  const s = slices.schematic
+  if (s && (Object.keys(s.positions).length || Object.keys(s.legacyOffsets).length || s.locked.length || s.areas.length)) {
+    notes.push('schematic layout (positions, locks, areas)')
   }
   if ((slices.spreadsheets ?? []).length) {
     notes.push('legacy spreadsheet slice')

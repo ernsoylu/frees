@@ -1,6 +1,6 @@
 # CR-SCHEMATIC-01 — Configurable, bidirectional modeling workspace
 
-Status: scope confirmed; first complete design proposal delivered. Draft date: 2026-10-26. Scope confirmed: 2026-10-28. Split into phases 01a–01d plus a triggered backlog: 2026-10-28 (section 10). Repository baseline: `51a2ea2`. No application changes are included in this request.
+Status: scope confirmed; first complete design proposal delivered. Draft date: 2026-10-26. Scope confirmed: 2026-10-28. Split into phases 01a–01d plus a triggered backlog: 2026-10-28 (section 10). Repository baseline: `51a2ea2`. 01a delivered and closed 2026-10-28 (on `b9ca60b`); canvas decision D13 in section 7.4. 01b–01d not yet approved.
 
 ## 1. Recommendation and intended outcome
 
@@ -43,6 +43,8 @@ Reviewed the supplied screenshot, current source and tests, project serializatio
 | WIRE-08 routing obstacles | Before any drag, the `COIL.out → HP.re_in` loop ran underneath COIL and HP, so only two stubs showed (63 wire samples inside component boxes). After the drag: 153 samples, crossing COIL, FAN, HP and SUP. **Fixed 2026-10-28:** routes test every segment past the port stubs against every component box, the endpoints' own included, using live positions; 0 samples before and after the drag. | Before any drag, wires ran under BCP, CABIN, CHLC, CHLR, MCP and RAD1–3 (110 samples). Fixed: 0. | Before any drag, 1,898 samples fell inside 63 of the 100 component boxes. Fixed: 0. |
 | RUN-01 run states | After a reload and before any Check, the canvas says "connections not shown — the document has errors" for a valid document. `topologyStale` treats "no connections yet" as an error. **Fixed 2026-10-28:** an unchecked document now shows "connections appear after Check"; the error notice is kept for a check that ran without producing topology. | Same. | Same. |
 | CFG-03 persistence | The dragged offset survives reload exactly. Not a defect; kept as a regression check for the v3 migration. | Same. | Same. |
+
+**Re-recorded at 01a close, 2026-10-28** (`b9ca60b` plus the 01a changes, same browser and window). The spec now has 22 tests: the per-model checks above plus one per 01a slice, AC-01 and a dark/light visual regression run in CI. All pass. On all three models: 0 dimmed nodes on hover, 0 wire samples inside components after a drag, no node outside the view or its frame after Fit, the dragged offset unchanged after reopen, and labels at least 12 px at auto-fit. The dense floor keeps WIRE-04's recorded residual: 2 unmarked wire contacts and short shared c7/c40 lanes. Per-slice evidence is in `NEXT_STEPS.md`.
 
 Relevant existing assets: `readouts.ts`, `palette.ts`, `symbols.ts`, `componentText.ts`, ComponentWizard/UA/map builders, `modelRevision.ts`, project conflict/recovery behavior, and seven schematic unit-test files. Reuse these where their contracts remain valid.
 
@@ -270,6 +272,16 @@ Semantic changes increment the existing model revision; presentation changes inc
 | ELK/elkjs for automatic layout | ELK supports explicit ports, compound graphs and orthogonal routing. [ELK Layered](https://eclipse.dev/elk/reference/algorithms/org-eclipse-elk-layered.html). React Flow documents external layout engines rather than supplying its own. [Layout guide](https://reactflow.dev/learn/layouting/layouting). | Candidate for explicit auto-layout in a worker. Measure size, latency, fixed-port behavior and quality first; do not relayout the entire model on each drag. |
 
 Spike acceptance: render the humid-air and 26-component EV examples with correct multi-port/net semantics; move/connect/select by keyboard and pointer; preserve appearance on save/export; benchmark the proposed larger-model targets. Compare custom SVG with React Flow on total maintained code and user behavior. Check package license, offline behavior, supported React version, bundle impact and whether any desired examples require commercial assets before committing. No library is assumed to supply obstacle routing, subsystem semantics, source round-tripping or full accessibility automatically.
+
+**Decision 2026-10-28 (D13): keep custom SVG.** The spike ran a React Flow 12.12.0 canvas (MIT, React ≥17) beside the current one on the same build: custom block nodes with handles at the frees port positions, edges drawn by the frees router from React Flow's live positions, minimap and colour mode. Measured with a 40-step pointer drag through CDP:
+
+| Model | Canvas | Frames in the drag | Cost per move | Keyboard move |
+| --- | --- | --- | --- | --- |
+| humid-air (5 nodes, 5 wires) | SVG / React Flow | 43 / 39 | — | 7 / 4.9 px |
+| EV (29 nodes, 32 wires) | SVG / React Flow | 45 / 41 | ≈18 / ≈17 ms | 2.4 / 1.4 px |
+| dense floor (118 nodes, 147 wires) | SVG / React Flow | 103 / 100 | ≈43 / ≈42 ms | 1.4 / 0.9 px |
+
+Both canvases ran at a 16.7 ms animation-frame median; the floor's per-move cost is the shared `routeAll`, not rendering. React Flow added 63,211 bytes gzipped (the schematic chunk grew from 14.4 KB to 75 KB) and would replace about 350 lines (drag 101, pan/zoom 78, minimap 70, marquee 38, `viewport.ts` 65). Its adapter was already 115 lines and still lacked label level-of-detail (names unreadable at Fit), frames, areas, guides and snapping, locks and SVG export; it draws blocks as HTML, so export would need a second renderer, and it offers no keyboard connection. Reconsider when 01c's handle-drag connection and edge reconnection would cost more than the code it replaces, or when the 500-component budget (01d) fails in rendering rather than routing. ELK was not evaluated.
 
 For live manual moves, use a route strategy that checks all segments against current obstacles and honors fixed user waypoints. ELK auto-layout is not a substitute for that interaction contract. If routing cannot satisfy user constraints, report the conflict rather than asserting a collision-free result.
 

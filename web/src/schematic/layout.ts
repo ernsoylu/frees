@@ -137,6 +137,149 @@ export function framedGroups(groups: SchematicGroup[], nodes: Iterable<Schematic
   })
 }
 
+/**
+ * What an explicit context command shows, starting from one block:
+ * - `neighbours`: the block and every block one connection away (a junction
+ *   is passed through, not counted as the hop);
+ * - `trace`: everything reachable along the lines the block itself sits on, so
+ *   a heat exchanger traces both of its loops;
+ * - `circuit`: the block's own circuit frame and the wires inside it.
+ */
+export type FocusKind = 'neighbours' | 'trace' | 'circuit'
+
+export function focusOf(
+  kind: FocusKind,
+  start: string,
+  nodes: readonly SchematicNode[],
+  edges: readonly SchematicEdge[],
+): { nodes: Set<string>; edges: Set<string> } {
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  if (kind === 'circuit') {
+    const group = byId.get(start)?.group
+    const inside = new Set(nodes.filter((n) => n.group === group).map((n) => n.id))
+    return { nodes: inside, edges: new Set(edges.filter((e) => inside.has(e.from) && inside.has(e.to)).map((e) => e.id)) }
+  }
+  const lines = new Set(edges.filter((e) => e.from === start || e.to === start).map((e) => e.lineId))
+  const follow = (e: SchematicEdge) => kind === 'neighbours' || lines.has(e.lineId)
+  const expand = (id: string) => kind === 'trace' || id === start || byId.get(id)?.kind === 'junction'
+  const seen = { nodes: new Set([start]), edges: new Set<string>() }
+  const queue = [start]
+  while (queue.length > 0) {
+    const u = queue.pop()!
+    if (!expand(u)) {
+      continue
+    }
+    for (const e of edges) {
+      if ((e.from === u || e.to === u) && follow(e)) {
+        seen.edges.add(e.id)
+        const v = e.from === u ? e.to : e.from
+        if (!seen.nodes.has(v)) {
+          seen.nodes.add(v)
+          queue.push(v)
+        }
+      }
+    }
+  }
+  return seen
+}
+
+/** The connection set an edge was drawn for: one `connect(...)` or shared stream.
+ *  A set of three or more ends is drawn as junction spokes `c<i>_<k>`. */
+export function netOf(e: SchematicEdge): string {
+  return e.id.split('_')[0]
+}
+
+/** Every block reachable from `start` along any connection, whatever its line. */
+export function connectedTo(start: Iterable<string>, edges: readonly SchematicEdge[]): Set<string> {
+  const seen = new Set(start)
+  const queue = [...seen]
+  while (queue.length > 0) {
+    const u = queue.pop()!
+    for (const e of edges) {
+      const v = e.from === u ? e.to : e.to === u ? e.from : null
+      if (v !== null && !seen.has(v)) {
+        seen.add(v)
+        queue.push(v)
+      }
+    }
+  }
+  return seen
+}
+
+export type ArrangeOp = 'left' | 'centre' | 'right' | 'top' | 'middle' | 'bottom' | 'spread-x' | 'spread-y'
+
+type Placed = { id: string; x: number; y: number; w: number; h: number }
+
+/**
+ * How far each block moves to align the set on a shared edge or centre line
+ * of their bounding box, or to spread them with equal gaps between
+ * neighbours (the outermost two stay put; needs three or more).
+ */
+export function arrangeDeltas(op: ArrangeOp, boxes: readonly Placed[]): Map<string, { dx: number; dy: number }> {
+  const out = new Map<string, { dx: number; dy: number }>()
+  if (boxes.length < 2) {
+    return out
+  }
+  const minX = Math.min(...boxes.map((b) => b.x))
+  const maxX = Math.max(...boxes.map((b) => b.x + b.w))
+  const minY = Math.min(...boxes.map((b) => b.y))
+  const maxY = Math.max(...boxes.map((b) => b.y + b.h))
+  const spread = (axis: 'x' | 'y') => {
+    const size = axis === 'x' ? 'w' : 'h'
+    const sorted = [...boxes].sort((a, b) => a[axis] + a[size] / 2 - (b[axis] + b[size] / 2))
+    const first = sorted[0]
+    const last = sorted[sorted.length - 1]
+    const span = last[axis] + last[size] - first[axis]
+    const gap = (span - sorted.reduce((t, b) => t + b[size], 0)) / (sorted.length - 1)
+    let at = first[axis]
+    for (const b of sorted) {
+      const d = at - b[axis]
+      out.set(b.id, axis === 'x' ? { dx: d, dy: 0 } : { dx: 0, dy: d })
+      at += b[size] + gap
+    }
+  }
+  if (op === 'spread-x' || op === 'spread-y') {
+    if (boxes.length >= 3) {
+      spread(op === 'spread-x' ? 'x' : 'y')
+    }
+    return out
+  }
+  for (const b of boxes) {
+    const dx = { left: minX - b.x, centre: (minX + maxX) / 2 - (b.x + b.w / 2), right: maxX - (b.x + b.w) }
+    const dy = { top: minY - b.y, middle: (minY + maxY) / 2 - (b.y + b.h / 2), bottom: maxY - (b.y + b.h) }
+    out.set(b.id, op in dx ? { dx: dx[op as keyof typeof dx], dy: 0 } : { dx: 0, dy: dy[op as keyof typeof dy] })
+  }
+  return out
+}
+
+/**
+ * The block nearest `from` in an arrow-key direction: its centre must lie
+ * within 45° of that direction; off-axis distance counts double.
+ */
+export function nearestInDirection(
+  from: Placed,
+  dir: 'left' | 'right' | 'up' | 'down',
+  boxes: readonly Placed[],
+): string | null {
+  const cx = from.x + from.w / 2
+  const cy = from.y + from.h / 2
+  let best: string | null = null
+  let bestScore = Infinity
+  for (const b of boxes) {
+    const dx = b.x + b.w / 2 - cx
+    const dy = b.y + b.h / 2 - cy
+    const [along, across] = dir === 'left' ? [-dx, dy] : dir === 'right' ? [dx, dy] : dir === 'up' ? [-dy, dx] : [dy, dx]
+    if (b.id !== from.id && along > 0 && Math.abs(across) <= along) {
+      const score = along + 2 * Math.abs(across)
+      if (score < bestScore) {
+        bestScore = score
+        best = b.id
+      }
+    }
+  }
+  return best
+}
+
 export interface SchematicLayout {
   nodes: SchematicNode[]
   edges: SchematicEdge[]
@@ -995,40 +1138,299 @@ export function routeEdge(
   toPort?: string,
   obstacles: readonly SchematicNode[] = [],
 ): string {
+  return pathOf(routePoints(a, b, fromPort, toPort, obstacles))
+}
+
+/** The polyline `routeEdge` draws: port, stub end, lanes, stub end, port.
+ *  The first and last segments are always the two port stubs. */
+export function routePoints(
+  a: SchematicNode,
+  b: SchematicNode,
+  fromPort?: string,
+  toPort?: string,
+  obstacles: readonly SchematicNode[] = [],
+  wired?: Wired,
+): Pt[] {
   const p = anchorAt(a, fromPort)
   const q = anchorAt(b, toPort)
-  const STUB = 14
   const p1 = stubOut(p, STUB)
   const q1 = stubOut(q, STUB)
-  const boxes = obstacles.filter((n) => n.id !== a.id && n.id !== b.id && n.kind === 'instance')
+  // Another set's junction dot is an obstacle too: a wire through it would
+  // read as joining that set.
+  const boxes = obstacles.filter(
+    (n) => n.id !== a.id && n.id !== b.id && (n.kind === 'instance' || (wired && wired.junctions.get(n.id) !== wired.net)),
+  )
   for (const n of [a, b]) {
     if (n.kind === 'instance') {
       boxes.push(n)
     }
   }
-  const pts = bestRoute(p1, q1, a, b, boxes, p.side === 'top' || p.side === 'bottom' || q.side === 'top' || q.side === 'bottom')
-  let d = `M ${round(p.x)} ${round(p.y)} L ${round(p1.x)} ${round(p1.y)}`
+  const vertical = p.side === 'top' || p.side === 'bottom' || q.side === 'top' || q.side === 'bottom'
+  const pts = bestRoute(p1, q1, a, b, boxes, vertical, wired)
+  // The port stubs stay segments of their own, first and last.
+  return [{ x: p.x, y: p.y }, ...simplify(pts), { x: q.x, y: q.y }]
+}
+
+/**
+ * Routes every edge against the blocks and against the wires already laid, so
+ * two different connection sets never share a lane: a lane another set uses
+ * costs as much as a long detour, and each lane also offers parallel tracks
+ * beside it. Wires of one set may share a lane (they are one connection).
+ * Deterministic: edges are laid in layout order.
+ */
+export function routeAll(
+  edges: readonly SchematicEdge[],
+  nodes: ReadonlyMap<string, SchematicNode>,
+  obstacles: readonly SchematicNode[],
+): Map<string, Pt[]> {
+  const occupied: Occupancy = new Map()
+  // Every port stub is known before any route is chosen: a lane must not run
+  // along or across another set's stub, which would read as entering its port.
+  const stubs: Wired['stubs'] = new Map()
+  for (const e of edges) {
+    const a = nodes.get(e.from)
+    const b = nodes.get(e.to)
+    if (a && b) {
+      for (const [n, port] of [[a, e.fromPort], [b, e.toPort]] as const) {
+        const p = anchorAt(n, port)
+        const [u, v] = [{ x: p.x, y: p.y }, stubOut(p, STUB)]
+        occupy([u, v], netOf(e), occupied)
+        // A stub is shorter than a bucket, so it spans at most two.
+        const { vertical, at, lo, hi } = laneOf(u, v)
+        for (const k of new Set([Math.floor(lo / BUCKET), Math.floor(hi / BUCKET)])) {
+          const key = laneKey(vertical, k)
+          stubs.set(key, [...(stubs.get(key) ?? []), { net: netOf(e), at, lo, hi }])
+        }
+      }
+    }
+  }
+  const junctions = new Map<string, string>()
+  for (const e of edges) {
+    for (const id of [e.from, e.to]) {
+      if (nodes.get(id)?.kind === 'junction') {
+        junctions.set(id, netOf(e))
+      }
+    }
+  }
+  const out = new Map<string, Pt[]>()
+  for (const e of edges) {
+    const a = nodes.get(e.from)
+    const b = nodes.get(e.to)
+    if (a && b) {
+      const net = netOf(e)
+      const pts = routePoints(a, b, e.fromPort, e.toPort, obstacles, { net, occupied, stubs, junctions })
+      occupy(pts.slice(1, -1), net, occupied)
+      out.set(e.id, pts)
+    }
+  }
+  return out
+}
+
+type Wired = {
+  net: string
+  occupied: Occupancy
+  /** Port stubs by position: horizontal ones keyed by x bucket, vertical by y. */
+  stubs: Map<number, { net: string; at: number; lo: number; hi: number }[]>
+  /** The set each junction node belongs to. */
+  junctions: ReadonlyMap<string, string>
+}
+
+/** Length of the port stub every wire leaves and enters by. */
+const STUB = 14
+/** Stub index bucket: wider than a stub. */
+const BUCKET = 16
+
+/** Radius of the hop a wire makes over an unrelated wire it crosses. */
+export const HOP = 4
+
+/**
+ * Where each wire hops: at every crossing with a wire of a DIFFERENT
+ * connection set, the horizontal one hops, unless it is a port stub, in which
+ * case the lane crossing it hops instead. Crossings within one set get none,
+ * and hops closer than an arc's width to a bend or to each other are dropped.
+ */
+export function crossingHops(wires: ReadonlyMap<string, Pt[]>, netOfWire: (id: string) => string): Map<string, Pt[]> {
+  // A straight run is tested as one line, across the seam between a lane and
+  // its port stub; each piece remembers whether it is a stub.
+  type Piece = { lo: number; hi: number; stub: boolean }
+  type Run = { id: string; net: string; at: number; lo: number; hi: number; pieces: Piece[] }
+  const across: Run[] = []
+  const down: Run[] = []
+  for (const [id, pts] of wires) {
+    let run: (Run & { vertical: boolean }) | null = null
+    for (let i = 1; i < pts.length; i++) {
+      const { vertical, at, lo, hi } = laneOf(pts[i - 1], pts[i])
+      if (lo === hi) {
+        continue
+      }
+      const piece = { lo, hi, stub: i === 1 || i === pts.length - 1 }
+      if (run && run.vertical === vertical && run.at === at) {
+        run.lo = Math.min(run.lo, lo)
+        run.hi = Math.max(run.hi, hi)
+        run.pieces.push(piece)
+      } else {
+        run = { id, net: netOfWire(id), at, lo, hi, pieces: [piece], vertical }
+        ;(vertical ? down : across).push(run)
+      }
+    }
+  }
+  // The non-stub piece of a run with room for a whole arc around `x`.
+  const room = (r: Run, x: number) => r.pieces.some((p) => !p.stub && x > p.lo + HOP && x < p.hi - HOP)
+  const found = new Map<string, Pt[]>()
+  const add = (id: string, p: Pt) => found.set(id, [...(found.get(id) ?? []), p])
+  for (const h of across) {
+    for (const v of down) {
+      if (h.net === v.net || !(v.at > h.lo && v.at < h.hi && h.at > v.lo && h.at < v.hi)) {
+        continue
+      }
+      if (room(h, v.at)) {
+        add(h.id, { x: v.at, y: h.at })
+      } else if (room(v, h.at)) {
+        add(v.id, { x: v.at, y: h.at })
+      }
+    }
+  }
+  // Adjacent tracks are 2·HOP apart or more, so their hops just touch.
+  for (const [id, hops] of found) {
+    const kept: Pt[] = []
+    for (const p of hops.sort((m, n) => m.x - n.x || m.y - n.y)) {
+      if (!kept.some((k) => (k.x === p.x || k.y === p.y) && Math.abs(k.x - p.x) + Math.abs(k.y - p.y) < 2 * HOP)) {
+        kept.push(p)
+      }
+    }
+    found.set(id, kept)
+  }
+  return found
+}
+
+/** SVG path data for a routed polyline, hopping over the given points. */
+export function pathOf(pts: readonly Pt[], hops: readonly Pt[] = []): string {
+  let d = `M ${round(pts[0].x)} ${round(pts[0].y)}`
   for (let i = 1; i < pts.length; i++) {
     const [u, v] = [pts[i - 1], pts[i]]
-    if (u.x !== v.x) {
+    if (i === 1 || i === pts.length - 1) {
+      d += ` L ${round(v.x)} ${round(v.y)}` // a port stub
+    } else if (u.x === v.x && u.y === v.y) {
+      continue
+    } else if (u.y === v.y) {
+      const dir = Math.sign(v.x - u.x)
+      for (const h of [...hops].sort((m, n) => (m.x - n.x) * dir)) {
+        if (h.y === u.y && (h.x - u.x) * dir > 0 && (v.x - h.x) * dir > 0) {
+          // Clockwise left-to-right (and anticlockwise back) bulges upward.
+          d += ` H ${round(h.x - dir * HOP)} A ${HOP} ${HOP} 0 0 ${dir > 0 ? 1 : 0} ${round(h.x + dir * HOP)} ${round(h.y)}`
+        }
+      }
       d += ` H ${round(v.x)}`
-    } else if (u.y !== v.y) {
+    } else {
+      const dir = Math.sign(v.y - u.y)
+      for (const h of [...hops].sort((m, n) => (m.y - n.y) * dir)) {
+        if (h.x === u.x && (h.y - u.y) * dir > 0 && (v.y - h.y) * dir > 0) {
+          // Clockwise downward (and anticlockwise up) bulges to the right.
+          d += ` V ${round(h.y - dir * HOP)} A ${HOP} ${HOP} 0 0 ${dir > 0 ? 1 : 0} ${round(h.x)} ${round(h.y + dir * HOP)}`
+        }
+      }
       d += ` V ${round(v.y)}`
     }
   }
-  return `${d} L ${round(q.x)} ${round(q.y)}`
+  return d
 }
 
-type Pt = { x: number; y: number }
+/** Drops repeated points and merges straight runs into one segment. */
+function simplify(pts: readonly Pt[]): Pt[] {
+  const out: Pt[] = []
+  for (const p of pts) {
+    const last = out[out.length - 1]
+    if (last && last.x === p.x && last.y === p.y) {
+      continue
+    }
+    const prev = out[out.length - 2]
+    if (prev && last && ((prev.x === last.x && last.x === p.x) || (prev.y === last.y && last.y === p.y))) {
+      out[out.length - 1] = p
+    } else {
+      out.push(p)
+    }
+  }
+  return out
+}
+
+/** Segments laid so far, bucketed by lane coordinate (x for vertical, y for
+ *  horizontal) in TRACK-wide buckets, so near-coincident lanes are found too. */
+type Occupancy = Map<number, { at: number; lo: number; hi: number; net: string }[]>
+
+/** A numeric map key for a bucket of vertical or horizontal lanes. */
+function laneKey(vertical: boolean, bucket: number): number {
+  return bucket * 2 + (vertical ? 1 : 0)
+}
+
+function laneOf(u: Pt, v: Pt) {
+  const vertical = u.x === v.x
+  return {
+    vertical,
+    at: vertical ? u.x : u.y,
+    lo: vertical ? Math.min(u.y, v.y) : Math.min(u.x, v.x),
+    hi: vertical ? Math.max(u.y, v.y) : Math.max(u.x, v.x),
+  }
+}
+
+function occupy(pts: readonly Pt[], net: string, occupied: Occupancy) {
+  for (let i = 1; i < pts.length; i++) {
+    const { vertical, at, lo, hi } = laneOf(pts[i - 1], pts[i])
+    const key = laneKey(vertical, Math.round(at / TRACK))
+    occupied.set(key, [...(occupied.get(key) ?? []), { at, lo, hi, net }])
+  }
+}
+
+/** Length a route runs on, beside (closer than a track) or end-to-end against
+ *  another set's wire or port stub, plus a stub-length charge for every other
+ *  set's stub it crosses. */
+function sharedLength(pts: readonly Pt[], wired: Wired): number {
+  let total = 0
+  for (let i = 1; i < pts.length; i++) {
+    const [u, v] = [pts[i - 1], pts[i]]
+    if (u.x === v.x && u.y === v.y) {
+      continue
+    }
+    const { vertical, at, lo, hi } = laneOf(u, v)
+    const k = Math.round(at / TRACK)
+    for (const key of [k - 1, k, k + 1]) {
+      for (const t of wired.occupied.get(laneKey(vertical, key)) ?? []) {
+        if (t.net !== wired.net && Math.abs(t.at - at) < TRACK) {
+          total += Math.max(0, Math.min(hi, t.hi + TRACK / 2) - Math.max(lo, t.lo - TRACK / 2))
+        }
+      }
+    }
+    // Perpendicular stubs whose span covers this lane's coordinate.
+    for (const st of wired.stubs.get(laneKey(!vertical, Math.floor(at / BUCKET))) ?? []) {
+      if (st.net !== wired.net && st.at >= lo && st.at <= hi && at >= st.lo && at <= st.hi) {
+        total += 2 * STUB
+      }
+    }
+  }
+  return total
+}
+
+/** Spacing between parallel wires of different sets sharing a corridor. */
+const TRACK = 8
+
+export type Pt = { x: number; y: number }
 
 /** Clearance between a wire and a component box. Less than the port stub, so a
  *  stub end is always outside its own block's clearance. */
 const CLEAR = 6
 
-// ponytail: every edge re-searches its lanes against every block on each render
-// (about 11 ms for 150 fully blocked edges over 100 blocks). If layouts grow to
-// several hundred blocks, add a spatial index or reroute only edges near a drag.
-function bestRoute(p1: Pt, q1: Pt, a: SchematicNode, b: SchematicNode, boxes: readonly SchematicNode[], vertical: boolean): Pt[] {
+// ponytail: every edge re-searches its lanes against every block whenever a
+// block moves (routeAll is memoised on positions, so once per drag frame). If
+// layouts grow to several hundred blocks, add a spatial index or reroute only
+// edges near the moved blocks.
+function bestRoute(
+  p1: Pt,
+  q1: Pt,
+  a: SchematicNode,
+  b: SchematicNode,
+  boxes: readonly SchematicNode[],
+  vertical: boolean,
+  wired?: Wired,
+): Pt[] {
   // Lanes: the shared midline the layout aligns on, the stub ends, beside each
   // endpoint, around both, and beside any box in the way.
   const xs = [(p1.x + q1.x) / 2, p1.x, q1.x, a.x - 30, a.x + a.w + 30, b.x - 30, b.x + b.w + 30]
@@ -1040,53 +1442,93 @@ function bestRoute(p1: Pt, q1: Pt, a: SchematicNode, b: SchematicNode, boxes: re
       ys.push(n.y - 2 * CLEAR, n.y + n.h + 2 * CLEAR)
     }
   }
+  // Running on another set's wire reads as one connection: price it like a
+  // long detour, so a free lane wins whenever there is one.
+  const shared = (pts: Pt[]) => (wired ? sharedLength(pts, wired) : 0)
+  const extra = (pts: Pt[]) => 20 * shared(pts)
+  const cost = (pts: Pt[]) => routeCost(pts) + extra(pts)
   // Blocks in rows and columns share lanes; test each lane once.
-  const viaX = [...new Set(xs.map(round))].map((x) => [p1, { x, y: p1.y }, { x, y: q1.y }, q1])
-  const viaY = [...new Set(ys.map(round))].map((y) => [p1, { x: p1.x, y }, { x: q1.x, y }, q1])
-  // Flow prefers a vertical lane and couplings a horizontal one; on a tie the
-  // preferred family wins because the first cheapest candidate is kept.
-  let best = pickRoute(vertical ? [...viaY, ...viaX] : [...viaX, ...viaY], boxes)
-  if (best.hits > 0) {
-    // Two lanes and a crossing: out of the stub, along, across, along, in. The
-    // first lane stays by the source block and the last by the target block.
-    const detours: Pt[][] = []
-    for (const x1 of [p1.x, a.x - 30, a.x + a.w + 30]) {
-      for (const x2 of [q1.x, b.x - 30, b.x + b.w + 30]) {
-        for (const y of ys.slice(0, 5)) {
-          detours.push([p1, { x: x1, y: p1.y }, { x: x1, y }, { x: x2, y }, { x: x2, y: q1.y }, q1])
+  const attempt = (tracks: number[]) => {
+    const lanes = (vs: number[]) => [...new Set(vs.flatMap((v) => tracks.map((t) => round(v + t))))]
+    const viaX = lanes(xs).map((x) => [p1, { x, y: p1.y }, { x, y: q1.y }, q1])
+    const viaY = lanes(ys).map((y) => [p1, { x: p1.x, y }, { x: q1.x, y }, q1])
+    // Flow prefers a vertical lane and couplings a horizontal one; on a tie the
+    // preferred family wins because the first cheapest candidate is kept.
+    let best = pickRoute(vertical ? [...viaY, ...viaX] : [...viaX, ...viaY], boxes, extra)
+    if (best.hits > 0) {
+      // Two lanes and a crossing: out of the stub, along, across, along, in. The
+      // first lane stays by the source block and the last by the target block.
+      const detours: Pt[][] = []
+      for (const x1 of tracks.flatMap((t) => [p1.x, a.x - 30, a.x + a.w + 30].map((x) => x + t))) {
+        for (const x2 of [q1.x, b.x - 30, b.x + b.w + 30]) {
+          for (const y of ys.slice(0, 5)) {
+            detours.push([p1, { x: x1, y: p1.y }, { x: x1, y }, { x: x2, y }, { x: x2, y: q1.y }, q1])
+          }
         }
       }
+      const alt = pickRoute(detours, boxes, extra)
+      if (alt.hits < best.hits) {
+        best = alt
+      }
     }
-    const alt = pickRoute(detours, boxes)
-    if (alt.hits < best.hits) {
+    return best
+  }
+  let best = attempt([0])
+  // Only when every plain lane is taken by another set are the parallel tracks
+  // beside each lane tried; most wires never need them.
+  if (wired && shared(best.pts) > 0) {
+    const alt = attempt([-1, 1, -2, 2, -3, 3].map((k) => k * TRACK))
+    if (alt.hits < best.hits || (alt.hits === best.hits && cost(alt.pts) < cost(best.pts))) {
       best = alt
     }
   }
   return best.pts
 }
 
-function pickRoute(candidates: Pt[][], boxes: readonly SchematicNode[]): { pts: Pt[]; hits: number } {
-  // Cheapest first (a stable sort keeps the preferred family ahead on ties), so
-  // the first clear candidate is the answer and the rest are never checked.
-  const ranked = candidates.map((pts) => ({ pts, cost: routeCost(pts) })).sort((u, v) => u.cost - v.cost)
-  let best = { pts: ranked[0].pts, hits: Infinity }
-  for (const { pts } of ranked) {
+function pickRoute(
+  candidates: Pt[][],
+  allBoxes: readonly SchematicNode[],
+  extra: (pts: Pt[]) => number = () => 0,
+): { pts: Pt[]; hits: number } {
+  // Only boxes inside the candidates' joint extent can be hit.
+  let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity]
+  for (const pts of candidates) {
+    for (const p of pts) {
+      x0 = Math.min(x0, p.x)
+      y0 = Math.min(y0, p.y)
+      x1 = Math.max(x1, p.x)
+      y1 = Math.max(y1, p.y)
+    }
+  }
+  const boxes = allBoxes.filter((n) => n.x - CLEAR < x1 && n.x + n.w + CLEAR > x0 && n.y - CLEAR < y1 && n.y + n.h + CLEAR > y0)
+  // Shortest first (a stable sort keeps the preferred family ahead on ties).
+  // The answer is the cheapest clear route counting `extra` (never negative),
+  // so once a clear one is found, any candidate whose length alone costs as
+  // much cannot win and the rest are never checked.
+  const ranked = candidates.map((pts) => ({ pts, base: routeCost(pts) })).sort((u, v) => u.base - v.base)
+  let best = { pts: ranked[0].pts, hits: Infinity, cost: Infinity }
+  for (const { pts, base } of ranked) {
+    if (best.hits === 0 && base >= best.cost) {
+      break
+    }
+    // Once a clear route exists, one hit disqualifies.
+    const limit = Math.max(1, best.hits)
     let hits = 0
-    for (let i = 1; i < pts.length && hits < best.hits; i++) {
+    for (let i = 1; i < pts.length && hits < limit; i++) {
       const [u, v] = [pts[i - 1], pts[i]]
       if (u.x === v.x && u.y === v.y) {
         continue
       }
       for (const n of boxes) {
-        if (segmentHits(u, v, n) && ++hits >= best.hits) {
+        if (segmentHits(u, v, n) && ++hits >= limit) {
           break
         }
       }
     }
-    if (hits < best.hits) {
-      best = { pts, hits }
-      if (hits === 0) {
-        break
+    if (hits < best.hits || (hits === 0 && base < best.cost)) {
+      const cost = base + extra(pts)
+      if (hits < best.hits || cost < best.cost) {
+        best = { pts, hits, cost }
       }
     }
   }
