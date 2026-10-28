@@ -16,6 +16,8 @@ import {
 } from './declaration'
 import { buildLineStyles, lineId, lineLabel, type LineStyle } from './palette'
 import {
+  framedGroups,
+  LAYER_GAP,
   layoutSchematic,
   routeEdge,
   type SchematicEdge,
@@ -36,6 +38,14 @@ import {
 
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 3
+/** A node's name, in drawing units at full detail. */
+const LABEL_FONT = 12.5
+/** Smallest on-screen name size. Below it, nodes switch to the label-only chip. */
+const MIN_LABEL_PX = 12
+/** Screen gap kept between two neighbouring chip names. */
+const CHIP_GAP_PX = 6
+/** Furthest a chip name may run past its block on either side. */
+const CHIP_OVERHANG = LAYER_GAP
 
 interface Props {
   /** The check response holding the connection topology; it outlives the
@@ -48,8 +58,12 @@ interface Props {
   variables?: VariableResult[]
   /** The document text, for locating an instance's declaration on click. */
   text: string
-  /** Reveal a 1-based line in the editor. */
+  /** Reveal a 1-based line in the editor: an explicit navigation that brings
+   *  the editor forward. */
   onRevealLine: (line: number) => void
+  /** Select a 1-based line in the editor without moving focus or tabs; a node
+   *  click links to its declaration this way. */
+  onSelectLine?: (line: number) => void
   /** Append a statement to the document (wiring emits `connect(...)` lines).
    *  Absent = the canvas stays read-only. */
   onEmitStatement?: (statement: string) => void
@@ -78,6 +92,7 @@ export default function SchematicTab({
   variables,
   text,
   onRevealLine,
+  onSelectLine,
   onEmitStatement,
   onInsertBlock,
   offsets: savedOffsets,
@@ -130,10 +145,10 @@ export default function SchematicTab({
 
   const declaredIds = useMemo(() => [...documentInstances(text).keys()], [text])
 
-  // The document wires components but the payload carries no topology: the
-  // check did not get far enough to expand the network. Say so, rather than
-  // showing a silently edgeless canvas right after the user wired something.
-  const topologyStale = useMemo(
+  // The document wires components but the canvas has no topology. Either no
+  // check has run since the last edit (checkResult is null), or one ran and
+  // did not get far enough to expand the network. Only the second is an error.
+  const topologyMissing = useMemo(
     () => connections.length === 0 && /^\s*connect\s*\(/im.test(text),
     [connections, text],
   )
@@ -190,6 +205,55 @@ export default function SchematicTab({
     return map
   }, [layout.nodes, offsets])
 
+  const groups = useMemo(() => framedGroups(layout.groups, positioned.values()), [layout.groups, positioned])
+  // Routes avoid nodes where they are drawn now, not where the layout put them.
+  const placed = useMemo(() => [...positioned.values()], [positioned])
+
+  // Free drawing units left and right of each block, to its nearest neighbour
+  // in the same row: the space a chip name may share with that neighbour.
+  const chipRoom = useMemo(() => {
+    const room = new Map<string, { left: number; right: number }>()
+    for (const n of placed) {
+      let left = Infinity
+      let right = Infinity
+      for (const o of placed) {
+        if (o !== n && o.y < n.y + n.h && n.y < o.y + o.h) {
+          if (o.x >= n.x) {
+            right = Math.min(right, Math.max(0, o.x - (n.x + n.w)))
+          } else {
+            left = Math.min(left, Math.max(0, n.x - (o.x + o.w)))
+          }
+        }
+      }
+      room.set(n.id, { left, right })
+    }
+    return room
+  }, [placed])
+
+  // The drawing as it stands, dragged nodes included: what Fit frames and what
+  // an export contains. The layout's own extent always counts, so frames and
+  // labels drawn against it are never cut off.
+  const bounds = useMemo(() => {
+    let minX = 0
+    let minY = 0
+    let maxX = layout.width
+    let maxY = layout.height
+    for (const g of groups) {
+      minX = Math.min(minX, g.x)
+      minY = Math.min(minY, g.y)
+      maxX = Math.max(maxX, g.x + g.w)
+      maxY = Math.max(maxY, g.y + g.h)
+    }
+    // The margin covers a chip name running past its block.
+    for (const n of positioned.values()) {
+      minX = Math.min(minX, n.x - CHIP_OVERHANG - 5)
+      minY = Math.min(minY, n.y - 20)
+      maxX = Math.max(maxX, n.x + n.w + CHIP_OVERHANG + 5)
+      maxY = Math.max(maxY, n.y + n.h + 20)
+    }
+    return { minX, minY, w: maxX - minX, h: maxY - minY }
+  }, [layout.width, layout.height, groups, positioned])
+
   const values = useMemo(
     () => indexVariables(variables, checkResult?.inferredUnits),
     [variables, checkResult?.inferredUnits],
@@ -232,12 +296,19 @@ export default function SchematicTab({
       if (layout.width === 0 || layout.height === 0 || w === 0) {
         return
       }
-      const next = Math.min(w / layout.width, h / layout.height, MAX_ZOOM)
-      setZoom(Math.max(MIN_ZOOM, next))
-      setPan({ x: 0, y: 0 })
+      // MIN_ZOOM is the floor for manual zoom-out only; Fit must frame the
+      // whole drawing however large it is, dragged nodes included.
+      const next = Math.min(w / bounds.w, h / bounds.h, MAX_ZOOM)
+      setZoom(next)
+      setPan({ x: -bounds.minX * next, y: -bounds.minY * next })
     },
-    [layout.width, layout.height],
+    [layout.width, layout.height, bounds],
   )
+  // Manual zoom-out may always reach the fitted view, even below MIN_ZOOM.
+  const minZoom =
+    layout.width > 0 && layout.height > 0 && viewport.w > 0
+      ? Math.min(MIN_ZOOM, viewport.w / bounds.w, viewport.h / bounds.h)
+      : MIN_ZOOM
   // Auto-framing stays on until the user takes control of the view, then never
   // fights them again. A one-shot "fit on first render" is not enough: the
   // panel is still settling when the first measurement arrives, so the drawing
@@ -284,14 +355,14 @@ export default function SchematicTab({
     fitTo(viewport.w, viewport.h)
   }, [layout.nodes.length, layout.width, layout.height, viewport.w, viewport.h, fitTo])
 
+  const declarationOf = (node: SchematicNode): number | null =>
+    node.kind === 'instance'
+      ? (declarationLineFromCheck(checkResult?.instances, node.id) ??
+        declarationLineFromCheck(checkResult?.instances, node.label) ??
+        declarationLine(text, node.label))
+      : null
   const revealInstance = (node: SchematicNode) => {
-    if (node.kind !== 'instance') {
-      return
-    }
-    const line =
-      declarationLineFromCheck(checkResult?.instances, node.id) ??
-      declarationLineFromCheck(checkResult?.instances, node.label) ??
-      declarationLine(text, node.label)
+    const line = declarationOf(node)
     if (line !== null) {
       onRevealLine(line)
     }
@@ -406,20 +477,11 @@ export default function SchematicTab({
     }
     // The live viewBox frames what is on screen; an export has to frame the
     // whole drawing, including anything the user has dragged out of view.
-    let minX = 0
-    let minY = 0
-    let maxX = layout.width
-    let maxY = layout.height
-    for (const n of positioned.values()) {
-      minX = Math.min(minX, n.x - 20)
-      minY = Math.min(minY, n.y - 20)
-      maxX = Math.max(maxX, n.x + n.w + 20)
-      maxY = Math.max(maxY, n.y + n.h + 20)
-    }
+    const { minX, minY, w, h } = bounds
     const clone = svg.cloneNode(true) as SVGSVGElement
-    clone.setAttribute('viewBox', `${minX} ${minY} ${maxX - minX} ${maxY - minY}`)
-    clone.setAttribute('width', String(Math.round(maxX - minX)))
-    clone.setAttribute('height', String(Math.round(maxY - minY)))
+    clone.setAttribute('viewBox', `${minX} ${minY} ${w} ${h}`)
+    clone.setAttribute('width', String(Math.round(w)))
+    clone.setAttribute('height', String(Math.round(h)))
     const xml = new XMLSerializer().serializeToString(clone)
     const blob = new Blob([xml], { type: 'image/svg+xml' })
     const url = URL.createObjectURL(blob)
@@ -432,7 +494,7 @@ export default function SchematicTab({
     URL.revokeObjectURL(url)
   }
 
-  const drag = useDragging(zoom, offsetsRef, applyOffsets, setPan, commitOffsets)
+  const drag = useDragging(zoom, offsetsRef, applyOffsets, setPan, commitOffsets, takeControl)
 
   const active = pinned ?? hovered
   const activeNode = active ? positioned.get(active) : undefined
@@ -487,11 +549,15 @@ export default function SchematicTab({
             {wireNote}
           </Text>
         )}
-        {topologyStale && (
+        {topologyMissing && (checkResult ? (
           <Text size="xs" c="orange">
             connections not shown — the document has errors; fix them and Check
           </Text>
-        )}
+        ) : (
+          <Text size="xs" c="dimmed">
+            connections appear after Check
+          </Text>
+        ))}
         {onEmitStatement && (
           <Group gap={6} wrap="nowrap">
             <Select
@@ -544,7 +610,7 @@ export default function SchematicTab({
           <Tooltip label="Zoom out">
             <ActionIcon size="sm" variant="subtle" aria-label="Zoom out" onClick={() => {
                 takeControl()
-                setZoom((z) => Math.max(MIN_ZOOM, z / 1.25))
+                setZoom((z) => Math.max(minZoom, z / 1.25))
               }}>
               <IconZoomOut size={15} />
             </ActionIcon>
@@ -598,7 +664,7 @@ export default function SchematicTab({
           }
           e.preventDefault()
           takeControl()
-          setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * (e.deltaY < 0 ? 1.1 : 1 / 1.1))))
+          setZoom((z) => Math.min(MAX_ZOOM, Math.max(minZoom, z * (e.deltaY < 0 ? 1.1 : 1 / 1.1))))
         }}
       >
         <svg
@@ -613,7 +679,7 @@ export default function SchematicTab({
           {/* Circuit bands: one frame per fluid loop / coupling network, so two
               circuits that share a bond-graph domain still read apart. */}
           <g>
-            {layout.groups.map((g) => {
+            {groups.map((g) => {
               const style = styleOf(g.lineId)
               return (
                 <g key={g.id}>
@@ -647,13 +713,13 @@ export default function SchematicTab({
               return (
                 <path
                   key={e.id}
-                  d={routeEdge(a, b, e.fromPort, e.toPort, layout.nodes)}
+                  d={routeEdge(a, b, e.fromPort, e.toPort, placed)}
                   fill="none"
                   stroke={style.color}
                   strokeWidth={lit ? style.width + 1.2 : style.width}
                   strokeDasharray={style.dash}
                   strokeLinejoin="round"
-                  strokeOpacity={active !== null && !lit ? 0.28 : 0.95}
+                  strokeOpacity={0.95}
                 >
                   <title>{edgeTitle(e)}</title>
                 </path>
@@ -678,9 +744,10 @@ export default function SchematicTab({
                 <NodeBlock
                   key={n.id}
                   node={n}
+                  zoom={zoom}
+                  room={chipRoom.get(n.id) ?? { left: Infinity, right: Infinity }}
                   badge={badgeFor(n, readouts.get(n.id) ?? { ports: [], outputs: [], params: [] })}
                   active={active === n.id}
-                  dimmed={active !== null && active !== n.id}
                   styleOf={styleOf}
                   wiring={Boolean(onEmitStatement)}
                   pendingPort={pendingPort}
@@ -702,8 +769,13 @@ export default function SchematicTab({
                       })
                       return
                     }
+                    // Selecting links to the declaration but keeps the canvas
+                    // in front; the readout card's reveal action navigates.
                     setPinned((p) => (p === n.id ? null : n.id))
-                    revealInstance(n)
+                    const line = declarationOf(n)
+                    if (line !== null) {
+                      onSelectLine?.(line)
+                    }
                   }}
                   onEnter={() => setHovered(n.id)}
                   onLeave={() => setHovered(null)}
@@ -763,11 +835,41 @@ function parseChoice(value: string | null): { instance: string; port: string } |
   return { instance: value.slice(0, sep), port: value.slice(sep + 2) }
 }
 
+let measure: CanvasRenderingContext2D | null | undefined
+/** On-screen width of a chip name at `px`, measured in the page's UI font. */
+function chipTextPx(text: string, px: number): number {
+  if (measure === undefined) {
+    measure = typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d')
+  }
+  if (!measure) {
+    return 0.62 * px * text.length // no canvas (tests): average bold glyph width
+  }
+  measure.font = `600 ${px}px ${getComputedStyle(document.body).fontFamily}`
+  return measure.measureText(text).width
+}
+
+/** A chip name that fits `widthPx` on screen, shortened with an ellipsis when
+ *  it would not; the full name stays in the node's tooltip and the inspector. */
+function fitLabel(label: string, widthPx: number): string {
+  if (chipTextPx(label, MIN_LABEL_PX) <= widthPx) {
+    return label
+  }
+  for (let n = label.length - 1; n > 1; n--) {
+    const short = `${label.slice(0, n)}…`
+    if (chipTextPx(short, MIN_LABEL_PX) <= widthPx) {
+      return short
+    }
+  }
+  return `${label[0]}…`
+}
+
 interface BlockProps {
   node: SchematicNode
+  zoom: number
+  /** Free drawing units each side of the block, shared with a row neighbour. */
+  room: { left: number; right: number }
   badge: { label: string; value: number; units: string } | null
   active: boolean
-  dimmed: boolean
   styleOf: (id: string) => LineStyle
   wiring: boolean
   pendingPort: { instance: string; port: string } | null
@@ -783,9 +885,10 @@ interface BlockProps {
  *  telling number. */
 function NodeBlock({
   node,
+  zoom,
+  room,
   badge,
   active,
-  dimmed,
   styleOf,
   wiring,
   pendingPort,
@@ -798,6 +901,17 @@ function NodeBlock({
 }: Readonly<BlockProps>) {
   const glyph = glyphPath(node.shape)
   const GLYPH = 20
+  // Level of detail: once the full card's name would draw below MIN_LABEL_PX,
+  // show only the name, held at MIN_LABEL_PX on screen whatever the zoom.
+  const chip = zoom * LABEL_FONT < MIN_LABEL_PX
+  const chipFont = MIN_LABEL_PX / zoom
+  // A name may take half the gap to each neighbour, less a visible margin, and
+  // shifts toward the freer side when centring would not fit.
+  const share = (gap: number) => Math.max(0, Math.min(CHIP_OVERHANG, gap / 2 - CHIP_GAP_PX / (2 * zoom)))
+  const [sL, sR] = [share(room.left), share(room.right)]
+  const chipLabel = chip ? fitLabel(node.label, (sL + node.w + sR) * zoom) : node.label
+  const half = chip ? chipTextPx(chipLabel, MIN_LABEL_PX) / zoom / 2 : 0
+  const chipX = Math.min(Math.max(node.w / 2, half - sL), node.w + sR - half)
   const activate = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -807,7 +921,6 @@ function NodeBlock({
   return (
     <g
       transform={`translate(${node.x}, ${node.y})`}
-      opacity={dimmed && !highlighted ? 0.45 : 1}
       onPointerDown={onPointerDown}
       onClick={(e) => onClick(e.shiftKey)}
       onMouseEnter={onEnter}
@@ -828,7 +941,23 @@ function NodeBlock({
         strokeWidth={highlighted || active ? 2.2 : 1.2}
         strokeDasharray={node.terminal ? '4 2' : undefined}
       />
-      {glyph && (
+      {chip && (
+        <text
+          x={chipX}
+          y={node.h / 2}
+          fontSize={chipFont}
+          fontWeight={600}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="#e9ecef"
+          stroke="#1a1b1e"
+          strokeWidth={3 / zoom}
+          paintOrder="stroke"
+        >
+          {chipLabel}
+        </text>
+      )}
+      {!chip && glyph && (
         <g color="#12b886" transform={`translate(6, ${(node.h - GLYPH) / 2}) scale(${GLYPH})`}>
           <path
             d={glyph}
@@ -840,13 +969,17 @@ function NodeBlock({
           <path d={glyphFillPath(node.shape)} fill="currentColor" />
         </g>
       )}
-      <text x={GLYPH + 12} y={badge ? 19 : 22} fontSize={12.5} fontWeight={600} fill="#e9ecef">
-        {node.label}
-      </text>
-      <text x={GLYPH + 12} y={badge ? 31 : 36} fontSize={10} fill="#909296">
-        {node.type}
-      </text>
-      {badge && (
+      {!chip && (
+        <text x={GLYPH + 12} y={badge ? 19 : 22} fontSize={LABEL_FONT} fontWeight={600} fill="#e9ecef">
+          {node.label}
+        </text>
+      )}
+      {!chip && (
+        <text x={GLYPH + 12} y={badge ? 31 : 36} fontSize={10} fill="#909296">
+          {node.type}
+        </text>
+      )}
+      {!chip && badge && (
         <text x={GLYPH + 12} y={44} fontSize={10.5} fontWeight={600} fill="#63e6be">
           {badgeText(badge)}
         </text>
@@ -1048,6 +1181,7 @@ function useDragging(
   applyOffsets: (next: Offsets) => void,
   setPan: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>,
   onDragEnd: () => void,
+  takeControl: () => void,
 ) {
   const state = useRef<{ id: string | null; x: number; y: number; moved: boolean } | null>(null)
   const [panning, setPanning] = useState(false)
@@ -1062,6 +1196,10 @@ function useDragging(
       const dy = e.clientY - s.y
       if (Math.abs(dx) + Math.abs(dy) > 3) {
         s.moved = true
+      }
+      // A drag or pan is the user taking the view; auto-fit must not chase it.
+      if (s.moved) {
+        takeControl()
       }
       s.x = e.clientX
       s.y = e.clientY
@@ -1095,7 +1233,7 @@ function useDragging(
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
     }
-  }, [zoom, offsetsRef, applyOffsets, setPan, onDragEnd])
+  }, [zoom, offsetsRef, applyOffsets, setPan, onDragEnd, takeControl])
 
   return {
     panning,

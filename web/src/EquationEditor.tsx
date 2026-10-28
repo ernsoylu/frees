@@ -30,7 +30,9 @@ export interface EquationEditorHandle {
   /** Replace the whole document (project load, examples, generated equations).
    *  Does NOT fire onChange — the caller already holds the new text. */
   setDoc: (text: string) => void
-  goToLine: (line: number) => void
+  /** Select a 1-based line and scroll it into view. `focus: false` leaves
+   *  keyboard focus where it is, for selection linked from another view. */
+  goToLine: (line: number, opts?: { focus?: boolean }) => void
   focus: () => void
 }
 
@@ -570,7 +572,7 @@ function EquationEditorInner(
           programmaticRef.current = false
         }
       },
-      goToLine(line: number) {
+      goToLine(line: number, opts?: { focus?: boolean }) {
         const view = viewRef.current
         if (!view) return
         const n = Math.min(Math.max(line, 1), view.state.doc.lines)
@@ -579,7 +581,7 @@ function EquationEditorInner(
           selection: { anchor: target.from, head: target.to },
           scrollIntoView: true,
         })
-        view.focus()
+        if (opts?.focus !== false) view.focus()
       },
       focus() {
         viewRef.current?.focus()
