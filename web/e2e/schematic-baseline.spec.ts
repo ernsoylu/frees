@@ -1949,6 +1949,7 @@ test('AC-14: insert, configure, connect, inspect, solve and export from the keyb
   await press(canvas, 'a')
   await insert('Resistor', [/^R\s*\[ohm\]/, '5'])
   await press(canvas, 'a')
+  await expect(quick.getByLabel('Search components')).toBeFocused()
   // Typing in the search box is text: `l` does not open the list, Delete deletes nothing.
   await page.keyboard.type('Gl')
   await page.keyboard.press('Delete')

@@ -289,7 +289,7 @@ Design proposal and phased scope in [`docs/schematic-workspace-change-request.md
      - A new annotation now starts at the view's top-left margin. At the centre, it covered a block in AC-15.
      - Fit and export frame annotations; a note outside the blocks used to be clipped.
      - In a docked panel, the Annotate and Views buttons wrap the toolbar to another row, and R1's pinned card then covers R2. AC-08 now adds R2 with Shift+Enter.
-     - AC-14's palette helper now waits for the command palette to close. In the full run, its closing transition still held focus in the search field. `?` then landed in an input, and the shortcuts handler rightly ignored it.
+     - AC-14's palette helper now waits for the command palette to close. In the full run, its closing transition still held focus in the search field. `?` then landed in an input, and the shortcuts handler rightly ignored it. On CI, the test also typed into the quick-add search before it had focus; it now waits for focus, as its other inserts do.
 
 **01d closed 2026-10-29.** Gates on the closing tree:
 - workspace 3,420 tests and the parity corpus, green;
