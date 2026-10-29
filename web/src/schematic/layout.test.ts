@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrangeDeltas, connectedTo, crossingHops, focusOf, framedGroups, HOP, nearestInDirection, pathOf, routeAll, layoutSchematic, routeEdge, type Connection, type SchematicEdge, type SchematicNode } from './layout'
+import { arrangeDeltas, connectedTo, endpointScope, scopeOf, crossingHops, focusOf, framedGroups, HOP, manualRoute, nearestInDirection, nearestLane, pathOf, routeAll, routeCrosses, routeKey, layoutSchematic, routeEdge, type Connection, type SchematicEdge, type SchematicNode } from './layout'
 import { boxesEntered } from '../test/schematicPaths'
 
 const conn = (domain: string, ...endpoints: string[]): Connection => ({ domain, endpoints })
@@ -539,5 +539,45 @@ describe('wire semantics', () => {
     expect(lanes(apart, 'c1')[0]).not.toBe(lanes(apart, 'c2')[0])
     const together = routeAll([edge('c1_0', 'a', 'b'), edge('c1_1', 'c', 'd')], nodes, [...nodes.values()])
     expect(lanes(together, 'c1_0')[0]).toBe(lanes(together, 'c1_1')[0])
+  })
+})
+
+describe('manual routes (WIRE-07)', () => {
+  const block = (id: string, x: number, port: string, side: 'left' | 'right'): SchematicNode => ({
+    id, label: id, shape: 'generic' as SchematicNode['shape'], terminal: false, kind: 'instance', group: 'g',
+    x, y: 0, w: 100, h: 40, ports: [{ port, side, dx: side === 'right' ? 100 : 0, dy: 20 }],
+  })
+  const b = block('b', 0, 'p', 'right')
+  const l = block('l', 300, 'a', 'left')
+  const e: SchematicEdge = { id: 'c0', lineId: 'x', domain: 'electrical', from: 'b', to: 'l', fromPort: 'p', toPort: 'a' }
+  const bend = { x: 200, y: -60 }
+
+  it('keys a wire by its ports, independent of connection numbering', () => {
+    expect(routeKey(e)).toBe('b.p|l.a')
+    expect(routeKey({ from: '$node7', to: 'l', toPort: 'a' })).toBe('*|l.a')
+  })
+
+  it('runs orthogonally through every bend and keeps them when an end moves', () => {
+    const pts = manualRoute(b, l, 'p', 'a', [bend])
+    expect(pts).toEqual([{ x: 100, y: 20 }, { x: 114, y: 20 }, { x: 200, y: 20 }, bend, { x: 286, y: -60 }, { x: 286, y: 20 }, { x: 300, y: 20 }])
+    expect(manualRoute(b, { ...l, y: 100 }, 'p', 'a', [bend])).toContainEqual(bend)
+    // Laid first by routeAll, through the same bend.
+    expect(routeAll([e], new Map([['b', b], ['l', l]]), [b, l], new Map([['c0', [bend]]])).get('c0')).toEqual(pts)
+  })
+
+  it('finds the lane under the pointer and the blocks a route runs through', () => {
+    const pts = manualRoute(b, l, 'p', 'a', [bend])
+    expect(nearestLane(pts, { x: 203, y: -20 })).toEqual({ index: 2, foot: { x: 200, y: -20 } })
+    expect(routeCrosses(pts, [b, l])).toEqual([])
+    expect(routeCrosses(manualRoute(b, l, 'p', 'a', [{ x: 350, y: -60 }, { x: 350, y: 100 }]), [b, l])).toEqual(['l'])
+  })
+})
+
+describe('scopes (HIER-01)', () => {
+  it('places nested blocks and boundary nodes in their subsystem', () => {
+    expect(['vs.p', 'sub1.r1_a', 'sub1.r1.b', 'sub1$r1_a', 'sub1.box.inner.in', 'sub1.box$a'].map(endpointScope)).toEqual(['', '', 'sub1', 'sub1', 'sub1.box', 'sub1.box'])
+    expect(['vs', 'sub1.r1', '$node3', 'sub1$a'].map(scopeOf)).toEqual(['', 'sub1', '', 'sub1'])
+    const l = layoutSchematic([{ domain: 'electrical', endpoints: ['sub1$a', 'sub1.r1.a'] }, { domain: 'electrical', endpoints: ['sub1.r1.b', 'sub1.r2.b'] }])
+    expect(l.nodes.map((n) => n.id).sort()).toEqual(['sub1$a', 'sub1.r1', 'sub1.r2'])
   })
 })

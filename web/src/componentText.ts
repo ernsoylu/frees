@@ -67,6 +67,11 @@ function formatNumericValue(raw: string, unit: string): string {
   return v
 }
 
+/** A parameter value as it is written into an instantiation. */
+export function formatParamValue(p: ComponentParam, raw: string): string {
+  return p.isString ? formatStringValue(raw) : formatNumericValue(raw, p.unit)
+}
+
 /** Build the single-line component instantiation text. Only active params are
  *  emitted (so a stale value from an unselected variant is dropped); empty values
  *  are skipped (an unset optional/selector param uses the std-library default). */
@@ -79,11 +84,7 @@ export function generateComponentText(
   for (const p of activeParams(spec, values)) {
     const raw = (values[p.name] ?? '').trim()
     if (raw === '') continue
-    if (p.isString) {
-      parts.push(`${p.name}=${formatStringValue(raw)}`)
-    } else {
-      parts.push(`${p.name}=${formatNumericValue(raw, p.unit)}`)
-    }
+    parts.push(`${p.name}=${formatParamValue(p, raw)}`)
   }
   const name = instanceName.trim() || suggestInstanceName(spec.type)
   return `${spec.type} ${name}(${parts.join(', ')})`

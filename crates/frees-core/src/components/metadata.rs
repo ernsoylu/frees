@@ -595,6 +595,7 @@ mod tests {
                 .into(),
             line: 0,
             span: Default::default(),
+            param_spans: Vec::new(),
         };
         let comps = build_from_instances(&[inst], &[VariableRow::new("UA_chl_r", 575.46, "W/K")]);
         assert_eq!(comps.len(), 1);

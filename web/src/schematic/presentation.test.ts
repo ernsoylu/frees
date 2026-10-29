@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EV_TOPOLOGY } from './evTopology.fixture'
 import { layoutSchematic, pathOf, routeAll, type SchematicGroup, type SchematicNode } from './layout'
-import { arrangeBase, EMPTY_PRESENTATION, framesFor, guideSnap, resolveLegacy, sanitizePresentation, snapToGrid, styleFor } from './presentation'
+import { arrangeBase, arrangeBlocks, EMPTY_PRESENTATION, framesFor, guideSnap, resolveLegacy, sanitizePresentation, snapToGrid, styleFor } from './presentation'
 import { boxesEntered } from '../test/schematicPaths'
 
 const ev = layoutSchematic(EV_TOPOLOGY)
@@ -127,5 +127,29 @@ describe('style scopes (CFG-01) and identifier validation (CFG-07)', () => {
     expect(presentation.locked).toEqual(['u1'])
     expect(presentation.styles).toEqual({ project: { precision: 4 }, types: { pump: { accent: '#abcdef' } }, instances: { p1: { accent: '#000000' } } })
     expect(repaired).toBe(5) // position, lock, project accent, bad type key, precision 99
+  })
+})
+
+describe('wire routes (WIRE-07)', () => {
+  it('round-trips bends and locks, and drops malformed ones', () => {
+    const routes = { 'fan.out|sup.in': { points: [{ x: 1, y: 2 }], locked: true }, '*|l.a': { points: [] } }
+    const { presentation, repaired } = sanitizePresentation({ ...EMPTY_PRESENTATION, routes: { ...routes, bad: { points: [{ x: 'a' }] }, worse: 3 } })
+    expect(presentation.routes).toEqual(routes)
+    expect(repaired).toBe(2)
+  })
+})
+
+describe('arrangeBlocks (VIEW-04)', () => {
+  it('returns unlocked targets to the layout with their unlocked routes; locks hold', () => {
+    const p = {
+      ...EMPTY_PRESENTATION,
+      positions: { a: { x: 1, y: 1 }, b: { x: 2, y: 2 }, c: { x: 3, y: 3 } },
+      locked: ['b'],
+      routes: { 'a.out|c.in': { points: [] }, 'b.out|c.in': { points: [], locked: true }, 'c.out|d.in': { points: [] } },
+    }
+    const { presentation, moved } = arrangeBlocks(p, ['a', 'b'])
+    expect(moved).toEqual(['a'])
+    expect(presentation.positions).toEqual({ b: { x: 2, y: 2 }, c: { x: 3, y: 3 } })
+    expect(Object.keys(presentation.routes)).toEqual(['b.out|c.in', 'c.out|d.in'])
   })
 })

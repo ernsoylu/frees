@@ -268,6 +268,7 @@ mod tests {
             source_text: format!("{type_name} {name}()"),
             line: 0,
             span: Default::default(),
+            param_spans: Vec::new(),
         }
     }
 

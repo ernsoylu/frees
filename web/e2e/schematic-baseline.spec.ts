@@ -18,6 +18,7 @@
 // and after the 01a fixes and its attachments show what changed.
 //
 // Run:  npm run build && npx playwright test e2e/schematic-baseline.spec.ts --project=chromium
+import { readFileSync } from 'node:fs'
 import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test'
 import { EV_THERMAL_EXAMPLE_TEXT } from '../src/defaultExample'
 
@@ -833,6 +834,7 @@ test('presentation file: a v3 project migrates against the legacy layout', async
   await testInfo.attach('migrated.png', { body: await svg.screenshot(), contentType: 'image/png' })
   // Reset layout returns FAN to the layout: the difference is the v3 offset.
   await page.getByRole('button', { name: 'Reset layout' }).click()
+  await page.getByTestId('arrange-preview').getByRole('button', { name: 'Apply' }).click()
   const base = await placeOf(svg, 'fan')
   expect([migrated[0] - base[0], migrated[1] - base[1]]).toEqual([300, -150])
   await record(testInfo, 'evidence', { migrated, base })
@@ -900,6 +902,7 @@ test('RUN-10: arranging, selecting and viewing never check, solve or stale a res
     await setting(label)
   }
   await page.getByRole('button', { name: 'Reset layout' }).click()
+  await page.getByTestId('arrange-preview').getByRole('button', { name: 'Apply' }).click()
   done.push('zoom', 'fit', 'pan', 'flow', 'spacing', 'frames', 'detail', 'background', 'labels', 'snap', 'reset')
   await page.waitForTimeout(1500) // past the idle-check and autosave debounces
 
@@ -1134,7 +1137,7 @@ test('AC-05: legal wires connect, illegal ones are refused, a partial network st
   await expect(svg.locator('[data-port="q.port"]')).toHaveAttribute('data-compat', 'prohibited')
   await expect(svg.locator('[data-port="c1.p"]')).toHaveAttribute('data-compat', 'allowed')
   await page.mouse.up()
-  await expect(page.getByText(/Cannot wire electrical src\.p to heat q\.port/i)).toBeVisible()
+  await expect(page.getByText(/Cannot wire electrical src\.p to heat q\.port/i).first()).toBeVisible()
   await editorText(page).not.toMatch(/connect\(SRC\.p, Q\.port\)/i)
 
   const cap = await portAt(svg, 'c1.p')
@@ -1253,8 +1256,14 @@ test('AC-04: scoped rename; other scopes, comments and layout hold; editor caret
   // After the check, the renamed block keeps its place; the subsystems are untouched.
   await expect(svg.locator('[data-node="outlet"]')).toHaveCount(1, { timeout: 15_000 })
   expect(await placeOf(svg, 'outlet')).toEqual(placed)
-  await expect(svg.getByRole('button', { name: 'B1.inner.in port' })).toHaveCount(1)
-  await expect(svg.getByRole('button', { name: 'C1.inner.in port' })).toHaveCount(1)
+  // Each subsystem keeps its own `inner`, drawn inside it (HIER-01), not on the block.
+  await expect(svg.locator('[data-port^="b1.inner"]')).toHaveCount(0)
+  for (const sub of ['B1', 'C1']) {
+    await page.getByRole('button', { name: 'Model tree' }).click()
+    await page.getByTestId('model-tree').getByRole('button', { name: `Open ${sub}` }).click()
+    await expect(svg.locator(`[data-port="${sub.toLowerCase()}.inner.in"]`)).toHaveCount(1)
+  }
+  await page.getByRole('button', { name: 'Model', exact: true }).click()
 
   // SYNC-09: the editor caret on a declaration highlights its block.
   await showView(page, 'Editor')
@@ -1314,4 +1323,704 @@ test('AC-13: style scopes persist; source-only exports say what stays behind; fi
   await page.getByRole('button', { name: 'Undo' }).click()
   await editorText(page).toMatch(/MoistAirSink SUP\(\)$/)
   await record(testInfo, 'evidence', { styles: { project: { accent: '#cc3300' }, fan: { precision: 3 } }, fix: 'Rename the second SUP to SUP2' })
+})
+
+// CR-SCHEMATIC-01c journeys.
+
+test('AC-03: a source edit shows in the inspector; an inspector edit is a minimal diff; both undo in order', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, HUMID_AIR)
+  // Edit one binding in the source, as text.
+  await showView(page, 'Editor')
+  await page.locator('.cm-line', { hasText: 'MoistAirFan' }).click()
+  await page.keyboard.press('End')
+  for (let i = 0; i < '0 [Pa], eta=0.55)'.length; i++) await page.keyboard.press('ArrowLeft')
+  await page.keyboard.press('Backspace') // 250 → 20, then 260
+  await page.keyboard.type('6')
+  await editorText(page).toContain('MoistAirFan        FAN(dP=260 [Pa], eta=0.55)')
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await showView(page, 'Schematic')
+  await svg.locator('[data-node="fan"]').click()
+  const inspector = page.getByTestId('param-inspector')
+  await expect(inspector.locator('[data-param="dp"]')).toContainText('260 [Pa]')
+  await expect(inspector.locator('[data-param="eta"]')).toContainText('0.55')
+
+  // Edit another in the inspector: a draft until Apply, then one token changes.
+  await inspector.getByRole('button', { name: 'Edit eta' }).click()
+  await inspector.getByLabel('New eta').fill('0.6 +')
+  await inspector.getByRole('button', { name: 'Apply' }).click()
+  await expect(inspector).toContainText('Not a valid value or expression.')
+  await editorText(page).toContain('eta=0.55)')
+  await inspector.getByLabel('New eta').fill('0.6')
+  await inspector.getByRole('button', { name: 'Apply' }).click()
+  await editorText(page).toBe(HUMID_AIR.replace('dP=250 [Pa], eta=0.55', 'dP=260 [Pa], eta=0.6 [-]')) // written as the wizard writes it
+  // The edit stales the run: no result is shown as current.
+  await expect(page.getByText(/^Solved/i)).toHaveCount(0)
+
+  // Undo in order: the canvas edit, then the typed one in the editor.
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await editorText(page).toBe(HUMID_AIR.replace('dP=250', 'dP=260'))
+  await showView(page, 'Editor')
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+z')
+  await editorText(page).toBe(HUMID_AIR)
+  await record(testInfo, 'evidence', { sourceEdit: 'dP 250 → 260 [Pa] (typed)', inspectorEdit: 'eta 0.55 → 0.6', undoneInOrder: true })
+})
+
+test('AC-02: from an empty document, place, configure, wire, check and solve without typing source', async ({ page }, testInfo) => {
+  const start = '// AC-02: a circuit built on the canvas\n'
+  const source = 'https://raw.example/empty.frees'
+  await page.route(source, (route) => route.fulfill({ contentType: 'text/plain', body: start }))
+  await page.goto('/?url=' + encodeURIComponent(source))
+  await expect(page.locator('.cm-content')).toContainText('AC-02')
+  await showView(page, 'Schematic')
+  const wizard = page.getByRole('dialog', { name: 'Insert a Component' })
+  const quick = page.getByTestId('quick-add')
+
+  // Cancel at either step writes nothing.
+  await page.getByRole('button', { name: 'Add component' }).click()
+  await quick.getByLabel('Search components').fill('resistor')
+  await page.keyboard.press('Escape')
+  await expect(quick).toHaveCount(0)
+  await page.getByRole('button', { name: 'Add component' }).click()
+  await quick.getByLabel('Search components').fill('VoltageSource')
+  await page.keyboard.press('Enter')
+  await wizard.getByRole('button', { name: 'Cancel' }).click()
+  await expect(wizard).toHaveCount(0)
+  await editorText(page).toBe(start)
+
+  // Source: the empty-state button, then the wizard.
+  await page.getByRole('button', { name: 'Add component' }).click()
+  await quick.getByLabel('Search components').fill('VoltageSource')
+  await page.keyboard.press('Enter')
+  await wizard.getByRole('textbox', { name: /^E\s*\[V\]/ }).fill('10')
+  await wizard.getByRole('button', { name: 'Add to System' }).click()
+  await editorText(page).toContain('VoltageSource VS(E=10 [V])')
+  const svg = page.getByRole('application', { name: /Component network schematic/ })
+  await expect(svg.locator('[data-node="vs"]')).toBeVisible()
+
+  // Equipment: double-click where it should go.
+  const box = (await svg.boundingBox())!
+  const spot = { x: box.x + box.width * 0.6, y: box.y + box.height * 0.6 }
+  await page.mouse.dblclick(spot.x, spot.y)
+  await quick.getByLabel('Search components').fill('Resistor')
+  await quick.getByRole('option', { name: /^Resistor\b/ }).click()
+  await wizard.getByRole('textbox', { name: /^R\s*\[ohm\]/ }).fill('5')
+  await wizard.getByRole('button', { name: 'Add to System' }).click()
+  await editorText(page).toContain('Resistor RESI(R=5 [ohm])')
+  const placed = (await svg.locator('[data-node="resi"]').boundingBox())!
+  const dist = Math.hypot(placed.x + placed.width / 2 - spot.x, placed.y + placed.height / 2 - spot.y)
+
+  // Sink: the 'a' key, then drag the result onto the canvas.
+  await svg.locator('..').focus() // the viewport takes the keys
+  await page.keyboard.press('a')
+  await quick.getByLabel('Search components').fill('Ground')
+  await quick.getByRole('option', { name: /^Ground\b/ }).dragTo(svg, { targetPosition: { x: box.width * 0.3, y: box.height * 0.75 } })
+  await wizard.getByRole('button', { name: 'Add to System' }).click()
+  await editorText(page).toContain('Ground GROU()')
+
+  // Connect by dragging port to port; Check classifies the ports first.
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  for (const [a, b] of [['vs.p', 'resi.a'], ['resi.b', 'vs.n'], ['vs.n', 'grou.port']]) {
+    await expect(svg.locator(`[data-port="${b}"]`)).toBeVisible()
+    const from = await portAt(svg, a)
+    const to = await portAt(svg, b)
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(to.x, to.y, { steps: 10 })
+    await page.mouse.up()
+    await editorText(page).toMatch(new RegExp(`connect\\(${a.replace('.', '\\.')}, ${b.replace('.', '\\.')}\\)`, 'i'))
+  }
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 60_000 })
+  const text = await savedText(page)
+  expect(text).not.toContain('\n\n\n')
+  await record(testInfo, 'evidence', { text, resistorOffsetFromDoubleClick: Math.round(dist) })
+  expect(dist).toBeLessThan(60)
+})
+
+const PIPES = `// AC-09 source document
+function [a, b] = Box()
+port(a)
+port(b)
+LiquidPipe inner(fluid$=Water, L=1 [m], D=0.05 [m], rough=1e-4 [m])
+connect(a, inner.in)
+connect(inner.out, b)
+end
+m_in = 1 [kg/s]
+LiquidSource SRC(fluid$=Water, mdot=m_in, P=200000 [Pa], T=300 [K])
+Box B1()
+LiquidSink SNK()
+connect(SRC.out, B1.a)
+connect(B1.b, SNK.in)
+P_out = B1.b.P
+`
+const TARGET = `// AC-09 target: its own SRC, no Box
+m_in = 2 [kg/s]
+LiquidSource SRC(fluid$=Water, mdot=m_in, P=150000 [Pa], T=290 [K])
+LiquidSink OUT()
+connect(SRC.out, OUT.in)
+`
+
+test('AC-09: delete shows impact and undoes; copy into another document resolves names and types, never external wires', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, PIPES, 'Check')
+  // Delete B1: its two connections go, the equation that reads it stays and is named.
+  await svg.getByRole('button', { name: /\bB1$/ }).click()
+  await page.keyboard.press('Delete')
+  const impact = page.getByTestId('delete-impact')
+  await expect(impact).toContainText('Removes 2 connections: connect(SRC.out, B1.a); connect(B1.b, SNK.in)')
+  await expect(impact).toContainText('line 15: P_out = B1.b.P')
+  await impact.getByRole('button', { name: 'Cancel' }).click()
+  await editorText(page).toBe(PIPES)
+  await svg.getByRole('button', { name: /\bB1$/ }).click()
+  await page.keyboard.press('Delete')
+  await impact.getByRole('button', { name: 'Delete' }).click()
+  await editorText(page).toBe(PIPES.replace('Box B1()\n', '').replace('connect(SRC.out, B1.a)\nconnect(B1.b, SNK.in)\n', ''))
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await editorText(page).toBe(PIPES)
+
+  // Copy SRC and B1 (with Box), then paste into a document that has its own SRC.
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await svg.getByRole('button', { name: /\bSRC$/ }).click()
+  await svg.getByRole('button', { name: /\bB1$/ }).click({ modifiers: ['Shift'] })
+  await page.keyboard.press('Control+c')
+  await expect(page.getByText('Copied 2 components.').first()).toBeVisible()
+  // Another document in the same browser; the app reopens on the Schematic view.
+  await page.route('https://raw.example/target.frees', (route) => route.fulfill({ contentType: 'text/plain', body: TARGET }))
+  await page.goto('/?url=' + encodeURIComponent('https://raw.example/target.frees'))
+  await page.getByRole('button', { name: 'Open shared document' }).click()
+  await editorText(page).toBe(TARGET)
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await showView(page, 'Schematic')
+  await expect(svg.locator('[data-node="out"]')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Edit components' }).click()
+  await page.getByRole('menuitem', { name: 'Paste' }).click()
+  const report = page.getByTestId('paste-report')
+  await expect(report).toContainText('Renamed SRC → SRC2 (name taken)')
+  await expect(report).toContainText('Added definition box')
+  await expect(report).toContainText('Not reconnected: B1.b — SNK.in')
+  await expect(report).not.toContainText('Not defined here') // the target has its own m_in
+  await editorText(page).toContain(PIPES.slice(PIPES.indexOf('function'), PIPES.indexOf('end\n') + 3))
+  const pasted = await savedText(page)
+  expect(pasted).toContain('LiquidSource SRC2(fluid$=Water, mdot=m_in, P=200000 [Pa], T=300 [K])\nBox B1()\nconnect(SRC2.out, B1.a)')
+  expect(pasted).not.toMatch(/SNK/)
+  // It checks and solves; B1's far port is joined to nothing in the target.
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await expect(svg.locator('[data-node="src2"]')).toHaveCount(1)
+  expect(pasted).not.toMatch(/B1\.b/i)
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 60_000 })
+  // Undo removes the whole paste.
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await editorText(page).toBe(TARGET)
+  await record(testInfo, 'evidence', { deleted: 'B1 (2 connections, equation on line 15 kept)', pasted: pasted?.slice(TARGET.length) })
+})
+
+/** The corners of an `M/L/H/V` path, in drawing units; arcs (hops) are skipped. */
+function corners(d: string): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = []
+  let at = { x: 0, y: 0 }
+  for (const [, cmd, args] of d.matchAll(/([MLHVA])\s*([^MLHVA]*)/g)) {
+    const n = args.trim().split(/[\s,]+/).map(Number)
+    if (cmd === 'A') at = { x: n[5], y: n[6] }
+    else at = cmd === 'H' ? { x: n[0], y: at.y } : cmd === 'V' ? { x: at.x, y: n[0] } : { x: n[0], y: n[1] }
+    if (cmd !== 'A') out.push(at)
+  }
+  return out
+}
+
+test('AC-07: bends, lane drag, lock, moved ends, crossing without a junction, conflict, reset, undo, export, reopen', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, HUMID_AIR, 'Check')
+  const KEY = 'fan.out|sup.in'
+  const wire = svg.locator(`path[data-route="${KEY}"]`)
+  const d = () => wire.getAttribute('d').then((v) => v!)
+  const toScreen = (p: { x: number; y: number }) =>
+    svg.evaluate((el: SVGSVGElement, q) => {
+      const s = new DOMPoint(q.x, q.y).matrixTransform(el.getScreenCTM()!)
+      return { x: s.x, y: s.y }
+    }, p)
+  const junctions = svg.locator('circle[data-ends]')
+  await expect(junctions).toHaveCount(0)
+
+  // Double-click the last lane: a bend appears on it (the click also opens the card).
+  const before = corners(await d())
+  const lane = [before.at(-3)!, before.at(-2)!]
+  const mid = await toScreen({ x: (lane[0].x + lane[1].x) / 2, y: (lane[0].y + lane[1].y) / 2 })
+  await page.mouse.dblclick(mid.x, mid.y)
+  await expect(page.getByTestId('wire-card')).toBeVisible()
+  const handles = svg.locator(`[data-bend^="${KEY}:"]`)
+  await expect(handles).toHaveCount(2)
+
+  // Drag the new bend just right of COIL, level with the return wire's riser: a crossing.
+  const riser = corners((await svg.locator('path[data-route="coil.out|hp.re_in"]').getAttribute('d'))!)
+  const target = { x: riser[1].x - 2, y: (riser[1].y + riser[2].y) / 2 }
+  const hb = (await handles.nth(1).boundingBox())!
+  const to = await toScreen(target)
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(to.x, to.y, { steps: 8 })
+  await page.mouse.up()
+  const bent = await d()
+  expect(bent).toContain(' A ') // it hops the riser
+  await expect(junctions).toHaveCount(0) // no bend became a junction
+  const bend = corners(bent).find((p) => Math.abs(p.x - target.x) <= 8 && Math.abs(p.y - target.y) <= 8)!
+  expect(bend).toBeTruthy()
+
+  // Drag a lane of another wire: it squares itself through the new place.
+  const other = svg.locator('path[data-route="hp.pre_in|room.out"]')
+  const otherBefore = (await other.getAttribute('d'))!
+  const ob = corners(otherBefore)
+  const grab = await toScreen({ x: (ob[2].x + ob[3].x) / 2, y: ob[2].y })
+  await page.mouse.move(grab.x, grab.y)
+  await page.mouse.down()
+  await page.mouse.move(grab.x, grab.y + 40, { steps: 6 })
+  await page.mouse.up()
+  expect(await other.getAttribute('d')).not.toBe(otherBefore)
+
+  // Lock: no handles; moving the far end keeps the bend.
+  const card = page.getByTestId('wire-card')
+  await card.getByRole('button', { name: 'Lock route' }).click()
+  await expect(handles).toHaveCount(0)
+  await dragBy(page, svg, 'sup', 0, 60)
+  expect(corners(await d())).toContainEqual(bend)
+
+  // Push COIL under the locked route: a named conflict.
+  await dragBy(page, svg, 'coil', 50, 0)
+  await expect(page.getByTestId('route-conflict')).toContainText('runs through COIL')
+  await expect(wire).toHaveAttribute('data-conflict', 'true')
+
+  // Unlock and reset: automatic again, clear of COIL; Undo brings the bends back.
+  await card.getByRole('button', { name: 'Unlock route' }).click()
+  await card.getByRole('button', { name: 'Reset route' }).click()
+  await expect(page.getByTestId('route-conflict')).toHaveCount(0)
+  expect(corners(await d())).not.toContainEqual(bend)
+  await page.getByRole('button', { name: 'Undo' }).click()
+  expect(corners(await d())).toContainEqual(bend)
+
+  // Reload: the bends come back with the autosaved project (AC-01 covers the file round trip).
+  await expect.poll(() => page.evaluate((key) => localStorage.getItem('frees.project')?.includes(`"${key}"`) ?? false, KEY), { timeout: 10_000 }).toBe(true)
+  await page.reload()
+  await page.getByRole('dialog').first().waitFor({ timeout: 15_000 }).catch(() => {})
+  await page.keyboard.press('Escape')
+  await showView(page, 'Schematic')
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await expect(wire).toHaveCount(1, { timeout: 30_000 })
+  expect(corners(await d())).toContainEqual(bend)
+
+  // Export: the same wires and bends, without the editing handles.
+  const onScreen = await svg.locator('path[data-route]').evaluateAll((p) => p.map((x) => [x.getAttribute('data-route'), x.getAttribute('d')]))
+  await page.getByRole('button', { name: 'Export…' }).click()
+  await page.getByTestId('export-drawing').getByText('Whole model').click()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-drawing').getByRole('button', { name: 'Export', exact: true }).click()])
+  const xml = readFileSync((await download.path())!, 'utf8')
+  expect(xml).not.toMatch(/data-bend|data-wire/)
+  const exported = Object.fromEntries([...xml.matchAll(/<path [^>]*data-route="([^"]+)"[^>]*\sd="([^"]+)"/g)].map((m) => [m[1], m[2]]))
+  expect(exported).toEqual(Object.fromEntries(onScreen))
+
+  await record(testInfo, 'evidence', { bend, bent, conflict: 'COIL', reopened: await d() })
+})
+
+const LOOP = `// WIRE-09: a source, a load and a grounded junction
+VoltageSource VS(E=10 [V])
+Resistor R1(R=5 [ohm])
+Ground G()
+connect(VS.p, R1.a)
+connect(VS.n, R1.b, G.port)
+`
+
+test('WIRE-09: insert into a wire and into one branch of a junction, previewed, solved, undone', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, LOOP, 'Check')
+  const panel = page.getByTestId('insert-panel')
+  const wizard = page.getByRole('dialog', { name: 'Insert a Component' })
+  const insertResistor = async (wire: RegExp, ohms: string) => {
+    await openWire(svg, wire)
+    await page.getByTestId('wire-card').getByRole('button', { name: 'Insert component…' }).click()
+    await panel.getByRole('combobox', { name: 'Component' }).fill('Resistor')
+    await page.getByRole('option', { name: 'Resistor', exact: true }).click()
+    await panel.getByRole('button', { name: 'Configure…' }).click()
+    await wizard.getByRole('textbox', { name: /^R\s*\[ohm\]/ }).fill(ohms)
+    await wizard.getByRole('button', { name: 'Add to System' }).click()
+  }
+
+  // Two ends: the statement is split through the new block, shown before it is written.
+  await insertResistor(/Wire (vs\.p → r1\.a|r1\.a → vs\.p)/i, '5')
+  await expect(page.getByTestId('insert-preview')).toHaveText(
+    ['- connect(VS.p, R1.a)', '+ connect(VS.p, RESI.a)', '+ Resistor RESI(R=5 [ohm])', '+ connect(RESI.b, R1.a)'].join('\n'),
+  )
+  await editorText(page).toBe(LOOP)
+  await panel.getByRole('button', { name: 'Apply' }).click()
+  await editorText(page).toBe(LOOP.replace('connect(VS.p, R1.a)', 'connect(VS.p, RESI.a)') + 'Resistor RESI(R=5 [ohm])\nconnect(RESI.b, R1.a)\n')
+
+  // A junction: the chosen branch (G.port) moves behind the new block; the rest stay joined.
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await insertResistor(/Wire .*g\.port/i, '1')
+  await expect(panel.getByRole('combobox', { name: 'Branch it goes on' })).toHaveValue('G.port')
+  await panel.getByRole('button', { name: 'Apply' }).click()
+  await editorText(page).toContain('connect(VS.n, R1.b, RESI2.a)')
+  await editorText(page).toContain('Resistor RESI2(R=1 [ohm])\nconnect(RESI2.b, G.port)')
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 60_000 })
+  await expect(svg.locator('[data-node="resi2"]')).toHaveCount(1)
+  const inserted = await savedText(page)
+
+  // One undo per insertion restores the original topology.
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await editorText(page).toBe(LOOP)
+  await record(testInfo, 'evidence', { inserted })
+})
+
+test('VIEW-04: arrange selection, circuit and all — previewed, cancelable, lock-respecting, deterministic, undoable', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, HUMID_AIR, 'Check')
+  const at = (id: string) => svg.locator(`[data-node="${id}"]`).getAttribute('transform')
+  const where = async () => Object.fromEntries(await Promise.all(['room', 'hp', 'coil', 'fan', 'sup'].map(async (id) => [id, await at(id)])))
+  const layout = await where()
+  await dragBy(page, svg, 'fan', -80, 90)
+  await dragBy(page, svg, 'coil', -60, -70)
+  // Lock COIL where it was dragged.
+  await svg.getByRole('button', { name: /\bCOIL$/ }).click()
+  await page.getByRole('button', { name: 'Arrange', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Lock position' }).click()
+  const dragged = await where()
+  expect(dragged.fan).not.toBe(layout.fan)
+  const banner = page.getByTestId('arrange-preview')
+  const arrange = async (item: string) => {
+    await page.getByRole('button', { name: 'Arrange', exact: true }).click()
+    await page.getByRole('menuitem', { name: item }).click()
+  }
+
+  // Selection: FAN previews back at its layout place; Cancel leaves it where it was.
+  await svg.getByRole('button', { name: /\bFAN$/ }).click()
+  await arrange('Arrange selection')
+  await expect(banner).toContainText('Arrange selection moves 1 block')
+  expect(await at('fan')).toBe(layout.fan)
+  await banner.getByRole('button', { name: 'Cancel' }).click()
+  expect(await at('fan')).toBe(dragged.fan)
+
+  // Circuit: every unlocked block of FAN's circuit; locked COIL is not counted.
+  await arrange('Arrange circuit')
+  await expect(banner).toContainText('Arrange circuit moves 4 blocks; locked ones stay')
+  await banner.getByRole('button', { name: 'Cancel' }).click()
+
+  // All: applied as one undo step; COIL holds; the same input gives the same result.
+  await arrange('Arrange all')
+  await banner.getByRole('button', { name: 'Apply' }).click()
+  const first = await where()
+  expect(first.fan).toBe(layout.fan)
+  expect(first.coil).toBe(dragged.coil)
+  await page.getByRole('button', { name: 'Undo' }).click()
+  expect(await where()).toEqual(dragged)
+  await arrange('Arrange all')
+  await banner.getByRole('button', { name: 'Apply' }).click()
+  expect(await where()).toEqual(first)
+  await record(testInfo, 'evidence', { layout, dragged, arranged: first })
+})
+
+const PAIR = `// AC-08: two resistors whose outer ends are both called a
+R_load = 5 [ohm]
+VoltageSource VS(E=10 [V])
+Resistor R1(R=R_load)
+Resistor R2(R=2*R_load*cos(0))
+Ground G()
+connect(VS.p, R1.a)
+connect(R1.b, R2.b)
+connect(R2.a, VS.n, G.port)
+I_load = R1.a.I
+`
+
+test('AC-08: extract a subsystem with duplicate port names, captured parameters and outside readers; checked, same result, browsed, undone', async ({ page }, testInfo) => {
+  const { initSync, solve } = await import('../src/wasm/pkg/frees.js')
+  initSync({ module: readFileSync(new URL('../src/wasm/pkg/frees_bg.wasm', import.meta.url)) })
+  const I_load = (src: string) => (JSON.parse(solve(src, '{}')).variables as { name: string; value: number }[]).find((v) => v.name === 'I_load')!.value
+
+  const svg = await openSolved(page, PAIR, 'Check')
+  await dragBy(page, svg, 'r1', 0, 80)
+  const placed = await svg.locator('[data-node="r1"]').getAttribute('transform')
+  await svg.getByRole('button', { name: /\bR1$/ }).click()
+  await svg.getByRole('button', { name: /\bR2$/ }).click({ modifiers: ['Shift'] })
+  await page.getByRole('button', { name: 'Edit components' }).click()
+  await page.getByRole('menuitem', { name: 'Extract subsystem…' }).click()
+
+  // The preview: both outer ends are `a`, so each exposed port is named for its block.
+  const preview = page.getByTestId('extract-preview')
+  await expect(preview.getByTestId('extract-ports')).toHaveText('Ports: R1_a (R1.a — VS.p); R2_a (R2.a — VS.n, G.port)')
+  await expect(preview.getByTestId('extract-captures')).toHaveText('Passed in: R_load = R_load')
+  await expect(preview.getByTestId('extract-references')).toHaveText('Re-pointed: line 10: I_load = R1.a.I → I_load = SUB1.R1.a.I')
+  // A name that clashes is refused before anything is written.
+  await preview.getByRole('textbox', { name: 'Component name' }).fill('Resistor')
+  await expect(preview).toContainText('A component named Resistor already exists; choose another name.')
+  await expect(preview.getByRole('button', { name: 'Extract' })).toBeDisabled()
+  await preview.getByRole('textbox', { name: 'Component name' }).fill('Pair')
+  await expect(preview.getByTestId('result-check')).toHaveText(/^Check of the result: .*20 equations and 20 variables/)
+  await editorText(page).toBe(PAIR)
+  await preview.getByRole('button', { name: 'Extract' }).click()
+  await editorText(page).toContain('Pair SUB1(R_load=R_load)')
+  const extracted = (await savedText(page))!
+  expect(extracted).toContain('connect(VS.p, SUB1.R1_a)\nconnect(SUB1.R2_a, VS.n, G.port)\nI_load = SUB1.R1.a.I')
+
+  // The parent and the generated definition check and solve; the result is the original's.
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 120_000 })
+  expect(I_load(extracted)).toBeCloseTo(I_load(PAIR), 12)
+
+  // Browse in: the tree opens SUB1, whose blocks kept their places; back and forward.
+  await showView(page, 'Schematic')
+  await page.getByRole('button', { name: 'Model tree' }).click()
+  await page.getByTestId('model-tree').getByRole('button', { name: 'Open SUB1' }).click()
+  await expect(page.getByRole('navigation', { name: 'Breadcrumbs' })).toHaveText(/Model›SUB1 \(Pair\)/)
+  await expect(svg.locator('[data-node]')).toHaveCount(4)
+  expect(await svg.locator('[data-node="sub1.r1"]').getAttribute('transform')).toBe(placed)
+  await page.getByRole('button', { name: 'Back' }).click()
+  await expect(svg.locator('[data-node="sub1"]')).toBeVisible()
+  await page.getByRole('button', { name: 'Forward' }).click()
+  await expect(svg.locator('[data-node="sub1.r2"]')).toBeVisible()
+  await page.getByRole('button', { name: 'Model', exact: true }).click()
+
+  // One Undo restores the source and the geometry.
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await editorText(page).toBe(PAIR)
+  await expect.poll(() => svg.locator('[data-node="r1"]').getAttribute('transform'), { timeout: 10_000 }).toBe(placed)
+  await record(testInfo, 'evidence', { extracted, I_load: I_load(extracted) })
+})
+
+test('HIER-04/05: a local subsystem interface renamed with its migration plan; its bindings inspected; exported and imported without overwriting', async ({ page }, testInfo) => {
+  const { initSync, check } = await import('../src/wasm/pkg/frees.js')
+  initSync({ module: readFileSync(new URL('../src/wasm/pkg/frees_bg.wasm', import.meta.url)) })
+  const pair = PAIR.replace('Resistor R1(R=R_load)\nResistor R2(R=2*R_load*cos(0))\n', '')
+  const subsystem = `function [R1_a, R2_a] = Pair(R_load)
+  port(R1_a)
+  port(R2_a)
+  Resistor R1(R=R_load)
+  Resistor R2(R=2*R_load*cos(0))
+  connect(R1.b, R2.b)
+  connect(R1_a, R1.a)
+  connect(R2_a, R2.a)
+end
+`
+  const doc = subsystem + pair.replace('Ground G()', 'Pair SUB1(R_load=R_load)\nGround G()').replace('connect(VS.p, R1.a)\nconnect(R1.b, R2.b)\nconnect(R2.a,', 'connect(VS.p, SUB1.R1_a)\nconnect(SUB1.R2_a,').replace('R1.a.I', 'SUB1.R1.a.I')
+  expect(JSON.parse(check(doc, '{}')).solvable).toBe(true)
+  const svg = await openSolved(page, doc, 'Check')
+
+  // The subsystem's own bindings show in the inspector like a library block's.
+  await svg.locator('[data-node="sub1"]').click()
+  await expect(page.getByTestId('param-inspector').locator('[data-param="r_load"]')).toContainText('R_load')
+
+  // Rename a port from inside: the plan lists every statement it changes, then one undo step.
+  await page.getByRole('button', { name: 'Model tree' }).click()
+  await page.getByTestId('model-tree').getByRole('button', { name: 'Open SUB1' }).click()
+  await page.getByRole('button', { name: 'Interface…' }).click()
+  const editor = page.getByTestId('interface-editor')
+  await expect(editor).toContainText('Used by 1 instance(s).')
+  await editor.getByRole('textbox', { name: 'Port R1_a' }).fill('hot')
+  await editor.getByRole('button', { name: 'Rename' }).first().click()
+  await expect(editor.getByTestId('interface-plan')).toHaveText(
+    [
+      'line 1: function [R1_a, R2_a] = Pair(R_load) → function [hot, R2_a] = Pair(R_load)',
+      'line 2: port(R1_a) → port(hot)',
+      'line 7: connect(R1_a, R1.a) → connect(hot, R1.a)',
+      'line 15: connect(VS.p, SUB1.R1_a) → connect(VS.p, SUB1.hot)',
+    ].join(''),
+  )
+  await editorText(page).toBe(doc)
+  await editor.getByRole('button', { name: 'Apply' }).click()
+  await editorText(page).toContain('connect(VS.p, SUB1.hot)')
+  const renamed = (await savedText(page))!
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 120_000 })
+
+  // Export it with a description; import it into a document whose Pair differs: kept unless replaced.
+  await showView(page, 'Schematic')
+  await page.getByRole('button', { name: 'Edit components' }).click()
+  await page.getByRole('menuitem', { name: 'Export component…' }).click()
+  await page.getByTestId('export-component').getByRole('textbox', { name: 'Description' }).fill('Two resistors, outer ends exposed')
+  const [file] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-component').getByRole('button', { name: 'Download' }).click()])
+  expect(file.suggestedFilename()).toBe('Pair.frees')
+  const exported = readFileSync(await file.path(), 'utf8')
+  expect(exported.split('\n').slice(0, 5)).toEqual(['// Component: Pair', '// Description: Two resistors, outer ends exposed', '// Ports: hot, R2_a', '// Parameters: R_load', '// Uses: Resistor (built-in)'])
+
+  await page.getByRole('button', { name: 'Model', exact: true }).click()
+  await page.getByRole('button', { name: 'Edit components' }).click()
+  await page.getByRole('menuitem', { name: 'Import components…' }).click()
+  await page.getByTestId('import-components-input').setInputFiles({ name: 'Pair.frees', mimeType: 'text/plain', buffer: Buffer.from(exported.replace('2*R_load', '3*R_load')) })
+  const imports = page.getByTestId('import-components')
+  await expect(imports.getByRole('checkbox', { name: "pair differs from this document's — replace mine" })).not.toBeChecked()
+  await expect(imports.getByRole('button', { name: 'Import' })).toBeDisabled()
+  await imports.getByRole('checkbox').check()
+  await expect(imports.getByTestId('result-check')).toHaveText(/^Check of the result: /)
+  await imports.getByRole('button', { name: 'Import' }).click()
+  await editorText(page).toContain('Resistor R2(R=3*R_load*cos(0))')
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await editorText(page).toBe(renamed)
+  await record(testInfo, 'evidence', { renamed, exported })
+})
+
+test('CFG-05: export SVG, PNG and print for the model or a selection, with background, scale, legend, values and run context, without editing affordances', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, HUMID_AIR, 'Solve')
+  const dialog = page.getByTestId('export-drawing')
+  const save = async () => {
+    const [file] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Export', exact: true }).click()])
+    return { name: file.suggestedFilename(), body: readFileSync(await file.path()) }
+  }
+
+  // A selected block exports alone; its selection ring, the values left out, the run context kept.
+  await svg.getByRole('button', { name: /\bFAN$/ }).click()
+  await page.getByRole('button', { name: 'Export…' }).click()
+  await expect(dialog.getByRole('radio', { name: 'Selection' })).toBeChecked()
+  await dialog.getByRole('checkbox', { name: 'Values' }).uncheck()
+  const part = await save()
+  const partXml = part.body.toString()
+  expect(part.name).toBe('schematic.svg')
+  expect(partXml).toContain('data-node="fan"')
+  expect(partXml).not.toContain('data-node="coil"')
+  expect(partXml).not.toMatch(/data-badge|data-bend|data-wire|data-transient|data-background/)
+  expect(partXml).toMatch(/<rect[^>]*data-plain="([^"]+)"[^>]*stroke="\1"/)
+  expect(partXml).toContain('Solved: ')
+
+  // The whole model on white, then the same at 2× as PNG.
+  await page.getByRole('button', { name: 'Export…' }).click()
+  await dialog.getByText('Whole model').click()
+  await dialog.getByText('White').click()
+  const whole = (await save()).body.toString()
+  expect(whole).toContain('fill="#ffffff"')
+  for (const id of ['room', 'hp', 'coil', 'fan', 'sup']) expect(whole).toContain(`data-node="${id}"`)
+  expect(whole).toContain('data-badge')
+  const width = Number(/<svg[^>]* width="(\d+)"/.exec(whole)![1])
+  await page.getByRole('button', { name: 'Export…' }).click()
+  await dialog.getByText('Whole model').click()
+  await dialog.getByText('White').click()
+  await dialog.getByText('PNG').click()
+  const png = await save()
+  expect(png.name).toBe('schematic.png')
+  expect(png.body.subarray(1, 4).toString()).toBe('PNG')
+  expect(png.body.readUInt32BE(16)).toBe(Math.round(width * 2))
+
+  // Print: a frame holding only the drawing, on the page size asked for.
+  await page.getByRole('button', { name: 'Export…' }).click()
+  await dialog.getByText('Print / PDF').click()
+  await dialog.getByText('Whole model').click()
+  await dialog.getByRole('combobox', { name: 'Page' }).click()
+  await page.getByRole('option', { name: 'Letter' }).click()
+  await dialog.getByRole('button', { name: 'Export', exact: true }).click()
+  const printed = page.frameLocator('iframe[data-testid="print-frame"]')
+  expect(await printed.locator('style').textContent()).toContain('size: Letter landscape')
+  await expect(printed.locator('[data-node]')).toHaveCount(5)
+  await expect(printed.locator('[data-wire], [data-bend]')).toHaveCount(0)
+  await record(testInfo, 'evidence', { selectionSvgBytes: part.body.length, wholeWidth: width, pngWidth: png.body.readUInt32BE(16) })
+})
+
+test('AC-14: insert, configure, connect, inspect, solve and export from the keyboard and the structured list, announced; typing never fires canvas keys', async ({ page }, testInfo) => {
+  const start = '// AC-14: built from the keyboard\n'
+  const source = 'https://raw.example/keyboard.frees'
+  await page.route(source, (route) => route.fulfill({ contentType: 'text/plain', body: start }))
+  await page.goto('/?url=' + encodeURIComponent(source))
+  await expect(page.locator('.cm-content')).toContainText('AC-14')
+  await showView(page, 'Schematic')
+  const svg = page.getByRole('application', { name: /Component network schematic/ })
+  const wizard = page.getByRole('dialog', { name: 'Insert a Component' })
+  const quick = page.getByTestId('quick-add')
+  const announcer = page.getByTestId('canvas-announcer')
+  const palette = async (command: string) => {
+    await page.keyboard.press('Control+K')
+    await page.getByPlaceholder('Search views, tools, and actions…').fill(command)
+    await page.keyboard.press('Enter')
+  }
+  const press = async (target: Locator, key = 'Enter') => {
+    await target.focus()
+    await page.keyboard.press(key)
+  }
+  const insert = async (type: string, field?: [RegExp, string]) => {
+    await expect(quick.getByLabel('Search components')).toBeFocused()
+    await page.keyboard.type(type)
+    await page.keyboard.press('Enter')
+    if (field) {
+      await wizard.getByRole('textbox', { name: field[0] }).focus()
+      await page.keyboard.type(field[1])
+    }
+    await press(wizard.getByRole('button', { name: 'Add to System' }))
+  }
+
+  // Insert and configure: the palette's canvas command, then the canvas's own `a` key.
+  await palette('Add component')
+  await insert('VoltageSource', [/^E\s*\[V\]/, '10'])
+  await expect(svg.locator('[data-node="vs"]')).toBeVisible()
+  const canvas = svg.locator('..')
+  await press(canvas, 'a')
+  await insert('Resistor', [/^R\s*\[ohm\]/, '5'])
+  await press(canvas, 'a')
+  // Typing in the search box is text: `l` does not open the list, Delete deletes nothing.
+  await page.keyboard.type('Gl')
+  await page.keyboard.press('Delete')
+  await expect(page.getByTestId('structured-list')).toHaveCount(0)
+  await page.keyboard.press('Backspace')
+  await page.keyboard.type('round')
+  await page.keyboard.press('Enter')
+  await press(wizard.getByRole('button', { name: 'Add to System' }))
+  await editorText(page).toContain('Ground GROU()')
+
+  // Check is announced; connect through the port fields, each announced.
+  await page.keyboard.press('F4')
+  await expect(announcer).toContainText(/^Check: /)
+  for (const [a, b] of [['VS.p', 'RESI.a'], ['RESI.b', 'VS.n'], ['VS.n', 'GROU.port']]) {
+    for (const [field, port] of [['Connect from port', a], ['Connect to port', b]]) {
+      await page.getByRole('combobox', { name: field }).focus()
+      await page.keyboard.type(port)
+      await page.keyboard.press('ArrowDown')
+      await page.keyboard.press('Enter')
+    }
+    await press(page.getByRole('button', { name: 'Connect', exact: true }))
+    await expect(announcer).toHaveText(`Connected ${a} — ${b}`) // once Check confirms it
+  }
+  await editorText(page).toContain('connect(VS.n, GROU.port)')
+
+  // The structured list: every component and connection, each reachable without the drawing.
+  await page.keyboard.press('F4')
+  await press(canvas, 'l')
+  const list = page.getByRole('region', { name: 'Components and connections' })
+  await expect(list.getByRole('heading', { name: 'Components (3)' })).toBeVisible()
+  await expect(list.getByRole('heading', { name: 'Connections (3)' })).toBeVisible()
+  await press(list.getByRole('button', { name: 'Inspect RESI' }))
+  await expect(page.getByTestId('param-inspector').locator('[data-param="r"]')).toContainText('5 [ohm]')
+  await press(list.getByRole('button', { name: /^Open connection resi\.b — vs\.n/i }))
+  await expect(page.getByTestId('wire-card')).toBeVisible()
+
+  // Solve with F2, export from the palette.
+  await page.keyboard.press('F2')
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 60_000 })
+  await palette('Export drawing')
+  const [file] = await Promise.all([page.waitForEvent('download'), press(page.getByTestId('export-drawing').getByRole('button', { name: 'Export', exact: true }))])
+  // RESI is selected from the list, so the selection is what exports.
+  const exported = readFileSync(await file.path(), 'utf8')
+  expect(exported).toContain('data-node="resi"')
+  expect(exported).not.toContain('data-node="grou"')
+
+  // The shortcuts sheet lists the canvas keys.
+  await page.locator('body').focus()
+  await page.keyboard.press('Shift+?')
+  await expect(page.getByRole('dialog', { name: 'Keyboard Shortcuts' })).toContainText('Schematic: Component and connection list')
+  await record(testInfo, 'evidence', { text: await savedText(page) })
+})
+
+test.describe('AC-14 on a tablet', () => {
+  test.use({ viewport: { width: 1024, height: 768 }, hasTouch: true })
+
+  test('tap-to-connect with finger-sized ports and toolbar, then the list, then solve', async ({ page }, testInfo) => {
+    const svg = await openSolved(page, LOOP.replace(/connect\(.*\)\n/g, ''), 'Check')
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+    const list = page.getByRole('button', { name: 'List' })
+    expect((await list.boundingBox())!.height).toBeGreaterThanOrEqual(36)
+    // A lone port side gets a full finger; two close ports share the gap between them.
+    const hit = (await svg.locator('[data-port="r1.a"] circle[data-hit]').boundingBox())!
+    expect(hit.width).toBeGreaterThanOrEqual(43)
+    for (const [a, b] of [['vs.p', 'r1.a'], ['vs.n', 'r1.b'], ['r1.b', 'g.port']]) {
+      await svg.locator(`[data-port="${a}"]`).tap()
+      await svg.locator(`[data-port="${b}"]`).tap()
+      await editorText(page).toMatch(new RegExp(`connect\\(${a.replace('.', '\\.')}, ${b.replace('.', '\\.')}\\)`, 'i'))
+      await page.getByRole('button', { name: 'Check', exact: true }).tap()
+    }
+    await list.tap()
+    await page.getByRole('region', { name: 'Components and connections' }).getByRole('button', { name: 'Inspect R1' }).tap()
+    await expect(page.getByTestId('param-inspector')).toBeVisible()
+    await page.getByRole('button', { name: 'Solve', exact: true }).tap()
+    await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 60_000 })
+    await record(testInfo, 'evidence', { portHitPx: Math.round(hit.width), text: await savedText(page) })
+  })
 })

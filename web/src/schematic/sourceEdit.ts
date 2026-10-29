@@ -217,3 +217,71 @@ export function suggestFix(message: string, text: string, catalog: readonly { ty
   }
   return null
 }
+
+/**
+ * COMP-04: bind a parameter. A written value is replaced in place; an unbound
+ * parameter is added before the instantiation's `)`. Nothing else is touched.
+ */
+export function setParameter(text: string, inst: InstanceIdentityDto, name: string, value: string): SourceEdit | null {
+  const label = `Set ${inst.label}.${name} = ${value}`
+  const bound = inst.params?.find((p) => p.name === name.toLowerCase())
+  if (bound) return { label, changes: [{ from: bound.range[0], to: bound.range[1], insert: value }] }
+  if (!inst.close) return null
+  const at = inst.close[0]
+  const lead = text.slice(0, at).trimEnd().endsWith('(') ? '' : ', '
+  return { label, changes: [{ from: at, to: at, insert: `${lead}${name}=${value}` }] }
+}
+
+/**
+ * WIRE-09: put a configured block into an authored connection. Its port
+ * `toA` joins the rest of the connection and `toB` takes over the `branch`
+ * endpoint (for two endpoints, the second). The statement is rewritten in
+ * place, the declaration and the new connection appended; null when no
+ * connect statement owns the wire or `branch` is not one of its endpoints.
+ */
+export function insertIntoConnection(
+  text: string,
+  conn: ConnectionDto,
+  block: string,
+  map: { toA: string; toB: string; branch?: string },
+): SourceEdit | null {
+  const decl = lastDeclaration(block)
+  if (!conn.range || conn.alias || conn.inDefinition || !decl) return null
+  const ends = writtenEndpoints(text.slice(conn.range[0], conn.range[1]))
+  const branch = map.branch ?? ends.at(-1)!
+  const rest = ends.filter((e) => canonRef(e) !== canonRef(branch))
+  if (rest.length === ends.length || rest.length === 0) return null
+  const name = decl[2]
+  return {
+    label: `Insert ${name} into ${ends.join(', ')}`,
+    changes: [
+      { from: conn.range[0], to: conn.range[1], insert: `connect(${[...rest, `${name}.${map.toA}`].join(', ')})` },
+      appendStatement(text, `${block}\nconnect(${name}.${map.toB}, ${branch})`),
+    ],
+  }
+}
+
+/** The last `Type NAME(` declaration in `block`: `[match, Type, NAME]` with its index. */
+export function lastDeclaration(block: string): RegExpMatchArray | undefined {
+  return [...block.matchAll(/^[ \t]*([A-Za-z_]\w*)[ \t]+([A-Za-z_]\w*)[ \t]*\(/gm)].at(-1)
+}
+
+/** `s` with each `[unit]` replaced by `by`, in one pass. */
+export function stripUnits(s: string, by = ' '): string {
+  let out = ''
+  let at = 0
+  for (let open = s.indexOf('['); open >= 0; open = s.indexOf('[', at)) {
+    const close = s.indexOf(']', open)
+    if (close < 0) break
+    out += s.slice(at, open) + by
+    at = close + 1
+  }
+  return out + s.slice(at)
+}
+
+/** `name` without its trailing digits. */
+export function trimDigits(name: string): string {
+  let k = name.length
+  while (k > 0 && name[k - 1] >= '0' && name[k - 1] <= '9') k--
+  return name.slice(0, k)
+}

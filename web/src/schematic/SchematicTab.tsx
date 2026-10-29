@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import {
   ActionIcon,
   Badge,
   Button,
+  Checkbox,
   ColorInput,
   Group,
   Kbd,
   Menu,
+  Modal,
   Paper,
   Popover,
   SegmentedControl,
@@ -26,10 +29,11 @@ import {
   IconDownload,
   IconLock,
   IconLayoutGrid,
+  IconPlus,
   IconZoomIn,
   IconZoomOut,
 } from '@tabler/icons-react'
-import type { CheckResponse, ComponentResult, ConnectionDto, InstanceIdentityDto, VariableResult } from '../api'
+import { check as checkText, type CheckResponse, type ComponentResult, type ConnectionDto, type InstanceIdentityDto, type VariableResult } from '../api'
 import {
   declarationLine,
   declarationLineFromCheck,
@@ -48,7 +52,13 @@ import {
   pathOf,
   routeAll,
   netOf,
+  nearestLane,
+  routeCrosses,
+  routeKey,
+  endpointScope,
+  scopeOf,
   type ArrangeOp,
+  type Pt,
   type FocusKind,
   type PortSide,
   type SchematicEdge,
@@ -59,22 +69,31 @@ import {
   appendStatement,
   applyChanges,
   disconnectEndpoint,
+  insertIntoConnection,
   invertChanges,
   removeStatement,
   renamedIds,
+  lastDeclaration,
   renameId,
   renameInstance,
   renameProblem,
+  setParameter,
   suggestFix,
+  writtenEndpoints,
   type SourceChange,
   type SourceEdit,
 } from './sourceEdit'
-import { encapsulateSelection } from './encapsulation'
+import { componentFile, editInterface, extractSubsystem, importComponents, movePresentation, type Extraction, type InterfaceChange } from './encapsulation'
 import { badgeFor, formatCompact, indexVariables, readoutFor, type NodeReadout } from './readouts'
-import { COMPONENT_CATALOG } from '../componentCatalog'
+import { COMPONENT_CATALOG, type ComponentSpec } from '../componentCatalog'
+import { formatParamValue, paramValueError, suggestInstanceName } from '../componentText'
+import { QuickAdd } from './QuickAdd'
+import { CANVAS_COMMANDS, canvasHandlers, type CanvasCommand } from './commands'
+import { copyFragment, deleteImpact, loadFragment, pasteFragment, storeFragment, withoutBlocks, type DeleteImpact, type Fragment, type PasteResult } from './clipboard'
 import { boxAround, contains, frameBox, visibleBox, zoomAbout, type Box, type View } from './viewport'
 import {
   arrangeBase,
+  arrangeBlocks,
   EMPTY_PRESENTATION,
   framesFor,
   guideSnap,
@@ -86,15 +105,20 @@ import {
   type BlockStyles,
   type SchematicPresentation,
   type ViewSettings,
+  type WireRoute,
 } from './presentation'
 import {
   alreadyConnected,
+  canonRef,
   compatibility,
+  COMPONENT_DRAG_TYPE,
   connectStatement,
   endpointRef,
   joinedElsewhere,
   netConnections,
   portIndex,
+  previewDomain,
+  type QuickAddChoice,
   previewWire,
   type WireEndpoint,
 } from './wiring'
@@ -138,6 +162,10 @@ const VIEW_CHOICES: { key: 'background' | 'grid' | 'spacing' | 'orientation' | '
 /** Snap and guide pull, in screen pixels. */
 const GUIDE_PX = 6
 const NO_PORTS: ReadonlySet<string> = new Set()
+const EMPTY_ROUTES: Record<string, WireRoute> = {}
+const ComponentWizardModal = lazy(() => import('../ComponentWizardModal'))
+/** A new block's top-left, from the point it was placed at (drawing units). */
+const PLACE_OFFSET = { x: 60, y: 24 }
 /** Steps the canvas undo timeline keeps. */
 const HISTORY_LIMIT = 100
 /** One undoable canvas action: a presentation change, a source edit, or both. */
@@ -175,7 +203,6 @@ interface Props {
   /** Apply range patches to the editor while it still holds `expected`; false
    *  when another edit intervened. The route every model edit here takes. */
   onSourceEdit?: (changes: SourceChange[], expected: string) => boolean
-  onInsertBlock?: (block: string) => void
   /** How the drawing is presented — placed blocks, locks, areas, view
    *  settings — owned by the workspace so it rides the project file; the
    *  network itself is regenerated from the document on every check. */
@@ -186,6 +213,109 @@ interface Props {
 }
 
 type Positions = SchematicPresentation['positions']
+
+interface ExportOptions {
+  format: 'svg' | 'png' | 'print'
+  region: 'model' | 'view' | 'selection'
+  background: 'none' | 'white' | 'theme'
+  /** PNG pixels per drawing unit. */
+  scale: number
+  page: 'A4' | 'Letter'
+  legend: boolean
+  values: boolean
+  annotations: boolean
+  context: boolean
+  warnings: boolean
+}
+/** A touch screen: larger targets (CFG-09). */
+const COARSE = typeof window !== 'undefined' && Boolean(window.matchMedia?.('(pointer: coarse)').matches)
+
+const EXPORT_DEFAULTS: ExportOptions = { format: 'svg', region: 'model', background: 'none', scale: 2, page: 'A4', legend: true, values: true, annotations: true, context: true, warnings: false }
+
+/**
+ * CFG-05: a captured drawing as a standalone file — editing affordances and
+ * rings removed, the chosen parts kept, a footer of legend, run context and
+ * warnings, framed on `box`.
+ */
+function drawingFile(
+  clone: SVGSVGElement,
+  box: Box,
+  o: ExportOptions,
+  ctx: { ink: SchematicInk; picked: ReadonlySet<string>; legend: { label: string; style: LineStyle }[]; context: string; issues: { severity: string; text: string }[] },
+): { xml: string; w: number; h: number } {
+  const { ink } = ctx
+  const ns = 'http://www.w3.org/2000/svg'
+  clone.querySelectorAll('[data-background], [data-bend], [data-wire], [data-transient]').forEach((el) => el.remove())
+  // Selection, hover and focus rings are not part of the drawing.
+  clone.querySelectorAll<SVGRectElement>('rect[data-plain]').forEach((r) => {
+    r.setAttribute('stroke', r.dataset.plain!)
+    r.setAttribute('stroke-width', '1.2')
+    r.setAttribute('fill', ink.block)
+  })
+  if (!o.values) clone.querySelectorAll('[data-badge]').forEach((el) => el.remove())
+  if (!o.annotations) clone.querySelectorAll('[data-area]').forEach((el) => el.remove())
+  if (o.region === 'selection') {
+    clone.querySelectorAll<SVGElement>('[data-node]').forEach((el) => !ctx.picked.has(el.dataset.node!) && el.remove())
+    clone.querySelectorAll<SVGElement>('[data-route]').forEach((el) => {
+      const ends = el.dataset.route!.split('|').filter((end) => end !== '*')
+      if (!ends.every((end) => ctx.picked.has(end.slice(0, end.lastIndexOf('.'))))) el.parentElement?.remove()
+    })
+  }
+  // Legend, run context and warnings go under the drawing, as text.
+  const foot = document.createElementNS(ns, 'g')
+  let y = box.minY + box.h + 18
+  const text = (x: number, content: string, color: string) => {
+    const t = document.createElementNS(ns, 'text')
+    Object.entries({ x, y, 'font-size': 11, fill: color, 'font-family': 'sans-serif' }).forEach(([k, v]) => t.setAttribute(k, String(v)))
+    t.textContent = content
+    foot.appendChild(t)
+  }
+  if (o.legend && ctx.legend.length > 0) {
+    let x = box.minX
+    for (const { label, style } of ctx.legend) {
+      const line = document.createElementNS(ns, 'line')
+      Object.entries({ x1: x, y1: y - 4, x2: x + 24, y2: y - 4, stroke: style.color, 'stroke-width': style.width, 'stroke-dasharray': style.dash ?? '' }).forEach(([k, v]) => line.setAttribute(k, String(v)))
+      foot.appendChild(line)
+      text(x + 30, label, ink.text)
+      x += 30 + label.length * 6.5 + 18
+    }
+    y += 18
+  }
+  if (o.context) {
+    text(box.minX, ctx.context, ink.subtext)
+    y += 18
+  }
+  if (o.warnings) {
+    for (const i of ctx.issues) {
+      text(box.minX, `${i.severity === 'error' ? 'Error' : 'Warning'}: ${i.text}`, i.severity === 'error' ? '#c92a2a' : '#e8590c')
+      y += 16
+    }
+  }
+  foot.setAttribute('data-export-footer', '')
+  clone.appendChild(foot)
+  const h = Math.max(box.h, y - box.minY - 8)
+  const w = Math.max(box.w, ...[...foot.querySelectorAll('text')].map((t) => Number(t.getAttribute('x')) - box.minX + (t.textContent?.length ?? 0) * 6.5))
+  if (o.background !== 'none') {
+    const bg = document.createElementNS(ns, 'rect')
+    Object.entries({ x: box.minX, y: box.minY, width: w, height: h, fill: o.background === 'white' ? '#ffffff' : ink.canvas }).forEach(([k, v]) => bg.setAttribute(k, String(v)))
+    clone.insertBefore(bg, clone.firstChild)
+  }
+  clone.setAttribute('viewBox', `${box.minX} ${box.minY} ${w} ${h}`)
+  clone.setAttribute('width', String(Math.round(w)))
+  clone.setAttribute('height', String(Math.round(h)))
+  return { xml: new XMLSerializer().serializeToString(clone), w, h }
+}
+
+function download(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
 
 /**
  * Rendered schematic of the component network, drawn as a circuit: each
@@ -203,7 +333,6 @@ export default function SchematicTab({
   onSelectLine,
   onEmitStatement: emitStatement,
   onSourceEdit,
-  onInsertBlock: insertBlock,
   presentation: saved,
   onPresentationChange,
   highlightIds = [],
@@ -218,11 +347,14 @@ export default function SchematicTab({
   // workspace — and publishes upward once, when the drag ends. The ref mirrors
   // the state so the commit can read the final value without waiting for a
   // render.
+  // VIEW-04: an arrangement on screen awaiting Apply or Cancel.
+  const [arranging, setArranging] = useState<{ label: string; moved: string[]; presentation: SchematicPresentation } | null>(null)
   const presRef = useRef<SchematicPresentation>(saved ?? EMPTY_PRESENTATION)
   const [pres, setPres] = useState(saved ?? EMPTY_PRESENTATION)
   const applyPres = useCallback((next: SchematicPresentation) => {
     presRef.current = next
     setPres(next)
+    setArranging(null) // a preview is measured against the presentation it was made from
   }, [])
   const publish = (next: SchematicPresentation) => {
     applyPres(next)
@@ -242,6 +374,7 @@ export default function SchematicTab({
     publish(next)
     record({ label, pres: [before, next] })
   }
+  const onScreen = arranging?.presentation ?? pres
   const settings = pres.view
   const setSettings = (change: (v: ViewSettings) => ViewSettings) => updatePres((p) => ({ ...p, view: change(p.view) }))
   const lockedIds = useMemo(() => new Set(pres.locked), [pres.locked])
@@ -254,7 +387,11 @@ export default function SchematicTab({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   // An explicit context command (VIEW-06); plain selection never fades anything.
   const [focus, setFocus] = useState<{ kind: FocusKind; id: string } | null>(null)
-  const [componentName, setComponentName] = useState('CustomComponent')
+  // HIER-01: the subsystem being looked into ('' = the model), with back/forward.
+  const [scopes, setScopes] = useState<{ list: string[]; at: number }>({ list: [''], at: 0 })
+  // CFG-08: the structured list, and what a screen reader hears.
+  const [listOpen, setListOpen] = useState(false)
+  const [announcement, setAnnouncement] = useState('')
   const toggle = (key: 'snap' | 'guides' | 'portLabels', on: boolean) => setSettings((s) => ({ ...s, [key]: on }))
   // A user area being named (VIEW-05), and v3 positions that matched no block.
   const [areaName, setAreaName] = useState<string | null>(null)
@@ -284,10 +421,11 @@ export default function SchematicTab({
     [checkResult, text, onSourceEdit],
   )
   const drawnCheck = showingPrevious ? previous : checkResult
-  // Model edits need the current source; pan, inspect and arrange do not.
-  const onEmitStatement = sourceBroken ? undefined : emitStatement
-  const onInsertBlock = sourceBroken ? undefined : insertBlock
-  const connections = useMemo(() => drawnCheck?.connections ?? [], [drawnCheck])
+  // A scope whose instance is gone (renamed, extracted back) falls back to the model.
+  const scope = drawnCheck?.instances?.some((i) => i.name.toLowerCase() === scopes.list[scopes.at]) ? scopes.list[scopes.at] : ''
+  // Inside a subsystem the drawing is browsed, not edited: its source is the definition.
+  const onEmitStatement = sourceBroken || scope ? undefined : emitStatement
+  const connections = useMemo(() => (drawnCheck?.connections ?? []).filter((c) => endpointScope(c.endpoints[0] ?? '') === scope), [drawnCheck, scope])
   const ports = useMemo(() => portIndex(drawnCheck?.ports), [drawnCheck])
   // WIRE-03: ports the engine reports unjoined, by instance.
   const openPorts = useMemo(() => {
@@ -329,10 +467,17 @@ export default function SchematicTab({
     for (const c of components ?? []) {
       map.set(c.name.toLowerCase(), { label: c.name, type: c.type })
     }
+    // A subsystem's boundary, drawn inside it, is labelled with its port.
+    for (const c of drawnCheck?.connections ?? []) {
+      for (const e of c.endpoints) if (e.includes('$')) map.set(e.toLowerCase(), { label: e.slice(e.indexOf('$') + 1) })
+    }
     return map
   }, [drawnCheck, components, text])
 
-  const declaredIds = useMemo(() => [...documentInstances(text).keys()], [text])
+  const declaredIds = useMemo(
+    () => (scope ? (drawnCheck?.instances ?? []).map((i) => i.name.toLowerCase()).filter((id) => scopeOf(id) === scope) : [...documentInstances(text).keys()]),
+    [text, scope, drawnCheck],
+  )
   // The canvas element exists only while there is something to draw; effects
   // that attach to it re-run when it appears.
   const drawn = connections.length > 0 || declaredIds.length > 0
@@ -345,6 +490,7 @@ export default function SchematicTab({
   /** Each instance's declared ports, by component type, so unwired ports show. */
   const portsByInstance = useMemo(() => {
     const byType = new Map(COMPONENT_CATALOG.map((c) => [c.type.toLowerCase(), c.ports]))
+    for (const d of drawnCheck?.definitions ?? []) if (d.ports) byType.set(d.name, d.ports)
     const out = new Map<string, readonly string[]>()
     for (const [instance, hit] of documentInstances(text)) {
       const ports = byType.get(hit.type.toLowerCase())
@@ -352,8 +498,12 @@ export default function SchematicTab({
         out.set(instance, ports)
       }
     }
+    for (const i of drawnCheck?.instances ?? []) {
+      const ports = i.definedIn ? byType.get(i.type.toLowerCase()) : undefined
+      if (ports && ports.length > 0) out.set(i.name.toLowerCase(), ports)
+    }
     return out
-  }, [text])
+  }, [text, drawnCheck])
 
   /** Written spelling of each fluid (`EG50`), for the legend — the payload
    *  canonicalises to lowercase but the document said it properly. */
@@ -396,11 +546,11 @@ export default function SchematicTab({
   const positioned = useMemo(() => {
     const map = new Map<string, SchematicNode>()
     for (const n of layout.nodes) {
-      const p = pres.positions[n.id]
+      const p = onScreen.positions[n.id]
       map.set(n.id, p ? { ...n, x: p.x, y: p.y } : n)
     }
     return map
-  }, [layout.nodes, pres.positions])
+  }, [layout.nodes, onScreen.positions])
 
   // v3 files saved offsets from the plain layout of the checked network; once
   // a Check has drawn that network, they become absolute positions.
@@ -437,8 +587,30 @@ export default function SchematicTab({
   const isolating = shown !== null && focus?.kind === 'circuit'
   // Routes avoid nodes where they are drawn now, not where the layout put them.
   const placed = useMemo(() => [...positioned.values()], [positioned])
+  // WIRE-07: wires the user bent go through their bends; a drag in progress
+  // overrides the saved bends of the wire it moves.
+  const [liveRoute, setLiveRoute] = useState<{ key: string; points: Pt[] } | null>(null)
+  const savedRoutes = onScreen.routes ?? EMPTY_ROUTES
+  const manual = useMemo(() => {
+    const out = new Map<string, Pt[]>()
+    for (const e of layout.edges) {
+      const key = routeKey(e)
+      const pts = liveRoute?.key === key ? liveRoute.points : savedRoutes[key]?.points
+      if (pts) out.set(e.id, pts)
+    }
+    return out
+  }, [layout.edges, savedRoutes, liveRoute])
   // Every wire routed once per arrangement, against the blocks and each other.
-  const routes = useMemo(() => routeAll(layout.edges, positioned, placed), [layout.edges, positioned, placed])
+  const routes = useMemo(() => routeAll(layout.edges, positioned, placed, manual), [layout.edges, positioned, placed, manual])
+  // A hand route the automatic router no longer keeps clear of blocks.
+  const routeConflicts = useMemo(() => {
+    const out = new Map<string, string[]>()
+    for (const id of manual.keys()) {
+      const crossed = routeCrosses(routes.get(id) ?? [], placed)
+      if (crossed.length) out.set(id, crossed)
+    }
+    return out
+  }, [manual, routes, placed])
   const edgeNet = useMemo(() => new Map(layout.edges.map((e) => [e.id, netOf(e)])), [layout.edges])
   // Hop over drawn wires only: an isolated circuit has nothing to hop.
   const hops = useMemo(
@@ -560,6 +732,43 @@ export default function SchematicTab({
   const takeControl = useCallback(() => {
     userAdjusted.current = true
   }, [])
+  // HIER-01: each scope keeps its own camera; one not yet adjusted is fitted.
+  const cameras = useRef(new Map<string, View>())
+  const showScope = (list: string[], at: number) => {
+    if (userAdjusted.current) cameras.current.set(scope, view)
+    else cameras.current.delete(scope)
+    setScopes({ list, at })
+    setSelected(new Set())
+    setPinned(null)
+    setWireCard(null)
+    setFocus(null)
+    const camera = cameras.current.get(list[at])
+    userAdjusted.current = Boolean(camera)
+    if (camera) setView(camera)
+  }
+  const openScope = (next: string) => {
+    if (next !== scope) showScope([...scopes.list.slice(0, scopes.at + 1), next], scopes.at + 1)
+  }
+  const [treeQuery, setTreeQuery] = useState('')
+  const [treeOpen, setTreeOpen] = useState(false)
+  /** Every instance, depth-first in declaration order; a subsystem counts the open ports inside it. */
+  const tree = useMemo(() => {
+    const all = drawnCheck?.instances ?? []
+    const rows: { id: string; label: string; type: string; depth: number; open: boolean; hidden: number }[] = []
+    const walk = (within: string, depth: number) => {
+      for (const i of all) {
+        const id = i.name.toLowerCase()
+        if (scopeOf(id) !== within) continue
+        const open = all.some((j) => scopeOf(j.name.toLowerCase()) === id)
+        const hidden = open ? (drawnCheck?.ports ?? []).filter((p) => !p.connected && p.instance.toLowerCase().startsWith(`${id}.`)).length : 0
+        rows.push({ id, label: i.label, type: i.type, depth, open, hidden })
+        if (open) walk(id, depth + 1)
+      }
+    }
+    walk('', 0)
+    return rows
+  }, [drawnCheck])
+  const nested = tree.some((r) => r.open)
   /** Zoom by `factor` about a viewport point (its centre by default). */
   const zoomBy = useCallback(
     (factor: number, at?: { x: number; y: number }) => {
@@ -595,8 +804,12 @@ export default function SchematicTab({
    * Make a model edit: patch the source the last Check described, then record
    * it — with any coupled presentation change — as one undo step.
    */
-  const runEdit = (edit: SourceEdit, presChange?: (p: SchematicPresentation) => SchematicPresentation): boolean => {
+  const runEdit = (edit: SourceEdit, presChange?: (p: SchematicPresentation) => SchematicPresentation, fromScope = false): boolean => {
     const before = text
+    if (scope && !fromScope) {
+      setWireNote('Inside a subsystem the drawing is read-only: edit its definition, or go back to the model.')
+      return false
+    }
     if (!onSourceEdit?.(edit.changes, before)) {
       setWireNote('The source changed after the last Check; Check again, then retry.')
       return false
@@ -608,6 +821,7 @@ export default function SchematicTab({
       pres: presStep ? [presStep[0], presStep[1]] : undefined,
       source: { changes: edit.changes, undo: invertChanges(before, edit.changes), before, after: applyChanges(before, edit.changes) },
     })
+    setAnnouncement(`${edit.label}: done; Check runs next.`)
     return true
   }
   const replay = (direction: 'undo' | 'redo') => {
@@ -634,9 +848,10 @@ export default function SchematicTab({
       return
     }
     const alive = new Set(nodeKey.split(','))
-    const positions = Object.fromEntries(Object.entries(presRef.current.positions).filter(([id]) => alive.has(id)))
+    // Only this scope's blocks are drawn; the others' positions are kept.
+    const positions = Object.fromEntries(Object.entries(presRef.current.positions).filter(([id]) => alive.has(id) || scopeOf(id) !== scope))
     onPresentationChange({ ...presRef.current, positions })
-  }, [nodeKey, onPresentationChange])
+  }, [nodeKey, onPresentationChange, scope])
 
   // Keep the whole network framed as the panel settles and the document
   // changes, so the user opens onto the drawing rather than its top-left
@@ -665,6 +880,578 @@ export default function SchematicTab({
       const { [key]: _old, ...rest } = s[field]
       return { ...p, styles: { ...s, [field]: kept ? { ...rest, [key]: kept } : rest } }
     }, next && Object.keys(next).length > 0 ? 'Change style' : `Reset ${scope} style`)
+  // COMP-01/02: placing a component. The quick-add finds it, the wizard
+  // configures a library type, and the block lands where it was asked for,
+  // its declaration and its position one undo step.
+  const [quickAdd, setQuickAdd] = useState<{ screen: { x: number; y: number }; at: { x: number; y: number } } | null>(null)
+  const [placing, setPlacing] = useState<{ type: string; at: { x: number; y: number }; after?: (block: string) => void } | null>(null)
+  const localTypes = useMemo(() => {
+    const out = new Map([...declaredComponentTypes(text)].map((t) => [t, t]))
+    for (const d of drawnCheck?.definitions ?? []) {
+      const header = d.range ? text.slice(d.range[0], d.range[1]) : ''
+      out.set(d.name, /(?:=|component)\s*([A-Za-z_]\w*)\s*\(/i.exec(header)?.[1] ?? d.name)
+    }
+    return [...out.values()]
+  }, [text, drawnCheck])
+  /** A document type as its definition writes it. */
+  const written = (type: string) => localTypes.find((t) => t.toLowerCase() === type.toLowerCase()) ?? type
+  const takenNames = useMemo(() => [...documentInstances(text).values()].map((h) => h.label), [text])
+  const toDrawing = (clientX: number, clientY: number) => {
+    const r = viewportRef.current?.getBoundingClientRect()
+    return r ? { x: (clientX - r.left - view.x) / zoom, y: (clientY - r.top - view.y) / zoom } : { x: 0, y: 0 }
+  }
+  const openQuickAdd = (clientX?: number, clientY?: number) => {
+    const r = viewportRef.current?.getBoundingClientRect()
+    const cx = clientX ?? (r ? r.left + r.width / 2 : 0)
+    const cy = clientY ?? (r ? r.top + r.height / 3 : 0)
+    setQuickAdd({ screen: { x: Math.max(8, cx - (r?.left ?? 0) - 170), y: Math.max(8, cy - (r?.top ?? 0)) }, at: toDrawing(cx, cy) })
+  }
+  const placeBlock = (block: string, at: { x: number; y: number }) => {
+    const decl = lastDeclaration(block)
+    const id = decl?.[2].toLowerCase()
+    runEdit(
+      { label: `Add ${decl?.[2] ?? 'component'}`, changes: [appendStatement(text, block)] },
+      id ? (p) => ({ ...p, positions: { ...p.positions, [id]: { x: at.x - PLACE_OFFSET.x, y: at.y - PLACE_OFFSET.y } } }) : undefined,
+    )
+  }
+  const choose = (choice: QuickAddChoice, at: { x: number; y: number }) => {
+    setQuickAdd(null)
+    if (choice.local) placeBlock(`${choice.type} ${suggestInstanceName(choice.type, takenNames)}()`, at)
+    else setPlacing({ type: choice.type, at })
+  }
+  const fitsArmed = pendingPort ? ports.get(`${pendingPort.instance}.${pendingPort.port}`.toLowerCase()) : undefined
+  const adding = (
+    <>
+      {quickAdd && (
+        <QuickAdd
+          at={quickAdd.screen}
+          localTypes={localTypes}
+          fits={fitsArmed ? { label: `${fitsArmed.instance}.${fitsArmed.port}`, domain: fitsArmed.domain } : null}
+          onChoose={(c) => choose(c, quickAdd.at)}
+          onCancel={() => {
+            setQuickAdd(null)
+            viewportRef.current?.focus()
+          }}
+        />
+      )}
+      {placing && (
+        <Suspense fallback={null}>
+          <ComponentWizardModal
+            opened
+            initialType={placing.type}
+            existingNames={takenNames}
+            onClose={() => setPlacing(null)}
+            onInsert={(block) => (placing.after ? placing.after(block) : placeBlock(block, placing.at))}
+          />
+        </Suspense>
+      )}
+    </>
+  )
+
+  // WIRE-07: route edits are presentation, one undo step each.
+  const snapPt = (p: Pt): Pt => (settings.snap ? { x: snapToGrid(p.x, settings.grid), y: snapToGrid(p.y, settings.grid) } : p)
+  const setRoutes = (change: (r: Record<string, WireRoute>) => Record<string, WireRoute>, label: string) =>
+    updatePres((p) => ({ ...p, routes: change(p.routes ?? EMPTY_ROUTES) }), label)
+  const suppressClick = useRef(false)
+  /** Drag the lane under the pointer square to itself; a still press is a click. */
+  const startLaneDrag = (ev: ReactPointerEvent, e: SchematicEdge) => {
+    const key = routeKey(e)
+    const pts = routes.get(e.id)
+    if (ev.button !== 0 || savedRoutes[key]?.locked || !pts || pts.length < 4) return
+    const { index: j } = nearestLane(pts, toDrawing(ev.clientX, ev.clientY))
+    const across = pts[j].y === pts[j + 1].y
+    const [x0, y0] = [ev.clientX, ev.clientY]
+    let moved: Pt[] | null = null
+    const move = (m: PointerEvent) => {
+      const [dx, dy] = [(m.clientX - x0) / zoom, (m.clientY - y0) / zoom]
+      if (!moved && Math.hypot(dx * zoom, dy * zoom) < 4) return
+      const next = pts.map((p) => ({ ...p }))
+      for (const k of [j, j + 1]) {
+        next[k] = across ? { x: next[k].x, y: snapPt({ x: 0, y: pts[k].y + dy }).y } : { x: snapPt({ x: pts[k].x + dx, y: 0 }).x, y: next[k].y }
+      }
+      // The bends: everything between the stubs, plus a stub end the drag moved.
+      const last = next.length - 2
+      moved = next.slice(1, -1).filter((p, k) => (k !== 0 || p.x !== pts[1].x || p.y !== pts[1].y) && (k + 1 !== last || p.x !== pts[last].x || p.y !== pts[last].y))
+      setLiveRoute({ key, points: moved })
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      setLiveRoute(null)
+      if (moved) {
+        suppressClick.current = true
+        const points = moved
+        setRoutes((r) => ({ ...r, [key]: { points } }), 'Move wire segment')
+      }
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  /** Double-click on a wire: a bend where it was clicked, ready to drag. */
+  const addBend = (e: SchematicEdge, at: Pt) => {
+    const key = routeKey(e)
+    const pts = routes.get(e.id)
+    if (savedRoutes[key]?.locked || !pts || pts.length < 4) return
+    const { index: j, foot } = nearestLane(pts, at)
+    const full = [...pts.slice(1, j + 1), snapPt(foot), ...pts.slice(j + 1, -1)]
+    setRoutes((r) => ({ ...r, [key]: { points: full.slice(1, -1) } }), 'Add bend')
+  }
+  const moveBend = (ev: ReactPointerEvent, key: string, k: number) => {
+    ev.stopPropagation()
+    const base = savedRoutes[key]?.points
+    if (!base || savedRoutes[key]?.locked) return
+    let moved: Pt[] | null = null
+    const move = (m: PointerEvent) => {
+      moved = base.map((p, i) => (i === k ? snapPt(toDrawing(m.clientX, m.clientY)) : p))
+      setLiveRoute({ key, points: moved })
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      setLiveRoute(null)
+      if (moved) {
+        const points = moved
+        setRoutes((r) => ({ ...r, [key]: { points } }), 'Move bend')
+      }
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  const removeBend = (key: string, k: number) =>
+    setRoutes((r) => ({ ...r, [key]: { points: r[key].points.filter((_, i) => i !== k) } }), 'Remove bend')
+  const cardEdges = wireCard ? layout.edges.filter((e) => Number(netOf(e).slice(1)) === wireCard.index) : []
+  const cardLocked = cardEdges.length > 0 && cardEdges.every((e) => savedRoutes[routeKey(e)]?.locked)
+  const routeControls = cardEdges.length > 0 && (
+    <Group gap={4} mt={6} data-testid="route-controls">
+      <Text size="xs" c="dimmed">
+        Route{cardEdges.some((e) => manual.has(e.id)) ? ' (manual)' : ' (automatic)'}:
+      </Text>
+      <Button
+        size="compact-xs"
+        variant="default"
+        onClick={() =>
+          setRoutes((r) => {
+            const next = { ...r }
+            for (const e of cardEdges) {
+              const key = routeKey(e)
+              next[key] = cardLocked ? { points: r[key]?.points ?? [] } : { points: r[key]?.points ?? (routes.get(e.id) ?? []).slice(2, -2), locked: true }
+            }
+            return next
+          }, cardLocked ? 'Unlock route' : 'Lock route')
+        }
+      >
+        {cardLocked ? 'Unlock route' : 'Lock route'}
+      </Button>
+      <Button
+        size="compact-xs"
+        variant="default"
+        disabled={cardLocked || !cardEdges.some((e) => savedRoutes[routeKey(e)])}
+        onClick={() =>
+          setRoutes((r) => Object.fromEntries(Object.entries(r).filter(([key]) => !cardEdges.some((e) => routeKey(e) === key))), 'Reset route')
+        }
+      >
+        Reset route
+      </Button>
+    </Group>
+  )
+
+  // WIRE-09: a configured block put into the open wire, with its port mapping
+  // and, on a junction, the branch it takes; previewed before it is written.
+  const [insertDraft, setInsertDraft] = useState<{ index: number; type: string | null; toA: string; toB: string; branch: string; block: string | null } | null>(null)
+  const insertConn = insertDraft ? connections[insertDraft.index] : undefined
+  const insertEnds = insertConn?.range ? writtenEndpoints(text.slice(insertConn.range[0], insertConn.range[1])) : []
+  const insertTypes = useMemo(() => {
+    if (!insertConn) return []
+    const local = (drawnCheck?.definitions ?? []).filter((d) => (d.ports?.length ?? 0) >= 2).map((d) => ({ type: localTypes.find((t) => t.toLowerCase() === d.name) ?? d.name, ports: d.ports ?? [] }))
+    const library = COMPONENT_CATALOG.filter((c) => c.ports.length >= 2 && c.ports.some((p) => previewDomain(c.type, p) === insertConn.domain)).map((c) => ({ type: c.type, ports: c.ports }))
+    return [...local, ...library]
+  }, [insertConn, drawnCheck, localTypes])
+  const portsOf = (type: string | null) => insertTypes.find((t) => t.type === type)?.ports ?? []
+  const insertEdit = insertDraft?.block && insertConn ? insertIntoConnection(text, insertConn, insertDraft.block, insertDraft) : null
+  const chooseInsertType = (type: string | null) => {
+    const ports = portsOf(type)
+    const toA = ports.find((p) => /(^|_)in(let)?$/i.test(p)) ?? ports[0] ?? ''
+    const toB = ports.find((p) => /(^|_)out(let)?$/i.test(p)) ?? ports.find((p) => p !== toA) ?? ''
+    setInsertDraft((d) => d && { ...d, type, toA, toB, block: null })
+  }
+  const applyInsert = () => {
+    if (!insertEdit || !insertConn || !insertDraft) return
+    const id = lastDeclaration(insertDraft.block!)?.[2].toLowerCase()
+    const centres = [insertDraft.branch, insertEnds.find((e) => canonRef(e) !== canonRef(insertDraft.branch))!]
+      .map((e) => positioned.get(e.split('.')[0].trim().toLowerCase()))
+      .filter((n): n is SchematicNode => Boolean(n))
+      .map((n) => ({ x: n.x + n.w / 2, y: n.y + n.h / 2 }))
+    const mid = centres.length === 2 ? { x: (centres[0].x + centres[1].x) / 2, y: (centres[0].y + centres[1].y) / 2 } : null
+    if (runEdit(insertEdit, id && mid ? (p) => ({ ...p, positions: { ...p.positions, [id]: { x: mid.x - PLACE_OFFSET.x, y: mid.y - PLACE_OFFSET.y } } }) : undefined)) {
+      setInsertDraft(null)
+      setWireCard(null)
+    }
+  }
+  const insertPanel = insertDraft && insertConn && (
+    <Paper withBorder shadow="md" p="xs" radius="sm" data-testid="insert-panel" style={{ position: 'absolute', left: 396, bottom: 8, width: 340, zIndex: 7 }}>
+      <Stack gap={6}>
+        <Text size="xs" fw={600}>Insert into {insertEnds.join(', ')}</Text>
+        <Select size="xs" label="Component" placeholder="Type to search" searchable data={insertTypes.map((t) => t.type)} value={insertDraft.type} onChange={chooseInsertType} />
+        {insertEnds.length > 2 && (
+          <Select size="xs" label="Branch it goes on" data={insertEnds} value={insertDraft.branch} onChange={(v) => v && setInsertDraft({ ...insertDraft, branch: v, block: null })} />
+        )}
+        {insertDraft.type && (
+          <Group gap={6} grow>
+            <Select size="xs" label={`Port toward ${insertEnds.filter((e) => canonRef(e) !== canonRef(insertDraft.branch)).join(', ')}`} data={portsOf(insertDraft.type)} value={insertDraft.toA} onChange={(v) => v && setInsertDraft({ ...insertDraft, toA: v, block: null })} />
+            <Select size="xs" label={`Port toward ${insertDraft.branch}`} data={portsOf(insertDraft.type)} value={insertDraft.toB} onChange={(v) => v && setInsertDraft({ ...insertDraft, toB: v, block: null })} />
+          </Group>
+        )}
+        {insertDraft.toA && insertDraft.toA === insertDraft.toB && <Text size="xs" c="orange">Pick two different ports.</Text>}
+        {insertEdit && (
+          <Text component="pre" size="xs" data-testid="insert-preview" style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--mantine-font-family-monospace)' }}>
+            {insertEdit.changes.flatMap((c) => [...text.slice(c.from, c.to).split('\n').filter(Boolean).map((l) => `- ${l}`), ...c.insert.split('\n').filter(Boolean).map((l) => `+ ${l}`)]).join('\n')}
+          </Text>
+        )}
+        <Group gap={4} justify="flex-end">
+          <Button size="compact-xs" variant="default" onClick={() => setInsertDraft(null)}>Cancel</Button>
+          {insertEdit ? (
+            <Button size="compact-xs" onClick={applyInsert}>Apply</Button>
+          ) : (
+            <Button
+              size="compact-xs"
+              disabled={!insertDraft.type || !insertDraft.toA || !insertDraft.toB || insertDraft.toA === insertDraft.toB}
+              onClick={() => {
+                const local = (drawnCheck?.definitions ?? []).some((d) => d.name === insertDraft.type!.toLowerCase())
+                const add = (block: string) => setInsertDraft((d) => d && { ...d, block })
+                if (local) add(`${insertDraft.type} ${suggestInstanceName(insertDraft.type!, takenNames)}()`)
+                else setPlacing({ type: insertDraft.type!, at: { x: 0, y: 0 }, after: add })
+              }}
+            >
+              Configure…
+            </Button>
+          )}
+        </Group>
+      </Stack>
+    </Paper>
+  )
+
+  // COMP-05/06: copy, paste, duplicate and delete. Each reads the ranges of the
+  // current Check, so a stale drawing asks for a Check rather than guessing.
+  const [deleting, setDeleting] = useState<(DeleteImpact & { ids: string[] }) | null>(null)
+  const [pasteReport, setPasteReport] = useState<PasteResult | null>(null)
+  const fragmentOf = (): Fragment | null => {
+    if (!checkResult || sourceBroken) {
+      setWireNote('Check first: copying and deleting work on the checked source.')
+      return null
+    }
+    const pos = Object.fromEntries(selection.flatMap((id) => {
+      const n = positioned.get(id)
+      return n ? [[id, { x: n.x, y: n.y }]] : []
+    }))
+    const f = copyFragment(text, checkResult, new Set(selection), pos)
+    if (f.instances.length === 0) {
+      setWireNote('Select one or more components first.')
+      return null
+    }
+    return f
+  }
+  const copySelection = () => {
+    const f = fragmentOf()
+    if (f && !storeFragment(f)) {
+      setWireNote('The clipboard could not be prepared; nothing was changed.')
+      return null
+    }
+    if (f) setWireNote(`Copied ${f.instances.length} component${f.instances.length === 1 ? '' : 's'}.`)
+    return f
+  }
+  const pasteHere = (f: Fragment | null, label: string) => {
+    if (!f) return setWireNote('Nothing to paste: copy components first.')
+    if (!checkResult || sourceBroken) return setWireNote('Check first: pasting needs the checked source.')
+    const defs = (checkResult.definitions ?? []).flatMap((d) => (d.range ? [{ name: d.name, text: text.slice(d.range[0], d.range[1]) }] : []))
+    const r = pasteFragment(text, f, takenNames, defs, { dx: 40, dy: 40 })
+    if (runEdit({ label: `${label} ${f.instances.map((i) => i.name).join(', ')}`, changes: [appendStatement(text, r.block)] }, (p) => ({ ...p, positions: { ...p.positions, ...r.positions } }))) {
+      setSelected(new Set(r.ids))
+      setPinned(null)
+      setPasteReport(r)
+    }
+  }
+  const requestDelete = (ids: readonly string[] = selection) => {
+    if (!checkResult || sourceBroken) return setWireNote('Check first: deleting works on the checked source.')
+    const impact = deleteImpact(text, checkResult, new Set(ids))
+    if (impact.edit.changes.length === 0) return setWireNote('Select one or more components first.')
+    setDeleting({ ...impact, ids: [...ids] })
+  }
+  const confirmDelete = () => {
+    if (!deleting) return
+    const gone = new Set(deleting.ids)
+    if (runEdit(deleting.edit, (p) => withoutBlocks(p, gone))) {
+      setSelected(new Set())
+      setPinned(null)
+    }
+    setDeleting(null)
+  }
+  /** The catalog entry, or a document definition's ports and parameters (HIER-04). */
+  const specOf = (type: string | undefined): ComponentSpec | undefined => {
+    const t = type?.toLowerCase()
+    const local = drawnCheck?.definitions?.find((d) => d.name === t)
+    if (!local) return COMPONENT_CATALOG.find((c) => c.type.toLowerCase() === t)
+    const param = (name: string) => ({ name, isString: name.endsWith('$'), isSelector: false, isMap: false, unit: '', description: `Parameter of ${type}`, required: true, values: [], variants: [] })
+    return { type: type!, library: 'document', summary: 'Defined in this document', tags: [], ports: local.ports ?? [], params: (local.params ?? []).map(param), variants: [] }
+  }
+  // HIER-04: a local definition's ports, changed with a migration plan.
+  const [iface, setIface] = useState<{ type: string; change: InterfaceChange | null; names: Record<string, string>; add: string } | null>(null)
+  const ifacePlan = iface?.change && checkResult ? editInterface(text, checkResult, iface.type, iface.change) : null
+  const ifaceDef = iface ? drawnCheck?.definitions?.find((d) => d.name === iface.type.toLowerCase()) : undefined
+  const interfacePanel = (
+    <Modal opened={iface !== null} onClose={() => setIface(null)} title={iface && `${iface.type} interface`} size="lg">
+      {iface && (
+        <Stack gap="xs" data-testid="interface-editor">
+          <Text size="sm">Used by {ifacePlan?.instances ?? (drawnCheck?.instances ?? []).filter((i) => i.type.toLowerCase() === iface.type.toLowerCase()).length} instance(s).</Text>
+          {(ifaceDef?.ports ?? []).map((port) => (
+            <Group key={port} gap={4} wrap="nowrap">
+              <TextInput size="xs" aria-label={`Port ${port}`} value={iface.names[port] ?? port} onChange={(e) => setIface({ ...iface, names: { ...iface.names, [port]: e.currentTarget.value }, change: null })} />
+              <Button size="compact-xs" variant="default" disabled={(iface.names[port] ?? port) === port} onClick={() => setIface({ ...iface, change: { rename: [port, iface.names[port]] } })}>
+                Rename
+              </Button>
+              <Button size="compact-xs" variant="default" color="red" onClick={() => setIface({ ...iface, change: { remove: port } })}>
+                Remove
+              </Button>
+            </Group>
+          ))}
+          <Group gap={4} wrap="nowrap">
+            <TextInput size="xs" aria-label="New port" placeholder="New port" value={iface.add} onChange={(e) => setIface({ ...iface, add: e.currentTarget.value, change: null })} />
+            <Button size="compact-xs" variant="default" disabled={!iface.add.trim()} onClick={() => setIface({ ...iface, change: { add: iface.add.trim() } })}>
+              Add port
+            </Button>
+          </Group>
+          {ifacePlan && (
+            <Stack gap={2} data-testid="interface-plan">
+              {ifacePlan.blocked.map((b) => <Text key={b} size="sm" c="red">{b}</Text>)}
+              {ifacePlan.statements.map((st) => (
+                <Text key={st.line} size="xs" ff="monospace">
+                  line {st.line}: {st.before} → {st.after || '(removed)'}
+                </Text>
+              ))}
+              {ifacePlan.kept.map((k) => <Text key={k} size="xs" c="orange">Kept, Check will report it: {k}</Text>)}
+            </Stack>
+          )}
+          <Group justify="flex-end" gap="xs">
+            <Button variant="default" size="xs" onClick={() => setIface(null)}>Cancel</Button>
+            <Button
+              size="xs"
+              disabled={!ifacePlan || ifacePlan.blocked.length > 0}
+              onClick={() => {
+                if (ifacePlan && runEdit(ifacePlan.edit, undefined, true)) setIface(null)
+              }}
+            >
+              Apply
+            </Button>
+          </Group>
+        </Stack>
+      )}
+    </Modal>
+  )
+  // HIER-02/03: the extraction preview, and a Check of the text it would write.
+  const [extracting, setExtracting] = useState<{ type: string; name: string; ids: string[] } | null>(null)
+  const extraction: Extraction | null = extracting && checkResult ? extractSubsystem(text, checkResult, new Set(extracting.ids), extracting.type, extracting.name) : null
+  // HIER-05: component files out and in.
+  const [exporting, setExporting] = useState<{ type: string; description: string } | null>(null)
+  const [importing, setImporting] = useState<{ file: string; defs: { name: string; text: string }[]; replace: string[] } | null>(null)
+  const importInput = useRef<HTMLInputElement>(null)
+  const importPlan = importing && checkResult ? importComponents(text, checkResult, importing.defs, new Set(importing.replace)) : null
+  const exportType = (() => {
+    const id = scope || (selection.length === 1 ? selection[0] : '')
+    const inst = drawnCheck?.instances?.find((i) => i.name.toLowerCase() === id)
+    return inst?.localType ? written(inst.type) : undefined
+  })()
+  const readComponents = async (file: File) => {
+    const body = await file.text()
+    const found = await checkText(body, [], false)
+    const defs = (found.definitions ?? []).flatMap((d) => (d.range ? [{ name: d.name, text: body.slice(d.range[0], d.range[1]) }] : []))
+    if (defs.length === 0) return setWireNote(`${file.name} defines no components.`)
+    setImporting({ file: file.name, defs, replace: [] })
+  }
+  const candidate =
+    extraction && extraction.blocked.length === 0
+      ? applyChanges(text, extraction.edit.changes)
+      : importPlan && importPlan.edit.changes.length > 0
+        ? applyChanges(text, importPlan.edit.changes)
+        : null
+  const [verdict, setVerdict] = useState<{ text: string; ok: boolean; message: string } | null>(null)
+  useEffect(() => {
+    if (!candidate) return
+    let live = true
+    void checkText(candidate, [], false).then((r) => {
+      // The result must parse, and be solvable whenever the model was.
+      if (live) setVerdict({ text: candidate, ok: !r.errors?.length && r.errorLine == null && (r.solvable || !checkResult?.solvable), message: r.message })
+    })
+    return () => {
+      live = false
+    }
+  }, [candidate, checkResult?.solvable])
+  const startExtract = () => {
+    if (!checkResult || sourceBroken) return setWireNote('Check first: extracting works on the checked source.')
+    const free = (make: (k: number) => string, taken: (n: string) => boolean) => {
+      let k = 1
+      while (taken(make(k).toLowerCase())) k++
+      return make(k)
+    }
+    const type = free((k) => (k === 1 ? 'Subsystem' : `Subsystem${k}`), (n) => (checkResult.definitions ?? []).some((d) => d.name === n))
+    const name = free((k) => `SUB${k}`, (n) => [...takenNames].some((t) => t.toLowerCase() === n))
+    setExtracting({ type, name, ids: [...selection] })
+  }
+  const applyExtraction = () => {
+    if (!extraction || !extracting) return
+    const ids = new Set(extracting.ids)
+    const boxes = extracting.ids.flatMap((id) => positioned.get(id) ?? [])
+    const at = { x: boxes.reduce((s, b) => s + b.x, 0) / Math.max(1, boxes.length), y: boxes.reduce((s, b) => s + b.y, 0) / Math.max(1, boxes.length) }
+    if (runEdit(extraction.edit, (p) => movePresentation(p, ids, extracting.name, at))) {
+      setSelected(new Set([extracting.name.toLowerCase()]))
+      setPinned(null)
+    }
+    setExtracting(null)
+  }
+  const verdictLine = candidate && (
+    <Text size="sm" c={verdict?.text !== candidate ? 'dimmed' : verdict.ok ? 'teal' : 'red'} data-testid="result-check">
+      {verdict?.text !== candidate ? 'Checking the result…' : `Check of the result: ${verdict.message}`}
+    </Text>
+  )
+  const editing = (
+    <>
+      {interfacePanel}
+      <input
+        ref={importInput}
+        type="file"
+        accept=".frees,.txt"
+        hidden
+        data-testid="import-components-input"
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0]
+          e.currentTarget.value = ''
+          if (file) void readComponents(file)
+        }}
+      />
+      <Modal opened={exporting !== null} onClose={() => setExporting(null)} title={exporting && `Export ${exporting.type}`} size="lg">
+        {exporting && (
+          <Stack gap="xs" data-testid="export-component">
+            <TextInput size="xs" label="Description" value={exporting.description} onChange={(e) => setExporting({ ...exporting, description: e.currentTarget.value })} />
+            <Text component="pre" size="xs" ff="monospace" m={0} p={6} style={{ background: 'var(--mantine-color-default-hover)', overflowX: 'auto' }}>
+              {componentFile(text, drawnCheck, exporting.type, exporting.description)}
+            </Text>
+            <Group justify="flex-end" gap="xs">
+              <Button variant="default" size="xs" onClick={() => setExporting(null)}>Cancel</Button>
+              <Button
+                size="xs"
+                onClick={() => {
+                  download(new Blob([componentFile(text, drawnCheck, exporting.type, exporting.description)], { type: 'text/plain' }), `${exporting.type}.frees`)
+                  setExporting(null)
+                }}
+              >
+                Download
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+      <Modal opened={importing !== null} onClose={() => setImporting(null)} title={importing && `Import from ${importing.file}`} size="lg">
+        {importing && importPlan && (
+          <Stack gap="xs" data-testid="import-components">
+            {importPlan.added.length > 0 && <Text size="sm">Adds {importPlan.added.join(', ')}</Text>}
+            {importPlan.same.length > 0 && <Text size="sm">Already here, identical: {importPlan.same.join(', ')}</Text>}
+            {[...importPlan.differs, ...importPlan.replaced].map((name) => (
+              <Checkbox
+                key={name}
+                size="xs"
+                label={`${name} differs from this document's — replace mine`}
+                checked={importing.replace.includes(name)}
+                onChange={(e) => setImporting({ ...importing, replace: e.currentTarget.checked ? [...importing.replace, name] : importing.replace.filter((n) => n !== name) })}
+              />
+            ))}
+            {verdictLine}
+            <Group justify="flex-end" gap="xs">
+              <Button variant="default" size="xs" onClick={() => setImporting(null)}>Cancel</Button>
+              <Button
+                size="xs"
+                disabled={!candidate || verdict?.text !== candidate || !verdict.ok}
+                onClick={() => {
+                  if (runEdit(importPlan.edit, undefined, true)) setImporting(null)
+                }}
+              >
+                Import
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+      <Modal opened={extracting !== null} onClose={() => setExtracting(null)} title="Extract subsystem" size="xl">
+        {extracting && extraction && (
+          <Stack gap="xs" data-testid="extract-preview">
+            <Group gap="xs">
+              <TextInput size="xs" label="Component name" value={extracting.type} onChange={(e) => setExtracting({ ...extracting, type: e.currentTarget.value })} />
+              <TextInput size="xs" label="Instance name" value={extracting.name} onChange={(e) => setExtracting({ ...extracting, name: e.currentTarget.value })} />
+            </Group>
+            {extraction.blocked.map((b) => (
+              <Text key={b} size="sm" c="red">{b}</Text>
+            ))}
+            <Text size="sm">Moves inside: {extraction.moved.join('; ')}{extraction.internal.length > 0 && `; ${extraction.internal.join('; ')}`}</Text>
+            {extraction.ports.length > 0 && (
+              <Text size="sm" data-testid="extract-ports">Ports: {extraction.ports.map((p) => `${p.name} (${p.inside.join(', ')} — ${p.outside.join(', ')})`).join('; ')}</Text>
+            )}
+            {extraction.captures.length > 0 && (
+              <Text size="sm" data-testid="extract-captures">Passed in: {extraction.captures.map((c) => `${c.name} = ${c.value}`).join('; ')}</Text>
+            )}
+            {extraction.references.length > 0 && (
+              <Text size="sm" data-testid="extract-references">Re-pointed: {extraction.references.map((r) => `line ${r.line}: ${r.before} → ${r.after}`).join('; ')}</Text>
+            )}
+            <Text component="pre" size="xs" ff="monospace" m={0} p={6} style={{ background: 'var(--mantine-color-default-hover)', overflowX: 'auto' }} data-testid="extract-definition">
+              {`${extraction.definition}\n${extraction.declaration}`}
+            </Text>
+            {verdictLine}
+            <Group justify="flex-end" gap="xs">
+              <Button variant="default" size="xs" onClick={() => setExtracting(null)}>Cancel</Button>
+              <Button size="xs" onClick={applyExtraction} disabled={!candidate || verdict?.text !== candidate || !verdict.ok}>Extract</Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+      <Modal opened={deleting !== null} onClose={() => setDeleting(null)} title={deleting?.edit.label} size="lg">
+        {deleting && (
+          <Stack gap="xs" data-testid="delete-impact">
+            {deleting.removed.length > 0 && <Text size="sm">Removes {deleting.removed.length} connection{deleting.removed.length === 1 ? '' : 's'}: {deleting.removed.join('; ')}</Text>}
+            {deleting.rewritten.length > 0 && <Text size="sm">Rewrites: {deleting.rewritten.join('; ')}</Text>}
+            {deleting.equations.length > 0 && (
+              <Text size="sm" c="orange">
+                Kept, and reported by Check until you change them: {deleting.equations.map((q) => `line ${q.line}: ${q.text}`).join('; ')}
+              </Text>
+            )}
+            {deleting.removed.length + deleting.rewritten.length + deleting.equations.length === 0 && <Text size="sm">Nothing else refers to it.</Text>}
+            <Group justify="flex-end" gap="xs">
+              <Button variant="default" size="xs" onClick={() => setDeleting(null)}>Cancel</Button>
+              <Button color="red" size="xs" onClick={confirmDelete} data-autofocus>Delete</Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+      {pasteReport && (
+        <Paper withBorder shadow="sm" p="xs" data-testid="paste-report" style={{ position: 'absolute', right: 8, bottom: 8, maxWidth: 420, zIndex: 7 }}>
+          <Group justify="space-between" gap={4} wrap="nowrap" align="flex-start">
+            <Stack gap={2}>
+              <Text size="xs" fw={600}>Pasted {pasteReport.ids.length} component{pasteReport.ids.length === 1 ? '' : 's'}</Text>
+              {pasteReport.renames.map(([a, b]) => <Text key={a} size="xs">Renamed {a} → {b} (name taken)</Text>)}
+              {pasteReport.added.map((d) => <Text key={d} size="xs">Added definition {d}</Text>)}
+              {pasteReport.reused.map((d) => <Text key={d.name} size="xs" c={d.differs ? 'orange' : undefined}>Uses this document's {d.name}{d.differs ? ' — it differs from the copied one' : ''}</Text>)}
+              {pasteReport.external.map((x) => <Text key={x} size="xs" c="orange">Not reconnected: {x}</Text>)}
+              {pasteReport.missing.length > 0 && <Text size="xs" c="orange">Not defined here: {pasteReport.missing.join(', ')}</Text>}
+            </Stack>
+            <ActionIcon size="xs" variant="subtle" aria-label="Close paste report" onClick={() => setPasteReport(null)}>×</ActionIcon>
+          </Group>
+        </Paper>
+      )}
+    </>
+  )
+
+  // COMP-04: one parameter binding, as one undoable source edit.
+  const setParam = (inst: InstanceIdentityDto, name: string, value: string): string | null => {
+    if (sourceBroken) return 'Fix the source errors first.'
+    const edit = setParameter(text, inst, name, value)
+    if (!edit) return 'Check again first: the source changed since this block was drawn.'
+    return runEdit(edit) ? null : 'The source changed after the last Check; Check again, then retry.'
+  }
   // SYNC-04: rename at every reference in the instance's scope, moving its
   // layout keys with it, as one undo step.
   const rename = (inst: InstanceIdentityDto, next: string): string | null => {
@@ -841,6 +1628,23 @@ export default function SchematicTab({
   const removeAreas = () => updatePres((p) => ({ ...p, areas: p.areas.filter((a) => !a.members.some((m) => selection.includes(m))) }), 'Remove area')
   const nudge = (dx: number, dy: number) => moveBlocks(new Map(selection.map((id) => [id, { dx, dy }])), 'Nudge')
   const arrange = (op: ArrangeOp) => moveBlocks(arrangeDeltas(op, selection.flatMap((id) => positioned.get(id) ?? [])), 'Arrange')
+  /** Preview handing a scope back to the automatic layout. */
+  const previewArrange = (scope: 'selection' | 'circuit' | 'all') => {
+    const groups = new Set(selection.map((id) => positioned.get(id)?.group))
+    const ids =
+      scope === 'all' ? layout.nodes.map((n) => n.id)
+        : scope === 'circuit' ? layout.nodes.filter((n) => groups.has(n.group)).map((n) => n.id)
+          : selection
+    const { presentation, moved } = arrangeBlocks(presRef.current, ids)
+    if (moved.length === 0) return setWireNote('Nothing to arrange: those blocks are locked.')
+    setArranging({ label: `Arrange ${scope}`, moved, presentation: scope === 'all' ? { ...presentation, legacyOffsets: {} } : presentation })
+  }
+  const applyArrange = () => {
+    if (!arranging) return
+    const next = arranging.presentation
+    setArranging(null)
+    updatePres(() => next, arranging.label)
+  }
   const instanceIds = (ids: Iterable<string>) => [...ids].filter((id) => positioned.get(id)?.kind === 'instance')
   const select = (ids: Iterable<string>) => {
     setSelected(new Set(instanceIds(ids)))
@@ -859,30 +1663,119 @@ export default function SchematicTab({
     setPinned(null)
   }
 
-  const exportSvg = () => {
-    const svg = svgRef.current
-    if (!svg) {
-      return
-    }
-    // The live viewBox frames what is on screen; an export has to frame the
-    // whole drawing, including anything the user has dragged out of view.
-    const { minX, minY, w, h } = bounds
-    const clone = svg.cloneNode(true) as SVGSVGElement
-    clone.querySelector('[data-background]')?.remove()
-    clone.setAttribute('viewBox', `${minX} ${minY} ${w} ${h}`)
-    clone.setAttribute('width', String(Math.round(w)))
-    clone.setAttribute('height', String(Math.round(h)))
-    const xml = new XMLSerializer().serializeToString(clone)
-    const blob = new Blob([xml], { type: 'image/svg+xml' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'schematic.svg'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+  // CFG-05: the drawing as a file or a page, without the editing affordances.
+  const [exportOpts, setExportOpts] = useState<ExportOptions | null>(null)
+  // While a drawing is captured, blocks render in full, never as name chips.
+  const [printing, setPrinting] = useState(false)
+  const runContext = [
+    variables?.length ? `Solved: ${variables.length} variables` : 'Not solved: no results shown',
+    showingPrevious ? 'drawing from the last valid Check (the source has errors)' : null,
+    scope ? `inside ${labels.get(scope)?.label ?? scope}` : null,
+    `exported ${new Date().toLocaleString()}`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const drawingSvg = (o: ExportOptions): { xml: string; w: number; h: number } | null => {
+    const box =
+      o.region === 'view'
+        ? { minX: -view.x / zoom, minY: -view.y / zoom, w: viewport.w / zoom, h: viewport.h / zoom }
+        : o.region === 'selection'
+          ? boxAround(selection.flatMap((id) => positioned.get(id) ?? []), CHIP_OVERHANG + 5, 20)
+          : bounds
+    flushSync(() => setPrinting(true))
+    const clone = svgRef.current && box ? (svgRef.current.cloneNode(true) as SVGSVGElement) : null
+    setPrinting(false)
+    if (!clone || !box) return null
+    const legend = layout.lines.map((key) => ({ label: lineLabel(key, fluidSpelling), style: styleOf(lineId(key)) }))
+    return drawingFile(clone, box, o, { ink, picked: new Set(selection), legend, context: runContext, issues })
   }
+  const exportDrawing = async (o: ExportOptions) => {
+    const drawing = drawingSvg(o)
+    if (!drawing) return setWireNote('Select the blocks to export first.')
+    if (o.format === 'svg') return download(new Blob([drawing.xml], { type: 'image/svg+xml' }), 'schematic.svg')
+    if (o.format === 'png') {
+      const img = new Image()
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(drawing.xml)}`
+      await img.decode()
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(drawing.w * o.scale)
+      canvas.height = Math.round(drawing.h * o.scale)
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+      const blob = await new Promise<Blob | null>((done) => canvas.toBlob(done, 'image/png'))
+      return blob ? download(blob, 'schematic.png') : setWireNote('The PNG could not be drawn.')
+    }
+    // Print through a frame holding only the drawing, so the browser's PDF
+    // printer gets the page size asked for and none of the app around it.
+    document.querySelector('iframe[data-testid="print-frame"]')?.remove()
+    const frame = document.createElement('iframe')
+    frame.setAttribute('data-testid', 'print-frame')
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'
+    document.body.appendChild(frame)
+    const page = frame.contentDocument!
+    page.open()
+    page.write(`<!doctype html><title>Schematic</title><style>@page { size: ${o.page} landscape; margin: 10mm } html, body { margin: 0 } svg { width: 100%; height: auto; max-height: 100vh }</style>${drawing.xml}`)
+    page.close()
+    frame.contentWindow?.print()
+  }
+  const toggles = [
+    ['legend', 'Legend'],
+    ['values', 'Values'],
+    ['annotations', 'Annotations'],
+    ['context', 'Run context'],
+    ['warnings', `Warnings (${issues.length})`],
+  ] as const
+  const exportDialog = (
+    <Modal opened={exportOpts !== null} onClose={() => setExportOpts(null)} title="Export drawing" size="md">
+      {exportOpts && (
+        <Stack gap="xs" data-testid="export-drawing">
+          {(
+            [
+              ['format', 'Format', [['svg', 'SVG'], ['png', 'PNG'], ['print', 'Print / PDF']]],
+              ['region', 'Region', [['model', 'Whole model'], ['view', 'Current view'], ['selection', 'Selection']]],
+              ['background', 'Background', [['none', 'None'], ['white', 'White'], ['theme', 'Theme']]],
+            ] as const
+          ).map(([key, label, choices]) => (
+            <div key={key}>
+              <Text size="xs" c="dimmed" mb={2}>{label}</Text>
+              <SegmentedControl
+                size="xs"
+                fullWidth
+                aria-label={label}
+                value={exportOpts[key]}
+                onChange={(v) => setExportOpts({ ...exportOpts, [key]: v })}
+                data={choices.map(([value, text]) => ({ value, label: text, disabled: value === 'selection' && selection.length === 0 }))}
+              />
+            </div>
+          ))}
+          {exportOpts.format === 'png' && (
+            <Select size="xs" label="Scale" value={String(exportOpts.scale)} onChange={(v) => setExportOpts({ ...exportOpts, scale: Number(v ?? 2) })} data={['1', '2', '4'].map((k) => ({ value: k, label: `${k}×` }))} allowDeselect={false} />
+          )}
+          {exportOpts.format === 'print' && (
+            <Select size="xs" label="Page" value={exportOpts.page} onChange={(v) => setExportOpts({ ...exportOpts, page: (v ?? 'A4') as ExportOptions['page'] })} data={['A4', 'Letter']} allowDeselect={false} />
+          )}
+          <Group gap="sm">
+            {toggles.map(([key, label]) => (
+              <Checkbox key={key} size="xs" label={label} checked={exportOpts[key]} onChange={(e) => setExportOpts({ ...exportOpts, [key]: e.currentTarget.checked })} />
+            ))}
+          </Group>
+          {exportOpts.context && <Text size="xs" c="dimmed">{runContext}</Text>}
+          <Group justify="flex-end" gap="xs">
+            <Button variant="default" size="xs" onClick={() => setExportOpts(null)}>Cancel</Button>
+            <Button
+              size="xs"
+              onClick={() => {
+                const o = exportOpts
+                setExportOpts(null)
+                void exportDrawing(o)
+              }}
+            >
+              Export
+            </Button>
+          </Group>
+        </Stack>
+      )}
+    </Modal>
+  )
 
   /**
    * Place dragged blocks at their start positions plus the pointer's travel. The
@@ -980,6 +1873,45 @@ export default function SchematicTab({
   const activeNode = active ? positioned.get(active) : undefined
   const activeReadout = active ? readouts.get(active) : undefined
 
+  // Hooks stay above the empty-canvas return. The palette reaches whichever
+  // handlers this render defined; an empty canvas offers only placement.
+  const commands = useRef<Partial<Record<CanvasCommand, () => void>>>({})
+  useEffect(() => {
+    for (const c of CANVAS_COMMANDS) canvasHandlers[c.id] = () => commands.current[c.id]?.()
+    return () => {
+      for (const c of CANVAS_COMMANDS) delete canvasHandlers[c.id]
+    }
+  }, [])
+  useEffect(() => {
+    // The full set only once the render got past the empty-canvas return.
+    commands.current = drawn
+      ? {
+          add: () => openQuickAdd(),
+          list: () => setListOpen((o) => !o),
+          fit,
+          'fit-selection': fitSelection,
+          'select-all': selectAll,
+          duplicate: () => pasteHere(fragmentOf(), 'Duplicate'),
+          copy: () => void copySelection(),
+          cut: () => copySelection() && requestDelete(),
+          paste: () => pasteHere(loadFragment(), 'Paste'),
+          delete: () => requestDelete(),
+          undo: () => replay('undo'),
+          redo: () => replay('redo'),
+          arrange: () => previewArrange('all'),
+          extract: startExtract,
+          tree: () => setTreeOpen(true),
+          export: () => setExportOpts({ ...EXPORT_DEFAULTS, region: selection.length > 0 ? 'selection' : 'model' }),
+        }
+      : { add: () => openQuickAdd(), paste: () => pasteHere(loadFragment(), 'Paste') }
+  })
+  // Announce a new canvas note or Check result as it arrives.
+  const [heard, setHeard] = useState({ note: wireNote, check: checkResult })
+  if (heard.note !== wireNote || heard.check !== checkResult) {
+    setHeard({ note: wireNote, check: checkResult })
+    if (heard.note !== wireNote && wireNote) setAnnouncement(wireNote)
+    else if (heard.check !== checkResult && checkResult) setAnnouncement(`Check: ${checkResult.message}`)
+  }
   if (!drawn) {
     return (
       <Stack gap="xs" p="md" align="center" justify="center" h="100%">
@@ -988,13 +1920,27 @@ export default function SchematicTab({
           <Text span ff="monospace" size="sm">{' connect(a.out, b.in) '}</Text>
           or by sharing a stream name — then press Check.
         </Text>
+        {onSourceEdit && (
+          <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => openQuickAdd()}>
+            Add component
+          </Button>
+        )}
+        {onSourceEdit && (
+          <Button size="xs" variant="subtle" onClick={() => pasteHere(loadFragment(), 'Paste')}>
+            Paste
+          </Button>
+        )}
+        {adding}
+        {editing}
       </Stack>
     )
   }
 
+  const listNodes = layout.nodes.filter((n) => n.kind === 'instance')
+
   return (
     <Stack gap={4} h="100%" style={{ minHeight: 0, position: 'relative' }}>
-      <Group gap="xs" px="xs" pt={4} wrap="wrap">
+      <Group gap="xs" px="xs" pt={4} wrap="wrap" data-schematic-toolbar>
         {layout.lines.map((key) => {
           const id = lineId(key)
           const style = styleOf(id)
@@ -1012,6 +1958,88 @@ export default function SchematicTab({
         <Badge size="xs" variant="light" color="gray">
           {layout.nodes.filter((n) => n.kind === 'instance').length} components
         </Badge>
+        {(nested || scope) && (
+          <Group gap={2} wrap="nowrap" data-testid="scope-bar">
+            <ActionIcon size="sm" variant="subtle" color="gray" aria-label="Back" disabled={scopes.at === 0} onClick={() => showScope(scopes.list, scopes.at - 1)}>
+              ‹
+            </ActionIcon>
+            <ActionIcon size="sm" variant="subtle" color="gray" aria-label="Forward" disabled={scopes.at >= scopes.list.length - 1} onClick={() => showScope(scopes.list, scopes.at + 1)}>
+              ›
+            </ActionIcon>
+            <nav aria-label="Breadcrumbs">
+              <Group gap={0} wrap="nowrap">
+                {['', ...scope.split('.').map((_, k, parts) => parts.slice(0, k + 1).join('.')).filter(Boolean)].map((path, k) => (
+                  <Group key={path} gap={0} wrap="nowrap">
+                    {k > 0 && <Text size="xs" c="dimmed">›</Text>}
+                    <Button size="compact-xs" variant="subtle" color={path === scope ? 'dark' : 'gray'} aria-current={path === scope ? 'location' : undefined} onClick={() => openScope(path)}>
+                      {path ? `${labels.get(path)?.label ?? path} (${labels.get(path)?.type ?? ''})` : 'Model'}
+                    </Button>
+                  </Group>
+                ))}
+              </Group>
+            </nav>
+            <Popover opened={treeOpen} onChange={setTreeOpen} position="bottom-start" withinPortal shadow="md">
+              <Popover.Target>
+                <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setTreeOpen((o) => !o)}>
+                  Model tree
+                </Button>
+              </Popover.Target>
+              <Popover.Dropdown p={6}>
+                <Stack gap={2} w={280} mah={360} style={{ overflowY: 'auto' }} data-testid="model-tree">
+                  <TextInput size="xs" placeholder="Find a block" aria-label="Find a block" value={treeQuery} onChange={(e) => setTreeQuery(e.currentTarget.value)} data-autofocus />
+                  {tree
+                    .filter((r) => !treeQuery.trim() || `${r.label} ${r.type}`.toLowerCase().includes(treeQuery.trim().toLowerCase()))
+                    .map((r) => (
+                      <Button
+                        key={r.id}
+                        size="compact-xs"
+                        variant={r.id === scope ? 'light' : 'subtle'}
+                        color="gray"
+                        justify="flex-start"
+                        pl={6 + r.depth * 14}
+                        aria-label={`${r.open ? 'Open' : 'Show'} ${r.id.split('.').map((_, k, parts) => labels.get(parts.slice(0, k + 1).join('.'))?.label ?? parts[k]).join(' › ')}`}
+                        onClick={() => {
+                          setTreeOpen(false)
+                          if (r.open) return openScope(r.id)
+                          openScope(scopeOf(r.id))
+                          setSelected(new Set([r.id]))
+                        }}
+                        rightSection={r.hidden > 0 ? <Badge size="xs" color="orange" variant="light">{r.hidden} inside</Badge> : undefined}
+                      >
+                        {r.open ? '▸ ' : ''}
+                        {r.label} <Text span size="xs" c="dimmed" ml={4}>{r.type}</Text>
+                      </Button>
+                    ))}
+                </Stack>
+              </Popover.Dropdown>
+            </Popover>
+            {scope && (
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                onClick={() => {
+                  const type = drawnCheck?.instances?.find((i) => i.name.toLowerCase() === scope)?.type.toLowerCase()
+                  const line = drawnCheck?.definitions?.find((d) => d.name === type)?.line
+                  if (line) onRevealLine(line)
+                }}
+              >
+                Open definition
+              </Button>
+            )}
+            {scope && onSourceEdit && (
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                onClick={() => {
+                  const type = drawnCheck?.instances?.find((i) => i.name.toLowerCase() === scope)?.type
+                  if (type) setIface({ type: written(type), change: null, names: {}, add: '' })
+                }}
+              >
+                Interface…
+              </Button>
+            )}
+          </Group>
+        )}
         {onEmitStatement && pendingPort && (
           <Badge size="xs" variant="filled" color="teal">
             wiring from {pendingPort.instance}.{pendingPort.port} — pick a second port (Esc cancels)
@@ -1099,19 +2127,6 @@ export default function SchematicTab({
             </Button>
           </Group>
         )}
-        {onInsertBlock && selected.size > 1 && (
-          <Group gap={4} wrap="nowrap">
-            <TextInput size="xs" value={componentName} onChange={(e) => setComponentName(e.currentTarget.value)} w={150} aria-label="Custom component name" />
-            <Button size="compact-xs" onClick={() => {
-              try {
-                onInsertBlock(encapsulateSelection({ name: componentName, selected, nodes: layout.nodes, edges: layout.edges, source: text }))
-                setSelected(new Set())
-              } catch (error) {
-                setWireNote(error instanceof Error ? error.message : String(error))
-              }
-            }}>Encapsulate</Button>
-          </Group>
-        )}
         {areaName !== null && (
           <Group gap={4} wrap="nowrap">
             <TextInput
@@ -1134,6 +2149,21 @@ export default function SchematicTab({
               Cancel
             </Button>
           </Group>
+        )}
+        {arranging && (
+          <Group gap={6} wrap="nowrap" data-testid="arrange-preview">
+            <Text size="xs" c="yellow">
+              Preview: {arranging.label} moves {arranging.moved.length} block{arranging.moved.length === 1 ? '' : 's'}{pres.locked.length ? '; locked ones stay' : ''}
+            </Text>
+            <Button size="compact-xs" onClick={applyArrange}>Apply</Button>
+            <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setArranging(null)}>Cancel</Button>
+          </Group>
+        )}
+        {routeConflicts.size > 0 && (
+          <Text size="xs" c="orange" data-testid="route-conflict">
+            {[...routeConflicts].map(([id, blocks]) => `${edgeTitle(layout.edges.find((e) => e.id === id)!)} runs through ${blocks.map((b) => labels.get(b)?.label ?? b).join(', ')}`).join('; ')}
+            {' '}— drag a segment clear, or unlock and reset the route
+          </Text>
         )}
         {unresolved > 0 && (
           <Text size="xs" c="orange">
@@ -1194,6 +2224,29 @@ export default function SchematicTab({
               {selection.length} selected
             </Badge>
           )}
+          <Button size="compact-xs" variant={listOpen ? 'light' : 'subtle'} color="gray" aria-pressed={listOpen} onClick={() => setListOpen((o) => !o)}>
+            List
+          </Button>
+          {onSourceEdit && (
+            <Menu position="bottom-end" withinPortal>
+              <Menu.Target>
+                <Button size="compact-xs" variant="subtle" color="gray" aria-label="Edit components">
+                  Edit
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item onClick={() => pasteHere(fragmentOf(), 'Duplicate')} disabled={selection.length === 0} rightSection={<Kbd size="xs">Ctrl D</Kbd>}>Duplicate</Menu.Item>
+                <Menu.Item onClick={copySelection} disabled={selection.length === 0} rightSection={<Kbd size="xs">Ctrl C</Kbd>}>Copy</Menu.Item>
+                <Menu.Item onClick={() => copySelection() && requestDelete()} disabled={selection.length === 0} rightSection={<Kbd size="xs">Ctrl X</Kbd>}>Cut</Menu.Item>
+                <Menu.Item onClick={() => pasteHere(loadFragment(), 'Paste')} rightSection={<Kbd size="xs">Ctrl V</Kbd>}>Paste</Menu.Item>
+                <Menu.Item onClick={startExtract} disabled={selection.length === 0}>Extract subsystem…</Menu.Item>
+                <Menu.Item onClick={() => exportType && setExporting({ type: exportType, description: '' })} disabled={!exportType}>Export component…</Menu.Item>
+                <Menu.Item onClick={() => importInput.current?.click()}>Import components…</Menu.Item>
+                <Menu.Divider />
+                <Menu.Item color="red" onClick={() => requestDelete()} disabled={selection.length === 0} rightSection={<Kbd size="xs">Del</Kbd>}>Delete…</Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          )}
           <Menu position="bottom-end" withinPortal>
             <Menu.Target>
               <Button size="compact-xs" variant="subtle" color="gray">
@@ -1218,11 +2271,15 @@ export default function SchematicTab({
           </Menu>
           <Menu position="bottom-end" withinPortal>
             <Menu.Target>
-              <Button size="compact-xs" variant="subtle" color="gray" disabled={selection.length === 0}>
+              <Button size="compact-xs" variant="subtle" color="gray">
                 Arrange
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
+              <Menu.Item onClick={() => previewArrange('selection')} disabled={selection.length === 0}>Arrange selection</Menu.Item>
+              <Menu.Item onClick={() => previewArrange('circuit')} disabled={selection.length === 0}>Arrange circuit</Menu.Item>
+              <Menu.Item onClick={() => previewArrange('all')}>Arrange all</Menu.Item>
+              <Menu.Divider />
               {ARRANGE_ITEMS.map((item) =>
                 item === null ? (
                   <Menu.Divider key="divider" />
@@ -1237,12 +2294,12 @@ export default function SchematicTab({
                 )
               )}
               <Menu.Divider />
-              {selection.every((id) => lockedIds.has(id)) ? (
+              {selection.length > 0 && selection.every((id) => lockedIds.has(id)) ? (
                 <Menu.Item onClick={() => lockSelection(false)}>Unlock position</Menu.Item>
               ) : (
-                <Menu.Item onClick={() => lockSelection(true)}>Lock position</Menu.Item>
+                <Menu.Item onClick={() => lockSelection(true)} disabled={selection.length === 0}>Lock position</Menu.Item>
               )}
-              <Menu.Item onClick={() => setAreaName(`Area ${pres.areas.length + 1}`)}>Frame as area…</Menu.Item>
+              <Menu.Item onClick={() => setAreaName(`Area ${pres.areas.length + 1}`)} disabled={selection.length === 0}>Frame as area…</Menu.Item>
               <Menu.Item onClick={removeAreas} disabled={!pres.areas.some((a) => a.members.some((m) => selection.includes(m)))}>
                 Remove area
               </Menu.Item>
@@ -1320,27 +2377,30 @@ export default function SchematicTab({
               <IconArrowForwardUp size={15} />
             </ActionIcon>
           </Tooltip>
+          {onSourceEdit && !sourceBroken && (
+            <Tooltip label="Add component (A, or double-click the canvas)">
+              <ActionIcon size="sm" variant="subtle" aria-label="Add component" onClick={() => openQuickAdd()}>
+                <IconPlus size={15} />
+              </ActionIcon>
+            </Tooltip>
+          )}
           <Tooltip label="Fit all (Shift+1)">
             <ActionIcon size="sm" variant="subtle" aria-label="Fit to window" onClick={fit}>
               <IconArrowsMaximize size={15} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Reset layout">
+          <Tooltip label="Reset layout (Arrange all)">
             <ActionIcon
               size="sm"
               variant="subtle"
               aria-label="Reset layout"
-              onClick={() => {
-                // Locked blocks keep their place; v3 positions not yet placed are dropped.
-                updatePres((p) => ({ ...p, positions: Object.fromEntries(Object.entries(p.positions).filter(([id]) => lockedIds.has(id))), legacyOffsets: {} }), 'Reset layout')
-                fit()
-              }}
+              onClick={() => previewArrange('all')}
             >
               <IconLayoutGrid size={15} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Export SVG">
-            <ActionIcon size="sm" variant="subtle" aria-label="Export SVG" onClick={exportSvg}>
+          <Tooltip label="Export drawing (SVG, PNG, print)">
+            <ActionIcon size="sm" variant="subtle" aria-label="Export…" onClick={() => setExportOpts((o) => o ?? { ...EXPORT_DEFAULTS, region: selection.length > 0 ? 'selection' : 'model' })}>
               <IconDownload size={15} />
             </ActionIcon>
           </Tooltip>
@@ -1361,6 +2421,20 @@ export default function SchematicTab({
           userSelect: 'none', // Shift+drag is a marquee, not a text selection
           cursor: drag.panning ? 'grabbing' : 'grab',
         }}
+        onDoubleClick={(e) => {
+          if (onSourceEdit && !sourceBroken && !(e.target as Element).closest('[data-node], [data-port], [data-wire]')) {
+            openQuickAdd(e.clientX, e.clientY)
+          }
+        }}
+        onDragOver={(e) => {
+          if (onSourceEdit && !sourceBroken && e.dataTransfer.types.includes(COMPONENT_DRAG_TYPE)) e.preventDefault()
+        }}
+        onDrop={(e) => {
+          const raw = e.dataTransfer.getData(COMPONENT_DRAG_TYPE)
+          if (!raw) return
+          e.preventDefault()
+          choose(JSON.parse(raw) as QuickAddChoice, toDrawing(e.clientX, e.clientY))
+        }}
         onPointerDown={(e) => {
           if (e.shiftKey && e.button === 0 && e.isPrimary) {
             e.preventDefault()
@@ -1374,6 +2448,19 @@ export default function SchematicTab({
           drag.startPan(e)
         }}
         onKeyDown={(e) => {
+          // CFG-10: typing in a field on the canvas is text, never a command.
+          if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return
+          const mod = e.ctrlKey || e.metaKey
+          const clip = onSourceEdit && !sourceBroken && !e.altKey
+            ? mod
+              ? { c: copySelection, x: () => copySelection() && requestDelete(), v: () => pasteHere(loadFragment(), 'Paste'), d: () => pasteHere(fragmentOf(), 'Duplicate') }[e.key.toLowerCase()]
+              : e.key === 'Delete' || e.key === 'Backspace' ? () => requestDelete() : undefined
+            : undefined
+          if (clip) {
+            e.preventDefault()
+            clip()
+            return
+          }
           // e.code: Shift+1 types "!" on most layouts.
           const command = e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
             ? { Digit1: fit, Digit2: fitSelection, Digit0: () => zoomBy(1 / zoom) }[e.code]
@@ -1381,6 +2468,16 @@ export default function SchematicTab({
           if (command) {
             e.preventDefault()
             command()
+            return
+          }
+          if (e.key === 'l' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            setListOpen((o) => !o)
+            return
+          }
+          if (e.key === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey && onSourceEdit && !sourceBroken) {
+            e.preventDefault()
+            openQuickAdd()
             return
           }
           if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
@@ -1502,6 +2599,8 @@ export default function SchematicTab({
                 <g key={e.id}>
                 <path
                   data-net={netOf(e)}
+                  data-route={routeKey(e)}
+                  data-conflict={routeConflicts.has(e.id) || undefined}
                   d={pathOf(pts, hops.get(e.id))}
                   fill="none"
                   stroke={style.color}
@@ -1523,9 +2622,19 @@ export default function SchematicTab({
                     fill="none"
                     stroke="transparent"
                     strokeWidth={Math.max(8, 12 / zoom)}
-                    style={{ cursor: 'pointer' }}
-                    onPointerDown={(ev) => ev.stopPropagation()}
-                    onClick={openCard}
+                    style={{ cursor: savedRoutes[routeKey(e)]?.locked ? 'pointer' : 'move' }}
+                    onPointerDown={(ev) => {
+                      ev.stopPropagation()
+                      startLaneDrag(ev, e)
+                    }}
+                    onDoubleClick={(ev) => {
+                      ev.stopPropagation()
+                      addBend(e, toDrawing(ev.clientX, ev.clientY))
+                    }}
+                    onClick={() => {
+                      if (suppressClick.current) suppressClick.current = false
+                      else openCard()
+                    }}
                     onKeyDown={(ev) => {
                       if (ev.key === 'Enter' || ev.key === ' ') {
                         ev.preventDefault()
@@ -1537,9 +2646,37 @@ export default function SchematicTab({
                 </g>
               )
             })}
+            {cardEdges.flatMap((e) => {
+              const key = routeKey(e)
+              const route = savedRoutes[key]
+              if (!route || route.locked) return []
+              return (liveRoute?.key === key ? liveRoute.points : route.points).map((p, k) => (
+                <rect
+                  // eslint-disable-next-line react/no-array-index-key -- a bend is its place on the route; a coordinate key would remount it mid-drag
+                  key={`${key}:${k}`}
+                  data-bend={`${key}:${k}`}
+                  x={p.x - 4 / zoom}
+                  y={p.y - 4 / zoom}
+                  width={8 / zoom}
+                  height={8 / zoom}
+                  fill={ink.canvas}
+                  stroke={ink.active}
+                  strokeWidth={1.4 / zoom}
+                  style={{ cursor: 'move' }}
+                  onPointerDown={(ev) => moveBend(ev, key, k)}
+                  onDoubleClick={(ev) => {
+                    ev.stopPropagation()
+                    removeBend(key, k)
+                  }}
+                >
+                  <title>Bend — drag to move, double-click to remove</title>
+                </rect>
+              ))
+            })}
             {wireDrag && (
               <line
                 data-testid="wire-drag"
+                data-transient
                 x1={wireDrag.a[0]}
                 y1={wireDrag.a[1]}
                 x2={wireDrag.b[0]}
@@ -1560,7 +2697,7 @@ export default function SchematicTab({
                 const a = at(provisional.from)
                 const b = at(provisional.to)
                 return a && b ? (
-                  <path data-provisional d={`M${a[0]},${a[1]} L${b[0]},${b[1]}`} stroke={ink.active} strokeWidth={1.6} strokeDasharray="5 4" fill="none">
+                  <path data-provisional data-transient d={`M${a[0]},${a[1]} L${b[0]},${b[1]}`} stroke={ink.active} strokeWidth={1.6} strokeDasharray="5 4" fill="none">
                     <title>Pending Check</title>
                   </path>
                 ) : null
@@ -1592,11 +2729,11 @@ export default function SchematicTab({
                   key={n.id}
                   node={n}
                   faded={out}
-                  zoom={zoom}
+                  zoom={printing ? 1 : zoom}
                   room={chipRoom.get(n.id) ?? { left: Infinity, right: Infinity }}
                   ink={ink}
                   locked={lockedIds.has(n.id)}
-                  namesOnly={settings.detail === 'names'}
+                  namesOnly={!printing && settings.detail === 'names'}
                   portLabels={settings.portLabels}
                   badge={badgeFor(n, readouts.get(n.id) ?? { ports: [], outputs: [], params: [] })}
                   active={active === n.id}
@@ -1644,7 +2781,7 @@ export default function SchematicTab({
             })}
           </g>
           {guides && (
-            <g data-testid="schematic-guides" pointerEvents="none" stroke={ink.guide} strokeWidth={1 / zoom} strokeDasharray={`${4 / zoom} ${3 / zoom}`}>
+            <g data-testid="schematic-guides" data-transient pointerEvents="none" stroke={ink.guide} strokeWidth={1 / zoom} strokeDasharray={`${4 / zoom} ${3 / zoom}`}>
               {guides.xs.map((x) => (
                 <line key={`x${x}`} x1={x} x2={x} y1={bounds.minY} y2={bounds.minY + bounds.h} />
               ))}
@@ -1718,6 +2855,50 @@ export default function SchematicTab({
         )}
       </div>
 
+      {adding}
+      {editing}
+      {exportDialog}
+      <div role="status" aria-live="polite" data-testid="canvas-announcer" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>
+        {announcement}
+      </div>
+      {listOpen && (
+        <Paper withBorder shadow="sm" p="xs" role="region" aria-label="Components and connections" data-testid="structured-list" style={{ position: 'absolute', left: 8, top: 44, width: 340, maxHeight: '75%', overflowY: 'auto', zIndex: 6 }}>
+          <Group justify="space-between" gap={4}>
+            <Text size="sm" fw={600} component="h3" m={0}>Components ({listNodes.length})</Text>
+            <ActionIcon size="sm" variant="subtle" aria-label="Close list" onClick={() => setListOpen(false)}>×</ActionIcon>
+          </Group>
+          <Stack component="ul" gap={2} p={0} m={0} style={{ listStyle: 'none' }}>
+            {listNodes.map((n) => (
+              <Group component="li" key={n.id} gap={4} wrap="nowrap">
+                <Text size="xs" style={{ flex: 1 }}>
+                  {n.label} <Text span size="xs" c="dimmed">{n.type}</Text>
+                  {(openPorts.get(n.id)?.size ?? 0) > 0 && <Text span size="xs" c="orange"> · {openPorts.get(n.id)!.size} open</Text>}
+                </Text>
+                <Button size="compact-xs" variant="subtle" aria-label={`Inspect ${n.label}`} onClick={() => { setSelected(new Set([n.id])); setPinned(n.id) }}>
+                  Inspect
+                </Button>
+                {onSourceEdit && !scope && (
+                  <Button size="compact-xs" variant="subtle" color="red" aria-label={`Delete ${n.label}`} onClick={() => requestDelete([n.id])}>
+                    Delete…
+                  </Button>
+                )}
+              </Group>
+            ))}
+          </Stack>
+          <Text size="sm" fw={600} component="h3" mt="xs" mb={0}>Connections ({connections.length})</Text>
+          <Stack component="ul" gap={2} p={0} m={0} style={{ listStyle: 'none' }}>
+            {connections.map((c, k) => (
+              <Group component="li" key={c.range?.[0] ?? c.endpoints.join('|')} gap={4} wrap="nowrap">
+                <Text size="xs" style={{ flex: 1 }}>{c.endpoints.join(' — ')}</Text>
+                <Button size="compact-xs" variant="subtle" aria-label={`Open connection ${c.endpoints.join(' — ')}`} onClick={() => setWireCard({ index: k, check: drawnCheck })}>
+                  Open
+                </Button>
+              </Group>
+            ))}
+          </Stack>
+          {onEmitStatement && <Text size="xs" c="dimmed" mt={4}>Join two ports with Connect from / to in the toolbar.</Text>}
+        </Paper>
+      )}
       {wireCard?.check === drawnCheck && connections[wireCard.index] && (
         <WireCard
           index={wireCard.index}
@@ -1729,9 +2910,19 @@ export default function SchematicTab({
           onApply={(edit) => {
             if (runEdit(edit)) setWireCard(null)
           }}
-          onClose={() => setWireCard(null)}
+          onClose={() => {
+            setWireCard(null)
+            setInsertDraft(null)
+          }}
+          routeControls={routeControls}
+          onInsertComponent={() => {
+            const conn = connections[wireCard.index]
+            const ends = conn.range ? writtenEndpoints(text.slice(conn.range[0], conn.range[1])) : []
+            setInsertDraft({ index: wireCard.index, type: null, toA: '', toB: '', branch: ends.at(-1) ?? '', block: null })
+          }}
         />
       )}
+      {wireCard && insertPanel}
       {activeNode && activeReadout && (
         <ReadoutCard
           node={activeNode}
@@ -1747,6 +2938,9 @@ export default function SchematicTab({
           onRevealLine={onRevealLine}
           styles={blockStyles}
           onStyle={pinned === activeNode.id ? setStyle : undefined}
+          spec={specOf(activeNode.type)}
+          text={text}
+          onSetParam={onSourceEdit ? setParam : undefined}
           onReveal={() => revealInstance(activeNode)}
           onFocus={
             pinned === activeNode.id
@@ -1919,6 +3113,7 @@ function NodeBlock({
         height={node.h}
         rx={node.terminal ? 3 : 7}
         fill={active ? ink.blockActive : ink.block}
+        data-plain={look?.accent ?? (node.terminal ? ink.borderTerminal : ink.border)}
         stroke={highlighted ? ink.highlight : active ? ink.active : (look?.accent ?? (node.terminal ? ink.borderTerminal : ink.border))}
         strokeWidth={highlighted || active ? 2.2 : 1.2}
         strokeDasharray={node.terminal ? '4 2' : undefined}
@@ -1962,7 +3157,7 @@ function NodeBlock({
         </text>
       )}
       {!chip && badge && (
-        <text x={GLYPH + 12} y={44} fontSize={10.5} fontWeight={600} fill={ink.badge}>
+        <text data-badge x={GLYPH + 12} y={44} fontSize={10.5} fontWeight={600} fill={ink.badge}>
           {badgeText(badge, look?.precision)}
         </text>
       )}
@@ -2005,7 +3200,9 @@ function NodeBlock({
           >
             <title>{`${node.label}.${p.port}`}</title>
             {wiring && (
-              <circle cx={p.dx} cy={p.dy} r={10} fill="transparent" />
+              // CFG-09: a finger needs about 22 px on screen whatever the zoom, but
+              // never over a neighbouring port's centre, or that port is lost.
+              <circle data-hit cx={p.dx} cy={p.dy} r={COARSE ? Math.max(10, Math.min(22 / zoom, 0.9 * Math.min(...node.ports.filter((q) => q !== p).map((q) => Math.hypot(q.dx - p.dx, q.dy - p.dy))))) : 10} fill="transparent" />
             )}
             {fit && fit !== 'unknown' && (
               <circle cx={p.dx} cy={p.dy} r={7} fill="none" strokeWidth={1.5} stroke={fit === 'allowed' ? 'var(--mantine-color-green-6)' : 'var(--mantine-color-red-6)'}>
@@ -2045,6 +3242,114 @@ function PortName({ side, x, y, name, color }: Readonly<{ side: PortSide; x: num
 
 /** The hover/pin card: what this block is, what its ports are doing, what it
  *  computed, and what it was built from. */
+/**
+ * COMP-04 / RUN-02: each catalog parameter with its binding as written (or the
+ * default it falls back to) beside its evaluated value. Editing is a draft
+ * until Apply, so a half-typed value never reaches the model.
+ */
+function ParamInspector({
+  spec,
+  identity,
+  text,
+  evaluated,
+  onSet,
+}: Readonly<{
+  spec: ComponentSpec
+  identity: InstanceIdentityDto
+  text: string
+  evaluated: readonly { name: string; text: string }[]
+  onSet: (inst: InstanceIdentityDto, name: string, value: string) => string | null
+}>) {
+  const [editing, setEditing] = useState<{ name: string; value: string; error: string | null } | null>(null)
+  const written = (name: string) => {
+    const r = identity.params?.find((p) => p.name === name.toLowerCase())?.range
+    return r ? text.slice(r[0], r[1]) : null
+  }
+  const apply = () => {
+    if (!editing) return
+    const param = spec.params.find((p) => p.name === editing.name)!
+    const error = paramValueError(param, editing.value) ?? (editing.value.trim() ? null : 'Enter a value.')
+    const problem = error ?? onSet(identity, param.name, formatParamValue(param, editing.value))
+    if (problem) setEditing({ ...editing, error: problem })
+    else setEditing(null)
+  }
+  return (
+    <Stack gap={2} mt={6} data-testid="param-inspector">
+      <Text size="xs" fw={600} c="dimmed">
+        parameters
+      </Text>
+      {spec.params.map((p) => {
+        const source = written(p.name)
+        const value = evaluated.find((e) => e.name.toLowerCase() === p.name.toLowerCase())?.text
+        const open = editing?.name === p.name
+        return (
+          <Stack key={p.name} gap={0} data-param={p.name.toLowerCase()}>
+            <Group gap={6} justify="space-between" wrap="nowrap" align="start">
+              <Tooltip label={p.description || p.name} disabled={!p.description} multiline w={260}>
+                <Text size="xs" c="dimmed">
+                  {p.name}
+                  {p.unit ? ` [${p.unit}]` : ''}
+                </Text>
+              </Tooltip>
+              {!open && (
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  aria-label={`Edit ${p.name}`}
+                  onClick={() => setEditing({ name: p.name, value: source ?? '', error: null })}
+                >
+                  <Text size="xs" ff="monospace" c={source ? undefined : 'dimmed'}>
+                    {source ?? (p.defaultValue ? `default ${p.defaultValue}` : p.required ? 'not set' : 'default')}
+                  </Text>
+                </Button>
+              )}
+            </Group>
+            {!open && (source || value) && (
+              <Text size="xs" c="dimmed" ta="right" data-testid="param-value">
+                = {value ?? 'not evaluated (Solve)'}
+              </Text>
+            )}
+            {open && (
+              <Group gap={4} wrap="nowrap" align="flex-start">
+                {p.isSelector && p.values.length ? (
+                  <Select
+                    size="xs"
+                    aria-label={`New ${p.name}`}
+                    data={p.values}
+                    value={editing.value || null}
+                    error={editing.error}
+                    onChange={(v) => setEditing({ ...editing, value: v ?? '', error: null })}
+                  />
+                ) : (
+                  <TextInput
+                    size="xs"
+                    aria-label={`New ${p.name}`}
+                    value={editing.value}
+                    error={editing.error}
+                    autoFocus
+                    onChange={(e) => setEditing({ ...editing, value: e.currentTarget.value, error: null })}
+                    onKeyDown={(e) => {
+                      e.stopPropagation()
+                      if (e.key === 'Enter') apply()
+                      if (e.key === 'Escape') setEditing(null)
+                    }}
+                  />
+                )}
+                <Button size="compact-xs" onClick={apply}>
+                  Apply
+                </Button>
+                <Button size="compact-xs" variant="default" onClick={() => setEditing(null)}>
+                  Cancel
+                </Button>
+              </Group>
+            )}
+          </Stack>
+        )
+      })}
+    </Stack>
+  )
+}
+
 type StyleScope = 'instance' | 'type' | 'project'
 
 /**
@@ -2122,8 +3427,12 @@ function WireCard({
   onReveal,
   onApply,
   onClose,
+  routeControls,
+  onInsertComponent,
 }: Readonly<{
   index: number
+  routeControls?: ReactNode
+  onInsertComponent?: () => void
   connections: readonly ConnectionDto[]
   text: string
   editable: boolean
@@ -2233,6 +3542,11 @@ function WireCard({
                 Disconnect {endpoint}
               </Button>
             ))}
+            {onInsertComponent && (
+              <Button size="compact-xs" variant="default" onClick={onInsertComponent}>
+                Insert component…
+              </Button>
+            )}
             {net.length > 1 && (
               <Button
                 size="compact-xs"
@@ -2277,6 +3591,7 @@ function WireCard({
           )}
         </>
       )}
+      {routeControls}
     </Paper>
   )
 }
@@ -2292,6 +3607,9 @@ function ReadoutCard({
   onRevealLine,
   styles,
   onStyle,
+  spec,
+  text,
+  onSetParam,
   onNudge,
   onReveal,
   onFocus,
@@ -2307,6 +3625,11 @@ function ReadoutCard({
   onRevealLine?: (line: number) => void
   styles?: BlockStyles
   onStyle?: (scope: StyleScope, key: string, next: BlockStyle | null) => void
+  /** The catalog entry for the block's type, and the source, for the inspector. */
+  spec?: ComponentSpec
+  text?: string
+  /** Bind a parameter to source text; returns why it cannot, or null once applied. */
+  onSetParam?: (inst: InstanceIdentityDto, name: string, value: string) => string | null
   onNudge?: (dx: number, dy: number) => void
   onReveal?: () => void
   onFocus?: (kind: FocusKind) => void
@@ -2484,7 +3807,9 @@ function ReadoutCard({
         </>
       )}
 
-      {readout.params.length > 0 && (
+      {pinned && spec && identity && onSetParam ? (
+        <ParamInspector spec={spec} identity={identity} text={text ?? ''} evaluated={readout.params} onSet={onSetParam} />
+      ) : readout.params.length > 0 && (
         <>
           <Text size="xs" fw={600} c="dimmed" mt={6}>
             parameters

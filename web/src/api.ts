@@ -206,6 +206,11 @@ export interface InstanceIdentityDto {
   /** Every place its name is written in its own scope: the declaration and each
    *  `NAME.member` use. Null when the checked text was not the editor's. */
   refs?: [number, number][] | null
+  /** Each `name=value` argument's value as written (lower-case name). A nested
+   *  instance's are in its definition's body. Null when not the editor's text. */
+  params?: { name: string; range: [number, number] }[] | null
+  /** The instantiation's closing parenthesis, where a new argument goes. */
+  close?: SourceRange
 }
 
 /** One port of one instance, as the engine classified it. */
@@ -219,9 +224,16 @@ export interface PortDto {
   connected: boolean
 }
 
+/** A component definition written in the document: `COMPONENT … END` or a
+ *  port-bearing `function [ports] = Name(…) … end`. */
 export interface DefinitionIdentityDto {
+  /** Lower-case. */
   name: string
   line: number
+  /** The whole block; null when the checked text was not the editor's. */
+  range?: SourceRange
+  ports?: string[]
+  params?: string[]
 }
 
 /** One connection-topology node of the component network. */

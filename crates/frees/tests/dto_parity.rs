@@ -13,7 +13,7 @@
 //! `SolveDtos` (`../frEES/backend`), which `api.ts` was written against.
 
 use frees::{check, solve};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 fn parsed(payload: &str) -> Value {
     serde_json::from_str(payload).unwrap_or_else(|e| {
@@ -883,4 +883,89 @@ connect(C1.b, inner.in)\n";
         .find(|i| i["name"] == "b1.inner")
         .unwrap();
     assert_eq!(nested["definedIn"], "box");
+}
+
+#[test]
+fn instance_parameter_bindings_have_editor_ranges() {
+    // COMP-04: the inspector edits a binding in place, or adds one before `)`.
+    let source = "// Lüfter ✓ 🧊\n\
+MoistAirSource ROOM(P=101325 [Pa], T=299 [K], W=0.012, mdot=0.6 [kg/s])\n\
+MoistAirFan FAN(dP = 250 [Pa], eta=0.5 + 0.05)\n\
+MoistAirSink SUP()\n\
+connect(ROOM.out, FAN.in)\n\
+connect(FAN.out, SUP.in)\n";
+    let v = checked(source);
+    let utf16: Vec<u16> = source.encode_utf16().collect();
+    let slice = |r: &Value| {
+        let (a, b) = (
+            r[0].as_u64().unwrap() as usize,
+            r[1].as_u64().unwrap() as usize,
+        );
+        String::from_utf16(&utf16[a..b]).unwrap()
+    };
+    let inst = |name: &str| {
+        v["instances"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap()
+            .clone()
+    };
+    let fan = inst("fan");
+    let params: Vec<(String, String)> = fan["params"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|p| (p["name"].as_str().unwrap().to_string(), slice(&p["range"])))
+        .collect();
+    assert_eq!(
+        params,
+        [
+            ("dp".into(), "250 [Pa]".into()),
+            ("eta".into(), "0.5 + 0.05".into())
+        ]
+    );
+    assert_eq!(slice(&fan["close"]), ")");
+    let sup = inst("sup");
+    assert_eq!(sup["params"], json!([]));
+    assert_eq!(slice(&sup["close"]), ")");
+}
+
+#[test]
+fn local_definitions_have_editor_ranges() {
+    // COMP-05 / HIER: copying or extracting moves a whole definition block.
+    let source = "// ✓ 🧊\n\
+function [a, b] = Box(L=1 [m])\n\
+port(a)\n\
+port(b)\n\
+LiquidPipe inner(fluid$=Water, L=L, D=0.05 [m], rough=1e-4 [m])\n\
+connect(a, inner.in)\n\
+connect(inner.out, b)\n\
+end\n\
+LiquidSource SRC(fluid$=Water, mdot=1 [kg/s], P=200000 [Pa], T=300 [K])\n\
+Box B1()\n\
+LiquidSink SNK()\n\
+connect(SRC.out, B1.a)\n\
+connect(B1.b, SNK.in)\n";
+    let v = checked(source);
+    let utf16: Vec<u16> = source.encode_utf16().collect();
+    let defs = v["definitions"].as_array().unwrap();
+    assert_eq!(defs.len(), 1);
+    let d = &defs[0];
+    let (a, b) = (
+        d["range"][0].as_u64().unwrap() as usize,
+        d["range"][1].as_u64().unwrap() as usize,
+    );
+    let text = String::from_utf16(&utf16[a..b]).unwrap();
+    assert!(
+        text.starts_with("function [a, b] = Box(") && text.ends_with("end"),
+        "{text}"
+    );
+    assert_eq!(
+        (d["name"].as_str(), d["line"].as_u64()),
+        (Some("box"), Some(2))
+    );
+    assert_eq!(d["ports"], json!(["a", "b"]));
+    assert_eq!(d["params"], json!(["l"]));
 }

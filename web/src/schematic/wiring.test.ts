@@ -12,6 +12,7 @@ import {
   parseFreeQuantities,
   previewDomain,
   previewWire,
+  searchLibrary,
 } from './wiring'
 
 describe('previewDomain', () => {
@@ -171,5 +172,23 @@ describe('net topology (WIRE-05)', () => {
     expect(netConnections(conns, 2)).toEqual([2])
     expect(joinedElsewhere(conns, new Set([0]), 'B.in')).toEqual([1])
     expect(joinedElsewhere(conns, new Set([0]), 'a.out')).toEqual([])
+  })
+})
+
+describe('searchLibrary', () => {
+  it('puts document types first and matches type, tag or library', () => {
+    const hits = searchLibrary('fan', ['MyFan'])
+    expect(hits[0]).toMatchObject({ type: 'MyFan', local: true })
+    expect(hits.some((h) => h.type === 'MoistAirFan' && !h.local)).toBe(true)
+    expect(searchLibrary('moistair', []).every((h) => h.library === 'moistair' || /moistair/i.test(h.type + h.summary))).toBe(true)
+  })
+  it('ranks the type typed in full first, then types it starts', () => {
+    expect(searchLibrary('resistor', []).slice(0, 1).map((h) => h.type)).toEqual(['Resistor'])
+  })
+  it('filters by domain and drops untyped local types', () => {
+    const hits = searchLibrary('', ['MyFan'], 'electrical')
+    expect(hits.some((h) => h.local)).toBe(false)
+    expect(hits.some((h) => h.type === 'Resistor')).toBe(true)
+    expect(hits.some((h) => h.type === 'MoistAirFan')).toBe(false)
   })
 })

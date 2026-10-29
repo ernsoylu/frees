@@ -868,6 +868,7 @@ fn flatten_instance<'d>(
                 source_text: sub.source_text.clone(),
                 line: sub.line,
                 span: sub.span,
+                param_spans: Vec::new(),
             },
             defs,
             out_insts,
@@ -2302,6 +2303,7 @@ mod tests {
             source_text: format!("{type_name} {name}(…)"),
             line: 0,
             span: Default::default(),
+            param_spans: Vec::new(),
         }
     }
 
@@ -5563,6 +5565,7 @@ mod tests {
                 source_text: format!("{name} U1()"),
                 line: 0,
                 span: Default::default(),
+                param_spans: Vec::new(),
             }];
             let mut display = BTreeMap::new();
             let result = (|| -> Result<usize> {

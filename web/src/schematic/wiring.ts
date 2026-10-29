@@ -219,3 +219,31 @@ export function joinedElsewhere(connections: readonly ConnectionDto[], removed: 
   const ref = canonRef(endpoint)
   return connections.flatMap((c, k) => (!removed.has(k) && c.endpoints.some((e) => canonRef(e) === ref) ? [k] : []))
 }
+
+/** A placeable type: from the built-in library, or defined in this document. */
+export interface QuickAddChoice {
+  type: string
+  local: boolean
+}
+
+export const MAX_SHOWN = 60
+
+export const COMPONENT_DRAG_TYPE = 'application/x-frees-component'
+
+/**
+ * Library entries matching `query` (type, summary, tags or library), the
+ * document's own types first. With `domain`, only types with a port that can
+ * take a wire of that domain — the catalog's view; Check decides the wire.
+ */
+export function searchLibrary(query: string, localTypes: Iterable<string>, domain?: string | null) {
+  const q = query.trim().toLowerCase()
+  const hit = (...fields: string[]) => !q || fields.some((f) => f.toLowerCase().includes(q))
+  const local = [...localTypes].filter((t) => hit(t) && !domain).map((type) => ({ type, local: true, library: 'document', summary: 'Defined in this document', ports: 0 }))
+  const library = COMPONENT_CATALOG.filter(
+    (c) => hit(c.type, c.summary, c.library, ...c.tags) && (!domain || c.ports.some((p) => previewDomain(c.type, p) === domain)),
+  ).map((c) => ({ type: c.type, local: false, library: c.library, summary: c.summary, ports: c.ports.length }))
+  // The type typed in full, then types it starts, then the rest in catalog order.
+  const rank = (t: string) => (t.toLowerCase() === q ? 0 : t.toLowerCase().startsWith(q) ? 1 : 2)
+  return [...local, ...library.sort((a, b) => rank(a.type) - rank(b.type))]
+}
+

@@ -2173,11 +2173,12 @@ impl<'a> Parser<'a> {
 
         let mut port_args = Vec::new();
         let mut params = ParamOverrides::new();
+        let mut param_spans = Vec::new();
         // `componentArgList : (componentArg (COMMA componentArg)*)?` — the list
         // is optional, as `TransGround G()` in the standard library relies on.
         if !matches!(self.c.peek(), TokenKind::RParen) {
             loop {
-                self.component_arg(&name, &mut port_args, &mut params)?;
+                self.component_arg(&name, &mut port_args, &mut params, &mut param_spans)?;
                 if !self.c.eat(&TokenKind::Comma) {
                     break;
                 }
@@ -2196,6 +2197,7 @@ impl<'a> Parser<'a> {
             source_text,
             line,
             span,
+            param_spans,
         })
     }
 
@@ -2209,13 +2211,16 @@ impl<'a> Parser<'a> {
         inst_name: &str,
         port_args: &mut Vec<String>,
         params: &mut ParamOverrides,
+        param_spans: &mut Vec<(String, Span)>,
     ) -> Result<()> {
         if matches!(self.c.peek(), TokenKind::Ident(_))
             && matches!(self.c.peek_at(1), TokenKind::Eq)
         {
             let name = self.c.expect_ident()?.to_ascii_lowercase();
             self.c.expect(&TokenKind::Eq)?;
+            let value_pos = self.c.pos();
             let value = self.expr()?;
+            param_spans.push((name.clone(), self.span_since(value_pos)));
             // `LinkedHashMap.put`: a repeated name overwrites in place.
             params.put(name, value);
             return Ok(());

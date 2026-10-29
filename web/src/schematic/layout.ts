@@ -310,12 +310,26 @@ interface Endpoint {
 }
 
 function splitEndpoint(raw: string, stream?: string): Endpoint {
-  const dot = raw.indexOf('.')
+  // A subsystem's own boundary (`sub1$a`) is a node of its scope; otherwise the
+  // port follows the last dot, so a nested `sub1.r1.b` is block `sub1.r1`.
+  const dot = raw.includes('$') ? -1 : raw.lastIndexOf('.')
   if (dot <= 0) {
     return { instance: raw.toLowerCase(), stream }
   }
   return { instance: raw.slice(0, dot).toLowerCase(), port: raw.slice(dot + 1), stream }
 }
+
+/**
+ * HIER-01: the instance path a block id lives in — '' at top level, `sub1` for
+ * `sub1.r1` and the boundary node `sub1$a`, `sub1.box` inside SUB1's BOX.
+ */
+export function scopeOf(id: string): string {
+  const cut = id.startsWith('$') ? -1 : id.includes('$') ? id.indexOf('$') : id.lastIndexOf('.')
+  return cut < 0 ? '' : id.slice(0, cut)
+}
+
+/** The scope a connection endpoint (`sub1.r1.b`, `sub1$a`, `vs.p`) belongs to. */
+export const endpointScope = (raw: string) => scopeOf(splitEndpoint(raw).instance)
 
 function nodeWidth(label: string, type?: string): number {
   const longest = Math.max(label.length, (type ?? '').length)
@@ -1182,6 +1196,8 @@ export function routeAll(
   edges: readonly SchematicEdge[],
   nodes: ReadonlyMap<string, SchematicNode>,
   obstacles: readonly SchematicNode[],
+  /** WIRE-07: the user's bends by edge id; those wires are drawn through them. */
+  manual: ReadonlyMap<string, readonly Pt[]> = new Map(),
 ): Map<string, Pt[]> {
   const occupied: Occupancy = new Map()
   // Every port stub is known before any route is chosen: a lane must not run
@@ -1213,14 +1229,87 @@ export function routeAll(
     }
   }
   const out = new Map<string, Pt[]>()
+  // Hand-routed wires are laid first: the automatic ones route around them.
   for (const e of edges) {
     const a = nodes.get(e.from)
     const b = nodes.get(e.to)
-    if (a && b) {
+    const bends = manual.get(e.id)
+    if (a && b && bends) {
+      const pts = manualRoute(a, b, e.fromPort, e.toPort, bends)
+      occupy(pts.slice(1, -1), netOf(e), occupied)
+      out.set(e.id, pts)
+    }
+  }
+  for (const e of edges) {
+    const a = nodes.get(e.from)
+    const b = nodes.get(e.to)
+    if (a && b && !manual.has(e.id)) {
       const net = netOf(e)
       const pts = routePoints(a, b, e.fromPort, e.toPort, obstacles, { net, occupied, stubs, junctions })
       occupy(pts.slice(1, -1), net, occupied)
       out.set(e.id, pts)
+    }
+  }
+  return out
+}
+
+/**
+ * A wire's identity for its saved route: its two ports, which survive a
+ * re-check that renumbers connections. A junction end is `*`, since a port
+ * joins at most one junction.
+ */
+export function routeKey(e: Pick<SchematicEdge, 'from' | 'to' | 'fromPort' | 'toPort'>): string {
+  const end = (id: string, port?: string) => (id.startsWith('$node') ? '*' : `${id}.${port ?? ''}`)
+  return [end(e.from, e.fromPort), end(e.to, e.toPort)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).join('|')
+}
+
+/**
+ * WIRE-07: the orthogonal polyline through the user's bends, from port stub to
+ * port stub. An unaligned step turns horizontally first, so moving an end
+ * keeps every bend and only re-squares the legs that meet it.
+ */
+export function manualRoute(a: SchematicNode, b: SchematicNode, fromPort: string | undefined, toPort: string | undefined, bends: readonly Pt[]): Pt[] {
+  const p = anchorAt(a, fromPort)
+  const q = anchorAt(b, toPort)
+  const pts: Pt[] = []
+  let prev = stubOut(p, STUB)
+  pts.push(prev)
+  for (const w of [...bends, stubOut(q, STUB)]) {
+    if (prev.x !== w.x && prev.y !== w.y) pts.push({ x: w.x, y: prev.y })
+    pts.push({ x: w.x, y: w.y })
+    prev = w
+  }
+  return [{ x: p.x, y: p.y }, ...simplify(pts), { x: q.x, y: q.y }]
+}
+
+/** The lane of `pts` nearest `at` (never a port stub), and the foot of the perpendicular. */
+export function nearestLane(pts: readonly Pt[], at: Pt): { index: number; foot: Pt } {
+  let best = { index: 1, foot: pts[1] ?? at, d: Infinity }
+  for (let j = 1; j < pts.length - 2; j++) {
+    const [u, v] = [pts[j], pts[j + 1]]
+    const foot = {
+      x: Math.min(Math.max(at.x, Math.min(u.x, v.x)), Math.max(u.x, v.x)),
+      y: Math.min(Math.max(at.y, Math.min(u.y, v.y)), Math.max(u.y, v.y)),
+    }
+    const d = Math.hypot(at.x - foot.x, at.y - foot.y)
+    if (d < best.d) best = { index: j, foot, d }
+  }
+  return { index: best.index, foot: best.foot }
+}
+
+/** The blocks a route's lanes (not its port stubs) pass through. */
+export function routeCrosses(pts: readonly Pt[], blocks: Iterable<SchematicNode>): string[] {
+  const out: string[] = []
+  for (const n of blocks) {
+    if (n.kind !== 'instance') continue
+    for (let i = 2; i < pts.length - 1; i++) {
+      const [u, v] = [pts[i - 1], pts[i]]
+      const across = u.y === v.y && u.y > n.y && u.y < n.y + n.h && Math.max(u.x, v.x) > n.x && Math.min(u.x, v.x) < n.x + n.w
+      const down = u.x === v.x && u.x > n.x && u.x < n.x + n.w && Math.max(u.y, v.y) > n.y && Math.min(u.y, v.y) < n.y + n.h
+      if (across || down) {
+        out.push(n.id)
+        break
+      }
     }
   }
   return out

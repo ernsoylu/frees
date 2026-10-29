@@ -46,6 +46,8 @@ interface Props {
   onInsert: (block: string) => void
   /** Instance names already in the document (case-insensitive uniqueness). */
   existingNames?: readonly string[]
+  /** Open on this component, chosen elsewhere (the canvas quick-add). */
+  initialType?: string
 }
 
 // Friendly labels for the library keys parsed from `category: Component (<lib>)`.
@@ -89,10 +91,10 @@ function buildSections(spec: ComponentSpec): ComponentSection[] {
   return sections
 }
 
-export default function ComponentWizardModal({ opened, onClose, onInsert, existingNames = [] }: Readonly<Props>) {
+export default function ComponentWizardModal({ opened, onClose, onInsert, existingNames = [], initialType }: Readonly<Props>) {
   const [search, setSearch] = useState('')
   const [library, setLibrary] = useState<string | null>(null)
-  const [selectedType, setSelectedType] = useState<string | null>(null)
+  const [selectedType, setSelectedType] = useState<string | null>(initialType ?? null)
   const [instanceName, setInstanceName] = useState('')
   const [values, setValues] = useState<ParamValues>({})
   // Preamble blocks (correlation helpers / TABLE blocks) keyed by the param they
