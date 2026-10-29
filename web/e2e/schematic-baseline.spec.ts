@@ -1736,7 +1736,9 @@ test('AC-08: extract a subsystem with duplicate port names, captured parameters 
   await dragBy(page, svg, 'r1', 0, 80)
   const placed = await svg.locator('[data-node="r1"]').getAttribute('transform')
   await svg.getByRole('button', { name: /\bR1$/ }).click()
-  await svg.getByRole('button', { name: /\bR2$/ }).click({ modifiers: ['Shift'] })
+  // R1's pinned card can cover R2 in a docked panel; Shift+Enter adds it from the keyboard.
+  await svg.getByRole('button', { name: /\bR2$/ }).focus()
+  await page.keyboard.press('Shift+Enter')
   await page.getByRole('button', { name: 'Edit components' }).click()
   await page.getByRole('menuitem', { name: 'Extract subsystem…' }).click()
 
@@ -1922,6 +1924,7 @@ test('AC-14: insert, configure, connect, inspect, solve and export from the keyb
     await page.keyboard.press('Control+K')
     await page.getByPlaceholder('Search views, tools, and actions…').fill(command)
     await page.keyboard.press('Enter')
+    await expect(page.getByPlaceholder('Search views, tools, and actions…')).toBeHidden()
   }
   const press = async (target: Locator, key = 'Enter') => {
     await target.focus()
@@ -1936,6 +1939,8 @@ test('AC-14: insert, configure, connect, inspect, solve and export from the keyb
       await page.keyboard.type(field[1])
     }
     await press(wizard.getByRole('button', { name: 'Add to System' }))
+    // The closing wizard still holds focus; the next key must reach the canvas.
+    await expect(wizard).toBeHidden()
   }
 
   // Insert and configure: the palette's canvas command, then the canvas's own `a` key.
@@ -1946,6 +1951,7 @@ test('AC-14: insert, configure, connect, inspect, solve and export from the keyb
   await press(canvas, 'a')
   await insert('Resistor', [/^R\s*\[ohm\]/, '5'])
   await press(canvas, 'a')
+  await expect(quick.getByLabel('Search components')).toBeFocused()
   // Typing in the search box is text: `l` does not open the list, Delete deletes nothing.
   await page.keyboard.type('Gl')
   await page.keyboard.press('Delete')
@@ -1954,6 +1960,7 @@ test('AC-14: insert, configure, connect, inspect, solve and export from the keyb
   await page.keyboard.type('round')
   await page.keyboard.press('Enter')
   await press(wizard.getByRole('button', { name: 'Add to System' }))
+  await expect(wizard).toBeHidden()
   await editorText(page).toContain('Ground GROU()')
 
   // Check is announced; connect through the port fields, each announced.
@@ -1992,11 +1999,673 @@ test('AC-14: insert, configure, connect, inspect, solve and export from the keyb
   expect(exported).toContain('data-node="resi"')
   expect(exported).not.toContain('data-node="grou"')
 
-  // The shortcuts sheet lists the canvas keys.
+  // The shortcuts sheet lists the canvas keys, once the export dialog has closed.
+  await expect(page.getByTestId('export-drawing')).toBeHidden()
   await page.locator('body').focus()
   await page.keyboard.press('Shift+?')
   await expect(page.getByRole('dialog', { name: 'Keyboard Shortcuts' })).toContainText('Schematic: Component and connection list')
   await record(testInfo, 'evidence', { text: await savedText(page) })
+})
+
+const SEARCHED = `function [a, b] = Pair(R_load)
+  Resistor R1(R=R_load)
+  Resistor R2(R=R_load)
+  port(a)
+  port(b)
+  connect(R1.b, R2.b)
+  connect(a, R1.a)
+  connect(b, R2.a)
+end
+R_load = 5 [ohm]
+VoltageSource VS(E=10 [V])
+Pair SUB1(R_load=R_load)
+Ground G()
+Resistor SPARE(R=1)
+connect(VS.p, SUB1.a)
+connect(SUB1.b, VS.n, G.port)
+I_load = SUB1.R1.a.I
+`
+
+test('VIEW-07: search blocks, types, ports, nets, parameters, statements and issues; a hit opens its scope and centres it; the saved camera holds', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, SEARCHED, 'Check')
+  const search = async (q: string, hit: RegExp) => {
+    await svg.locator('..').focus()
+    await page.keyboard.press('/')
+    await page.getByRole('textbox', { name: 'Search the model' }).fill(q)
+    await page.getByTestId('model-search').getByRole('button', { name: hit }).first().click()
+  }
+  const centred = async (id: string) => {
+    const box = (await svg.boundingBox())!
+    const node = (await svg.locator(`[data-node="${id}"]`).boundingBox())!
+    return Math.hypot(node.x + node.width / 2 - (box.x + box.width / 2), node.y + node.height / 2 - (box.y + box.height / 2))
+  }
+  // A root camera the user set; a search into SUB1 and Back must not lose it.
+  await page.getByRole('button', { name: 'Zoom in' }).click()
+  const rootCamera = await svg.locator('[data-node="vs"]').boundingBox()
+
+  await search('r2', /^block R2 Resistor in SUB1/)
+  await expect(page.getByRole('navigation', { name: 'Breadcrumbs' })).toHaveText(/Model›SUB1 \(Pair\)/)
+  await expect(svg.locator('[data-node="sub1.r2"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => centred('sub1.r2')).toBeLessThan(8)
+  await page.getByRole('button', { name: 'Back' }).click()
+  await expect.poll(() => svg.locator('[data-node="vs"]').boundingBox()).toEqual(rootCamera)
+
+  // A type selects every block of it in that scope; a net its blocks; a binding its block.
+  await search('resistor', /^type Resistor 2 in SUB1/)
+  await expect(svg.locator('[data-node][aria-pressed="true"]')).toHaveCount(2)
+  await search('sub1.r1.b', /^net sub1\.r1\.b — sub1\.r2\.b/)
+  await expect(svg.locator('[data-node][aria-pressed="true"]')).toHaveCount(2)
+  await search('R_load', /^parameter SUB1\.r_load = R_load/)
+  await expect(svg.locator('[data-node="sub1"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('navigation', { name: 'Breadcrumbs' })).toHaveText(/^Model$/)
+  await search('vs.p', /^port VS\.p electrical/)
+  await expect(svg.locator('[data-node="vs"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => centred('vs')).toBeLessThan(8)
+
+  // A statement selects the blocks it names (the editor follows, behind its tab); an issue its block.
+  await search('I_load', /^statement I_load = SUB1\.R1\.a\.I line 17/)
+  await expect(svg.locator('[data-node="sub1"]')).toHaveAttribute('aria-pressed', 'true')
+  await search('not connected', /^issue spare\.a is not connected/)
+  await expect(svg.locator('[data-node="spare"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('canvas-announcer')).toHaveText(/^spare\.a is not connected, in Model/)
+  await svg.locator('..').focus()
+  await page.keyboard.press('/')
+  await page.getByRole('textbox', { name: 'Search the model' }).fill('zzz')
+  await expect(page.getByTestId('model-search')).toContainText('Nothing matches.')
+  await record(testInfo, 'evidence', { text: await savedText(page) })
+})
+
+test('VIEW-08: presets change view settings only; a named view restores scope, camera and settings, survives save and reopen, and never edits the document', async ({ page }, testInfo) => {
+  await page.addInitScript(() => {
+    delete (window as { showSaveFilePicker?: unknown }).showSaveFilePicker
+    delete (window as { showOpenFilePicker?: unknown }).showOpenFilePicker
+  })
+  const svg = await openSolved(page, SEARCHED, 'Check')
+  const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').schematic)
+  const views = page.getByTestId('views')
+  const openViews = async () => {
+    if (!(await views.isVisible())) await page.getByRole('button', { name: 'Views', exact: true }).click()
+  }
+  await openViews()
+  await views.getByRole('button', { name: 'Debug', exact: true }).click()
+  await expect.poll(async () => (await saved())?.view).toMatchObject({ portLabels: true, grouping: 'domain' })
+
+  // Look into SUB1, zoom, and name that view.
+  await svg.locator('..').focus()
+  await page.keyboard.press('/')
+  await page.getByRole('textbox', { name: 'Search the model' }).fill('r2')
+  await page.getByTestId('model-search').getByRole('button', { name: /^block R2/ }).first().click()
+  await page.getByRole('button', { name: 'Zoom in' }).click()
+  await page.waitForTimeout(300)
+  // R1: R2 carries the search's selection ring, which a view does not restore.
+  const inside = await svg.locator('[data-node="sub1.r1"]').boundingBox()
+  await openViews()
+  await views.getByRole('textbox', { name: 'View name' }).fill('Inside')
+  await views.getByRole('button', { name: 'Save', exact: true }).click()
+
+  // Elsewhere, with other settings; the view brings all of it back.
+  await page.getByRole('button', { name: 'Back' }).click()
+  await expect(views).toBeHidden()
+  await openViews()
+  await views.getByRole('button', { name: 'Names', exact: true }).click()
+  await expect.poll(async () => (await saved())?.view?.portLabels).toBe(false)
+  await views.getByRole('button', { name: 'Inside', exact: true }).click()
+  await expect(page.getByRole('navigation', { name: 'Breadcrumbs' })).toHaveText(/Model›SUB1 \(Pair\)/)
+  await expect.poll(() => svg.locator('[data-node="sub1.r1"]').boundingBox()).toEqual(inside)
+  await expect.poll(async () => (await saved())?.view).toMatchObject({ portLabels: true, grouping: 'domain' })
+
+  // Saved with the project file and back after reopening.
+  await page.getByRole('button', { name: 'File', exact: true }).click()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: 'Save Project', exact: true }).click()])
+  const file = testInfo.outputPath('view08.frees')
+  await download.saveAs(file)
+  await page.getByRole('button', { name: 'File', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'New Project', exact: true }).click()
+  await expect(svg.locator('[data-node="vs"]')).toHaveCount(0)
+  await page.getByRole('button', { name: 'File', exact: true }).click()
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('menuitem', { name: 'Open Project…', exact: true }).click()])
+  await chooser.setFiles(file)
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await expect(svg.locator('[data-node="vs"]')).toHaveCount(1, { timeout: 15_000 })
+  await openViews()
+  await views.getByRole('button', { name: 'Inside', exact: true }).click()
+  await expect(page.getByRole('navigation', { name: 'Breadcrumbs' })).toHaveText(/Model›SUB1 \(Pair\)/)
+  await views.getByRole('button', { name: 'Delete view Inside' }).click()
+  await expect(views).toContainText('None yet.')
+  await editorText(page).toBe(SEARCHED)
+  await record(testInfo, 'evidence', { inside, schematic: await saved() })
+})
+
+const NOTED = PAIR.replace('I_load = R1.a.I\n', '')
+
+test('VIEW-09: notes, callouts, variable cards and legends; links follow a rename and show broken when the target is deleted; the document is untouched', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, NOTED)
+  const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').schematic?.annotations ?? [])
+  const annotate = async (item: string | RegExp, text?: string) => {
+    await page.getByRole('button', { name: 'Annotate', exact: true }).click()
+    await page.getByRole('menuitem', { name: item }).click()
+    if (text === undefined) return
+    const dialog = page.getByRole('dialog', { name: 'Annotation' })
+    await dialog.getByRole('textbox', { name: 'Text' }).fill(text)
+    await dialog.getByRole('button', { name: 'Save' }).click()
+  }
+  const card = svg.locator('[data-annotation="card"]')
+  const callout = svg.locator('[data-annotation="callout"]')
+
+  // A card from a pinned block's value, a callout to the block, a note and the line legend.
+  await svg.locator('[data-node="r1"]').click()
+  await page.getByRole('button', { name: 'Card for R1.a.I on the canvas' }).click()
+  await expect(card).toHaveAccessibleName('card: R1.a.i, 0.66667 A')
+  await annotate(/^Callout to R1$/, 'Load resistor')
+  await expect(callout).toHaveAccessibleName('callout: Load resistor')
+  await expect(callout.locator('line')).toHaveCount(1)
+  await annotate('Note', 'Check wiring\nbefore the test')
+  await expect(svg.locator('[data-annotation="note"]')).toHaveAccessibleName('note: Check wiring, before the test')
+  await annotate('Legend')
+  await expect(svg.locator('[data-annotation="legend"]')).toContainText(/electrical/)
+
+  // Drag the note: it moves and stays moved.
+  const note = svg.locator('[data-annotation="note"] rect')
+  const box = (await note.boundingBox())!
+  await page.mouse.move(box.x + 10, box.y + 8)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 70, box.y + 48, { steps: 5 })
+  await page.mouse.up()
+  await expect.poll(async () => (await note.boundingBox())!.x).toBeCloseTo(box.x + 60, 0)
+  await expect.poll(async () => (await saved()).map((a: { kind: string; target: string }) => `${a.kind} ${a.target}`)).toEqual(['card r1.a.i', 'callout r1', 'note ', 'legend '])
+  await editorText(page).toBe(NOTED)
+
+  // Rename R1 from its card, still pinned: both links follow.
+  await page.getByRole('button', { name: 'Rename', exact: true }).click()
+  await page.getByLabel('New instance name').fill('RL')
+  await page.keyboard.press('Enter')
+  await expect(svg.locator('[data-node="rl"]')).toHaveCount(1, { timeout: 15_000 })
+  await expect.poll(async () => (await saved()).map((a: { target: string }) => a.target)).toEqual(['rl.a.i', 'rl', '', ''])
+  await expect(svg.locator('[data-annotation][data-broken]')).toHaveCount(0)
+  await expect(callout.locator('line')).toHaveCount(1)
+  // The rename withdrew the solve: the card says so instead of showing the old number.
+  await expect(card).toHaveAccessibleName('card: RL.a.i, Not solved')
+
+  // Delete RL: both links show broken, then Undo mends them.
+  await svg.getByRole('button', { name: /\bRL$/ }).click()
+  await page.keyboard.press('Delete')
+  await page.getByTestId('delete-impact').getByRole('button', { name: 'Delete' }).click()
+  await expect(svg.locator('[data-node="rl"]')).toHaveCount(0, { timeout: 15_000 })
+  await expect(callout).toHaveAccessibleName('callout: Load resistor, Link broken: rl no longer exists')
+  await expect(card).toHaveAccessibleName('card: rl.a.i, Link broken: rl.a.i no longer exists')
+  await expect(callout).toHaveAttribute('data-broken', 'true')
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(svg.locator('[data-annotation][data-broken]')).toHaveCount(0, { timeout: 15_000 })
+
+  // Edit and delete from the annotation itself.
+  await svg.locator('[data-annotation="legend"]').click()
+  await page.getByRole('dialog', { name: 'Annotation' }).getByRole('button', { name: 'Delete' }).click()
+  await expect(svg.locator('[data-annotation="legend"]')).toHaveCount(0)
+  await testInfo.attach('view09.png', { body: await svg.screenshot(), contentType: 'image/png' })
+  await record(testInfo, 'evidence', { annotations: await saved() })
+})
+
+const EQUATIONS = `// AC-16: equations only
+x = 2
+y = x^2 + 1
+z + w = y
+z - w = 1
+q = sin(z)*x
+`
+
+test('AC-16: an equation-only model explains itself, shows its variables and the solve\'s block dependencies without wires; a renamed or deleted variable shows a broken card', async ({ page }, testInfo) => {
+  const source = 'https://raw.example/equations.frees'
+  await page.route(source, (route) => route.fulfill({ contentType: 'text/plain', body: EQUATIONS }))
+  await page.goto('/?url=' + encodeURIComponent(source))
+  await expect(page.locator('.cm-content')).toContainText('AC-16', { timeout: 60_000 })
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await page.locator('body').click({ position: { x: 5, y: 5 } })
+  await page.keyboard.press('Control+K')
+  await page.getByPlaceholder('Search views, tools, and actions…').fill('Schematic')
+  await page.keyboard.press('Enter')
+  const view = page.getByTestId('equation-view')
+  await expect(view).toContainText('This model is equations only')
+  // Before a solve: the variables Check found, nothing about order.
+  await expect(view).toContainText('Solve to see how the equations depend on each other.')
+  await view.getByRole('button', { name: 'y', exact: true }).click()
+  const cards = page.getByTestId('variable-cards')
+  await expect(cards.getByLabel(/^card: /)).toHaveAccessibleName('card: y, Not solved')
+
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 120_000 })
+  const deps = page.getByTestId('dependencies')
+  await expect(deps.locator('[data-block]')).toHaveCount(4)
+  await expect(deps.getByRole('group', { name: /^Block 3, solved together: solves w, z$/ })).toBeVisible()
+  // Each arrow is a dependency the solve's blocks carry; no wires are drawn.
+  await expect(deps.locator('path[data-dependency]')).toHaveCount(4)
+  expect(await deps.locator('path[data-dependency]').evaluateAll((ps) => ps.map((p) => `${p.getAttribute('data-dependency')} ${p.querySelector('title')?.textContent}`))).toEqual([
+    '1-2 Block 2 uses x from block 1',
+    '2-3 Block 3 uses y from block 2',
+    '1-4 Block 4 uses x from block 1',
+    '3-4 Block 4 uses z from block 3',
+  ])
+  await expect(page.locator('path[data-net], [data-node]')).toHaveCount(0)
+  await expect(cards.getByLabel(/^card: /)).toHaveAccessibleName('card: y, 5 -')
+  await deps.getByRole('button', { name: 'Card for q' }).click()
+  await expect(cards.getByLabel(/^card: /)).toHaveCount(2)
+
+  // An equation opens its line in the editor.
+  await deps.getByRole('button', { name: 'Equation z - w = 1' }).click()
+  await expect(page.locator('.cm-activeLine')).toContainText('z - w = 1')
+
+  // Rename y in the source: the card for y reads broken, not the old 5.
+  const editor = page.locator('.cm-content')
+  await editor.click()
+  await page.keyboard.press('Control+a')
+  await page.keyboard.insertText(EQUATIONS.replaceAll('y', 'yy'))
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await page.getByRole('button', { name: /^Schematic/ }).first().click()
+  await expect(cards.getByLabel('card: y, Link broken: y no longer exists')).toBeVisible({ timeout: 15_000 })
+  await expect(cards.getByLabel('card: q, Not solved')).toBeVisible()
+  await expect(deps).toHaveCount(0)
+  await cards.getByRole('button', { name: 'Remove card y' }).click()
+  await expect(cards.getByLabel(/^card: /)).toHaveCount(1)
+  await testInfo.attach('ac16.png', { body: await view.screenshot(), contentType: 'image/png' })
+  await record(testInfo, 'evidence', { cards: await page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').schematic?.annotations) })
+})
+
+test('COMP-07: rotate, mirror, detail and name placement per block; ports keep their names and wires stay on them; the equations and result do not change', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, PAIR)
+  // Where R1's ports sit relative to its centre, and whether the VS–R1 wire still ends on port a.
+  const geometry = () =>
+    svg.evaluate((root) => {
+      const centre = (el: Element) => {
+        const r = el.getBoundingClientRect()
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+      }
+      const block = centre(root.querySelector('[data-node="r1"] rect')!)
+      const port = (p: string) => {
+        const c = centre(root.querySelector(`[data-port="r1.${p}"] circle:last-of-type`)!)
+        return { dx: Math.round(c.x - block.x), dy: Math.round(c.y - block.y) }
+      }
+      const wire = root.querySelector('path[data-route="r1.a|vs.p"]') as SVGPathElement
+      const m = wire.getScreenCTM()!
+      const ends = [0, wire.getTotalLength()].map((t) => wire.getPointAtLength(t)).map((p) => ({ x: m.a * p.x + m.c * p.y + m.e, y: m.b * p.x + m.d * p.y + m.f }))
+      const a = centre(root.querySelector('[data-port="r1.a"] circle:last-of-type')!)
+      return { a: port('a'), b: port('b'), wireOnA: Math.min(...ends.map((e) => Math.hypot(e.x - a.x, e.y - a.y))) < 2 }
+    })
+  // The layout puts both ports on R1's bottom edge, a to the left of b.
+  const before = await geometry()
+  expect([before.a.dy === before.b.dy, before.a.dy > 0, before.a.dx < before.b.dx, before.wireOnA]).toEqual([true, true, true, true])
+  await svg.locator('[data-node="r1"]').click()
+  const editor = page.getByTestId('style-editor')
+  await editor.getByText('90°', { exact: true }).click()
+  // A quarter turn clockwise: the bottom edge becomes the left, its left end the top.
+  await expect.poll(async () => (await geometry()).a.dx).toBeLessThan(0)
+  let turned = await geometry()
+  expect([turned.a.dx === turned.b.dx, turned.a.dy < turned.b.dy, turned.wireOnA]).toEqual([true, true, true])
+  // Mirrored first, then turned: same side, the order flips.
+  await editor.getByRole('switch', { name: 'Mirror' }).click()
+  await expect.poll(async () => (await geometry()).a.dy).toBeGreaterThan(0)
+  turned = await geometry()
+  expect([turned.a.dx === turned.b.dx, turned.a.dy > turned.b.dy, turned.wireOnA]).toEqual([true, true, true])
+  // The name moves below the block and grows; this block alone shows its name only.
+  await editor.getByRole('combobox', { name: 'Name position' }).click()
+  await page.getByRole('option', { name: 'Below' }).click()
+  await expect(svg.locator('[data-node="r1"] text[data-label="below"]')).toHaveAttribute('text-anchor', 'middle')
+  await editor.getByRole('combobox', { name: 'Name size' }).click()
+  await page.getByRole('option', { name: '16', exact: true }).click()
+  await expect(svg.locator('[data-node="r1"] text[data-label="below"]')).toHaveAttribute('font-size', '16')
+  await editor.getByRole('combobox', { name: 'Detail' }).click()
+  await page.getByRole('option', { name: 'Name only' }).click()
+  await expect(svg.locator('[data-node="r1"] [data-badge]')).toHaveCount(0)
+  await expect(svg.locator('[data-node="r2"] [data-badge]')).toHaveCount(1)
+  await expect
+    .poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').schematic?.styles?.instances?.r1))
+    .toEqual({ rotate: 90, mirror: true, label: 'below', labelSize: 16, density: 'names' })
+  // Presentation only: the document is unchanged and the solve gives the same current.
+  await editorText(page).toBe(PAIR)
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 120_000 })
+  // R1's card is still pinned: its current reads as before the transforms.
+  await expect(page.getByText('0.66667 A').first()).toBeVisible()
+  await testInfo.attach('comp07.png', { body: await svg.screenshot(), contentType: 'image/png' })
+  await record(testInfo, 'evidence', { before, turned })
+})
+
+test('AC-11: trace coolant, refrigerant and thermal links on the EV model; open a component\'s values in watch, table, plot and state windows; grouping never duplicates equipment or re-solves', async ({ page }, testInfo) => {
+  test.setTimeout(300_000)
+  const svg = await openSolved(page, EV_THERMAL_EXAMPLE_TEXT)
+  const ids = () => svg.locator('[data-node]').evaluateAll((ns) => ns.map((n) => n.getAttribute('data-node')))
+  const banner = page.getByRole('status').filter({ hasText: /showing \d+ of \d+ components/ })
+  const lit = async () => Number((await banner.textContent())!.match(/showing (\d+) of/)![1])
+
+  // Trace from each side of the chiller: refrigerant (CHLR), coolant (CHLC) and the thermal tie between them.
+  const traced: Record<string, number> = {}
+  for (const block of ['CHLR', 'CHLC', 'BATT']) {
+    await svg.getByRole('button', { name: new RegExp(`\\b${block}$`) }).click()
+    await page.getByRole('button', { name: 'Trace net' }).click()
+    traced[block] = await lit()
+    await page.keyboard.press('Escape')
+  }
+  expect(traced.CHLR).toBeGreaterThan(1)
+  expect(traced.CHLC).toBeGreaterThan(1)
+
+  // Watch the chiller's refrigerant inlet pressure.
+  await svg.getByRole('button', { name: /\bCHLR$/ }).click()
+  await page.getByRole('button', { name: /^Watch CHLR\.in\.P$/i }).click()
+  const watch = page.getByTestId('watch')
+  await expect(watch).toContainText(/CHLR\.in\.p/i)
+  const watched = await watch.textContent()
+
+  // Group by domain: every block still drawn once, the solve untouched.
+  const before = (await ids()).sort()
+  expect(before).toHaveLength(26)
+  await page.getByRole('button', { name: 'Views', exact: true }).click()
+  await page.getByTestId('views').getByRole('button', { name: 'Debug', exact: true }).click()
+  await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').schematic?.view?.grouping)).toBe('domain')
+  await page.keyboard.press('Escape')
+  expect((await ids()).sort()).toEqual(before)
+  await expect(watch).toHaveText(watched!)
+
+  // Its fluid's property diagram.
+  // Pin CHLR's card again when another window took the view (a second click would unpin it).
+  const open = async (name: RegExp) => {
+    const button = page.getByRole('button', { name })
+    for (let k = 0; k < 2 && !(await button.waitFor({ timeout: 3000 }).then(() => true, () => false)); k++) await svg.getByRole('button', { name: /\bCHLR$/ }).click()
+    await button.click()
+  }
+  await open(/^Open CHLR\.in\.P in…$/i)
+  await page.getByRole('menuitem', { name: /^Property diagram/ }).click()
+  await expect(page.getByRole('dialog', { name: 'New Plot' }).getByRole('combobox', { name: 'Fluid' })).toHaveValue('R1234yf')
+  await page.keyboard.press('Escape')
+
+  // Two of its values into a parametric table; run it; the plot then opens from the table.
+  // A table edit withdraws the steady result (AC-10), so the model is solved again before each handoff.
+  const solveSteady = async () => {
+    await page.getByRole('button', { name: /^Schematic/ }).first().click()
+    await page.getByRole('button', { name: 'Solve', exact: true }).click()
+    await expect(watch).not.toContainText('not solved', { timeout: 120_000 })
+  }
+  await open(/^Open CHLR\.in\.P in…$/i)
+  await page.getByRole('menuitem', { name: /^Add to a parametric table/ }).click()
+  await solveSteady()
+  await open(/^Open CHLR\.q in…$/i)
+  await page.getByRole('menuitem', { name: /^Add to a parametric table/ }).click()
+  // The table window has focus: Solve runs its three rows.
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText('Run status: completed')).toBeVisible({ timeout: 240_000 })
+  await solveSteady()
+  await open(/^Open CHLR\.q in…$/i)
+  await expect(page.getByRole('menuitem', { name: /^Plot/ })).toBeEnabled()
+  await page.getByRole('menuitem', { name: /^Plot/ }).click()
+  // The X-Y plot dialog opens on the run table, CHLR.q against its other column.
+  const plot = page.getByRole('dialog', { name: 'New Plot' })
+  await expect(plot.getByRole('combobox', { name: 'X-axis variable' })).toHaveValue('chlr.in.p')
+  await expect(plot).toContainText('chlr.q')
+  await testInfo.attach('ac11-plot.png', { body: await plot.screenshot(), contentType: 'image/png' })
+  await record(testInfo, 'evidence', { traced, ids: before.length })
+})
+
+test('AC-15 (without sheets and custom symbols): engineering and presentation views, linked annotations, a display unit and the theme survive save, reopen and export', async ({ page }, testInfo) => {
+  await page.addInitScript(() => {
+    delete (window as { showSaveFilePicker?: unknown }).showSaveFilePicker
+    delete (window as { showOpenFilePicker?: unknown }).showOpenFilePicker
+  })
+  const svg = await openSolved(page, PAIR)
+  const views = page.getByTestId('views')
+  const saveView = async (preset: string) => {
+    if (!(await views.isVisible())) await page.getByRole('button', { name: 'Views', exact: true }).click()
+    await views.getByRole('button', { name: preset, exact: true }).click()
+    await views.getByRole('textbox', { name: 'View name' }).fill(preset)
+    await views.getByRole('button', { name: 'Save', exact: true }).click()
+  }
+  await saveView('Engineering')
+  await saveView('Presentation')
+  await page.keyboard.press('Escape')
+
+  // A note, and a card for R1's current read in mA.
+  await page.getByRole('button', { name: 'Annotate', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Note' }).click()
+  await page.getByRole('dialog', { name: 'Annotation' }).getByRole('textbox', { name: 'Text' }).fill('Bench test, 10 V')
+  await page.getByRole('dialog', { name: 'Annotation' }).getByRole('button', { name: 'Save' }).click()
+  await svg.locator('[data-node="r1"]').click()
+  await page.getByRole('button', { name: 'Card for R1.a.I on the canvas' }).click()
+  await page.getByRole('button', { name: 'Format R1.a.I' }).click()
+  const fmt = page.getByTestId('format-variable')
+  await fmt.getByRole('textbox', { name: /Display unit/ }).fill('mA')
+  await fmt.getByRole('textbox', { name: /Display unit/ }).press('Enter')
+  await page.keyboard.press('Escape')
+  const card = svg.locator('[data-annotation="card"]')
+  await expect(card).toHaveAccessibleName(/^card: R1\.a\.i, 666\.67 mA$/)
+
+  // Theme: the annotations take the light ink.
+  const fill = () => card.locator('rect').getAttribute('fill')
+  const dark = await fill()
+  await page.getByRole('button', { name: 'Switch to light mode' }).click()
+  await expect.poll(fill).not.toBe(dark)
+
+  // Export carries the annotations unless they are left out.
+  const dialog = page.getByTestId('export-drawing')
+  const exportSvg = async (annotations: boolean) => {
+    await page.getByRole('button', { name: 'Export…' }).click()
+    await dialog.getByText('Whole model').click()
+    if (!annotations) await dialog.getByRole('checkbox', { name: 'Annotations' }).uncheck()
+    const [file] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Export', exact: true }).click()])
+    return readFileSync(await file.path(), 'utf8')
+  }
+  const withNotes = await exportSvg(true)
+  expect(withNotes).toContain('data-annotation="note"')
+  expect(withNotes).toContain('666.67 mA')
+  expect(await exportSvg(false)).not.toContain('data-annotation=')
+
+  // Save, start over, reopen: views, annotations and the unit come back.
+  await page.getByRole('button', { name: 'File', exact: true }).click()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: 'Save Project', exact: true }).click()])
+  const file = testInfo.outputPath('ac15.frees')
+  await download.saveAs(file)
+  await page.getByRole('button', { name: 'File', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'New Project', exact: true }).click()
+  await expect(svg.locator('[data-node="r1"]')).toHaveCount(0)
+  await page.getByRole('button', { name: 'File', exact: true }).click()
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('menuitem', { name: 'Open Project…', exact: true }).click()])
+  await chooser.setFiles(file)
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(svg.locator('[data-node="r1"]')).toHaveCount(1, { timeout: 30_000 })
+  await expect(card).toHaveAccessibleName(/^card: R1\.a\.i, 666\.67 mA$/, { timeout: 30_000 })
+  await expect(svg.locator('[data-annotation="note"]')).toHaveAccessibleName('note: Bench test, 10 V')
+  await page.getByRole('button', { name: 'Views', exact: true }).click()
+  await expect(views.getByRole('button', { name: /^(Engineering|Presentation)$/ })).toHaveCount(4) // two presets, two saved views
+  await views.getByRole('button', { name: 'Presentation', exact: true }).last().click()
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').schematic?.view?.background)).toBe('plain')
+  await editorText(page).toBe(PAIR)
+  await record(testInfo, 'evidence', { exported: withNotes.length })
+})
+
+// The 500-component budget (CR section 5): the chilled-water floor scaled to 83 zones,
+// 502 instances. Measured on Check alone; a solve is not part of the canvas budget.
+const BIG_ZONES = Array.from({ length: 83 }, (_, j) => j + 1)
+const BIG_FLOOR = [
+  '// Chilled-water floor: 83 zones, 502 instances',
+  'LiquidSource  CHWS(fluid$=Water, mdot=9 [kg/s], P=200000 [Pa], T=280 [K])',
+  'LiquidPump    PUMP(fluid$=Water, eta=0.65)',
+  'PUMP.out.P = 320000 [Pa]',
+  'ThermalSource OUT(T=305 [K])',
+  ...BIG_ZONES.flatMap((i) => [
+    `LiquidPipe    P${i}(fluid$=Water, L=${2 + (i % 20)} [m], D=0.025 [m], rough=4.5e-5 [m])`,
+    `LiquidOrifice V${i}(CdA=2.2e-05, rho=1000)`,
+    `LiquidWallHX  FC${i}(fluid$=Water, UA=200 [W/K])`,
+    `MassGen       Z${i}(C=2e6, Qgen=${QGEN[i % 16]}, T0=297 [K])`,
+    `Convection    E${i}(htc=3, area=20 [m^2])`,
+  ]),
+  ...BIG_ZONES.slice(1).map((i) => `LiquidMixer   M${i - 1}()`),
+  'LiquidPipe    RISER(fluid$=Water, L=30 [m], D=0.1 [m], rough=4.5e-5 [m])',
+  'LiquidSink    CHWR()',
+  `connect(PUMP.out, ${BIG_ZONES.map((i) => `P${i}.in`).join(', ')})`,
+  'connect(CHWS.out, PUMP.in)',
+  ...BIG_ZONES.flatMap((i) => [`connect(P${i}.out, V${i}.in)`, `connect(V${i}.out, FC${i}.in)`, `connect(FC${i}.wall, Z${i}.port, E${i}.a)`]),
+  `connect(OUT.port, ${BIG_ZONES.map((i) => `E${i}.b`).join(', ')})`,
+  'connect(FC1.out, M1.in1)',
+  ...BIG_ZONES.slice(1).map((i) => `connect(FC${i}.out, M${i - 1}.in2)`),
+  ...BIG_ZONES.slice(2).map((i) => `connect(M${i - 2}.out, M${i - 1}.in1)`),
+  `connect(M${BIG_ZONES.length - 1}.out, RISER.in)`,
+  'connect(RISER.out, CHWR.in)',
+].join('\n') + '\n'
+
+test('budget: 500 components — Check to drawn, selection and search latency, measured', async ({ page }, testInfo) => {
+  test.setTimeout(300_000)
+  const source = 'https://raw.example/big-floor.frees'
+  await page.route(source, (route) => route.fulfill({ contentType: 'text/plain', body: BIG_FLOOR }))
+  await page.goto('/?url=' + encodeURIComponent(source))
+  await expect(page.locator('.cm-content')).toContainText('83 zones', { timeout: 60_000 })
+  await page.locator('body').click({ position: { x: 5, y: 5 } })
+  await page.keyboard.press('Control+K')
+  await page.getByPlaceholder('Search views, tools, and actions…').fill('Schematic')
+  await page.keyboard.press('Enter')
+  const svg = page.getByRole('application', { name: /Component network schematic/ })
+  const t0 = Date.now()
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await expect(svg.locator('path[data-net]').first()).toBeVisible({ timeout: 120_000 })
+  const checkToDrawn = Date.now() - t0
+  const nodes = await svg.locator('[data-node]').count()
+  const wires = await svg.locator('path[data-net]').count()
+  expect(nodes).toBeGreaterThanOrEqual(500)
+
+  // Latency inside the page, click or keystroke to the painted frame that shows it, so
+  // the harness's own round trip is not counted.
+  const p95 = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.ceil(0.95 * xs.length) - 1]
+  const select: number[] = await svg.evaluate(async (root) => {
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
+    const out: number[] = []
+    for (let i = 1; i <= 20; i++) {
+      const node = root.querySelector(`[data-node="fc${i}"]`)!
+      const t = performance.now()
+      node.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      while (node.getAttribute('aria-pressed') !== 'true') await frame()
+      await frame()
+      out.push(performance.now() - t)
+    }
+    return out
+  })
+  await page.keyboard.press('Escape')
+  await svg.locator('..').focus()
+  await page.keyboard.press('/')
+  await expect(page.getByRole('textbox', { name: 'Search the model' })).toBeVisible()
+  const search: number[] = await page.evaluate(async () => {
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
+    const input = document.querySelector('input[aria-label="Search the model"]') as HTMLInputElement
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+    const list = () => document.querySelector('[data-testid="model-search"]')!
+    const out: number[] = []
+    for (const q of ['fc1', 'z4', 'v77', 'riser', 'mixer', 'e12', 'p50', 'chws', 'wallhx', 'pump', 'fc80', 'm40']) {
+      set.call(input, '')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      while (list().querySelector('button')) await frame()
+      const t = performance.now()
+      set.call(input, q)
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      while (!list().querySelector('button')) await frame()
+      await frame()
+      out.push(performance.now() - t)
+    }
+    return out
+  })
+  // ponytail: recorded, not asserted; CI runners vary too much for a hard 200 ms gate.
+  const measured = { nodes, wires, checkToDrawn, selectP95: Math.round(p95(select)), searchP95: Math.round(p95(search)) }
+  await record(testInfo, 'evidence', measured)
+})
+
+test('RUN-03: choose a block\'s readout, watch values, set display units and digits; rows and blocks select each other; the document is untouched', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, PAIR)
+  await svg.locator('[data-node="r1"]').click()
+  // The badge shows the variable chosen for it.
+  await page.getByRole('button', { name: 'Show R1.a.I on the block' }).click()
+  await expect(svg.locator('[data-node="r1"] [data-badge]')).toHaveText(/^a I = 0\.66667 A$/)
+  // Watch two values; one reads in mA with 3 digits, the other in kV — display only.
+  await page.getByRole('button', { name: 'Watch R1.a.I' }).click()
+  await page.getByRole('button', { name: 'Watch R1.a.V' }).click()
+  const watch = page.getByTestId('watch')
+  await expect(watch.getByRole('button', { name: /^R1\.a\.i / })).toContainText(/0\.66667 A/)
+  await watch.getByRole('button', { name: 'Format R1.a.i' }).click()
+  const fmt = page.getByTestId('format-variable')
+  await fmt.getByRole('textbox', { name: /Display unit/ }).fill('kW')
+  await fmt.getByRole('textbox', { name: /Display unit/ }).press('Enter')
+  await expect(fmt).toContainText('kW does not measure the same quantity as A.')
+  await fmt.getByRole('textbox', { name: /Display unit/ }).fill('mA')
+  await fmt.getByRole('textbox', { name: /Display unit/ }).press('Enter')
+  await fmt.getByRole('combobox', { name: 'Significant digits' }).click()
+  await page.getByRole('option', { name: '3', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await expect(watch.getByRole('button', { name: /^R1\.a\.i / })).toContainText(/667 mA/)
+  // The badge reads in the same unit; the document is unchanged.
+  await expect(svg.locator('[data-node="r1"] [data-badge]')).toHaveText(/^a I = 667 mA$/)
+  await editorText(page).toBe(PAIR)
+  // A row selects its block; a selected block marks its rows.
+  await svg.locator('[data-node="vs"]').click()
+  await page.keyboard.press('Escape')
+  await watch.getByRole('button', { name: /^R1\.a\.v / }).click()
+  await expect(svg.locator('[data-node="r1"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(watch.getByRole('button', { name: /^R1\.a\.i / })).toHaveAttribute('aria-current', 'true')
+  await expect(page.getByTestId('canvas-announcer')).toHaveText(/port a of r1/)
+  await watch.getByRole('button', { name: 'Stop watching R1.a.v' }).click()
+  await expect(watch.getByRole('button', { name: /^R1\.a\.v / })).toHaveCount(0)
+  await record(testInfo, 'evidence', { badge: await svg.locator('[data-node="r1"] [data-badge]').textContent() })
+})
+
+test('RUN-04/WIRE-10: wires coloured by one metric with a legend and scale; measured-flow arrows follow the solved sign; presentation only', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, PAIR)
+  await page.getByRole('button', { name: 'Overlay' }).click()
+  const settings = page.getByTestId('overlay-settings')
+  await settings.getByRole('combobox', { name: 'Colour wires by' }).click()
+  // Only quantities the solve produced, each with its unit.
+  await expect(page.getByRole('option')).toHaveText(['Nothing', 'electrical V [V]', 'electrical I [A]'])
+  await page.getByRole('option', { name: 'electrical V [V]' }).click()
+  const legend = page.getByTestId('overlay-legend')
+  await expect(legend).toContainText('electrical V [V]')
+  await expect(legend.getByTestId('overlay-scale')).toHaveText('010')
+  // VS.p sits at 10 V, the top of the scale: the widest wire; the grounded side the narrowest.
+  const width = (route: string) => svg.locator(`path[data-route="${route}"]`).getAttribute('stroke-width')
+  expect(Number(await width('r1.a|vs.p'))).toBeCloseTo(5, 5)
+  expect(await svg.locator('path[data-overlay="value"]').count()).toBeGreaterThanOrEqual(3)
+
+  // Flow arrows: current leaves VS at p and enters R1 at a.
+  await settings.getByRole('switch', { name: 'Measured flow arrows' }).check()
+  await expect(legend).toContainText('measured flow')
+  const toward = await page.evaluate(() => {
+    const at = (id: string) => {
+      const g = document.querySelector(`[data-node="${id}"]`)!
+      const [x, y] = /translate\(([-\d.]+), ([-\d.]+)\)/.exec(g.getAttribute('transform')!)!.slice(1).map(Number)
+      const r = (g as SVGGraphicsElement).getBBox()
+      return { x: x + r.width / 2, y: y + r.height / 2 }
+    }
+    const arrow = document.querySelector('path[data-route="r1.a|vs.p"] ~ path[data-arrow]')!
+    const n = arrow.getAttribute('d')!.match(/-?[\d.]+/g)!.map(Number)
+    const tip = { x: n[0], y: n[1] }
+    const base = { x: (n[2] + n[4]) / 2, y: (n[3] + n[5]) / 2 }
+    const d = (p: { x: number; y: number }, q: { x: number; y: number }) => Math.hypot(p.x - q.x, p.y - q.y)
+    const r1 = at('r1')
+    return d(tip, r1) < d(base, r1)
+  })
+  expect(toward).toBe(true)
+  // The overlay is presentation: nothing in the document changed.
+  await editorText(page).toBe(PAIR)
+  await record(testInfo, 'evidence', { flows: await svg.locator('path[data-flow]').evaluateAll((ps) => ps.map((p) => `${p.getAttribute('data-route')} ${p.getAttribute('data-flow')}`)) })
+})
+
+test('RUN-06: a solved value opens in the app\'s own windows; inapplicable actions say why', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, PAIR)
+  await svg.locator('[data-node="r1"]').click()
+  const more = () => page.getByRole('button', { name: 'Open R1.a.I in…' }).click()
+  await more()
+  // A single steady solve has nothing to plot against; an electrical value has no fluid.
+  await expect(page.getByRole('menuitem', { name: /^Plot/ })).toBeDisabled()
+  await expect(page.getByRole('menuitem', { name: /^Plot/ })).toContainText('a plot needs more than one solved point')
+  await expect(page.getByRole('menuitem', { name: /^Property diagram/ })).toBeDisabled()
+  await expect(page.getByRole('menuitem', { name: /^Property diagram/ })).toContainText('Not a fluid stream with a named fluid.')
+  // Sensitivity opens with this output chosen.
+  await page.getByRole('menuitem', { name: /^Sensitivity/ }).click()
+  await expect(page.getByRole('dialog', { name: /Sensitivity/ })).toBeVisible()
+  await page.keyboard.press('Escape')
+  // A parametric table gains the column and its window opens. R1's card is still pinned.
+  await more()
+  await page.getByRole('menuitem', { name: /^Add to a parametric table/ }).click()
+  await expect(page.getByText('Parametric 1').first()).toBeVisible()
+  await record(testInfo, 'evidence', {})
 })
 
 test.describe('AC-14 on a tablet', () => {

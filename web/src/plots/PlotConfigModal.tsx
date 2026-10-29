@@ -46,6 +46,8 @@ interface Props {
   /** Seed for a new X-Y plot (e.g. opened from a table's column selection):
    * pre-fills the x-axis variable and y-axis variables. */
   initialXy?: { xVar: string; yVars: string[]; tableId?: string }
+  /** Seed for a new property diagram: the fluid a schematic stream carries. */
+  initialFluid?: string
   hasStates: boolean
   /** Declared STATE TABLE blocks, so property/psychro plots can overlay one
    * specific circuit's states (and adopt its fluid). */
@@ -972,6 +974,7 @@ export default function PlotConfigModal({
   fluids,
   tableVars,
   initialXy,
+  initialFluid,
   tables = [],
   occupiedNames = [],
   hasStates,
@@ -993,6 +996,8 @@ export default function PlotConfigModal({
         xy: { ...base.xy, xVar: initialXy.xVar, yVars: initialXy.yVars },
       }
     }
+    // Fluid names are case-insensitive in the engine; the picker shows its own spelling.
+    if (initialFluid && base.kind === 'property') return { ...base, property: { ...base.property, fluid: fluids.find((f) => f.toLowerCase() === initialFluid.toLowerCase()) ?? initialFluid } }
     return base
   })
   const nameError = !draft.name.trim() ? 'A name is required.' : occupiedNames.some((n) => n.toLowerCase() === draft.name.trim().toLowerCase()) ? 'This plot name is already in use.' : undefined

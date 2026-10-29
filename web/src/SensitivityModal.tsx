@@ -59,10 +59,13 @@ export default function SensitivityModal({
   opened,
   onClose,
   onRun,
+  initialOutput,
 }: Readonly<{
   opened: boolean
   onClose: () => void
   onRun: (params: Omit<SensitivityParams, 'text'>) => Promise<SensitivityResult>
+  /** The output to show first once the analysis has run (RUN-06 handoff). */
+  initialOutput?: string
 }>) {
   const [method, setMethod] = useState<'sobol' | 'morris'>('sobol')
   const [samples, setSamples] = useState<number>(100)
@@ -75,7 +78,7 @@ export default function SensitivityModal({
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<SensitivityResult | null>(null)
-  const [selectedOutput, setSelectedOutput] = useState<string | null>(null)
+  const [selectedOutput, setSelectedOutput] = useState<string | null>(initialOutput ?? null)
 
   const run = async () => {
     setRunning(true)
@@ -94,9 +97,7 @@ export default function SensitivityModal({
       } else {
         setResult(res)
         setSelectedOutput((prev) =>
-          prev && res.outputs.some((o) => o.variable === prev)
-            ? prev
-            : (res.outputs[0]?.variable ?? null),
+          res.outputs.find((o) => o.variable.toLowerCase() === prev?.toLowerCase())?.variable ?? res.outputs[0]?.variable ?? null,
         )
       }
     } catch (e) {

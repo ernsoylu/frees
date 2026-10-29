@@ -25,11 +25,11 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Component Library**: 295+ standard acausal components spanning fluid networks, thermal systems, moist air HVAC, mechanics, and electrical circuits.
 - **Experimental Data & Statistics** (`crates/frees-core/src/analysis/`): weighted/bounded/robust curve fitting and dynamic calibration with SVD parameter covariance; correlated and non-Gaussian input uncertainty declared in the document as `Correlation(A, B) = ρ` and `DistributionOf(X) = Uniform(…)`; truncated inverse-CDF sampling; seeded Latin-hypercube and scrambled Sobol designs; Sobol' and Morris global sensitivity. `signal.rs` carries an `O(n log n)` transform (radix-2 + Bluestein, any length) and the sensor kernels behind the `Detrend`, `Smooth`, `Window`, `Filter`, `FiltFilt`, `XCorr`, and `Welch` multi-output functions.
 - **Worker Pool**: Up to 4 Web Workers executing independent parametric sweep chunks in parallel with weighted progress, preserving deterministic row ordering.
-- **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-10-29: 4,437.1 KiB raw / 1,989.7 KiB gzipped, 682.9 KiB headroom). Raised from 4,096 on 2026-09-10, owner-authorized, to link every fluid the alias table names; the `ci.yml` header carries the full ledger and records that the lazy-chunk pay-down is now overdue.
+- **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-10-29: 4,441.3 KiB raw / 1,991.3 KiB gzipped, 678.7 KiB headroom). Raised from 4,096 on 2026-09-10, owner-authorized, to link every fluid the alias table names; the `ci.yml` header carries the full ledger and records that the lazy-chunk pay-down is now overdue.
 - **Test Suite Health**:
-  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,419 tests pass across all workspace crates.
+  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,420 tests pass across all workspace crates.
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 69 test files, 793 tests passing (needs the built `web/src/wasm/pkg`).
+  - `vitest run` (Node 22): 72 test files, 802 tests passing (needs the built `web/src/wasm/pkg`).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
   - `npm run check-examples`: 809/809 documentation blocks (2,898 assertions), including the 20 multi-domain examples and their 19 optimization requests. Every graded block must also check with zero unit warnings.

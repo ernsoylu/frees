@@ -17,6 +17,7 @@ import {
   Stack,
   Switch,
   Text,
+  Textarea,
   TextInput,
   Tooltip,
   useComputedColorScheme,
@@ -27,13 +28,17 @@ import {
   IconArrowForwardUp,
   IconArrowsMaximize,
   IconDownload,
+  IconEye,
+  IconPinned,
   IconLock,
   IconLayoutGrid,
+  IconNote,
   IconPlus,
+  IconTrash,
   IconZoomIn,
   IconZoomOut,
 } from '@tabler/icons-react'
-import { check as checkText, type CheckResponse, type ComponentResult, type ConnectionDto, type InstanceIdentityDto, type VariableResult } from '../api'
+import { check as checkText, type BlockResult, type CheckResponse, type ComponentResult, type ConnectionDto, type InstanceIdentityDto, type VariableResult } from '../api'
 import {
   declarationLine,
   declarationLineFromCheck,
@@ -74,7 +79,6 @@ import {
   removeStatement,
   renamedIds,
   lastDeclaration,
-  renameId,
   renameInstance,
   renameProblem,
   setParameter,
@@ -84,15 +88,23 @@ import {
   type SourceEdit,
 } from './sourceEdit'
 import { componentFile, editInterface, extractSubsystem, importComponents, movePresentation, type Extraction, type InterfaceChange } from './encapsulation'
-import { badgeFor, formatCompact, indexVariables, readoutFor, type NodeReadout } from './readouts'
+import { edgeReadings, flowAlong, overlayMetrics, rampColor, RAMP_STOPS } from './overlay'
+import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, type NodeReadout, type Reading } from './readouts'
+import { wasmUnitConversions } from '../wasm/engineClient'
 import { COMPONENT_CATALOG, type ComponentSpec } from '../componentCatalog'
+import { searchModel, type SearchHit } from './search'
+import { blockDependencies, lineOfEquation, type BlockLink } from './dependencies'
 import { formatParamValue, paramValueError, suggestInstanceName } from '../componentText'
 import { QuickAdd } from './QuickAdd'
 import { CANVAS_COMMANDS, canvasHandlers, type CanvasCommand } from './commands'
 import { copyFragment, deleteImpact, loadFragment, pasteFragment, storeFragment, withoutBlocks, type DeleteImpact, type Fragment, type PasteResult } from './clipboard'
 import { boxAround, contains, frameBox, visibleBox, zoomAbout, type Box, type View } from './viewport'
 import {
+  applyPreset,
   arrangeBase,
+  LABEL_SIZES,
+  transformSymbols,
+  renamePresentation,
   arrangeBlocks,
   EMPTY_PRESENTATION,
   framesFor,
@@ -101,9 +113,13 @@ import {
   snapToGrid,
   EMPTY_STYLES,
   styleFor,
+  type Annotation,
   type BlockStyle,
   type BlockStyles,
+  type SavedView,
   type SchematicPresentation,
+  type VariableFormat,
+  type ViewPreset,
   type ViewSettings,
   type WireRoute,
 } from './presentation'
@@ -210,6 +226,16 @@ interface Props {
   onPresentationChange?: (next: SchematicPresentation) => void
   /** Instance ids to emphasize from a Check diagnosis (free quantities). */
   highlightIds?: readonly string[]
+  /** RUN-06: hand a solved variable to the app's windows; `reason` says why an action does not apply. */
+  handoff?: Handoff
+  /** SYNC-10: the last solve's block decomposition, for an equation-only model's dependency view. */
+  blocks?: readonly BlockResult[]
+}
+
+export type SchematicHandoff = 'plot' | 'table' | 'state' | 'sensitivity'
+interface Handoff {
+  reason: (kind: SchematicHandoff, name: string) => string | null
+  run: (kind: SchematicHandoff, name: string, fluid?: string) => void
 }
 
 type Positions = SchematicPresentation['positions']
@@ -253,7 +279,7 @@ function drawingFile(
     r.setAttribute('fill', ink.block)
   })
   if (!o.values) clone.querySelectorAll('[data-badge]').forEach((el) => el.remove())
-  if (!o.annotations) clone.querySelectorAll('[data-area]').forEach((el) => el.remove())
+  if (!o.annotations) clone.querySelectorAll('[data-area], [data-annotation]').forEach((el) => el.remove())
   if (o.region === 'selection') {
     clone.querySelectorAll<SVGElement>('[data-node]').forEach((el) => !ctx.picked.has(el.dataset.node!) && el.remove())
     clone.querySelectorAll<SVGElement>('[data-route]').forEach((el) => {
@@ -336,6 +362,8 @@ export default function SchematicTab({
   presentation: saved,
   onPresentationChange,
   highlightIds = [],
+  handoff,
+  blocks,
 }: Readonly<Props>) {
   const svgRef = useRef<SVGSVGElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -530,8 +558,8 @@ export default function SchematicTab({
   // Placed blocks keep their absolute positions whatever the flow or spacing;
   // only the blocks the layout places move with it.
   const layout = useMemo(
-    () => arrangeBase(rawLayout, { spacing: settings.spacing, orientation: settings.orientation }),
-    [rawLayout, settings.spacing, settings.orientation],
+    () => transformSymbols(arrangeBase(rawLayout, { spacing: settings.spacing, orientation: settings.orientation }), pres.styles ?? EMPTY_STYLES),
+    [rawLayout, settings.spacing, settings.orientation, pres.styles],
   )
 
   const scheme = useComputedColorScheme('dark')
@@ -664,8 +692,18 @@ export default function SchematicTab({
       maxX = Math.max(maxX, n.x + n.w + CHIP_OVERHANG + 5)
       maxY = Math.max(maxY, n.y + n.h + 20)
     }
+    // VIEW-09: annotations in this scope, sized as they draw (a card or legend at its widest likely line).
+    for (const a of pres.annotations ?? []) {
+      if (a.scope !== scope) continue
+      const lines = a.text ? a.text.split('\n') : []
+      const rows = a.kind === 'legend' ? layout.lines.length : a.kind === 'card' ? 2 : Math.max(1, lines.length)
+      minX = Math.min(minX, a.at.x - 5)
+      minY = Math.min(minY, a.at.y - 5)
+      maxX = Math.max(maxX, a.at.x + Math.max(a.kind === 'note' || a.kind === 'callout' ? 60 : 200, ...lines.map((l) => l.length * 6.4 + 14)) + 5)
+      maxY = Math.max(maxY, a.at.y + rows * 15 + 13)
+    }
     return { minX, minY, w: maxX - minX, h: maxY - minY }
-  }, [layout.width, layout.height, groups, areaFrames, positioned])
+  }, [layout.width, layout.height, layout.lines.length, groups, areaFrames, positioned, pres.annotations, scope])
 
   const values = useMemo(
     () => indexVariables(variables, checkResult?.inferredUnits),
@@ -790,6 +828,19 @@ export default function SchematicTab({
   const selection = [...selected, ...(pinned && !selected.has(pinned) ? [pinned] : [])]
   const fitSelection = () =>
     frame(boxAround(selection.flatMap((id) => positioned.get(id) ?? []), CHIP_OVERHANG + 5, 20))
+  // VIEW-07: a picked search hit is centred once its scope has drawn it, at
+  // 100 % or less so it reads; the scope's saved camera is not overwritten.
+  const seek = useRef<string[] | null>(null)
+  const [seekTick, setSeekTick] = useState(0)
+  useEffect(() => {
+    const box = seek.current && boxAround(seek.current.flatMap((id) => positioned.get(id) ?? []), CHIP_OVERHANG + 5, 20)
+    if (!box || viewport.w === 0) return
+    seek.current = null
+    takeControl()
+    setView(frameBox(box, viewport.w, viewport.h, 1))
+  }, [seekTick, positioned, viewport.w, viewport.h, takeControl])
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const nodeKey = layout.nodes.map((n) => n.id).join(',')
 
@@ -880,6 +931,99 @@ export default function SchematicTab({
       const { [key]: _old, ...rest } = s[field]
       return { ...p, styles: { ...s, [field]: kept ? { ...rest, [key]: kept } : rest } }
     }, next && Object.keys(next).length > 0 ? 'Change style' : `Reset ${scope} style`)
+  // RUN-03: the variables chosen to read on the drawing, and how they read.
+  const badges = pres.badges ?? {}
+  const watch = pres.watch ?? []
+  const formats = pres.formats ?? {}
+  const toggleBadge = (block: string, name: string) =>
+    updatePres((p) => {
+      const { [block]: old, ...rest } = p.badges ?? {}
+      return { ...p, badges: old === name ? rest : { ...rest, [block]: name } }
+    }, 'Change block readout')
+  const toggleWatch = (name: string) =>
+    updatePres((p) => {
+      const w = p.watch ?? []
+      return { ...p, watch: w.includes(name) ? w.filter((x) => x !== name) : [...w, name] }
+    }, 'Change watch')
+  const setFormat = (name: string, f: VariableFormat | null) =>
+    updatePres((p) => {
+      const { [name]: _old, ...rest } = p.formats ?? {}
+      return { ...p, formats: f ? { ...rest, [name]: f } : rest }
+    }, 'Change display format')
+  // RUN-04/WIRE-10: wires coloured by one solved metric, and measured-flow arrows.
+  const overlaySet = pres.overlay ?? { metric: '', arrows: false }
+  const metrics = useMemo(() => overlayMetrics(layout.edges, values), [layout.edges, values])
+  const metric = metrics.find((m) => m.key === overlaySet.metric) ?? null
+  const overlayRead = useMemo(() => (metric ? edgeReadings(layout.edges, values, metric) : null), [metric, layout.edges, values])
+  const setOverlay = (next: Partial<SchematicPresentation['overlay']>) =>
+    updatePres((p) => ({ ...p, overlay: { ...(p.overlay ?? { metric: '', arrows: false }), ...next } }), 'Change overlay')
+  // VIEW-08: presets change view settings only; a named view also restores
+  // where it looked, its readouts and any focus. Both are presentation, one undo step.
+  const [viewName, setViewName] = useState('')
+  const savedViews = pres.views ?? []
+  const viewGone = (v: SavedView) => [v.scope, v.focus?.id ?? ''].some((id) => id && !drawnCheck?.instances?.some((i) => i.name.toLowerCase() === id))
+  const saveView = (name: string) =>
+    updatePres((p) => ({ ...p, views: [...(p.views ?? []).filter((x) => x.name !== name), { name, scope, camera: view, view: p.view, overlay: p.overlay, badges: p.badges, focus }] }), `Save view ${name}`)
+  const applyView = (v: SavedView) => {
+    updatePres((p) => ({ ...p, view: v.view, overlay: v.overlay, badges: v.badges }), `Apply view ${v.name}`)
+    openScope(v.scope)
+    userAdjusted.current = true
+    setView(v.camera)
+    setFocus(v.focus)
+    setAnnouncement(`View ${v.name}`)
+  }
+  // VIEW-09: annotations drawn in this scope. A callout or card whose block or
+  // variable the last Check no longer reports is drawn broken, never with an old value.
+  const annotations = pres.annotations ?? []
+  const [noteDrag, setNoteDrag] = useState<{ id: string; from: { x: number; y: number }; at: { x: number; y: number }; moved: boolean } | null>(null)
+  const [noteEdit, setNoteEdit] = useState<{ id: string; text: string } | null>(null)
+  const knownVariables = useMemo(() => new Set((drawnCheck?.variables ?? []).map((v) => v.toLowerCase())), [drawnCheck])
+  const annotate = (kind: Annotation['kind'], target = '', at?: { x: number; y: number }) => {
+    const id = `n${annotations.reduce((m, a) => Math.max(m, Number(a.id.slice(1))), 0) + 1}`
+    // Near the view's top-left corner, where Fit leaves a margin, cascading so a new one never hides the last.
+    const step = 24 * (annotations.filter((x) => x.scope === scope).length % 8)
+    const where = at ?? { x: Math.round((16 - view.x) / zoom) + step, y: Math.round((16 - view.y) / zoom) + step }
+    updatePres((p) => ({ ...p, annotations: [...(p.annotations ?? []), { id, kind, scope, at: where, text: '', target }] }), `Add ${kind}`)
+    if (kind === 'note' || kind === 'callout') setNoteEdit({ id, text: '' })
+  }
+  // SYNC-10: an equation-only model's cards and the solve's block dependencies.
+  const links = useMemo(() => blockDependencies(blocks ?? []), [blocks])
+  const pinnedCards = annotations.filter((a) => a.kind === 'card' && a.scope === '')
+  const togglePin = (name: string) => {
+    const card = pinnedCards.find((a) => a.target === name)
+    if (card) updatePres((p) => ({ ...p, annotations: (p.annotations ?? []).filter((x) => x.id !== card.id) }), 'Remove card')
+    else annotate('card', name, { x: 0, y: 40 * pinnedCards.length })
+  }
+  const readingText = (name: string) => {
+    const v = values.get(name)
+    if (!v) return null
+    const f = formatReading(v, formats[name])
+    return `${f.text} ${f.units}`.trim()
+  }
+  /** A variable as the drawing labels its block (`R1.a.i`), else as the solve reported it. */
+  const shownName = (name: string) => {
+    const owner = ownerOf(name)
+    return owner ? `${labels.get(owner.block)?.label ?? owner.block}${name.slice(owner.block.length)}` : (values.get(name)?.name ?? name)
+  }
+  const legendRows = layout.lines.map((key) => ({ label: lineLabel(key, fluidSpelling), color: styleOf(lineId(key)).color }))
+  const annotationBody = (a: Annotation): { lines: string[]; broken: boolean; to?: SchematicNode } => {
+    const text = a.text ? a.text.split('\n') : []
+    if (a.kind === 'callout') {
+      const to = positioned.get(a.target)
+      if (to) return { lines: text.length ? text : ['Note'], broken: false, to }
+      const gone = !drawnCheck?.instances?.some((i) => i.name.toLowerCase() === a.target)
+      return { lines: [...text, `Link broken: ${a.target} ${gone ? 'no longer exists' : 'is in another subsystem'}`], broken: true }
+    }
+    if (a.kind === 'card') {
+      const v = values.get(a.target)
+      const title = a.text || shownName(a.target)
+      if (drawnCheck && !knownVariables.has(a.target)) return { lines: [title, `Link broken: ${a.target} no longer exists`], broken: true }
+      const f = v && formatReading(v, formats[a.target])
+      return { lines: [title, f ? `${f.text} ${f.units}`.trim() : 'Not solved'], broken: false }
+    }
+    if (a.kind === 'legend') return { lines: legendRows.map((l) => l.label), broken: false }
+    return { lines: text.length ? text : ['Note'], broken: false }
+  }
   // COMP-01/02: placing a component. The quick-add finds it, the wizard
   // configures a library type, and the block lands where it was asked for,
   // its declaration and its position one undo step.
@@ -895,6 +1039,25 @@ export default function SchematicTab({
   }, [text, drawnCheck])
   /** A document type as its definition writes it. */
   const written = (type: string) => localTypes.find((t) => t.toLowerCase() === type.toLowerCase()) ?? type
+  const hits = useMemo(
+    () =>
+      searchModel(drawnCheck, text, issues, searchQuery, (type) =>
+        COMPONENT_CATALOG.find((c) => c.type.toLowerCase() === type.toLowerCase())?.type ?? localTypes.find((t) => t.toLowerCase() === type.toLowerCase()) ?? type,
+      ),
+    [drawnCheck, text, issues, searchQuery, localTypes],
+  )
+  const goTo = (hit: SearchHit) => {
+    setSearchOpen(false)
+    if (hit.scope !== null) {
+      openScope(hit.scope)
+      setSelected(new Set(hit.select))
+      seek.current = hit.select
+      setSeekTick((t) => t + 1)
+    }
+    // The editor follows without taking the view, unless the hit has nothing to draw.
+    if (hit.line !== null) (hit.scope !== null ? onSelectLine : onRevealLine)?.(hit.line)
+    setAnnouncement(`${hit.label}, ${hit.detail}`)
+  }
   const takenNames = useMemo(() => [...documentInstances(text).values()].map((h) => h.label), [text])
   const toDrawing = (clientX: number, clientY: number) => {
     const r = viewportRef.current?.getBoundingClientRect()
@@ -1459,15 +1622,7 @@ export default function SchematicTab({
     const problem = sourceBroken ? 'Fix the source errors first.' : renameProblem(inst, next, all)
     if (problem) return problem
     const renames = renamedIds(inst, next, all)
-    const move = <V,>(r: Record<string, V>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [renameId(k, renames), v]))
-    const done = runEdit(renameInstance(inst, next), (p) => ({
-      ...p,
-      positions: move(p.positions),
-      legacyOffsets: move(p.legacyOffsets),
-      locked: p.locked.map((id) => renameId(id, renames)),
-      areas: p.areas.map((a) => ({ ...a, members: a.members.map((id) => renameId(id, renames)) })),
-      styles: { ...(p.styles ?? EMPTY_STYLES), instances: move((p.styles ?? EMPTY_STYLES).instances) },
-    }))
+    const done = runEdit(renameInstance(inst, next), (p) => renamePresentation(p, renames))
     if (!done) return 'The source changed after the last Check; Check again, then retry.'
     setPinned(null)
     setSelected(new Set())
@@ -1872,6 +2027,36 @@ export default function SchematicTab({
   const active = pinned ?? hovered
   const activeNode = active ? positioned.get(active) : undefined
   const activeReadout = active ? readouts.get(active) : undefined
+  /** The block a variable belongs to — the longest instance path it starts with — and the port after it. */
+  const ownerOf = (name: string) => {
+    let block = ''
+    for (const i of drawnCheck?.instances ?? []) {
+      const id = i.name.toLowerCase()
+      if (name.startsWith(`${id}.`) && id.length > block.length) block = id
+    }
+    const port = block ? name.slice(block.length + 1).split('.')[0] : ''
+    return block ? { block, port: portsByInstance.get(block)?.some((p) => p.toLowerCase() === port) ? port : null } : null
+  }
+  /** The fluid a variable's stream carries, from the wire at its port or its shared stream. */
+  const fluidOf = (name: string) => {
+    const owner = ownerOf(name)
+    const alias = name.split('.')[0]
+    const e = layout.edges.find((x) => (owner?.port ? (x.from === owner.block && x.fromPort === owner.port) || (x.to === owner.block && x.toPort === owner.port) : x.fromStream?.toLowerCase() === alias))
+    return e?.domain.toLowerCase() === 'fluid' ? (e.fluid ?? null) : null
+  }
+  // RUN-06: the card's handoff, with the fluid filled in for a stream's state.
+  const cardHandoff: Handoff | undefined = handoff && {
+    reason: (kind, name) => (kind === 'state' && !fluidOf(name.toLowerCase()) ? 'Not a fluid stream with a named fluid.' : handoff.reason(kind, name)),
+    run: (kind, name) => handoff.run(kind, name, fluidOf(name.toLowerCase()) ?? undefined),
+  }
+  /** A block's badge: the variable chosen for it while the solve still reports it, else the automatic one. */
+  const badgeOf = (n: SchematicNode) => {
+    const r = readouts.get(n.id) ?? { ports: [], outputs: [], params: [] }
+    const want = badges[n.id]
+    const chosen = want ? readingsOf(r).find((x) => x.name.toLowerCase() === want) : undefined
+    const b = chosen ?? badgeFor(n, r)
+    return b ? { ...b, format: formats[b.name.toLowerCase()] } : null
+  }
 
   // Hooks stay above the empty-canvas return. The palette reaches whichever
   // handlers this render defined; an empty canvas offers only placement.
@@ -1888,6 +2073,7 @@ export default function SchematicTab({
       ? {
           add: () => openQuickAdd(),
           list: () => setListOpen((o) => !o),
+          search: () => setSearchOpen(true),
           fit,
           'fit-selection': fitSelection,
           'select-all': selectAll,
@@ -1912,6 +2098,76 @@ export default function SchematicTab({
     if (heard.note !== wireNote && wireNote) setAnnouncement(wireNote)
     else if (heard.check !== checkResult && checkResult) setAnnouncement(`Check: ${checkResult.message}`)
   }
+  if (!drawn && (drawnCheck?.variables?.length ?? 0) > 0) {
+    return (
+      <Stack gap="sm" p="md" h="100%" style={{ overflowY: 'auto' }} data-testid="equation-view">
+        <Text size="sm" c="dimmed" maw={560}>
+          This model is equations only: it declares no components, so there is no physical network to draw. Its variables and how the solve's blocks depend on each other are below.
+        </Text>
+        {onSourceEdit && (
+          <Group gap="xs">
+            <Button size="xs" variant="light" leftSection={<IconPlus size={14} />} onClick={() => openQuickAdd()}>
+              Add component
+            </Button>
+            <Button size="xs" variant="subtle" onClick={() => pasteHere(loadFragment(), 'Paste')}>
+              Paste
+            </Button>
+          </Group>
+        )}
+        {pinnedCards.length > 0 && (
+          <Stack gap={4} data-testid="variable-cards" role="region" aria-label="Variable cards">
+            <Text size="xs" fw={600}>
+              Cards
+            </Text>
+            <Group gap="xs">
+              {pinnedCards.map((a) => {
+                const body = annotationBody(a)
+                return (
+                  <Paper key={a.id} withBorder p={6} data-broken={body.broken || undefined} aria-label={`card: ${body.lines.join(', ')}`} style={body.broken ? { borderColor: '#fa5252', borderStyle: 'dashed' } : undefined}>
+                    <Group gap={6} wrap="nowrap">
+                      <Stack gap={0}>
+                        <Text size="xs" fw={600}>
+                          {body.lines[0]}
+                        </Text>
+                        <Text size="xs" ff="monospace" c={body.broken ? 'red' : undefined}>
+                          {body.lines[1]}
+                        </Text>
+                      </Stack>
+                      <ActionIcon size="xs" variant="subtle" color="gray" aria-label={`Remove card ${a.target}`} onClick={() => togglePin(a.target)}>
+                        <IconTrash size={12} />
+                      </ActionIcon>
+                    </Group>
+                  </Paper>
+                )
+              })}
+            </Group>
+          </Stack>
+        )}
+        {blocks?.length ? (
+          <DependencyView blocks={blocks} links={links} ink={ink} valueOf={readingText} pinned={new Set(pinnedCards.map((a) => a.target))} onPin={togglePin} onLine={(eq) => {
+            const line = lineOfEquation(text, eq)
+            if (line !== null) onRevealLine(line)
+          }} />
+        ) : (
+          <Stack gap={4}>
+            <Text size="xs" c="dimmed">
+              Solve to see how the equations depend on each other. Variables Check found:
+            </Text>
+            <Group gap={4}>
+              {(drawnCheck?.variables ?? []).map((v) => (
+                <Button key={v} size="compact-xs" variant={pinnedCards.some((a) => a.target === v.toLowerCase()) ? 'light' : 'default'} onClick={() => togglePin(v.toLowerCase())}>
+                  {v}
+                </Button>
+              ))}
+            </Group>
+          </Stack>
+        )}
+        {adding}
+        {editing}
+      </Stack>
+    )
+  }
+
   if (!drawn) {
     return (
       <Stack gap="xs" p="md" align="center" justify="center" h="100%">
@@ -1972,7 +2228,7 @@ export default function SchematicTab({
                   <Group key={path} gap={0} wrap="nowrap">
                     {k > 0 && <Text size="xs" c="dimmed">›</Text>}
                     <Button size="compact-xs" variant="subtle" color={path === scope ? 'dark' : 'gray'} aria-current={path === scope ? 'location' : undefined} onClick={() => openScope(path)}>
-                      {path ? `${labels.get(path)?.label ?? path} (${labels.get(path)?.type ?? ''})` : 'Model'}
+                      {path ? `${labels.get(path)?.label ?? path} (${written(labels.get(path)?.type ?? '')})` : 'Model'}
                     </Button>
                   </Group>
                 ))}
@@ -2224,6 +2480,139 @@ export default function SchematicTab({
               {selection.length} selected
             </Badge>
           )}
+          <Popover position="bottom-end" withinPortal shadow="md">
+            <Popover.Target>
+              <Button size="compact-xs" variant={metric || overlaySet.arrows ? 'light' : 'subtle'} color="gray">
+                Overlay
+              </Button>
+            </Popover.Target>
+            <Popover.Dropdown p={8}>
+              <Stack gap={6} w={220} data-testid="overlay-settings">
+                <Select
+                  size="xs"
+                  label="Colour wires by"
+                  data={[{ value: '', label: 'Nothing' }, ...metrics.map((m) => ({ value: m.key, label: `${m.label} [${m.units || '-'}]` }))]}
+                  value={metric?.key ?? ''}
+                  onChange={(v) => setOverlay({ metric: v ?? '' })}
+                  comboboxProps={{ withinPortal: false }}
+                />
+                <Switch size="xs" label="Measured flow arrows" checked={overlaySet.arrows} onChange={(e) => setOverlay({ arrows: e.currentTarget.checked })} />
+                {metrics.length === 0 && (
+                  <Text size="xs" c="dimmed">
+                    Solve to colour wires by a result.
+                  </Text>
+                )}
+              </Stack>
+            </Popover.Dropdown>
+          </Popover>
+          <Menu position="bottom-end" withinPortal>
+            <Menu.Target>
+              <Button size="compact-xs" variant="subtle" color="gray">
+                Annotate
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item onClick={() => annotate('note')}>Note</Menu.Item>
+              <Menu.Item
+                disabled={!(selection.length === 1 && positioned.has(selection[0]))}
+                onClick={() => {
+                  const n = positioned.get(selection[0])!
+                  annotate('callout', selection[0], { x: n.x + n.w + 30, y: n.y - 50 })
+                }}
+              >
+                {selection.length === 1 && positioned.has(selection[0]) ? `Callout to ${positioned.get(selection[0])!.label}` : 'Callout — select one block first'}
+              </Menu.Item>
+              <Menu.Item disabled={legendRows.length === 0} onClick={() => annotate('legend')}>
+                Legend
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Popover position="bottom-end" withinPortal shadow="md">
+            <Popover.Target>
+              <Button size="compact-xs" variant="subtle" color="gray">
+                Views
+              </Button>
+            </Popover.Target>
+            <Popover.Dropdown p={8}>
+              <Stack gap={6} w={240} data-testid="views">
+                <Text size="xs" fw={600}>Presets</Text>
+                <Group gap={4}>
+                  {(['names', 'engineering', 'debug', 'presentation'] as ViewPreset[]).map((k) => (
+                    <Button key={k} size="compact-xs" variant="default" onClick={() => updatePres((p) => applyPreset(p, k), `Apply ${k} preset`)}>
+                      {k[0].toUpperCase() + k.slice(1)}
+                    </Button>
+                  ))}
+                </Group>
+                <Text size="xs" fw={600}>Saved views</Text>
+                {savedViews.length === 0 && (
+                  <Text size="xs" c="dimmed">
+                    None yet.
+                  </Text>
+                )}
+                {savedViews.map((v) => (
+                  <Group key={v.name} gap={4} wrap="nowrap">
+                    <Button size="compact-xs" variant="subtle" color="gray" justify="flex-start" style={{ flex: 1 }} disabled={viewGone(v)} title={viewGone(v) ? 'What it looked at is no longer in the model.' : undefined} onClick={() => applyView(v)}>
+                      {v.name}
+                    </Button>
+                    <ActionIcon size="xs" variant="subtle" color="gray" aria-label={`Delete view ${v.name}`} onClick={() => updatePres((p) => ({ ...p, views: (p.views ?? []).filter((x) => x.name !== v.name) }), `Delete view ${v.name}`)}>
+                      <IconTrash size={12} />
+                    </ActionIcon>
+                  </Group>
+                ))}
+                <Group gap={4} wrap="nowrap">
+                  <TextInput size="xs" style={{ flex: 1 }} placeholder="Name this view" aria-label="View name" maxLength={60} value={viewName} onChange={(e) => setViewName(e.currentTarget.value)} />
+                  <Button
+                    size="compact-xs"
+                    disabled={!viewName.trim()}
+                    onClick={() => {
+                      saveView(viewName.trim())
+                      setViewName('')
+                    }}
+                  >
+                    Save
+                  </Button>
+                </Group>
+              </Stack>
+            </Popover.Dropdown>
+          </Popover>
+          <Popover opened={searchOpen} onChange={setSearchOpen} position="bottom-end" withinPortal shadow="md">
+            <Popover.Target>
+              <Button size="compact-xs" variant={searchOpen ? 'light' : 'subtle'} color="gray" onClick={() => setSearchOpen((o) => !o)}>
+                Search
+              </Button>
+            </Popover.Target>
+            <Popover.Dropdown p={6}>
+              <Stack gap={2} w={340} mah={420} style={{ overflowY: 'auto' }} data-testid="model-search">
+                <TextInput
+                  size="xs"
+                  placeholder="Block, type, port, net, parameter, equation, issue"
+                  aria-label="Search the model"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && hits[0]) goTo(hits[0])
+                  }}
+                  data-autofocus
+                />
+                {searchQuery.trim() && hits.length === 0 && (
+                  <Text size="xs" c="dimmed" px={4}>
+                    Nothing matches.
+                  </Text>
+                )}
+                {hits.map((h) => (
+                  <Button key={`${h.kind}|${h.label}|${h.detail}|${h.line}`} size="compact-xs" variant="subtle" color="gray" justify="flex-start" h="auto" py={2} aria-label={`${h.kind} ${h.label} ${h.detail}`} onClick={() => goTo(h)}>
+                    <Stack gap={0} align="flex-start">
+                      <Text size="xs" truncate maw={300}>
+                        <Text span size="xs" c="dimmed" mr={6}>{h.kind}</Text>
+                        {h.label}
+                      </Text>
+                      <Text size="10px" c="dimmed">{h.detail}</Text>
+                    </Stack>
+                  </Button>
+                ))}
+              </Stack>
+            </Popover.Dropdown>
+          </Popover>
           <Button size="compact-xs" variant={listOpen ? 'light' : 'subtle'} color="gray" aria-pressed={listOpen} onClick={() => setListOpen((o) => !o)}>
             List
           </Button>
@@ -2475,6 +2864,11 @@ export default function SchematicTab({
             setListOpen((o) => !o)
             return
           }
+          if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            setSearchOpen(true)
+            return
+          }
           if (e.key === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey && onSourceEdit && !sourceBroken) {
             e.preventDefault()
             openQuickAdd()
@@ -2595,23 +2989,32 @@ export default function SchematicTab({
               }
               const index = Number(netOf(e).slice(1))
               const openCard = () => setWireCard({ index, check: drawnCheck })
+              const reading = overlayRead?.byEdge.get(e.id)
+              const valued = reading?.state === 'value'
+              const flow = overlaySet.arrows ? flowAlong(e, values) : undefined
               return (
                 <g key={e.id}>
                 <path
                   data-net={netOf(e)}
                   data-route={routeKey(e)}
                   data-conflict={routeConflicts.has(e.id) || undefined}
+                  data-overlay={reading?.state}
+                  data-flow={flow === undefined ? undefined : flow === null ? 'unknown' : flow === 0 ? 'zero' : flow > 0 ? 'forward' : 'reverse'}
                   d={pathOf(pts, hops.get(e.id))}
                   fill="none"
-                  stroke={style.color}
-                  strokeWidth={lit ? style.width + 1.2 : style.width}
-                  strokeDasharray={style.dash}
+                  stroke={valued ? rampColor(reading.t!) : reading?.state === 'nonfinite' ? '#e03131' : reading ? ink.subtext : style.color}
+                  strokeWidth={(valued ? 1.5 + 3.5 * reading.t! : style.width) + (lit ? 1.2 : 0)}
+                  strokeDasharray={reading && !valued ? OVERLAY_DASH[reading.state] : style.dash}
                   strokeLinecap={style.cap}
                   strokeLinejoin="round"
-                  strokeOpacity={out ? 0.15 : 0.95}
+                  strokeOpacity={out ? 0.15 : overlayRead && !reading ? 0.3 : 0.95}
                 >
-                  <title>{edgeTitle(e)}</title>
+                  <title>
+                    {edgeTitle(e)}
+                    {reading?.value !== undefined && metric ? ` — ${metric.label} ${formatCompact(reading.value)} ${metric.units}` : ''}
+                  </title>
                 </path>
+                {flow && !out ? <FlowArrow pts={pts} dir={flow} fill={ink.text} /> : null}
                 {onSourceEdit && !out && (
                   <path
                     data-wire={e.id}
@@ -2735,7 +3138,7 @@ export default function SchematicTab({
                   locked={lockedIds.has(n.id)}
                   namesOnly={!printing && settings.detail === 'names'}
                   portLabels={settings.portLabels}
-                  badge={badgeFor(n, readouts.get(n.id) ?? { ports: [], outputs: [], params: [] })}
+                  badge={badgeOf(n)}
                   active={active === n.id}
                   styleOf={styleOf}
                   wiring={Boolean(onEmitStatement)}
@@ -2779,6 +3182,73 @@ export default function SchematicTab({
                 />
               )
             })}
+          </g>
+          <g data-annotations>
+            {annotations
+              .filter((a) => a.scope === scope)
+              .map((a) => {
+                const at = noteDrag?.id === a.id ? noteDrag.at : a.at
+                const body = annotationBody(a)
+                const swatch = a.kind === 'legend' ? 22 : 0
+                const w = Math.max(60, ...body.lines.map((l) => l.length * 6.4 + 14 + swatch))
+                const h = body.lines.length * 15 + 8
+                // A callout's leader ends on its block's edge, nearest the note's centre.
+                const tip = body.to && { x: Math.min(Math.max(at.x + w / 2, body.to.x), body.to.x + body.to.w), y: Math.min(Math.max(at.y + h / 2, body.to.y), body.to.y + body.to.h) }
+                return (
+                  <g
+                    key={a.id}
+                    data-annotation={a.kind}
+                    data-broken={body.broken || undefined}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${a.kind}: ${body.lines.join(', ')}`}
+                    style={{ cursor: 'move' }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation()
+                      e.currentTarget.setPointerCapture(e.pointerId)
+                      setNoteDrag({ id: a.id, from: { x: e.clientX, y: e.clientY }, at: a.at, moved: false })
+                    }}
+                    onPointerMove={(e) => {
+                      if (noteDrag?.id !== a.id) return
+                      const dx = (e.clientX - noteDrag.from.x) / zoom
+                      const dy = (e.clientY - noteDrag.from.y) / zoom
+                      setNoteDrag({ ...noteDrag, at: { x: Math.round(a.at.x + dx), y: Math.round(a.at.y + dy) }, moved: noteDrag.moved || Math.hypot(dx, dy) * zoom > 3 })
+                    }}
+                    onPointerUp={() => {
+                      if (noteDrag?.id !== a.id) return
+                      setNoteDrag(null)
+                      if (noteDrag.moved) updatePres((p) => ({ ...p, annotations: (p.annotations ?? []).map((x) => (x.id === a.id ? { ...x, at: noteDrag.at } : x)) }), `Move ${a.kind}`)
+                      else setNoteEdit({ id: a.id, text: a.text })
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter') return
+                      e.stopPropagation()
+                      setNoteEdit({ id: a.id, text: a.text })
+                    }}
+                  >
+                    {tip && <line x1={at.x + w / 2} y1={at.y + h / 2} x2={tip.x} y2={tip.y} stroke={ink.subtext} strokeWidth={1.2} />}
+                    {tip && <circle cx={tip.x} cy={tip.y} r={2.5} fill={ink.subtext} />}
+                    <rect x={at.x} y={at.y} width={w} height={h} rx={a.kind === 'card' ? 6 : 2} fill={ink.block} stroke={body.broken ? '#fa5252' : ink.border} strokeWidth={1} strokeDasharray={body.broken ? '4 3' : undefined} />
+                    {body.lines
+                      .map((line, k) => ({ line, y: at.y + 15 * k + 15, color: a.kind === 'legend' ? legendRows[k]?.color : undefined, title: a.kind === 'card' && k === 0, value: a.kind === 'card' && k > 0 }))
+                      .map((row) => (
+                        <g key={row.y}>
+                          {row.color && <line x1={at.x + 7} x2={at.x + 23} y1={row.y - 4} y2={row.y - 4} stroke={row.color} strokeWidth={3} />}
+                          <text
+                            x={at.x + 7 + swatch}
+                            y={row.y}
+                            fontSize={11}
+                            fontWeight={row.title ? 600 : 400}
+                            fontFamily={row.value ? 'monospace' : undefined}
+                            fill={body.broken && row.line.startsWith('Link broken') ? '#fa5252' : ink.text}
+                          >
+                            {row.line}
+                          </text>
+                        </g>
+                      ))}
+                  </g>
+                )
+              })}
           </g>
           {guides && (
             <g data-testid="schematic-guides" data-transient pointerEvents="none" stroke={ink.guide} strokeWidth={1 / zoom} strokeDasharray={`${4 / zoom} ${3 / zoom}`}>
@@ -2861,6 +3331,107 @@ export default function SchematicTab({
       <div role="status" aria-live="polite" data-testid="canvas-announcer" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>
         {announcement}
       </div>
+      {(overlayRead || overlaySet.arrows) && (
+        <Paper withBorder shadow="sm" p="xs" role="region" aria-label="Overlay legend" data-testid="overlay-legend" style={{ position: 'absolute', right: 8, top: 44, width: 230, zIndex: 4 }}>
+          {metric && overlayRead && (
+            <Stack gap={2}>
+              <Text size="xs" fw={600}>
+                {metric.label} [{metric.units || '-'}]
+              </Text>
+              <div style={{ height: 8, borderRadius: 2, background: `linear-gradient(to right, ${RAMP_STOPS.join(', ')})` }} />
+              <Group justify="space-between" data-testid="overlay-scale">
+                <Text size="10px">{Number.isFinite(overlayRead.min) ? formatCompact(overlayRead.min) : '—'}</Text>
+                <Text size="10px">{Number.isFinite(overlayRead.max) ? formatCompact(overlayRead.max) : '—'}</Text>
+              </Group>
+              <Text size="10px" c="dimmed">
+                Width and colour grow with the value. Dashed: no {metric.label} in the solve · dotted red: not finite · dash-dot: another unit. Faded: other domains.
+              </Text>
+            </Stack>
+          )}
+          {overlaySet.arrows && (
+            <Text size="10px" c="dimmed" mt={metric ? 4 : 0}>
+              ▶ measured flow: current and heat flow by their sign into a port, mass flow from a port named in toward one named out. No arrow: zero flow, or no solved flow and convention.
+            </Text>
+          )}
+        </Paper>
+      )}
+      <Modal opened={noteEdit !== null} onClose={() => setNoteEdit(null)} title="Annotation" size="sm">
+        {noteEdit && (() => {
+          const a = annotations.find((x) => x.id === noteEdit.id)
+          if (!a) return null
+          const close = (change: (list: Annotation[]) => Annotation[], label: string) => {
+            updatePres((p) => ({ ...p, annotations: change(p.annotations ?? []) }), label)
+            setNoteEdit(null)
+          }
+          return (
+            <Stack gap="xs">
+              {a.target && (
+                <Text size="xs" c="dimmed">
+                  Linked to {a.target}
+                </Text>
+              )}
+              {a.kind !== 'legend' && (
+                <Textarea label={a.kind === 'card' ? 'Title (empty shows the variable)' : 'Text'} autosize minRows={2} maxLength={2000} value={noteEdit.text} onChange={(e) => setNoteEdit({ ...noteEdit, text: e.currentTarget.value })} data-autofocus />
+              )}
+              <Group justify="space-between">
+                <Button size="xs" variant="subtle" color="red" onClick={() => close((list) => list.filter((x) => x.id !== a.id), `Delete ${a.kind}`)}>
+                  Delete
+                </Button>
+                {a.kind !== 'legend' && (
+                  <Button size="xs" onClick={() => close((list) => list.map((x) => (x.id === a.id ? { ...x, text: noteEdit.text } : x)), `Edit ${a.kind}`)}>
+                    Save
+                  </Button>
+                )}
+              </Group>
+            </Stack>
+          )
+        })()}
+      </Modal>
+      {watch.length > 0 && (
+        <Paper withBorder shadow="sm" p="xs" role="region" aria-label="Watch" data-testid="watch" style={{ position: 'absolute', left: 8, bottom: 8, width: 300, maxHeight: '40%', overflowY: 'auto', zIndex: 6 }}>
+          <Text size="xs" fw={600} mb={2}>
+            Watch
+          </Text>
+          {watch.map((name) => {
+            const v = values.get(name)
+            const owner = ownerOf(name)
+            const current = Boolean(owner && selection.includes(owner.block))
+            const shown = shownName(name)
+            return (
+              <Group key={name} gap={2} wrap="nowrap" bg={current ? 'var(--mantine-color-default-hover)' : undefined}>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="gray"
+                  justify="space-between"
+                  style={{ flex: 1 }}
+                  aria-current={current ? 'true' : undefined}
+                  disabled={!owner}
+                  onClick={() => {
+                    if (!owner) return
+                    openScope(scopeOf(owner.block))
+                    setSelected(new Set([owner.block]))
+                    seek.current = [owner.block]
+                    setSeekTick((t) => t + 1)
+                    setAnnouncement(`${v?.name ?? name}${owner.port ? `, port ${owner.port} of ${owner.block}` : ''}`)
+                  }}
+                  rightSection={
+                    <Text size="xs" ff="monospace">
+                      {v ? `${formatReading(v, formats[name]).text} ${formatReading(v, formats[name]).units}` : 'not solved'}
+                    </Text>
+                  }
+                >
+                  {shown}
+                </Button>
+                {v && <FormatButton reading={{ ...v, name: shown, label: shown }} format={formats[name]} onChange={(f) => setFormat(name, f)} />}
+                <ActionIcon size="xs" variant="subtle" color="gray" aria-label={`Stop watching ${shown}`} onClick={() => toggleWatch(name)}>
+                  ×
+                </ActionIcon>
+              </Group>
+            )
+          })}
+        </Paper>
+      )}
       {listOpen && (
         <Paper withBorder shadow="sm" p="xs" role="region" aria-label="Components and connections" data-testid="structured-list" style={{ position: 'absolute', left: 8, top: 44, width: 340, maxHeight: '75%', overflowY: 'auto', zIndex: 6 }}>
           <Group justify="space-between" gap={4}>
@@ -2958,6 +3529,18 @@ export default function SchematicTab({
               : undefined
           }
           onNudge={pinned === activeNode.id ? nudge : undefined}
+          shown={{ badge: badges[activeNode.id], watch, formats }}
+          onShow={
+            pinned === activeNode.id
+              ? (how, name) => {
+                  if (how === 'badge') toggleBadge(activeNode.id, name)
+                  else if (how === 'watch') toggleWatch(name)
+                  else annotate('card', name, { x: activeNode.x + activeNode.w + 30, y: activeNode.y - 50 })
+                }
+              : undefined
+          }
+          onFormat={pinned === activeNode.id ? setFormat : undefined}
+          handoff={pinned === activeNode.id ? cardHandoff : undefined}
         />
       )}
     </Stack>
@@ -3022,7 +3605,7 @@ interface BlockProps {
   namesOnly?: boolean
   /** Name each port beside it, at full detail. */
   portLabels?: boolean
-  badge: { label: string; value: number; units: string } | null
+  badge: (Reading & { format?: VariableFormat }) | null
   active: boolean
   styleOf: (id: string) => LineStyle
   wiring: boolean
@@ -3074,7 +3657,11 @@ function NodeBlock({
   const GLYPH = 20
   // Level of detail: once the full card's name would draw below MIN_LABEL_PX,
   // show only the name, held at MIN_LABEL_PX on screen whatever the zoom.
-  const chip = namesOnly || zoom * LABEL_FONT < MIN_LABEL_PX
+  const chip = (look?.density ? look.density === 'names' : namesOnly) || zoom * LABEL_FONT < MIN_LABEL_PX
+  // COMP-07: the glyph turns and mirrors in its square; text stays upright.
+  const turn = `${look?.rotate ? `rotate(${look.rotate} 0.5 0.5)` : ''}${look?.mirror ? ' translate(1 0) scale(-1 1)' : ''}`
+  const labelFont = look?.labelSize ?? LABEL_FONT
+  const outside = look?.label === 'above' || look?.label === 'below'
   const chipFont = MIN_LABEL_PX / zoom
   // A name may take half the gap to each neighbour, less a visible margin, and
   // shifts toward the freer side when centring would not fit.
@@ -3136,18 +3723,31 @@ function NodeBlock({
       )}
       {!chip && glyph && (
         <g color={ink.glyph} transform={`translate(6, ${(node.h - GLYPH) / 2}) scale(${GLYPH})`}>
-          <path
-            d={glyph}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.2}
-            vectorEffect="non-scaling-stroke"
-          />
-          <path d={glyphFillPath(node.shape)} fill="currentColor" />
+          <g transform={turn || undefined}>
+            <path
+              d={glyph}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.2}
+              vectorEffect="non-scaling-stroke"
+            />
+            <path d={glyphFillPath(node.shape)} fill="currentColor" />
+          </g>
         </g>
       )}
       {!chip && (
-        <text x={GLYPH + 12} y={badge ? 19 : 22} fontSize={LABEL_FONT} fontWeight={600} fill={ink.text}>
+        <text
+          data-label={look?.label ?? 'inside'}
+          x={outside ? node.w / 2 : GLYPH + 12}
+          y={look?.label === 'above' ? -8 : look?.label === 'below' ? node.h + labelFont + 4 : badge ? 19 : 22}
+          textAnchor={outside ? 'middle' : undefined}
+          fontSize={labelFont}
+          fontWeight={600}
+          fill={ink.text}
+          stroke={outside ? ink.halo : undefined}
+          strokeWidth={outside ? 3 : undefined}
+          paintOrder={outside ? 'stroke' : undefined}
+        >
           {node.label}
         </text>
       )}
@@ -3402,8 +4002,23 @@ function StyleEditor({
           Reset
         </Button>
       </Group>
+      <Group gap={4} wrap="nowrap">
+        <SegmentedControl
+          size="xs"
+          aria-label="Rotate symbol"
+          value={String(own?.rotate ?? 0)}
+          onChange={(v) => set({ rotate: Number(v) ? (Number(v) as BlockStyle['rotate']) : undefined })}
+          data={['0', '90', '180', '270'].map((v) => ({ value: v, label: `${v}°` }))}
+        />
+        <Switch size="xs" label="Mirror" checked={own?.mirror ?? false} onChange={(e) => set({ mirror: e.currentTarget.checked || undefined })} />
+      </Group>
+      <Group gap={4} wrap="nowrap">
+        <Select size="xs" aria-label="Detail" placeholder="View's detail" w={110} data={[{ value: 'names', label: 'Name only' }, { value: 'full', label: 'Full card' }]} value={own?.density ?? null} onChange={(v) => set({ density: (v as BlockStyle['density']) ?? undefined })} clearable comboboxProps={{ withinPortal: false }} />
+        <Select size="xs" aria-label="Name position" placeholder="Inside" w={90} data={[{ value: 'inside', label: 'Inside' }, { value: 'above', label: 'Above' }, { value: 'below', label: 'Below' }]} value={own?.label ?? null} onChange={(v) => set({ label: (v as BlockStyle['label']) ?? undefined })} clearable comboboxProps={{ withinPortal: false }} />
+        <Select size="xs" aria-label="Name size" placeholder="Size" w={80} data={LABEL_SIZES.map(String)} value={own?.labelSize ? String(own.labelSize) : null} onChange={(v) => set({ labelSize: v ? Number(v) : undefined })} clearable comboboxProps={{ withinPortal: false }} />
+      </Group>
       <Text size="xs" c="dimmed">
-        This block overrides its type, which overrides the project.
+        This block overrides its type, which overrides the project. Turning or mirroring moves the ports with the symbol; the equations do not change.
       </Text>
     </Stack>
   )
@@ -3596,6 +4211,250 @@ function WireCard({
   )
 }
 
+/**
+ * SYNC-10: the solve's blocks in the order it solved them, each with its
+ * equations and the variables it solved. Dashed arcs show which earlier block
+ * a block reads from. They are drawn unlike wires, because they are not wires.
+ */
+function DependencyView({
+  blocks,
+  links,
+  ink,
+  valueOf,
+  pinned,
+  onPin,
+  onLine,
+}: Readonly<{
+  blocks: readonly BlockResult[]
+  links: readonly BlockLink[]
+  ink: SchematicInk
+  valueOf: (name: string) => string | null
+  pinned: ReadonlySet<string>
+  onPin: (name: string) => void
+  onLine: (equation: string) => void
+}>) {
+  const ROW = 16
+  const left = 30 + Math.min(80, 12 * Math.max(0, ...links.map((l) => l.to - l.from)))
+  const width = 420
+  const boxes: { y: number; h: number }[] = []
+  let y = 8
+  for (const b of blocks) {
+    const h = (1 + b.equations.length + b.variables.length) * ROW + 10
+    boxes.push({ y, h })
+    y += h + 22
+  }
+  const keyPress = (run: () => void) => (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      run()
+    }
+  }
+  return (
+    <Stack gap={4} data-testid="dependencies">
+      <Text size="xs" c="dimmed" maw={560}>
+        Blocks in the order the solver solved them. A dashed arrow means a block uses values an earlier block solved; it is not a physical connection. Equations in one block are solved together, in no order.
+      </Text>
+      <svg width={left + width + 10} height={y} role="group" aria-label="Solve dependencies" style={{ flexShrink: 0 }}>
+        <defs>
+          <marker id="dep-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill={ink.subtext} />
+          </marker>
+        </defs>
+        {links.map((l) => {
+          const a = boxes[l.from]
+          const b = boxes[l.to]
+          const y1 = a.y + a.h - 8
+          const y2 = b.y + 10
+          const d = Math.min(left - 6, 14 + 12 * (l.to - l.from))
+          return (
+            <path key={`${l.from}-${l.to}`} data-dependency={`${l.from + 1}-${l.to + 1}`} d={`M ${left} ${y1} C ${left - d} ${y1}, ${left - d} ${y2}, ${left} ${y2}`} fill="none" stroke={ink.subtext} strokeWidth={1.2} strokeDasharray="5 4" markerEnd="url(#dep-arrow)">
+              <title>{`Block ${l.to + 1} uses ${l.via.join(', ')} from block ${l.from + 1}`}</title>
+            </path>
+          )
+        })}
+        {blocks.map((b, k) => {
+          const { y: top, h } = boxes[k]
+          const together = b.equations.length > 1
+          return (
+            <g key={b.index} data-block={k + 1} role="group" aria-label={`Block ${k + 1}${together ? ', solved together' : ''}: solves ${b.variables.join(', ')}`}>
+              <rect x={left} y={top} width={width} height={h} rx={6} fill={ink.block} stroke={ink.border} />
+              <text x={left + 8} y={top + 15} fontSize={11} fontWeight={600} fill={ink.subtext}>
+                {`Block ${k + 1}${together ? ' · solved together' : ''}`}
+              </text>
+              {b.equations.map((eq, e) => (
+                <text key={eq} x={left + 8} y={top + 15 + ROW * (e + 1)} fontSize={11} fontFamily="monospace" fill={ink.text} role="button" tabIndex={0} aria-label={`Equation ${eq}`} style={{ cursor: 'pointer' }} onClick={() => onLine(eq)} onKeyDown={keyPress(() => onLine(eq))}>
+                  {eq.length > 60 ? `${eq.slice(0, 59)}…` : eq}
+                </text>
+              ))}
+              {b.variables.map((v, i) => {
+                const value = valueOf(v)
+                const on = pinned.has(v.toLowerCase())
+                return (
+                  <text
+                    key={v}
+                    x={left + 20}
+                    y={top + 15 + ROW * (b.equations.length + i + 1)}
+                    fontSize={11}
+                    fill={on ? ink.badge : ink.subtext}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={on}
+                    aria-label={`Card for ${v}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => onPin(v.toLowerCase())}
+                    onKeyDown={keyPress(() => onPin(v.toLowerCase()))}
+                  >
+                    {`${on ? '■' : '□'} ${v}${value ? ` = ${value}` : ''}`}
+                  </text>
+                )
+              })}
+            </g>
+          )
+        })}
+      </svg>
+    </Stack>
+  )
+}
+
+const HANDOFFS: [SchematicHandoff, string][] = [
+  ['plot', 'Plot'],
+  ['table', 'Add to a parametric table'],
+  ['state', 'Property diagram of its fluid'],
+  ['sensitivity', 'Sensitivity of this output'],
+]
+
+/** A block's readings, port members labelled with their port (`in P`). */
+function readingsOf(r: NodeReadout): Reading[] {
+  return [...r.outputs, ...r.ports.flatMap((p) => p.readings.map((x) => ({ ...x, label: `${p.port} ${x.label}` })))]
+}
+
+/** RUN-03: one solved value, shown on the block or watched, in the unit and digits chosen for it. */
+function ReadingRow({
+  reading: r,
+  shown,
+  onShow,
+  onFormat,
+  handoff,
+}: Readonly<{
+  handoff?: Handoff
+  reading: Reading
+  shown?: { badge?: string; watch: readonly string[]; formats: Readonly<Record<string, VariableFormat>> }
+  onShow?: (how: 'badge' | 'watch' | 'card', name: string) => void
+  onFormat?: (name: string, f: VariableFormat | null) => void
+}>) {
+  const key = r.name.toLowerCase()
+  const format = shown?.formats[key]
+  const out = formatReading(r, format)
+  const onBlock = shown?.badge === key
+  const watched = shown?.watch.includes(key) ?? false
+  return (
+    <Group gap={4} justify="space-between" wrap="nowrap">
+      <Text size="xs" c="dimmed">
+        {r.label}
+      </Text>
+      <Group gap={2} wrap="nowrap">
+        <Text size="xs" ff="monospace" c={out.stale ? 'orange' : undefined} title={out.stale ? `Shown in ${r.units}: ${format?.unit} was chosen for ${format?.from}` : undefined}>
+          {out.text} {out.units}
+        </Text>
+        {onShow && (
+          <>
+            <ActionIcon size="xs" variant={onBlock ? 'light' : 'subtle'} color="gray" aria-pressed={onBlock} aria-label={`Show ${r.name} on the block`} onClick={() => onShow('badge', key)}>
+              <IconPinned size={12} />
+            </ActionIcon>
+            <ActionIcon size="xs" variant={watched ? 'light' : 'subtle'} color="gray" aria-pressed={watched} aria-label={`Watch ${r.name}`} onClick={() => onShow('watch', key)}>
+              <IconEye size={12} />
+            </ActionIcon>
+            <ActionIcon size="xs" variant="subtle" color="gray" aria-label={`Card for ${r.name} on the canvas`} onClick={() => onShow('card', key)}>
+              <IconNote size={12} />
+            </ActionIcon>
+          </>
+        )}
+        {onFormat && <FormatButton reading={r} format={format} onChange={(f) => onFormat(key, f)} />}
+        {handoff && (
+          <Menu position="left-start" withinPortal shadow="md">
+            <Menu.Target>
+              <ActionIcon size="xs" variant="subtle" color="gray" aria-label={`Open ${r.name} in…`}>
+                …
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {HANDOFFS.map(([kind, label]) => {
+                const why = handoff.reason(kind, r.name)
+                return (
+                  <Menu.Item key={kind} disabled={Boolean(why)} onClick={() => handoff.run(kind, r.name)}>
+                    <Text size="xs">{label}</Text>
+                    {why && (
+                      <Text size="10px" c="dimmed" maw={220}>
+                        {why}
+                      </Text>
+                    )}
+                  </Menu.Item>
+                )
+              })}
+            </Menu.Dropdown>
+          </Menu>
+        )}
+      </Group>
+    </Group>
+  )
+}
+
+/** Display unit and digits for one variable. The engine checks a typed unit measures the same quantity; nothing is re-solved. */
+function FormatButton({ reading: r, format, onChange }: Readonly<{ reading: Reading; format?: VariableFormat; onChange: (f: VariableFormat | null) => void }>) {
+  const [draft, setDraft] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const { unit: _u, from: _f, scale: _s, shift: _h, ...digitsOnly } = format ?? {}
+  const keep = (next: VariableFormat) => onChange(Object.keys(next).length > 0 ? next : null)
+  const applyUnit = async () => {
+    const unit = draft.trim()
+    if (!unit || unit === r.units) return keep(digitsOnly)
+    const c = (await wasmUnitConversions(r.units, [unit])).units[0]
+    if (c?.scale === undefined) return setError(c?.error ?? `${unit} is not a unit.`)
+    setError(null)
+    keep({ ...format, unit, from: r.units, scale: c.scale, shift: c.shift ?? 0 })
+  }
+  return (
+    <Popover position="left" withinPortal shadow="md" onOpen={() => setDraft(format?.from === r.units ? (format?.unit ?? '') : '')}>
+      <Popover.Target>
+        <ActionIcon size="xs" variant={format ? 'light' : 'subtle'} color="gray" aria-label={`Format ${r.name}`}>
+          <IconAdjustments size={12} />
+        </ActionIcon>
+      </Popover.Target>
+      <Popover.Dropdown p={6}>
+        <Stack gap={4} w={210} data-testid="format-variable">
+          <TextInput
+            size="xs"
+            label={`Display unit (solved in ${r.units || 'no unit'})`}
+            placeholder={r.units}
+            disabled={!r.units}
+            value={draft}
+            error={error}
+            onChange={(e) => setDraft(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void applyUnit()
+            }}
+            onBlur={() => void applyUnit()}
+          />
+          <Select
+            size="xs"
+            label="Significant digits"
+            data={['auto', ...Array.from({ length: 9 }, (_, k) => String(k + 2))]}
+            value={format?.digits ? String(format.digits) : 'auto'}
+            onChange={(v) => {
+              const { digits: _d, ...rest } = format ?? {}
+              keep(v && v !== 'auto' ? { ...rest, digits: Number(v) } : rest)
+            }}
+            comboboxProps={{ withinPortal: false }}
+          />
+          <Text size="10px" c="dimmed">
+            Display only: the document and its inputs are unchanged.
+          </Text>
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
+  )
+}
+
 function ReadoutCard({
   node,
   readout,
@@ -3613,9 +4472,18 @@ function ReadoutCard({
   onNudge,
   onReveal,
   onFocus,
+  shown,
+  onShow,
+  onFormat,
+  handoff,
 }: Readonly<{
+  handoff?: Handoff
   node: SchematicNode
   readout: NodeReadout
+  /** RUN-03: the block's chosen badge variable, the watch list and the formats. */
+  shown?: { badge?: string; watch: readonly string[]; formats: Readonly<Record<string, VariableFormat>> }
+  onShow?: (how: 'badge' | 'watch' | 'card', name: string) => void
+  onFormat?: (name: string, f: VariableFormat | null) => void
   pinned: boolean
   localType?: boolean
   identity?: InstanceIdentityDto
@@ -3777,14 +4645,7 @@ function ReadoutCard({
             {p.port}
           </Text>
           {p.readings.map((r) => (
-            <Group key={r.label} gap={6} justify="space-between" wrap="nowrap">
-              <Text size="xs" c="dimmed">
-                {r.label}
-              </Text>
-              <Text size="xs" ff="monospace">
-                {formatCompact(r.value)} {r.units}
-              </Text>
-            </Group>
+            <ReadingRow key={r.name} reading={r} shown={shown} onShow={onShow} onFormat={onFormat} handoff={handoff} />
           ))}
         </div>
       ))}
@@ -3795,14 +4656,7 @@ function ReadoutCard({
             results
           </Text>
           {readout.outputs.map((r) => (
-            <Group key={r.label} gap={6} justify="space-between" wrap="nowrap">
-              <Text size="xs" c="dimmed">
-                {r.label}
-              </Text>
-              <Text size="xs" ff="monospace">
-                {formatCompact(r.value)} {r.units}
-              </Text>
-            </Group>
+            <ReadingRow key={r.name} reading={r} shown={shown} onShow={onShow} onFormat={onFormat} handoff={handoff} />
           ))}
         </>
       )}
@@ -4100,6 +4954,20 @@ function usePanZoom(
 }
 
 /** "a.out → b.in  (EG50 · liquid)" — the hover description of one connection. */
+const OVERLAY_DASH = { missing: '2 4', nonfinite: '1 3', unit: '8 3 2 3', value: undefined }
+
+/** WIRE-10: a measured-flow arrowhead at the middle of a wire's longest run. */
+function FlowArrow({ pts, dir, fill }: Readonly<{ pts: readonly { x: number; y: number }[]; dir: 1 | -1; fill: string }>) {
+  let k = 1
+  for (let i = 2; i < pts.length; i++) if (Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y) > Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y)) k = i
+  const [a, b] = [pts[k - 1], pts[k]]
+  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1
+  const [ux, uy] = [((b.x - a.x) / len) * dir, ((b.y - a.y) / len) * dir]
+  const [mx, my] = [(a.x + b.x) / 2, (a.y + b.y) / 2]
+  const d = `M ${mx + ux * 5} ${my + uy * 5} L ${mx - ux * 4 - uy * 4} ${my - uy * 4 + ux * 4} L ${mx - ux * 4 + uy * 4} ${my - uy * 4 - ux * 4} Z`
+  return <path data-arrow={dir > 0 ? 'forward' : 'reverse'} d={d} fill={fill} pointerEvents="none" />
+}
+
 function edgeTitle(e: SchematicEdge): string {
   const from = endpointName(e.from, e.fromPort)
   const to = endpointName(e.to, e.toPort)
@@ -4122,7 +4990,7 @@ function lineDescription(e: SchematicEdge): string {
 /** Terminals (sources, sinks, grounds) get a lighter outline to go with their
  *  dashed border — they bound the model rather than being part of it. */
 /** "q = 6444.3 W" — the one number printed on a block. */
-function badgeText(badge: { label: string; value: number; units: string }, digits?: number): string {
-  const unit = badge.units ? ` ${badge.units}` : ''
-  return `${badge.label} = ${formatCompact(badge.value, digits)}${unit}`
+function badgeText(badge: Reading & { format?: VariableFormat }, digits?: number): string {
+  const shown = formatReading(badge, { digits, ...badge.format })
+  return `${badge.label} = ${shown.text}${shown.units ? ` ${shown.units}` : ''}`
 }

@@ -558,6 +558,16 @@ export async function wasmReplClear(name?: string): Promise<void> {
   await call('replClear', [JSON.stringify(name ?? null)])
 }
 
+/** RUN-03: `{unit, scale, shift}` per target (`shown = value · scale + shift`), or why not. */
+export async function wasmUnitConversions(from: string, to: string[]): Promise<UnitConversions> {
+  return JSON.parse((await call('unitConversions', [from, JSON.stringify(to)])).result) as UnitConversions
+}
+
+export interface UnitConversions {
+  error?: string
+  units: { unit: string; scale?: number; shift?: number; error?: string }[]
+}
+
 /** The engine's language reference. */
 export async function wasmReference(): Promise<LanguageReference> {
   return JSON.parse((await call('reference', [])).result) as LanguageReference

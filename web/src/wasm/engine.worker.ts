@@ -38,6 +38,7 @@ import init, {
   psychrometric_chart,
   reference,
   repl_clear,
+  unit_conversions,
   repl_evaluate,
   monte_carlo,
   optimize,
@@ -149,6 +150,7 @@ export interface EngineRequest {
     | 'extractPlant'
     | 'check'
     | 'reference'
+    | 'unitConversions'
     | 'version'
     | 'fluids'
     | 'propertyDiagram'
@@ -272,6 +274,9 @@ const handle = async (event: MessageEvent<EngineRequest>) => {
         break
       case 'reference':
         result = reference()
+        break
+      case 'unitConversions':
+        result = unit_conversions(args[0] ?? '', args[1] ?? '[]')
         break
       case 'version':
         result = version()

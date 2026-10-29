@@ -1,6 +1,7 @@
 import { tableInputIssues } from './tableValidation'
 import { resolvePlotSource } from './plots/sources'
 import { CANVAS_COMMANDS, runCanvasCommand } from './schematic/commands'
+import type { SchematicHandoff } from './schematic/SchematicTab'
 import { flushSync } from 'react-dom'
 import { helpUrl } from './helpUrl'
 import { ChangeEvent, lazy, startTransition, Suspense, useCallback, useEffect, useEffectEvent, useMemo, useState, useRef, type ReactNode } from 'react'
@@ -754,8 +755,7 @@ export default function App() {
       // Blurring is how an in-progress grid cell or input edit gets committed
       // before a check/solve reads it. The equation editor has nothing pending —
       // its keystrokes are already in the document — so blurring it would only
-      // throw the caret out of the text the caller is about to check, which the
-      // 700 ms live lint would then do on every typing pause.
+      // throw the caret out of the text the caller is about to check.
       const active = document.activeElement
       if (active instanceof HTMLElement && !active.closest('.cm-editor')) active.blur()
     })
@@ -776,6 +776,9 @@ export default function App() {
   // Seed for a new X-Y plot opened from a table's column selection (x + y vars),
   // applied as the modal's initial XY config.
   const [plotSeed, setPlotSeed] = useState<{ xVar: string; yVars: string[]; tableId?: string } | null>(null)
+  // RUN-06: a schematic stream's fluid for a new property diagram; a variable to open Sensitivity on.
+  const [fluidSeed, setFluidSeed] = useState<string | null>(null)
+  const [sensitivityOutput, setSensitivityOutput] = useState<string | null>(null)
   // D10: the spreadsheet feature is removed. A loaded project's spreadsheets
   // array is carried INERT — held here, written back on save, never shown and
   // never destroyed (ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions, compatibility
@@ -1737,7 +1740,11 @@ export default function App() {
 
   async function onCheck(fromLint = false): Promise<CheckResponse | null> {
     if (checking) return null
-    flushTableEdits()
+    // The live lint was not asked for, so it must not take focus from whatever
+    // the user is typing in (a quick-add search, an inspector field); it reads
+    // what is already committed.
+    if (fromLint) flushTablesWorkbook()
+    else flushTableEdits()
     const requestRevision = modelRevisionRef.current.startCheck()
     setChecking(true)
     setStopped(false)
@@ -2292,6 +2299,34 @@ export default function App() {
     setNewPlotKind('xy')
   }
 
+  // RUN-06: a solved variable handed from the schematic to the app's own windows.
+  const plotTableFor = (name: string) =>
+    tables.find((t): t is ParamTableSpec => t.kind === 'parametric' && t.results.length > 1 && t.vars.some((v) => v.toLowerCase() === name.toLowerCase()))
+  const handoffReason = (kind: SchematicHandoff, name: string): string | null => {
+    if (!result) return 'Solve first.'
+    if (kind === 'plot' && !plotTableFor(name)) return 'Add it to a parametric table and run the table: a plot needs more than one solved point.'
+    return null
+  }
+  const handoff = (kind: SchematicHandoff, name: string, fluid?: string) => {
+    if (kind === 'plot') {
+      const t = plotTableFor(name)
+      if (t) handlePlotColumns(t.vars.find((v) => v.toLowerCase() !== name.toLowerCase()) ?? t.vars[0], [name], t.id)
+    } else if (kind === 'table') {
+      const target = [...tables].reverse().find((t): t is ParamTableSpec => t.kind === 'parametric' && t.source !== 'code' && t.origin !== 'ode')
+      const t = target ?? newParamTable(tables)
+      const next = t.vars.some((v) => v.toLowerCase() === name.toLowerCase()) ? t : invalidateActiveParam({ ...t, vars: [...t.vars, name] })
+      setTables((prev) => (target ? prev.map((x) => (x.id === t.id ? next : x)) : [...prev, next]))
+      setActiveTableId(t.id)
+      requestAnimationFrame(() => openTableWindow(next))
+    } else if (kind === 'state' && fluid) {
+      setFluidSeed(fluid)
+      setNewPlotKind('property')
+    } else if (kind === 'sensitivity') {
+      setSensitivityOutput(name)
+      setShowSensitivity(true)
+    }
+  }
+
   const handlePlotsChange = (nextPlots: PlotSpec[]) => {
     // Code-defined plots are derived from the solve response, not persisted, so
     // strip them before saving — they are re-merged on the next solve/check.
@@ -2840,6 +2875,7 @@ export default function App() {
             checkResult={checkResult}
             components={result?.components}
             variables={result?.variables}
+            blocks={result?.blocks}
             text={textRef.current}
             onRevealLine={goToLine}
             onSelectLine={selectLine}
@@ -2847,6 +2883,7 @@ export default function App() {
             onSourceEdit={(changes, expected) => editorRef.current?.applyEdit(changes, expected) ?? false}
             presentation={schematic}
             onPresentationChange={setSchematic}
+            handoff={{ reason: handoffReason, run: handoff }}
             highlightIds={cursorInstance ? [...instancesInDiagnosis(checkResult?.message ?? ''), cursorInstance] : instancesInDiagnosis(checkResult?.message ?? '')}
           />
         </Suspense>
@@ -3462,7 +3499,8 @@ export default function App() {
         <Suspense fallback={null}>
           <SensitivityModal
             opened
-            onClose={() => setShowSensitivity(false)}
+            onClose={() => { setShowSensitivity(false); setSensitivityOutput(null) }}
+            initialOutput={sensitivityOutput ?? undefined}
             onRun={(params) =>
               runSensitivity({
                 text: effectiveText(),
@@ -3715,15 +3753,17 @@ export default function App() {
             occupiedNames={mergedPlots.map((p) => p.name)}
             tableVars={tableVars}
             initialXy={newPlotKind === 'xy' ? (plotSeed ?? undefined) : undefined}
+            initialFluid={newPlotKind === 'property' ? (fluidSeed ?? undefined) : undefined}
             hasStates={detectStates(result?.variables ?? []).indices.length > 0}
             onSave={(spec) => {
               handlePlotsChange([...plots, spec])
               setActivePlotId(spec.id)
               setNewPlotKind(null)
               setPlotSeed(null)
+              setFluidSeed(null)
               requestAnimationFrame(() => dockRef.current?.openInstance(`plot:${spec.id}`, 'plot', spec.name))
             }}
-            onClose={() => { setNewPlotKind(null); setPlotSeed(null) }}
+            onClose={() => { setNewPlotKind(null); setPlotSeed(null); setFluidSeed(null) }}
           />
         </Suspense>
       )}

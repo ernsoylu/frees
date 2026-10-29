@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EV_TOPOLOGY } from './evTopology.fixture'
 import { layoutSchematic, pathOf, routeAll, type SchematicGroup, type SchematicNode } from './layout'
-import { arrangeBase, arrangeBlocks, EMPTY_PRESENTATION, framesFor, guideSnap, resolveLegacy, sanitizePresentation, snapToGrid, styleFor } from './presentation'
+import { applyPreset, arrangeBase, arrangeBlocks, EMPTY_PRESENTATION, renamePresentation, transformSymbols, framesFor, guideSnap, resolveLegacy, sanitizePresentation, snapToGrid, styleFor } from './presentation'
 import { boxesEntered } from '../test/schematicPaths'
 
 const ev = layoutSchematic(EV_TOPOLOGY)
@@ -136,6 +136,92 @@ describe('wire routes (WIRE-07)', () => {
     const { presentation, repaired } = sanitizePresentation({ ...EMPTY_PRESENTATION, routes: { ...routes, bad: { points: [{ x: 'a' }] }, worse: 3 } })
     expect(presentation.routes).toEqual(routes)
     expect(repaired).toBe(2)
+  })
+})
+
+describe('shown variables (RUN-03)', () => {
+  it('round-trips badges, watch rows and formats, and drops malformed ones', () => {
+    const shown = {
+      badges: { chlr: 'chlr.q', 'sub1.r1': 'sub1.r1.a.i' },
+      watch: ['chlr.in.p', 'x[2]'],
+      formats: { 'chlr.in.p': { unit: 'bar', from: 'kPa', scale: 0.01, shift: 0, digits: 4 }, 'chlr.q': { digits: 3 } },
+    }
+    const { presentation, repaired } = sanitizePresentation({
+      ...EMPTY_PRESENTATION,
+      badges: { ...shown.badges, 'bad id': 'x', fan: 'Not A Name' },
+      watch: [...shown.watch, 'chlr.in.p', 7],
+      formats: { ...shown.formats, a: { unit: 'bar' }, b: { digits: 1 }, c: { scale: 0 } },
+    })
+    expect([presentation.badges, presentation.watch, presentation.formats]).toEqual([shown.badges, shown.watch, shown.formats])
+    expect(repaired).toBe(7) // two badges, a duplicate and a number in watch, three formats
+    expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: 'fluid:p', arrows: true } }).presentation.overlay).toEqual({ metric: 'fluid:p', arrows: true })
+    expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: 'drop table', arrows: 1 } })).toMatchObject({ presentation: { overlay: { metric: '', arrows: false } }, repaired: 1 })
+  })
+})
+
+describe('saved views and presets (VIEW-08)', () => {
+  it('keeps a whole view, drops a broken one, and presets touch view settings only', () => {
+    const good = { name: 'Loop', scope: 'sub1', camera: { x: -40, y: 12, zoom: 1.5 }, view: { ...EMPTY_PRESENTATION.view, detail: 'names' as const }, overlay: { metric: 'fluid:p', arrows: true }, badges: { pump: 'pump.w' }, focus: { kind: 'trace' as const, id: 'pump' } }
+    const { presentation, repaired } = sanitizePresentation({
+      ...EMPTY_PRESENTATION,
+      views: [good, { ...good }, { ...good, name: 'Zoomed', camera: { x: 0, y: 0, zoom: 0 } }, { ...good, name: 'Odd', view: { detail: 'everything' } }, { ...good, name: 'Bad focus', focus: { kind: 'all', id: 'pump' } }],
+    })
+    expect(presentation.views).toEqual([good])
+    expect(repaired).toBe(4) // a duplicate name, zero zoom, an unknown detail, an unknown focus
+    const p = { ...EMPTY_PRESENTATION, positions: { a: { x: 1, y: 2 } }, overlay: { metric: 'fluid:p', arrows: false } }
+    const debug = applyPreset(p, 'debug')
+    expect([debug.view.portLabels, debug.view.grouping, debug.overlay, debug.positions]).toEqual([true, 'domain', p.overlay, p.positions])
+    expect(applyPreset(p, 'presentation')).toMatchObject({ view: { background: 'plain', guides: false }, overlay: { metric: '', arrows: false } })
+  })
+})
+
+describe('annotations (VIEW-09) and rename', () => {
+  it('keeps linked annotations, drops malformed ones, and a rename moves every key and link', () => {
+    const notes = [
+      { id: 'n1', kind: 'note' as const, scope: '', at: { x: 10, y: 20 }, text: 'Pump sizing\nsee report', target: '' },
+      { id: 'n2', kind: 'callout' as const, scope: 'sub1', at: { x: 0, y: 0 }, text: '', target: 'sub1.r1' },
+      { id: 'n3', kind: 'card' as const, scope: 'sub1', at: { x: 5, y: 5 }, text: '', target: 'sub1.r1.a.i' },
+    ]
+    const { presentation, repaired } = sanitizePresentation({
+      ...EMPTY_PRESENTATION,
+      annotations: [...notes, { ...notes[0] }, { ...notes[1], id: 'n4', target: '' }, { ...notes[2], id: 'n5', target: 'Not A Var' }, { ...notes[0], id: 'x', text: 'odd id' }],
+    })
+    expect(presentation.annotations).toEqual(notes)
+    expect(repaired).toBe(4) // a duplicate id, a callout to nothing, a malformed variable, a malformed id
+    const p = {
+      ...presentation,
+      positions: { 'sub1.r1': { x: 1, y: 1 } },
+      badges: { 'sub1.r1': 'sub1.r1.a.i' },
+      watch: ['sub1.r1.a.v', 'sub1.r10.a.v'],
+      formats: { 'sub1.r1.a.i': { digits: 3 } },
+      views: [{ name: 'V', scope: 'sub1', camera: { x: 0, y: 0, zoom: 1 }, view: EMPTY_PRESENTATION.view, overlay: { metric: '', arrows: false }, badges: { 'sub1.r1': 'sub1.r1.a.i' }, focus: { kind: 'trace' as const, id: 'sub1.r1' } }],
+    }
+    const moved = renamePresentation(p, new Map([['sub1.r1', 'sub1.ra']]))
+    expect(Object.keys(moved.positions)).toEqual(['sub1.ra'])
+    expect(moved.badges).toEqual({ 'sub1.ra': 'sub1.ra.a.i' })
+    expect(moved.watch).toEqual(['sub1.ra.a.v', 'sub1.r10.a.v']) // whole segments only
+    expect(Object.keys(moved.formats)).toEqual(['sub1.ra.a.i'])
+    expect(moved.views[0]).toMatchObject({ scope: 'sub1', badges: { 'sub1.ra': 'sub1.ra.a.i' }, focus: { id: 'sub1.ra' } })
+    expect(moved.annotations.map((a) => a.target)).toEqual(['', 'sub1.ra', 'sub1.ra.a.i'])
+  })
+})
+
+describe('symbol transforms (COMP-07)', () => {
+  it('turns and mirrors ports with the symbol, keeping their names, and validates the style', () => {
+    const node = { id: 'p', label: 'P', type: 'Pump', shape: 'pump', terminal: false, kind: 'instance', group: 'g', x: 0, y: 0, w: 100, h: 50, ports: [
+      { port: 'in', side: 'left', dx: 0, dy: 25 },
+      { port: 'out', side: 'right', dx: 100, dy: 25 },
+      { port: 'shaft', side: 'top', dx: 50, dy: 0 },
+    ] } as SchematicNode
+    const at = (rotate: 0 | 90 | 180 | 270, mirror = false) =>
+      transformSymbols({ nodes: [node] } as Parameters<typeof transformSymbols>[0], { project: {}, types: {}, instances: { p: { rotate, mirror } } }).nodes[0].ports.map((q) => `${q.port} ${q.side} ${q.dx},${q.dy}`)
+    expect(at(90)).toEqual(['in top 50,0', 'out bottom 50,50', 'shaft right 100,25'])
+    expect(at(180)).toEqual(['in right 100,25', 'out left 0,25', 'shaft bottom 50,50'])
+    expect(at(0, true)).toEqual(['in right 100,25', 'out left 0,25', 'shaft top 50,0'])
+    expect(at(90, true)).toEqual(['in bottom 50,50', 'out top 50,0', 'shaft right 100,25'])
+    const { presentation, repaired } = sanitizePresentation({ ...EMPTY_PRESENTATION, styles: { project: { label: 'below', labelSize: 14 }, types: { pump: { rotate: 90, mirror: true, density: 'names' } }, instances: { p: { rotate: 45, labelSize: 40, label: 'left' } } } })
+    expect(presentation.styles).toEqual({ project: { label: 'below', labelSize: 14 }, types: { pump: { rotate: 90, mirror: true, density: 'names' } }, instances: { p: {} } })
+    expect(repaired).toBe(3)
   })
 })
 
