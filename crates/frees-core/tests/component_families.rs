@@ -264,6 +264,7 @@ fn probe_instance(def: &frees_core::components::def::ComponentDef) -> Option<Com
         params,
         source_text: format!("{} probe(...)", def.name),
         line: 0,
+        span: Default::default(),
     })
 }
 

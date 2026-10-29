@@ -195,6 +195,31 @@ export interface SchematicPresentation {
   locked: string[]
   areas: SchematicArea[]
   view: ViewSettings
+  styles: BlockStyles
+}
+
+/** How a block draws, beyond the theme: an outline accent and readout digits. */
+export interface BlockStyle {
+  /** `#rrggbb`. */
+  accent?: string
+  /** Significant digits of the block's readout badge. */
+  precision?: number
+}
+
+/** CFG-01 style scopes. A block takes its own, then its type's, then the project's. */
+export interface BlockStyles {
+  project: BlockStyle
+  /** By lower-case component type. */
+  types: Record<string, BlockStyle>
+  /** By block id. */
+  instances: Record<string, BlockStyle>
+}
+
+export const EMPTY_STYLES: BlockStyles = { project: {}, types: {}, instances: {} }
+
+/** The style a block draws with, after precedence. */
+export function styleFor(styles: BlockStyles, id: string, type: string): BlockStyle {
+  return { ...styles.project, ...styles.types[type.toLowerCase()], ...styles.instances[id] }
 }
 
 export const EMPTY_PRESENTATION: SchematicPresentation = {
@@ -203,6 +228,7 @@ export const EMPTY_PRESENTATION: SchematicPresentation = {
   locked: [],
   areas: [],
   view: DEFAULT_VIEW,
+  styles: EMPTY_STYLES,
 }
 
 /** Coordinates past this, or more entries than this, are a malformed or
@@ -228,6 +254,44 @@ const record = (v: unknown): Record<string, unknown> | null =>
   v != null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null
 const id = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= MAX_TEXT
 const coord = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= MAX_COORD
+/** A block id: an instance path, or a `$` junction. */
+const ref = (v: unknown): v is string => id(v) && /^\$?[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$/.test(v)
+
+/** One style, keeping only well-formed fields; `bad` counts what was dropped. */
+function styleOf(v: unknown): { style: BlockStyle | null; bad: number } {
+  const raw = record(v)
+  if (!raw) return { style: null, bad: 1 }
+  const style: BlockStyle = {}
+  let bad = 0
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === 'accent' && typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)) style.accent = value
+    else if (key === 'precision' && Number.isInteger(value) && (value as number) >= 2 && (value as number) <= 8) style.precision = value as number
+    else bad++
+  }
+  return { style, bad }
+}
+
+function stylesOf(v: unknown): { styles: BlockStyles; repaired: number } {
+  const raw = record(v)
+  if (!raw) return { styles: EMPTY_STYLES, repaired: v == null ? 0 : 1 }
+  let repaired = 0
+  const scope = (value: unknown, key: (k: string) => boolean) => {
+    const out: Record<string, BlockStyle> = {}
+    for (const [k, s] of Object.entries(record(value) ?? {})) {
+      const { style, bad } = styleOf(s)
+      repaired += bad
+      if (style && key(k) && Object.keys(out).length < MAX_ENTRIES) out[k] = style
+      else if (style) repaired++
+    }
+    return out
+  }
+  const project = styleOf(raw.project ?? {})
+  repaired += project.bad
+  return {
+    styles: { project: project.style ?? {}, types: scope(raw.types, (k) => /^[a-z_]\w*$/.test(k)), instances: scope(raw.instances, ref) },
+    repaired,
+  }
+}
 
 /**
  * v3 drag offsets, validated as v3 always did: finite pairs only, clamped to
@@ -269,7 +333,7 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
   const positions: SchematicPresentation['positions'] = {}
   for (const [key, p] of Object.entries(record(raw.positions) ?? {})) {
     const { x, y } = record(p) ?? {}
-    if (Object.keys(positions).length < MAX_ENTRIES && id(key) && coord(x) && coord(y)) {
+    if (Object.keys(positions).length < MAX_ENTRIES && ref(key) && coord(x) && coord(y)) {
       positions[key] = { x, y }
     } else {
       repaired++
@@ -278,12 +342,12 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
   const legacy = offsetsOf(raw.legacyOffsets)
   repaired += legacy.repaired
   const list = (v: unknown) => (Array.isArray(v) ? v : [])
-  const locked = list(raw.locked).filter(id).slice(0, MAX_ENTRIES)
+  const locked = list(raw.locked).filter(ref).slice(0, MAX_ENTRIES)
   repaired += list(raw.locked).length - locked.length
   const areas: SchematicArea[] = []
   for (const a of list(raw.areas)) {
     const { id: areaId, label, members } = record(a) ?? {}
-    if (areas.length < MAX_AREAS && id(areaId) && typeof label === 'string' && label.length <= MAX_TEXT && Array.isArray(members) && members.every(id)) {
+    if (areas.length < MAX_AREAS && id(areaId) && typeof label === 'string' && label.length <= MAX_TEXT && Array.isArray(members) && members.every(ref)) {
       areas.push({ id: areaId, label, members: members.slice(0, MAX_ENTRIES) })
     } else {
       repaired++
@@ -299,7 +363,9 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
       repaired++
     }
   }
-  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view }, repaired }
+  const styles = stylesOf(raw.styles)
+  repaired += styles.repaired
+  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles }, repaired }
 }
 
 /**

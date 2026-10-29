@@ -208,6 +208,16 @@ fn assert_check_envelope(v: &Value) {
         assert_key(inst, "type", Value::is_string);
         assert_key(inst, "line", Value::is_u64);
         assert_key(inst, "localType", Value::is_boolean);
+        assert_key(inst, "range", |r| {
+            r.is_null() || r.as_array().is_some_and(|a| a.len() == 2)
+        });
+    }
+    assert_key(v, "ports", Value::is_array);
+    for port in v["ports"].as_array().unwrap() {
+        assert_key(port, "instance", Value::is_string);
+        assert_key(port, "port", Value::is_string);
+        assert_key(port, "domain", Value::is_string);
+        assert_key(port, "connected", Value::is_boolean);
     }
     for def in v["definitions"].as_array().unwrap() {
         assert_key(def, "name", Value::is_string);
@@ -666,4 +676,211 @@ fn print_the_ode_table_payload_for_the_web_fixture() {
             "{}"
         )
     );
+}
+
+/// Check reports where each instance and `connect` is written, as UTF-16
+/// offsets the editor can use directly, and every port, the unwired included.
+/// The comment before them is multi-byte in UTF-8 and has a surrogate pair in
+/// UTF-16, so a byte offset or a char count would both land in the wrong place.
+#[test]
+fn check_reports_editor_ranges_provenance_and_every_port() {
+    let source = "// Kühler — ✓ 🧊\n\
+MoistAirSource ROOM(s1, P=101325 [Pa], T=299 [K], W=0.012, mdot=0.6 [kg/s])\n\
+MoistAirFan FAN(s1, s2, dP=250 [Pa], eta=0.55)\n\
+MoistAirSink SUP()\n\
+HeatPipeWrapAround HP(eff=0.5)\n\
+connect(FAN.out, SUP.in)\n";
+    let v = checked(source);
+    let utf16: Vec<u16> = source.encode_utf16().collect();
+    let text = |range: &Value| {
+        let r: Vec<usize> = range
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| n.as_u64().unwrap() as usize)
+            .collect();
+        String::from_utf16(&utf16[r[0]..r[1]]).unwrap()
+    };
+    let fan = v["instances"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == "fan")
+        .unwrap();
+    assert_eq!(
+        text(&fan["range"]),
+        "MoistAirFan FAN(s1, s2, dP=250 [Pa], eta=0.55)"
+    );
+
+    let conns = v["connections"].as_array().unwrap();
+    let written = conns.iter().find(|c| c["alias"].is_null()).unwrap();
+    assert_eq!(text(&written["range"]), "connect(FAN.out, SUP.in)");
+    assert_eq!(written["inDefinition"], false);
+    let shared = conns.iter().find(|c| c["alias"] == "s1").unwrap();
+    assert!(
+        shared["range"].is_null(),
+        "no single statement owns a shared stream"
+    );
+
+    let port = |instance: &str, name: &str| {
+        v["ports"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["instance"] == instance && p["port"] == name)
+            .unwrap_or_else(|| panic!("no port {instance}.{name} in {}", v["ports"]))
+            .clone()
+    };
+    assert_eq!(port("fan", "in")["connected"], true); // shared stream s1
+    assert_eq!(port("fan", "out")["connected"], true); // connect
+    assert_eq!(port("hp", "pre_in")["connected"], false);
+    assert_eq!(port("fan", "in")["domain"], "fluid");
+    assert_eq!(port("fan", "in")["connector"], "moistair");
+
+    // An override rewrites the checked text, so ranges no longer index the editor's.
+    let overridden = parsed(&check(source, r#"{"overrides":["zz = 1"]}"#));
+    assert_eq!(overridden["instances"].as_array().unwrap().len(), 4);
+    assert!(overridden["instances"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|i| i["range"].is_null()));
+    assert!(overridden["connections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|c| c["range"].is_null()));
+}
+
+/// A `connect` written inside a subsystem belongs to the definition: editing it
+/// changes every instance. It keeps its own range; the subsystem's boundary
+/// ports are reported on the subsystem instance.
+#[test]
+fn subsystem_connects_are_definition_owned_with_ranges() {
+    let source = "// Unterkühlung ✓ 🧊\n\
+function [a, b] = Loop()\n\
+port(a)\n\
+port(b)\n\
+LiquidPipe P1(fluid$=Water, L=1 [m], D=0.05 [m], rough=1e-4 [m])\n\
+LiquidPipe P2(fluid$=Water, L=1 [m], D=0.05 [m], rough=1e-4 [m])\n\
+connect(a, P1.in)\n\
+connect(P1.out, P2.in)\n\
+connect(P2.out, b)\n\
+end\n\
+LiquidSource SRC(fluid$=Water, mdot=1 [kg/s], P=200000 [Pa], T=300 [K])\n\
+Loop L()\n\
+LiquidSink RET()\n\
+connect(SRC.out, L.a)\n\
+connect(L.b, RET.in)\n";
+    let v = checked(source);
+    let utf16: Vec<u16> = source.encode_utf16().collect();
+    let text = |range: &Value| {
+        let r: Vec<usize> = range
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|n| n.as_u64().unwrap() as usize)
+            .collect();
+        String::from_utf16(&utf16[r[0]..r[1]]).unwrap()
+    };
+    let conns = v["connections"].as_array().unwrap();
+    let inner = conns
+        .iter()
+        .find(|c| c["endpoints"] == serde_json::json!(["l.p1.out", "l.p2.in"]))
+        .unwrap_or_else(|| panic!("no inner connection in {conns:?}"));
+    assert_eq!(inner["inDefinition"], true);
+    assert_eq!(text(&inner["range"]), "connect(P1.out, P2.in)");
+    let outer = conns
+        .iter()
+        .find(|c| c["endpoints"] == serde_json::json!(["src.out", "l.a"]))
+        .unwrap();
+    assert_eq!(outer["inDefinition"], false);
+    assert_eq!(text(&outer["range"]), "connect(SRC.out, L.a)");
+    let boundary = v["ports"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["instance"] == "l" && p["port"] == "a")
+        .unwrap();
+    assert_eq!(boundary["connected"], true);
+    assert_eq!(boundary["domain"], "fluid");
+}
+
+/// Each instance lists where its name is written in its own scope only. Two
+/// definitions each declare `inner`, the top level declares `Inner`, and a
+/// comment mentions both: a rename of one must touch none of the others.
+#[test]
+fn instance_refs_are_scoped_and_skip_comments() {
+    let source = "// inner.out and SRC.out in a comment — ✓ 🧊\n\
+function [a, b] = Box()\n\
+port(a)\n\
+port(b)\n\
+LiquidPipe inner(fluid$=Water, L=1 [m], D=0.05 [m], rough=1e-4 [m])\n\
+connect(a, inner.in)\n\
+connect(INNER.out, b)\n\
+end\n\
+function [a, b] = Crate()\n\
+port(a)\n\
+port(b)\n\
+LiquidPipe inner(fluid$=Water, L=2 [m], D=0.05 [m], rough=1e-4 [m])\n\
+connect(a, inner.in)\n\
+connect(inner.out, b)\n\
+end\n\
+LiquidSource SRC(fluid$=Water, mdot=1 [kg/s], P=200000 [Pa], T=300 [K])\n\
+Box B1()\n\
+Crate C1()\n\
+LiquidSink Inner()\n\
+connect(SRC.out, B1.a)\n\
+connect(B1.b, C1.a)\n\
+connect(C1.b, inner.in)\n";
+    let v = checked(source);
+    let utf16: Vec<u16> = source.encode_utf16().collect();
+    let refs = |name: &str| -> Vec<(usize, String)> {
+        let inst = v["instances"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|i| i["name"] == name)
+            .unwrap_or_else(|| panic!("no {name} in {}", v["instances"]));
+        inst["refs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| {
+                let (a, b) = (
+                    r[0].as_u64().unwrap() as usize,
+                    r[1].as_u64().unwrap() as usize,
+                );
+                let line = String::from_utf16(&utf16[..a])
+                    .unwrap()
+                    .matches('\n')
+                    .count()
+                    + 1;
+                (line, String::from_utf16(&utf16[a..b]).unwrap())
+            })
+            .collect()
+    };
+    let at = |pairs: &[(usize, &str)]| {
+        pairs
+            .iter()
+            .map(|(l, t)| (*l, t.to_string()))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(refs("inner"), at(&[(19, "Inner"), (22, "inner")]));
+    assert_eq!(
+        refs("b1.inner"),
+        at(&[(5, "inner"), (6, "inner"), (7, "INNER")])
+    );
+    assert_eq!(
+        refs("c1.inner"),
+        at(&[(12, "inner"), (13, "inner"), (14, "inner")])
+    );
+    assert_eq!(refs("src"), at(&[(16, "SRC"), (20, "SRC")]));
+    let nested = v["instances"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["name"] == "b1.inner")
+        .unwrap();
+    assert_eq!(nested["definedIn"], "box");
 }

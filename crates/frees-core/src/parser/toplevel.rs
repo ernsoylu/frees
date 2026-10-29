@@ -282,7 +282,10 @@ impl<'a> Parser<'a> {
                 doc.guesses.push(directive);
             }
             TokenKind::Component => {
+                let start = self.c.pos();
                 let def = self.component_def()?;
+                let span = self.span_since(start);
+                doc.definition_spans.0.push((def.name.clone(), span));
                 doc.components.defs.push(def);
             }
             TokenKind::Connect => {
@@ -297,18 +300,27 @@ impl<'a> Parser<'a> {
                 doc.components.instances.push(inst);
             }
             TokenKind::Function => {
+                let start = self.c.pos();
                 let def = self.function_def()?;
+                let span = self.span_since(start);
+                doc.definition_spans.0.push((parsed_def_name(&def), span));
                 match def {
                     ParsedDef::Component(component) => doc.components.defs.push(component),
                     other => record_def(&mut doc.defs, other),
                 }
             }
             TokenKind::Procedure => {
+                let start = self.c.pos();
                 let def = self.procedure_def()?;
+                let span = self.span_since(start);
+                doc.definition_spans.0.push((def.name.clone(), span));
                 record_def(&mut doc.defs, ParsedDef::Procedure(def));
             }
             TokenKind::Module => {
+                let start = self.c.pos();
                 let def = self.module_def()?;
+                let span = self.span_since(start);
+                doc.definition_spans.0.push((def.name.clone(), span));
                 record_def(&mut doc.defs, ParsedDef::Module(def));
             }
             TokenKind::Table => {
@@ -815,11 +827,7 @@ impl<'a> Parser<'a> {
                 for statement in body {
                     match statement {
                         ProcStatement::Port { name } => ports.push(name),
-                        ProcStatement::Connect { ports } => connects.push(ConnectDecl {
-                            ports,
-                            source_text: "connect(...)".to_string(),
-                            boundary: Vec::new(),
-                        }),
+                        ProcStatement::Connect { decl } => connects.push(decl),
                         ProcStatement::Variant {
                             name,
                             require,
@@ -2178,7 +2186,8 @@ impl<'a> Parser<'a> {
         self.c.expect(&TokenKind::RParen)?;
 
         let source_text = self.text_since(start_pos);
-        let (line, _) = self.span_since(start_pos).line_col(self.c.source());
+        let span = self.span_since(start_pos);
+        let (line, _) = span.line_col(self.c.source());
         Ok(ComponentInst {
             type_name,
             name,
@@ -2186,6 +2195,7 @@ impl<'a> Parser<'a> {
             params,
             source_text,
             line,
+            span,
         })
     }
 
@@ -2261,6 +2271,7 @@ impl<'a> Parser<'a> {
             ports,
             source_text: self.text_since(start_pos),
             boundary: Vec::new(),
+            span: self.span_since(start_pos),
         })
     }
 
@@ -2401,14 +2412,9 @@ impl<'a> Parser<'a> {
     }
 
     fn canonical_connect_statement(&mut self) -> Result<ProcStatement> {
-        self.c.expect(&TokenKind::Connect)?;
-        self.c.expect(&TokenKind::LParen)?;
-        let mut ports = vec![self.connect_port()?];
-        while self.c.eat(&TokenKind::Comma) {
-            ports.push(self.connect_port()?);
-        }
-        self.c.expect(&TokenKind::RParen)?;
-        Ok(ProcStatement::Connect { ports })
+        Ok(ProcStatement::Connect {
+            decl: self.connect_stmt()?,
+        })
     }
 
     fn canonical_variant_statement(&mut self) -> Result<ProcStatement> {
@@ -2951,18 +2957,22 @@ enum ParsedDef {
     Table(FunctionTableDef),
 }
 
-/// Insert a definition, evicting any earlier definition of the same name from
-/// **all four** kinds first — the Java `LinkedHashMap<String, ProcDef>` keyed
-/// by lowercase name (`AstBuilder.buildProgram`) makes a later definition
-/// replace an earlier one across kinds. See the module docs.
-fn record_def(defs: &mut Definitions, def: ParsedDef) {
-    let name = match &def {
+fn parsed_def_name(def: &ParsedDef) -> String {
+    match def {
         ParsedDef::Function(d) => d.name.clone(),
         ParsedDef::Procedure(d) => d.name.clone(),
         ParsedDef::Component(d) => d.name.clone(),
         ParsedDef::Module(d) => d.name.clone(),
         ParsedDef::Table(d) => d.name.clone(),
-    };
+    }
+}
+
+/// Insert a definition, evicting any earlier definition of the same name from
+/// **all four** kinds first — the Java `LinkedHashMap<String, ProcDef>` keyed
+/// by lowercase name (`AstBuilder.buildProgram`) makes a later definition
+/// replace an earlier one across kinds. See the module docs.
+fn record_def(defs: &mut Definitions, def: ParsedDef) {
+    let name = parsed_def_name(&def);
     defs.functions.retain(|d| d.name != name);
     defs.procedures.retain(|d| d.name != name);
     defs.modules.retain(|d| d.name != name);

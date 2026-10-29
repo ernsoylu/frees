@@ -240,7 +240,7 @@ function describeParamValue(p: ComponentParamResult): string {
 }
 
 /** Compact fixed/exponential rendering — a hover card has no room for 8 digits. */
-export function formatCompact(value: number): string {
+export function formatCompact(value: number, digits = 5): string {
   if (!Number.isFinite(value)) {
     return String(value)
   }
@@ -251,7 +251,7 @@ export function formatCompact(value: number): string {
   if (abs >= 1e6 || abs < 1e-3) {
     return value.toExponential(3)
   }
-  return Number(value.toPrecision(5)).toString()
+  return Number(value.toPrecision(digits)).toString()
 }
 
 /**

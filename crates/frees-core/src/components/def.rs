@@ -38,6 +38,7 @@
 //! * **Domain separation** of a `connect` node: also the expander.
 
 use crate::ast::{Equation, Expr};
+use crate::diag::Span;
 
 /// A component parameter: `PARAM eta`, `PARAM eta = 0.7`, `PARAM fluid$`.
 ///
@@ -247,6 +248,9 @@ pub struct ComponentInst {
     /// library instance is line 221 in its file and line 564 in the concatenated
     /// source the Java parses as one string.
     pub line: usize,
+    /// Byte range of the whole instantiation in the parsed source; empty when
+    /// synthesised. Navigation and editing metadata, outside equality like `line`.
+    pub span: Span,
 }
 
 impl PartialEq for ComponentInst {
@@ -268,7 +272,7 @@ impl Eq for ComponentInst {}
 /// stream name — kept as its lowercase dotted text, exactly as
 /// `AstBuilder.buildConnect` keeps it. The expander ties the endpoints into one
 /// node: across-variables equal, flow conserved.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct ConnectDecl {
     /// Lowercase dotted endpoint paths, in written order.
     pub ports: Vec<String>,
@@ -279,6 +283,17 @@ pub struct ConnectDecl {
     /// world: its flow enters this node with the opposite sign. Empty for every
     /// top-level connect.
     pub boundary: Vec<bool>,
+    /// Byte range of the declaration in the parsed source; empty when
+    /// synthesised. Outside equality, like [`ComponentInst::line`].
+    pub span: Span,
+}
+
+impl PartialEq for ConnectDecl {
+    fn eq(&self, other: &Self) -> bool {
+        self.ports == other.ports
+            && self.source_text == other.source_text
+            && self.boundary == other.boundary
+    }
 }
 
 /// Everything the component layer of one document declared.
@@ -423,6 +438,7 @@ mod tests {
                 params: ParamOverrides::new(),
                 source_text: "Pump P1(s1, s2)".into(),
                 line: 0,
+                span: Default::default(),
             }],
             vec![],
         );

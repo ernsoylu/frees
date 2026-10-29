@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
   alreadyConnected,
+  compatibility,
+  portIndex,
+  netConnections,
+  joinedElsewhere,
   connectStatement,
   groupByInstance,
   hasUnknownUnitWarning,
@@ -137,5 +141,35 @@ describe('diagnosis helpers', () => {
       true,
     )
     expect(hasUnknownUnitWarning(['T_out: mixing K with C'])).toBe(false)
+  })
+})
+
+describe('engine-classified compatibility', () => {
+  const port = (instance: string, p: string, domain: string, connector: string | null = null, connected = false) => ({ instance, port: p, domain, connector, connected })
+  it('allows, prohibits, or leaves pending', () => {
+    expect(compatibility(port('a', 'out', 'fluid', 'liquid'), port('b', 'in', 'fluid', 'liquid')).kind).toBe('allowed')
+    expect(compatibility(port('a', 'out', 'fluid', 'liquid'), port('b', 'in', 'fluid', 'fluid')).kind).toBe('allowed')
+    expect(compatibility(port('a', 'out', 'fluid', 'liquid'), port('b', 'in', 'fluid', 'moistair'))).toMatchObject({ kind: 'prohibited', reason: /liquid line/ })
+    expect(compatibility(port('a', 'p', 'electrical'), port('b', 'wall', 'heat'))).toMatchObject({ kind: 'prohibited', reason: /electrical a.p to heat b.wall/ })
+    expect(compatibility(port('a', 'p', 'electrical'), undefined).kind).toBe('unknown')
+  })
+  it('previewWire defers to the engine, and marks unclassified wires pending', () => {
+    const ports = portIndex([port('a', 'out', 'fluid', 'liquid'), port('b', 'in', 'fluid', 'moistair')])
+    expect(previewWire({ instance: 'a', port: 'out' }, { instance: 'b', port: 'in' }, [], ports)).toMatchObject({ ok: false })
+    expect(previewWire({ instance: 'a', port: 'out' }, { instance: 'new', port: 'in' }, [], ports)).toMatchObject({ ok: true, pending: /decided by Check/ })
+  })
+})
+
+describe('net topology (WIRE-05)', () => {
+  const conns = [
+    { domain: 'fluid', endpoints: ['a.out', 'b.in'] },
+    { domain: 'fluid', endpoints: ['b.in', 'c.in'] },
+    { domain: 'fluid', endpoints: ['d.out', 'e.in'] },
+  ]
+  it('groups connections sharing endpoints and finds what still joins an end', () => {
+    expect(netConnections(conns, 0)).toEqual([0, 1])
+    expect(netConnections(conns, 2)).toEqual([2])
+    expect(joinedElsewhere(conns, new Set([0]), 'B.in')).toEqual([1])
+    expect(joinedElsewhere(conns, new Set([0]), 'a.out')).toEqual([])
   })
 })

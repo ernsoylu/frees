@@ -1087,7 +1087,7 @@ fn solve_success(
                     "operation": call.operation,
                 }))
                 .collect::<Vec<_>>(),
-            "connections": connection_defs(&solution.component_connections),
+            "connections": connection_defs(&solution.component_connections, None),
             // Tornado breakdown: per dependent variable, its propagated sigma and
             // each source's signed contribution, largest sigma first — the Java
             // `SolveController.uncertaintyBreakdownOf`. Empty when the document
@@ -1155,7 +1155,12 @@ fn plot_defs(plots: &[frees_core::parser::blocks::PlotDef]) -> Vec<Value> {
         .collect()
 }
 
-fn connection_defs(conns: &[frees_core::components::expander::Connection]) -> Vec<Value> {
+/// `connections[]`. `source` maps the editor text the spans index, when the
+/// engine parsed exactly that text; ranges are `null` otherwise.
+fn connection_defs(
+    conns: &[frees_core::components::expander::Connection],
+    source: Option<&Utf16Map>,
+) -> Vec<Value> {
     conns
         .iter()
         .map(|c| {
@@ -1165,9 +1170,38 @@ fn connection_defs(conns: &[frees_core::components::expander::Connection]) -> Ve
                 "connector": c.connector,
                 "fluid": c.fluid,
                 "streams": c.streams,
+                "range": source.zip(c.source).and_then(|(map, span)| map.range(span)),
+                "alias": c.alias,
+                "inDefinition": c.in_definition,
             })
         })
         .collect()
+}
+
+/// The UTF-16 offset of every byte position that starts a character, and of
+/// the end: what turns the engine's byte spans into editor (CodeMirror)
+/// positions in one pass over the text.
+struct Utf16Map(Vec<Option<usize>>);
+
+impl Utf16Map {
+    fn new(source: &str) -> Utf16Map {
+        let mut map = vec![None; source.len() + 1];
+        let mut at = 0;
+        for (byte, ch) in source.char_indices() {
+            map[byte] = Some(at);
+            at += ch.len_utf16();
+        }
+        map[source.len()] = Some(at);
+        Utf16Map(map)
+    }
+
+    /// A byte span as `[from, to)` UTF-16 offsets; `None` when empty or not on
+    /// character boundaries.
+    fn range(&self, span: frees_core::Span) -> Option<[usize; 2]> {
+        let (a, b) = (span.start as usize, span.end as usize);
+        let at = |i: usize| self.0.get(i).copied().flatten();
+        (a < b).then(|| Some([at(a)?, at(b)?])).flatten()
+    }
 }
 
 /// `odeTables[]` — the sampled trajectory of every solved `DYNAMIC` block.
@@ -1338,6 +1372,8 @@ pub fn check(source: &str, request_json: &str) -> String {
     // unsolvable, and one the override breaks must say so before Solve is
     // pressed.
     let overridden = apply_overrides(source, request.overrides.as_deref().unwrap_or_default());
+    // Source ranges index the editor's text; an override rewrote it.
+    let editor_text = (overridden == source).then_some(source);
     let source = overridden.as_str();
     // `CheckController.check`: `solver.check(parsed, complexMode,
     // SolveDtos.functionDefsOf(request.functionTables()))` — all three
@@ -1354,14 +1390,16 @@ pub fn check(source: &str, request_json: &str) -> String {
         .unwrap_or(false);
 
     match frees_core::check_with_tables_complex(source, &overrides, &extra_tables, complex_mode) {
-        Ok(report) => check_response(&report),
+        Ok(report) => check_response(&report, editor_text),
         // Only non-document problems (an invalid override row) surface as Err;
         // shaped like the Java 500-with-body, which api.ts reads the same way.
         Err(err) => check_failure(err.to_string_message()),
     }
 }
 
-fn check_response(report: &CheckReport) -> String {
+fn check_response(report: &CheckReport, source: Option<&str>) -> String {
+    let utf16 = source.map(Utf16Map::new);
+    let source = utf16.as_ref();
     // `variables` carries display spellings (the Java CheckResult maps through
     // displayNames), and `inferredUnits` is keyed the same way — the frontend
     // looks units up with the names from `variables`.
@@ -1410,7 +1448,20 @@ fn check_response(report: &CheckReport) -> String {
                 "operation": call.operation,
             }))
             .collect::<Vec<_>>(),
-        "connections": connection_defs(&report.connections),
+        "connections": connection_defs(&report.connections, source),
+        "ports": report
+            .ports
+            .iter()
+            .map(|p| {
+                json!({
+                    "instance": p.instance,
+                    "port": p.port,
+                    "domain": p.domain.as_str(),
+                    "connector": p.connector,
+                    "connected": p.connected,
+                })
+            })
+            .collect::<Vec<_>>(),
         "instances": report
             .instances
             .iter()
@@ -1420,7 +1471,12 @@ fn check_response(report: &CheckReport) -> String {
                     "label": i.label,
                     "type": i.type_name,
                     "line": i.line,
+                    "range": source.and_then(|map| map.range(i.span)),
                     "localType": i.local_type,
+                    "definedIn": i.defined_in,
+                    "refs": source.map(|map| {
+                        i.refs.iter().filter_map(|span| map.range(*span)).collect::<Vec<_>>()
+                    }),
                 })
             })
             .collect::<Vec<_>>(),
@@ -1448,6 +1504,7 @@ fn check_failure(message: String) -> String {
         "errors": [],
         "definedPlots": [],
         "connections": [],
+        "ports": [],
         "instances": [],
         "definitions": [],
     })

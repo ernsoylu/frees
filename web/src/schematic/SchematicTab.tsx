@@ -3,6 +3,7 @@ import {
   ActionIcon,
   Badge,
   Button,
+  ColorInput,
   Group,
   Kbd,
   Menu,
@@ -19,6 +20,8 @@ import {
 } from '@mantine/core'
 import {
   IconAdjustments,
+  IconArrowBackUp,
+  IconArrowForwardUp,
   IconArrowsMaximize,
   IconDownload,
   IconLock,
@@ -26,7 +29,7 @@ import {
   IconZoomIn,
   IconZoomOut,
 } from '@tabler/icons-react'
-import type { CheckResponse, ComponentResult, VariableResult } from '../api'
+import type { CheckResponse, ComponentResult, ConnectionDto, InstanceIdentityDto, VariableResult } from '../api'
 import {
   declarationLine,
   declarationLineFromCheck,
@@ -52,6 +55,20 @@ import {
   type SchematicNode,
 } from './layout'
 import { glyphFillPath, glyphPath, SHAPE_LABELS } from './symbols'
+import {
+  appendStatement,
+  applyChanges,
+  disconnectEndpoint,
+  invertChanges,
+  removeStatement,
+  renamedIds,
+  renameId,
+  renameInstance,
+  renameProblem,
+  suggestFix,
+  type SourceChange,
+  type SourceEdit,
+} from './sourceEdit'
 import { encapsulateSelection } from './encapsulation'
 import { badgeFor, formatCompact, indexVariables, readoutFor, type NodeReadout } from './readouts'
 import { COMPONENT_CATALOG } from '../componentCatalog'
@@ -63,13 +80,21 @@ import {
   guideSnap,
   resolveLegacy,
   snapToGrid,
+  EMPTY_STYLES,
+  styleFor,
+  type BlockStyle,
+  type BlockStyles,
   type SchematicPresentation,
   type ViewSettings,
 } from './presentation'
 import {
   alreadyConnected,
+  compatibility,
   connectStatement,
   endpointRef,
+  joinedElsewhere,
+  netConnections,
+  portIndex,
   previewWire,
   type WireEndpoint,
 } from './wiring'
@@ -112,6 +137,15 @@ const VIEW_CHOICES: { key: 'background' | 'grid' | 'spacing' | 'orientation' | '
 ]
 /** Snap and guide pull, in screen pixels. */
 const GUIDE_PX = 6
+const NO_PORTS: ReadonlySet<string> = new Set()
+/** Steps the canvas undo timeline keeps. */
+const HISTORY_LIMIT = 100
+/** One undoable canvas action: a presentation change, a source edit, or both. */
+interface HistoryStep {
+  label: string
+  pres?: [SchematicPresentation, SchematicPresentation]
+  source?: { changes: SourceChange[]; undo: SourceChange[]; before: string; after: string }
+}
 const FOCUS_TITLES: Record<FocusKind, string> = {
   neighbours: 'Neighbours of',
   trace: 'Net through',
@@ -138,6 +172,9 @@ interface Props {
   /** Append a statement to the document (wiring emits `connect(...)` lines).
    *  Absent = the canvas stays read-only. */
   onEmitStatement?: (statement: string) => void
+  /** Apply range patches to the editor while it still holds `expected`; false
+   *  when another edit intervened. The route every model edit here takes. */
+  onSourceEdit?: (changes: SourceChange[], expected: string) => boolean
   onInsertBlock?: (block: string) => void
   /** How the drawing is presented — placed blocks, locks, areas, view
    *  settings — owned by the workspace so it rides the project file; the
@@ -164,8 +201,9 @@ export default function SchematicTab({
   text,
   onRevealLine,
   onSelectLine,
-  onEmitStatement,
-  onInsertBlock,
+  onEmitStatement: emitStatement,
+  onSourceEdit,
+  onInsertBlock: insertBlock,
   presentation: saved,
   onPresentationChange,
   highlightIds = [],
@@ -186,11 +224,23 @@ export default function SchematicTab({
     presRef.current = next
     setPres(next)
   }, [])
-  /** Change the presentation and publish it at once — anything but a drag frame. */
-  const updatePres = (change: (p: SchematicPresentation) => SchematicPresentation) => {
-    const next = change(presRef.current)
+  const publish = (next: SchematicPresentation) => {
     applyPres(next)
     onPresentationChange?.(next)
+  }
+  // SYNC-07: one ordered timeline for the model and diagram edits made here.
+  // A step carries its presentation before/after, its source patches and their
+  // inverse, or both, and undoes as one. Typing in the editor keeps the
+  // editor's own undo; a source step undoes only while the editor still holds
+  // the text the step produced.
+  const [history, setHistory] = useState<{ done: HistoryStep[]; undone: HistoryStep[] }>({ done: [], undone: [] })
+  const record = (step: HistoryStep) => setHistory((h) => ({ done: [...h.done.slice(1 - HISTORY_LIMIT), step], undone: [] }))
+  /** Change the presentation and publish it at once — anything but a drag frame. */
+  const updatePres = (change: (p: SchematicPresentation) => SchematicPresentation, label = 'Change view settings') => {
+    const before = presRef.current
+    const next = change(before)
+    publish(next)
+    record({ label, pres: [before, next] })
   }
   const settings = pres.view
   const setSettings = (change: (v: ViewSettings) => ViewSettings) => updatePres((p) => ({ ...p, view: change(p.view) }))
@@ -212,8 +262,59 @@ export default function SchematicTab({
   // Alignment lines shown while a drag sits on one.
   const [guides, setGuides] = useState<{ xs: number[]; ys: number[] } | null>(null)
   const lastEmitted = useRef<{ a: string; b: string } | null>(null)
+  // A wire just written to the source, drawn dashed until the next Check lands.
+  const [provisional, setProvisional] = useState<{ from: WireEndpoint; to: WireEndpoint; check: CheckResponse | null } | null>(null)
+  // WIRE-05: the wire being inspected, valid only for the check that drew it.
+  const [wireCard, setWireCard] = useState<{ index: number; check: CheckResponse | null } | null>(null)
+  // WIRE-01: a wire being dragged out of a port, in drawing units.
+  const [wireDrag, setWireDrag] = useState<{ from: { instance: string; port: string }; a: [number, number]; b: [number, number] } | null>(null)
 
-  const connections = useMemo(() => checkResult?.connections ?? [], [checkResult])
+  // SYNC-06: the last check that drew a network stands in while the source is
+  // edited or broken, so the drawing never blanks under the user.
+  const drewNetwork = (checkResult?.connections?.length ?? 0) > 0
+  const [previous, setPrevious] = useState<CheckResponse | null>(null)
+  if (drewNetwork && previous !== checkResult) setPrevious(checkResult)
+  const wired = /^\s*connect\s*\(/im.test(text)
+  const showingPrevious = !drewNetwork && previous !== null && wired
+  // A check ran on the current text and could not expand the network.
+  const sourceBroken = showingPrevious && checkResult !== null
+  const errorLine = checkResult?.errorLine ?? checkResult?.errors?.[0]?.line ?? null
+  const fix = useMemo(
+    () => (checkResult && !checkResult.solvable && onSourceEdit ? suggestFix(checkResult.message, text, COMPONENT_CATALOG) : null),
+    [checkResult, text, onSourceEdit],
+  )
+  const drawnCheck = showingPrevious ? previous : checkResult
+  // Model edits need the current source; pan, inspect and arrange do not.
+  const onEmitStatement = sourceBroken ? undefined : emitStatement
+  const onInsertBlock = sourceBroken ? undefined : insertBlock
+  const connections = useMemo(() => drawnCheck?.connections ?? [], [drawnCheck])
+  const ports = useMemo(() => portIndex(drawnCheck?.ports), [drawnCheck])
+  // WIRE-03: ports the engine reports unjoined, by instance.
+  const openPorts = useMemo(() => {
+    const out = new Map<string, Set<string>>()
+    for (const p of drawnCheck?.ports ?? []) {
+      if (!p.connected) {
+        const key = p.instance.toLowerCase()
+        out.set(key, (out.get(key) ?? new Set()).add(p.port.toLowerCase()))
+      }
+    }
+    return out
+  }, [drawnCheck])
+  // RUN-08: everything Check reported, each pointing at what it names. Only
+  // what the engine attributes is attributed: a whole-system message points nowhere.
+  const issues = useMemo(() => {
+    const out: { severity: 'error' | 'warning'; text: string; line?: number; instance?: string }[] = []
+    for (const e of checkResult?.errors ?? []) out.push({ severity: 'error', text: e.message, line: e.line })
+    if (checkResult && !checkResult.solvable && !checkResult.errors?.length && checkResult.message) {
+      out.push({ severity: 'error', text: checkResult.message, line: checkResult.errorLine ?? undefined })
+    }
+    for (const p of drawnCheck?.ports ?? []) {
+      if (!p.connected) out.push({ severity: 'warning', text: `${p.instance}.${p.port} is not connected`, instance: p.instance })
+    }
+    for (const w of checkResult?.unitWarnings ?? []) out.push({ severity: 'warning', text: w })
+    return out
+  }, [checkResult, drawnCheck])
+  const [issueFilter, setIssueFilter] = useState<'all' | 'error' | 'warning'>('all')
 
   const labels = useMemo(() => {
     const map = new Map<string, { label: string; type?: string }>()
@@ -222,14 +323,14 @@ export default function SchematicTab({
     for (const [instance, hit] of documentInstances(text)) {
       map.set(instance, hit)
     }
-    for (const i of checkResult?.instances ?? []) {
+    for (const i of drawnCheck?.instances ?? []) {
       map.set(i.name.toLowerCase(), { label: i.label, type: i.type })
     }
     for (const c of components ?? []) {
       map.set(c.name.toLowerCase(), { label: c.name, type: c.type })
     }
     return map
-  }, [checkResult, components, text])
+  }, [drawnCheck, components, text])
 
   const declaredIds = useMemo(() => [...documentInstances(text).keys()], [text])
   // The canvas element exists only while there is something to draw; effects
@@ -239,10 +340,7 @@ export default function SchematicTab({
   // The document wires components but the canvas has no topology. Either no
   // check has run since the last edit (checkResult is null), or one ran and
   // did not get far enough to expand the network. Only the second is an error.
-  const topologyMissing = useMemo(
-    () => connections.length === 0 && /^\s*connect\s*\(/im.test(text),
-    [connections, text],
-  )
+  const topologyMissing = connections.length === 0 && wired
 
   /** Each instance's declared ports, by component type, so unwired ports show. */
   const portsByInstance = useMemo(() => {
@@ -493,6 +591,44 @@ export default function SchematicTab({
    * node looks it up), and pruning at save time means editing a document never
    * discards a position the user set on a block that survives the edit.
    */
+  /**
+   * Make a model edit: patch the source the last Check described, then record
+   * it — with any coupled presentation change — as one undo step.
+   */
+  const runEdit = (edit: SourceEdit, presChange?: (p: SchematicPresentation) => SchematicPresentation): boolean => {
+    const before = text
+    if (!onSourceEdit?.(edit.changes, before)) {
+      setWireNote('The source changed after the last Check; Check again, then retry.')
+      return false
+    }
+    const presStep = presChange ? ([presRef.current, presChange(presRef.current)] as const) : undefined
+    if (presStep) publish(presStep[1])
+    record({
+      label: edit.label,
+      pres: presStep ? [presStep[0], presStep[1]] : undefined,
+      source: { changes: edit.changes, undo: invertChanges(before, edit.changes), before, after: applyChanges(before, edit.changes) },
+    })
+    return true
+  }
+  const replay = (direction: 'undo' | 'redo') => {
+    const from = direction === 'undo' ? history.done : history.undone
+    const step = from.at(-1)
+    if (!step) return
+    if (step.source) {
+      const [changes, expected] = direction === 'undo' ? [step.source.undo, step.source.after] : [step.source.changes, step.source.before]
+      if (!onSourceEdit?.(changes, expected)) {
+        setWireNote(`Cannot ${direction} "${step.label}": the source changed since. Use the editor's undo for typed edits.`)
+        return
+      }
+    }
+    if (step.pres) publish(step.pres[direction === 'undo' ? 0 : 1])
+    setHistory((h) =>
+      direction === 'undo'
+        ? { done: h.done.slice(0, -1), undone: [...h.undone, step] }
+        : { done: [...h.done, step], undone: h.undone.slice(0, -1) },
+    )
+  }
+
   const commit = useCallback(() => {
     if (!onPresentationChange) {
       return
@@ -518,6 +654,38 @@ export default function SchematicTab({
         declarationLineFromCheck(checkResult?.instances, node.label) ??
         declarationLine(text, node.label))
       : null
+  // CFG-01: a style at one scope; null resets that scope.
+  const blockStyles = pres.styles ?? EMPTY_STYLES
+  const setStyle = (scope: StyleScope, key: string, next: BlockStyle | null) =>
+    updatePres((p) => {
+      const s = p.styles ?? EMPTY_STYLES
+      const kept = next && Object.keys(next).length > 0 ? next : null
+      if (scope === 'project') return { ...p, styles: { ...s, project: kept ?? {} } }
+      const field = scope === 'type' ? 'types' : 'instances'
+      const { [key]: _old, ...rest } = s[field]
+      return { ...p, styles: { ...s, [field]: kept ? { ...rest, [key]: kept } : rest } }
+    }, next && Object.keys(next).length > 0 ? 'Change style' : `Reset ${scope} style`)
+  // SYNC-04: rename at every reference in the instance's scope, moving its
+  // layout keys with it, as one undo step.
+  const rename = (inst: InstanceIdentityDto, next: string): string | null => {
+    const all = drawnCheck?.instances ?? []
+    const problem = sourceBroken ? 'Fix the source errors first.' : renameProblem(inst, next, all)
+    if (problem) return problem
+    const renames = renamedIds(inst, next, all)
+    const move = <V,>(r: Record<string, V>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [renameId(k, renames), v]))
+    const done = runEdit(renameInstance(inst, next), (p) => ({
+      ...p,
+      positions: move(p.positions),
+      legacyOffsets: move(p.legacyOffsets),
+      locked: p.locked.map((id) => renameId(id, renames)),
+      areas: p.areas.map((a) => ({ ...a, members: a.members.map((id) => renameId(id, renames)) })),
+      styles: { ...(p.styles ?? EMPTY_STYLES), instances: move((p.styles ?? EMPTY_STYLES).instances) },
+    }))
+    if (!done) return 'The source changed after the last Check; Check again, then retry.'
+    setPinned(null)
+    setSelected(new Set())
+    return null
+  }
   const revealInstance = (node: SchematicNode) => {
     const line = declarationOf(node)
     if (line !== null) {
@@ -550,19 +718,25 @@ export default function SchematicTab({
     if (!onEmitStatement) {
       return
     }
-    const preview = previewWire(from, to, connections)
+    const preview = previewWire(from, to, connections, ports)
     if (!preview.ok) {
       setWireNote(preview.reason)
       setPendingPort(null)
       return
     }
     const statement = connectStatement(from, to)
+    const label = `Connect ${endpointRef(from)} to ${endpointRef(to)}`
+    if (!onSourceEdit) {
+      onEmitStatement(statement)
+    } else if (!runEdit({ label, changes: [appendStatement(text, statement)] })) {
+      return
+    }
     lastEmitted.current = { a: endpointRef(from), b: endpointRef(to) }
-    onEmitStatement(statement)
+    setProvisional({ from, to, check: checkResult })
     setPendingPort(null)
     setSelectFrom(null)
     setSelectTo(null)
-    setWireNote(`Connection added; checking…  Undo (Ctrl+Z) removes the statement.`)
+    setWireNote(preview.pending ?? 'Connection added; pending Check. Undo removes the statement.')
   }
 
   const clickPort = (instance: string, port: string) => {
@@ -575,6 +749,41 @@ export default function SchematicTab({
       return
     }
     tryConnect(endpointOf(pendingPort.instance, pendingPort.port), endpointOf(instance, port))
+  }
+
+  // Drag from a port and release on another; a release where it began is a click.
+  const startWireDrag = (instance: string, port: string, e: React.PointerEvent) => {
+    const n = positioned.get(instance)
+    const p = n?.ports.find((q) => q.port === port)
+    const rect = viewportRef.current?.getBoundingClientRect()
+    if (!n || !p || !rect) return
+    const a: [number, number] = [n.x + p.dx, n.y + p.dy]
+    const at = (ev: PointerEvent): [number, number] => [(ev.clientX - rect.left - view.x) / zoom, (ev.clientY - rect.top - view.y) / zoom]
+    const [x0, y0] = [e.clientX, e.clientY]
+    let moved = false
+    const move = (ev: PointerEvent) => {
+      moved ||= Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) > 4
+      if (moved) setWireDrag({ from: { instance, port }, a, b: at(ev) })
+    }
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      setWireDrag(null)
+      const hit = moved ? document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-port]')?.getAttribute('data-port') : null
+      const dot = hit?.lastIndexOf('.') ?? -1
+      if (hit && dot > 0) {
+        setWireNote(null)
+        tryConnect(endpointOf(instance, port), endpointOf(hit.slice(0, dot), hit.slice(dot + 1)))
+      }
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  // WIRE-02: while a wire is being drawn, each port says whether it may take it.
+  const wireSource = wireDrag?.from ?? pendingPort
+  const compatOf = (instance: string, port: string) => {
+    if (!wireSource || wireSource.instance === instance) return undefined
+    return compatibility(ports.get(`${wireSource.instance}.${wireSource.port}`.toLowerCase()), ports.get(`${instance}.${port}`.toLowerCase())).kind
   }
 
   useEffect(() => {
@@ -607,7 +816,7 @@ export default function SchematicTab({
   }, [])
 
   /** Move blocks by per-block drawing-unit deltas, as one workspace update; locked blocks stay. */
-  const moveBlocks = (deltas: ReadonlyMap<string, { dx: number; dy: number }>) => {
+  const moveBlocks = (deltas: ReadonlyMap<string, { dx: number; dy: number }>, label = 'Move') => {
     const positions = { ...presRef.current.positions }
     for (const [id, d] of deltas) {
       const n = positioned.get(id)
@@ -616,7 +825,7 @@ export default function SchematicTab({
       }
     }
     takeControl()
-    updatePres((p) => ({ ...p, positions }))
+    updatePres((p) => ({ ...p, positions }), label)
   }
   /** Lock (or unlock) the selection where it is drawn now. */
   const lockSelection = (on: boolean) =>
@@ -624,14 +833,14 @@ export default function SchematicTab({
       ...p,
       positions: on ? { ...p.positions, ...Object.fromEntries(selection.flatMap((id) => { const n = positioned.get(id); return n ? [[id, { x: n.x, y: n.y }]] : [] })) } : p.positions,
       locked: on ? [...new Set([...p.locked, ...selection])] : p.locked.filter((id) => !selection.includes(id)),
-    }))
+    }), on ? 'Lock position' : 'Unlock position')
   const addArea = (label: string) => {
-    updatePres((p) => ({ ...p, areas: [...p.areas, { id: `area-${Date.now().toString(36)}`, label, members: selection }] }))
+    updatePres((p) => ({ ...p, areas: [...p.areas, { id: `area-${Date.now().toString(36)}`, label, members: selection }] }), `Frame area ${label}`)
     setAreaName(null)
   }
-  const removeAreas = () => updatePres((p) => ({ ...p, areas: p.areas.filter((a) => !a.members.some((m) => selection.includes(m))) }))
-  const nudge = (dx: number, dy: number) => moveBlocks(new Map(selection.map((id) => [id, { dx, dy }])))
-  const arrange = (op: ArrangeOp) => moveBlocks(arrangeDeltas(op, selection.flatMap((id) => positioned.get(id) ?? [])))
+  const removeAreas = () => updatePres((p) => ({ ...p, areas: p.areas.filter((a) => !a.members.some((m) => selection.includes(m))) }), 'Remove area')
+  const nudge = (dx: number, dy: number) => moveBlocks(new Map(selection.map((id) => [id, { dx, dy }])), 'Nudge')
+  const arrange = (op: ArrangeOp) => moveBlocks(arrangeDeltas(op, selection.flatMap((id) => positioned.get(id) ?? [])), 'Arrange')
   const instanceIds = (ids: Iterable<string>) => [...ids].filter((id) => positioned.get(id)?.kind === 'instance')
   const select = (ids: Iterable<string>) => {
     setSelected(new Set(instanceIds(ids)))
@@ -697,6 +906,7 @@ export default function SchematicTab({
       dy += g.ys.length > 0 ? g.dy : grid(box.minY)
       setGuides(g.xs.length + g.ys.length > 0 ? { xs: g.xs, ys: g.ys } : null)
     }
+    dragBefore.current ??= presRef.current
     const positions = { ...presRef.current.positions }
     for (const id of ids) {
       if (start[id]) {
@@ -705,9 +915,19 @@ export default function SchematicTab({
     }
     applyPres({ ...presRef.current, positions })
   }
+  // A drag is one undo step, from its first move to its release.
+  const dragBefore = useRef<SchematicPresentation | null>(null)
+  const recordRef = useRef(record)
+  useEffect(() => {
+    recordRef.current = record
+  })
   const endDrag = useCallback(() => {
     setGuides(null)
     commit()
+    if (dragBefore.current) {
+      recordRef.current({ label: 'Move', pres: [dragBefore.current, presRef.current] })
+      dragBefore.current = null
+    }
   }, [commit])
   const drag = useDragging(zoom, dragTo, setView, endDrag, takeControl, clearSelection)
   // Shift+drag on empty canvas: a marquee, in viewport pixels, adding every
@@ -802,6 +1022,39 @@ export default function SchematicTab({
             {wireNote}
           </Text>
         )}
+        {sourceBroken && (
+          <Group gap={6} wrap="nowrap" data-testid="schematic-previous">
+            <Text size="xs" c="orange">
+              Source has errors; showing previous model
+            </Text>
+            {errorLine !== null && (
+              <Button size="compact-xs" variant="subtle" color="orange" onClick={() => onRevealLine(errorLine)}>
+                Go to error (line {errorLine})
+              </Button>
+            )}
+          </Group>
+        )}
+        {fix && (
+          <Group gap={6} wrap="nowrap" data-testid="schematic-fix">
+            <Tooltip
+              label={
+                <Text component="pre" size="xs" style={{ margin: 0 }}>
+                  {fix.changes.map((c) => `- ${text.slice(c.from, c.to)}\n+ ${c.insert}`).join('\n')}
+                </Text>
+              }
+            >
+              <Text size="xs">Fix: {fix.label}</Text>
+            </Tooltip>
+            <Button size="compact-xs" variant="light" color="orange" onClick={() => runEdit(fix)}>
+              Apply fix
+            </Button>
+          </Group>
+        )}
+        {showingPrevious && !sourceBroken && (
+          <Text size="xs" c="dimmed" data-testid="schematic-previous">
+            edited — showing the last checked model
+          </Text>
+        )}
         {topologyMissing && (checkResult ? (
           <Text size="xs" c="orange">
             connections not shown — the document has errors; fix them and Check
@@ -888,6 +1141,54 @@ export default function SchematicTab({
           </Text>
         )}
         <Group gap={2} ml="auto">
+          {issues.length > 0 && (
+            <Menu position="bottom-end" withinPortal>
+              <Menu.Target>
+                <Button
+                  size="compact-xs"
+                  variant="light"
+                  color={issues.some((i) => i.severity === 'error') ? 'red' : 'orange'}
+                  aria-label={`${issues.length} issues`}
+                  data-testid="schematic-issues"
+                >
+                  {issues.length} {issues.length === 1 ? 'issue' : 'issues'}
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown mah={360} style={{ overflowY: 'auto' }}>
+                <SegmentedControl
+                  size="xs"
+                  fullWidth
+                  value={issueFilter}
+                  onChange={(v) => setIssueFilter(v as typeof issueFilter)}
+                  data={[
+                    { value: 'all', label: 'All' },
+                    { value: 'error', label: 'Errors' },
+                    { value: 'warning', label: 'Warnings' },
+                  ]}
+                />
+                {issues
+                  .filter((i) => issueFilter === 'all' || i.severity === issueFilter)
+                  .map((i) => (
+                    <Menu.Item
+                      key={`${i.severity}:${i.line ?? ""}:${i.text}`}
+                      color={i.severity === 'error' ? 'red' : undefined}
+                      disabled={i.line === undefined && i.instance === undefined}
+                      onClick={() => {
+                        if (i.line !== undefined) onRevealLine(i.line)
+                        const id = i.instance && [...positioned.keys()].find((n) => n.toLowerCase() === i.instance!.toLowerCase())
+                        if (id) {
+                          select([id])
+                          setPinned(id)
+                        }
+                      }}
+                    >
+                      {i.line !== undefined ? `Line ${i.line}: ` : ''}
+                      {i.text}
+                    </Menu.Item>
+                  ))}
+              </Menu.Dropdown>
+            </Menu>
+          )}
           {selection.length > 1 && (
             <Badge size="xs" variant="light" color="yellow" mr={4}>
               {selection.length} selected
@@ -1009,6 +1310,16 @@ export default function SchematicTab({
               ))}
             </Menu.Dropdown>
           </Menu>
+          <Tooltip label={history.done.length ? `Undo ${history.done.at(-1)!.label} (Ctrl+Z)` : 'Nothing to undo'}>
+            <ActionIcon size="sm" variant="subtle" aria-label="Undo" disabled={!history.done.length} onClick={() => replay('undo')}>
+              <IconArrowBackUp size={15} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label={history.undone.length ? `Redo ${history.undone.at(-1)!.label} (Ctrl+Shift+Z)` : 'Nothing to redo'}>
+            <ActionIcon size="sm" variant="subtle" aria-label="Redo" disabled={!history.undone.length} onClick={() => replay('redo')}>
+              <IconArrowForwardUp size={15} />
+            </ActionIcon>
+          </Tooltip>
           <Tooltip label="Fit all (Shift+1)">
             <ActionIcon size="sm" variant="subtle" aria-label="Fit to window" onClick={fit}>
               <IconArrowsMaximize size={15} />
@@ -1021,7 +1332,7 @@ export default function SchematicTab({
               aria-label="Reset layout"
               onClick={() => {
                 // Locked blocks keep their place; v3 positions not yet placed are dropped.
-                updatePres((p) => ({ ...p, positions: Object.fromEntries(Object.entries(p.positions).filter(([id]) => lockedIds.has(id))), legacyOffsets: {} }))
+                updatePres((p) => ({ ...p, positions: Object.fromEntries(Object.entries(p.positions).filter(([id]) => lockedIds.has(id))), legacyOffsets: {} }), 'Reset layout')
                 fit()
               }}
             >
@@ -1070,6 +1381,11 @@ export default function SchematicTab({
           if (command) {
             e.preventDefault()
             command()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+            e.preventDefault()
+            replay(e.key.toLowerCase() === 'y' || e.shiftKey ? 'redo' : 'undo')
             return
           }
           if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
@@ -1180,9 +1496,11 @@ export default function SchematicTab({
               if (out && isolating) {
                 return null
               }
+              const index = Number(netOf(e).slice(1))
+              const openCard = () => setWireCard({ index, check: drawnCheck })
               return (
+                <g key={e.id}>
                 <path
-                  key={e.id}
                   data-net={netOf(e)}
                   d={pathOf(pts, hops.get(e.id))}
                   fill="none"
@@ -1195,8 +1513,58 @@ export default function SchematicTab({
                 >
                   <title>{edgeTitle(e)}</title>
                 </path>
+                {onSourceEdit && !out && (
+                  <path
+                    data-wire={e.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Wire ${edgeTitle(e)}`}
+                    d={pathOf(pts)}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth={Math.max(8, 12 / zoom)}
+                    style={{ cursor: 'pointer' }}
+                    onPointerDown={(ev) => ev.stopPropagation()}
+                    onClick={openCard}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault()
+                        openCard()
+                      }
+                    }}
+                  />
+                )}
+                </g>
               )
             })}
+            {wireDrag && (
+              <line
+                data-testid="wire-drag"
+                x1={wireDrag.a[0]}
+                y1={wireDrag.a[1]}
+                x2={wireDrag.b[0]}
+                y2={wireDrag.b[1]}
+                stroke={ink.active}
+                strokeWidth={1.6}
+                strokeDasharray="4 3"
+                pointerEvents="none"
+              />
+            )}
+            {provisional?.check === checkResult &&
+              (() => {
+                const at = (end: WireEndpoint) => {
+                  const n = positioned.get(end.instance)
+                  const p = n?.ports.find((q) => q.port === end.port)
+                  return n && p ? [n.x + p.dx, n.y + p.dy] : null
+                }
+                const a = at(provisional.from)
+                const b = at(provisional.to)
+                return a && b ? (
+                  <path data-provisional d={`M${a[0]},${a[1]} L${b[0]},${b[1]}`} stroke={ink.active} strokeWidth={1.6} strokeDasharray="5 4" fill="none">
+                    <title>Pending Check</title>
+                  </path>
+                ) : null
+              })()}
           </g>
 
           <g>
@@ -1267,6 +1635,10 @@ export default function SchematicTab({
                   onEnter={() => setHovered(n.id)}
                   onLeave={() => setHovered(null)}
                   onPort={(port) => clickPort(n.id, port)}
+                  unconnected={drawnCheck?.ports?.length ? (openPorts.get(n.id.toLowerCase()) ?? NO_PORTS) : undefined}
+                  look={styleFor(blockStyles, n.id, n.type ?? '')}
+                  onPortDrag={(port, e) => startWireDrag(n.id, port, e)}
+                  compat={wireSource ? (port) => compatOf(n.id, port) : undefined}
                 />
               )
             })}
@@ -1346,6 +1718,20 @@ export default function SchematicTab({
         )}
       </div>
 
+      {wireCard?.check === drawnCheck && connections[wireCard.index] && (
+        <WireCard
+          index={wireCard.index}
+          connections={connections}
+          text={text}
+          editable={Boolean(onSourceEdit) && !sourceBroken}
+          instanceLine={(name) => drawnCheck?.instances?.find((i) => i.name.toLowerCase() === name.toLowerCase())?.line ?? null}
+          onReveal={onRevealLine}
+          onApply={(edit) => {
+            if (runEdit(edit)) setWireCard(null)
+          }}
+          onClose={() => setWireCard(null)}
+        />
+      )}
       {activeNode && activeReadout && (
         <ReadoutCard
           node={activeNode}
@@ -1355,6 +1741,12 @@ export default function SchematicTab({
             checkResult?.instances?.find((i) => i.name.toLowerCase() === activeNode.id)?.localType ??
             false
           }
+          identity={drawnCheck?.instances?.find((i) => i.name.toLowerCase() === activeNode.id)}
+          onRename={onSourceEdit ? rename : undefined}
+          definitionLine={(name) => drawnCheck?.definitions?.find((d) => d.name.toLowerCase() === name.toLowerCase())?.line ?? null}
+          onRevealLine={onRevealLine}
+          styles={blockStyles}
+          onStyle={pinned === activeNode.id ? setStyle : undefined}
           onReveal={() => revealInstance(activeNode)}
           onFocus={
             pinned === activeNode.id
@@ -1449,6 +1841,12 @@ interface BlockProps {
   onEnter: () => void
   onLeave: () => void
   onPort: (port: string) => void
+  /** Ports Check reports unjoined, lower-case. */
+  unconnected?: ReadonlySet<string>
+  look?: BlockStyle
+  onPortDrag?: (port: string, e: React.PointerEvent) => void
+  /** While a wire is drawn: whether each port may take it. */
+  compat?: (port: string) => 'allowed' | 'prohibited' | 'unknown' | undefined
 }
 
 /** One component, drawn as its circuit symbol with its identity and its most
@@ -1473,6 +1871,10 @@ function NodeBlock({
   onEnter,
   onLeave,
   onPort,
+  unconnected,
+  look,
+  onPortDrag,
+  compat,
 }: Readonly<BlockProps>) {
   const glyph = glyphPath(node.shape)
   const GLYPH = 20
@@ -1517,7 +1919,7 @@ function NodeBlock({
         height={node.h}
         rx={node.terminal ? 3 : 7}
         fill={active ? ink.blockActive : ink.block}
-        stroke={highlighted ? ink.highlight : active ? ink.active : node.terminal ? ink.borderTerminal : ink.border}
+        stroke={highlighted ? ink.highlight : active ? ink.active : (look?.accent ?? (node.terminal ? ink.borderTerminal : ink.border))}
         strokeWidth={highlighted || active ? 2.2 : 1.2}
         strokeDasharray={node.terminal ? '4 2' : undefined}
       />
@@ -1561,19 +1963,30 @@ function NodeBlock({
       )}
       {!chip && badge && (
         <text x={GLYPH + 12} y={44} fontSize={10.5} fontWeight={600} fill={ink.badge}>
-          {badgeText(badge)}
+          {badgeText(badge, look?.precision)}
         </text>
       )}
       {locked && <IconLock x={node.w - 13} y={2} size={11} color={ink.subtext} aria-hidden />}
       {node.ports.map((p) => {
         const armed = pendingPort?.instance === node.id && pendingPort?.port === p.port
         const color = p.lineId ? styleOf(p.lineId).color : ink.portIdle
+        const open = unconnected?.has(p.port.toLowerCase()) ?? false
+        const fit = compat?.(p.port)
         return (
           <g
             key={p.port}
             tabIndex={wiring ? 0 : undefined}
             role={wiring ? 'button' : undefined}
-            aria-label={`${node.label}.${p.port} port`}
+            aria-label={`${node.label}.${p.port} port${open ? ', not connected' : ''}`}
+            data-port={`${node.id}.${p.port}`}
+            data-connected={unconnected ? String(!open) : undefined}
+            data-compat={fit}
+            onPointerDown={(e) => {
+              if (wiring && onPortDrag && e.button === 0) {
+                e.stopPropagation()
+                onPortDrag(p.port, e)
+              }
+            }}
             onClick={(e) => {
               if (wiring) {
                 e.stopPropagation()
@@ -1594,13 +2007,18 @@ function NodeBlock({
             {wiring && (
               <circle cx={p.dx} cy={p.dy} r={10} fill="transparent" />
             )}
+            {fit && fit !== 'unknown' && (
+              <circle cx={p.dx} cy={p.dy} r={7} fill="none" strokeWidth={1.5} stroke={fit === 'allowed' ? 'var(--mantine-color-green-6)' : 'var(--mantine-color-red-6)'}>
+                <title>{fit === 'allowed' ? 'Can connect here' : 'Incompatible with the wire being drawn'}</title>
+              </circle>
+            )}
             <circle
               cx={p.dx}
               cy={p.dy}
               r={armed ? 5 : 3.2}
-              fill={armed ? ink.active : color}
-              stroke={ink.halo}
-              strokeWidth={1}
+              fill={armed ? ink.active : open ? ink.halo : color}
+              stroke={open && !armed ? ink.portIdle : ink.halo}
+              strokeWidth={open ? 1.4 : 1}
             />
             {portLabels && !chip && <PortName side={p.side} x={p.dx} y={p.dy} name={p.port} color={ink.portName} />}
           </g>
@@ -1627,11 +2045,253 @@ function PortName({ side, x, y, name, color }: Readonly<{ side: PortSide; x: num
 
 /** The hover/pin card: what this block is, what its ports are doing, what it
  *  computed, and what it was built from. */
+type StyleScope = 'instance' | 'type' | 'project'
+
+/**
+ * CFG-01: edit the block's style at one scope. The block's own style beats its
+ * type's, which beats the project's; Reset clears only the chosen scope.
+ */
+function StyleEditor({
+  node,
+  styles,
+  onStyle,
+}: Readonly<{ node: SchematicNode; styles: BlockStyles; onStyle: (scope: StyleScope, key: string, next: BlockStyle | null) => void }>) {
+  const [scope, setScope] = useState<StyleScope>('instance')
+  const type = node.type ?? ''
+  const key = scope === 'type' ? type.toLowerCase() : node.id
+  const own = scope === 'project' ? styles.project : scope === 'type' ? styles.types[key] : styles.instances[key]
+  const set = (change: BlockStyle) => onStyle(scope, key, Object.fromEntries(Object.entries({ ...own, ...change }).filter(([, v]) => v !== undefined)))
+  return (
+    <Stack gap={4} mb={4} data-testid="style-editor">
+      <SegmentedControl
+        size="xs"
+        value={scope}
+        onChange={(v) => setScope(v as StyleScope)}
+        data={[
+          { value: 'instance', label: 'This block' },
+          { value: 'type', label: `All ${type}`, disabled: !type },
+          { value: 'project', label: 'Project' },
+        ]}
+      />
+      <Group gap={4} wrap="nowrap">
+        <ColorInput
+          size="xs"
+          aria-label="Outline colour"
+          placeholder="Theme"
+          format="hex"
+          w={110}
+          value={own?.accent ?? ''}
+          onChange={(v) => set({ accent: /^#[0-9a-f]{6}$/i.test(v) ? v : undefined })}
+        />
+        <Select
+          size="xs"
+          aria-label="Readout digits"
+          placeholder="Digits"
+          w={90}
+          data={['2', '3', '4', '5', '6', '7', '8']}
+          value={own?.precision ? String(own.precision) : null}
+          onChange={(v) => set({ precision: v ? Number(v) : undefined })}
+          clearable
+        />
+        <Button size="compact-xs" variant="subtle" disabled={!own || Object.keys(own).length === 0} onClick={() => onStyle(scope, key, null)}>
+          Reset
+        </Button>
+      </Group>
+      <Text size="xs" c="dimmed">
+        This block overrides its type, which overrides the project.
+      </Text>
+    </Stack>
+  )
+}
+
+/** 1-based line of a UTF-16 offset. */
+const lineAt = (text: string, at: number) => text.slice(0, at).split('\n').length
+
+/**
+ * WIRE-05/06: inspect one connection and edit it through the source. Every
+ * action previews its patch and what still joins each end before it applies;
+ * a connection no single statement owns, or one written inside a component
+ * definition, says why it cannot be edited here and opens its source instead.
+ */
+function WireCard({
+  index,
+  connections,
+  text,
+  editable,
+  instanceLine,
+  onReveal,
+  onApply,
+  onClose,
+}: Readonly<{
+  index: number
+  connections: readonly ConnectionDto[]
+  text: string
+  editable: boolean
+  instanceLine: (name: string) => number | null
+  onReveal: (line: number) => void
+  onApply: (edit: SourceEdit) => void
+  onClose: () => void
+}>) {
+  const conn = connections[index]
+  const [action, setAction] = useState<{ kind: 'remove' | 'net' } | { kind: 'disconnect'; endpoint: string } | null>(null)
+  const net = netConnections(connections, index)
+  const owned = (c: ConnectionDto) => Boolean(c.range) && !c.alias && !c.inDefinition
+  const statementLine = conn.range ? lineAt(text, conn.range[0]) : null
+  const blocked = !editable
+    ? 'Fix the source errors first; the drawing shows the previous model.'
+    : conn.alias
+      ? `Joined by the shared stream name "${conn.alias}"; no connect statement owns it. Rename the stream in the source to split it.`
+      : conn.inDefinition
+        ? 'Written inside a component definition: editing it changes every instance.'
+        : !conn.range
+          ? 'Check again first: the source changed since this wire was drawn.'
+          : null
+  const openLine = statementLine ?? instanceLine(conn.endpoints[0].split('.').slice(0, -1).join('.'))
+
+  let edit: SourceEdit | null = null
+  let removed = new Set<number>()
+  let touched: string[] = []
+  try {
+    if (action?.kind === 'remove' && conn.range) {
+      edit = { label: `Remove ${text.slice(...conn.range)}`, changes: [removeStatement(text, conn.range)] }
+      removed = new Set([index])
+      touched = conn.endpoints
+    } else if (action?.kind === 'disconnect') {
+      edit = disconnectEndpoint(text, conn, action.endpoint)
+      removed = new Set([index])
+      touched = [action.endpoint]
+    } else if (action?.kind === 'net' && net.every((k) => owned(connections[k]))) {
+      edit = {
+        label: `Delete net (${net.length} connections)`,
+        changes: net.map((k) => removeStatement(text, connections[k].range!)),
+      }
+      applyChanges(text, edit.changes) // throws when two statements share a line span
+      removed = new Set(net)
+      touched = [...new Set(net.flatMap((k) => connections[k].endpoints))]
+    }
+  } catch {
+    edit = null
+  }
+  const diff = edit?.changes.flatMap((c) => [
+    ...text.slice(c.from, c.to).split('\n').filter(Boolean).map((l) => `- ${l}`),
+    ...c.insert.split('\n').filter(Boolean).map((l) => `+ ${l}`),
+  ])
+
+  return (
+    <Paper
+      withBorder
+      shadow="md"
+      p="xs"
+      radius="sm"
+      data-testid="wire-card"
+      style={{ position: 'absolute', left: 8, bottom: 8, maxWidth: 380, maxHeight: '70%', overflow: 'auto', zIndex: 6 }}
+    >
+      <Group gap={6} mb={4} wrap="nowrap">
+        <Text size="sm" fw={700}>
+          {conn.endpoints.join(' — ')}
+        </Text>
+        <ActionIcon size="xs" variant="subtle" ml="auto" aria-label="Close wire card" onClick={onClose}>
+          ×
+        </ActionIcon>
+      </Group>
+      <Text size="xs" c="dimmed">
+        {[conn.domain, conn.connector, conn.fluid].filter(Boolean).join(' · ')}
+      </Text>
+      <Text size="xs" mb={4} data-testid="wire-owner">
+        {conn.alias
+          ? `Shared stream ${conn.alias}`
+          : conn.inDefinition
+            ? `In a component definition${statementLine ? `, line ${statementLine}` : ''}`
+            : statementLine
+              ? `connect statement, line ${statementLine}`
+              : 'connect statement'}
+      </Text>
+      {blocked ? (
+        <>
+          <Text size="xs" c="orange" mb={4}>
+            {blocked}
+          </Text>
+          {openLine !== null && (
+            <Button size="compact-xs" variant="default" onClick={() => onReveal(openLine)}>
+              {conn.inDefinition ? 'Open definition' : 'Open source'}
+            </Button>
+          )}
+        </>
+      ) : (
+        <>
+          <Group gap={4} mb={4}>
+            <Button size="compact-xs" variant={action?.kind === 'remove' ? 'filled' : 'default'} onClick={() => setAction({ kind: 'remove' })}>
+              Remove connection
+            </Button>
+            {conn.endpoints.map((endpoint) => (
+              <Button
+                key={endpoint}
+                size="compact-xs"
+                variant={action?.kind === 'disconnect' && action.endpoint === endpoint ? 'filled' : 'default'}
+                onClick={() => setAction({ kind: 'disconnect', endpoint })}
+              >
+                Disconnect {endpoint}
+              </Button>
+            ))}
+            {net.length > 1 && (
+              <Button
+                size="compact-xs"
+                variant={action?.kind === 'net' ? 'filled' : 'default'}
+                disabled={!net.every((k) => owned(connections[k]))}
+                title={net.every((k) => owned(connections[k])) ? undefined : 'Part of this net has no connect statement of its own.'}
+                onClick={() => setAction({ kind: 'net' })}
+              >
+                Delete whole net
+              </Button>
+            )}
+          </Group>
+          {action && !edit && (
+            <Text size="xs" c="orange">
+              This change cannot be written as a patch; edit the source directly.
+            </Text>
+          )}
+          {edit && (
+            <>
+              <Text component="pre" size="xs" data-testid="wire-diff" style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--mantine-font-family-monospace)' }}>
+                {diff?.join('\n')}
+              </Text>
+              {touched.map((end) => {
+                const via = joinedElsewhere(connections, removed, end)
+                return (
+                  <Text key={end} size="xs" c="dimmed">
+                    {via.length
+                      ? `${end} still joined via ${via.map((k) => connections[k].range ? `line ${lineAt(text, connections[k].range![0])}` : connections[k].endpoints.join(', ')).join('; ')}`
+                      : `${end} left unconnected`}
+                  </Text>
+                )
+              })}
+              <Group gap={4} mt={6}>
+                <Button size="compact-xs" color="red" onClick={() => onApply(edit!)}>
+                  Apply
+                </Button>
+                <Button size="compact-xs" variant="default" onClick={() => setAction(null)}>
+                  Cancel
+                </Button>
+              </Group>
+            </>
+          )}
+        </>
+      )}
+    </Paper>
+  )
+}
+
 function ReadoutCard({
   node,
   readout,
   pinned,
   localType = false,
+  identity,
+  onRename,
+  definitionLine,
+  onRevealLine,
+  styles,
+  onStyle,
   onNudge,
   onReveal,
   onFocus,
@@ -1640,11 +2300,28 @@ function ReadoutCard({
   readout: NodeReadout
   pinned: boolean
   localType?: boolean
+  identity?: InstanceIdentityDto
+  /** Rename the instance; returns why it cannot, or null once applied. */
+  onRename?: (inst: InstanceIdentityDto, next: string) => string | null
+  definitionLine?: (name: string) => number | null
+  onRevealLine?: (line: number) => void
+  styles?: BlockStyles
+  onStyle?: (scope: StyleScope, key: string, next: BlockStyle | null) => void
   onNudge?: (dx: number, dy: number) => void
   onReveal?: () => void
   onFocus?: (kind: FocusKind) => void
 }>) {
   const empty = readout.ports.length === 0 && readout.outputs.length === 0 && readout.params.length === 0
+  const [draft, setDraft] = useState<string | null>(null)
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const owner = identity?.definedIn ?? null
+  const ownerLine = owner ? (definitionLine?.(owner) ?? null) : null
+  const applyRename = () => {
+    if (!identity || draft === null) return
+    const problem = onRename?.(identity, draft.trim()) ?? null
+    setRenameError(problem)
+    if (!problem) setDraft(null)
+  }
   return (
     <Paper
       withBorder
@@ -1685,6 +2362,53 @@ function ReadoutCard({
           </Button>
         )}
       </Group>
+      {owner && (
+        <Group gap={4} mb={4} wrap="nowrap" data-testid="instance-owner">
+          <Text size="xs" c="violet">
+            Defined in {owner} — editing changes every {owner}
+          </Text>
+          {ownerLine !== null && onRevealLine && (
+            <Button size="compact-xs" variant="subtle" onClick={() => onRevealLine(ownerLine)}>
+              Open definition
+            </Button>
+          )}
+        </Group>
+      )}
+      {pinned && identity && onRename && (
+        <Group gap={4} mb={4} wrap="nowrap" align="flex-start">
+          {draft === null ? (
+            <Button size="compact-xs" variant="default" onClick={() => setDraft(identity.name.split('.').pop() ?? '')}>
+              Rename
+            </Button>
+          ) : (
+            <>
+              <TextInput
+                size="xs"
+                aria-label="New instance name"
+                value={draft}
+                error={renameError}
+                autoFocus
+                onChange={(e) => {
+                  setDraft(e.currentTarget.value)
+                  setRenameError(null)
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation()
+                  if (e.key === 'Enter') applyRename()
+                  if (e.key === 'Escape') setDraft(null)
+                }}
+              />
+              <Button size="compact-xs" onClick={applyRename}>
+                Apply
+              </Button>
+              <Button size="compact-xs" variant="default" onClick={() => setDraft(null)}>
+                Cancel
+              </Button>
+            </>
+          )}
+        </Group>
+      )}
+      {styles && onStyle && <StyleEditor node={node} styles={styles} onStyle={onStyle} />}
       {onFocus && (
         <Group gap={4} mb={4}>
           <Button size="compact-xs" variant="default" onClick={() => onFocus('neighbours')}>
@@ -2073,7 +2797,7 @@ function lineDescription(e: SchematicEdge): string {
 /** Terminals (sources, sinks, grounds) get a lighter outline to go with their
  *  dashed border — they bound the model rather than being part of it. */
 /** "q = 6444.3 W" — the one number printed on a block. */
-function badgeText(badge: { label: string; value: number; units: string }): string {
+function badgeText(badge: { label: string; value: number; units: string }, digits?: number): string {
   const unit = badge.units ? ` ${badge.units}` : ''
-  return `${badge.label} = ${formatCompact(badge.value)}${unit}`
+  return `${badge.label} = ${formatCompact(badge.value, digits)}${unit}`
 }

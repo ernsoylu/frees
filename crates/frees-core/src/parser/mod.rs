@@ -154,6 +154,31 @@ pub struct Document {
     /// register) — are deliberately absent, which is why a `[J/kg-K]` cannot
     /// steal the display name of a later `k`.
     pub display_names: BTreeMap<String, String>,
+    /// Where each definition block is written, for scoping source edits.
+    pub definition_spans: DefinitionSpans,
+}
+
+/// `(lowercase name, byte span)` of every `COMPONENT` / `FUNCTION` /
+/// `PROCEDURE` / `MODULE` block. Editing metadata: two documents that differ
+/// only in where things are written are still equal, like
+/// [`crate::components::def::ComponentInst::line`].
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionSpans(pub Vec<(String, crate::diag::Span)>);
+
+impl PartialEq for DefinitionSpans {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
+impl DefinitionSpans {
+    /// The definition whose block holds byte `at`, if any.
+    pub fn enclosing(&self, at: u32) -> Option<&str> {
+        self.0
+            .iter()
+            .find(|(_, span)| span.start <= at && at < span.end)
+            .map(|(name, _)| name.as_str())
+    }
 }
 
 impl Document {

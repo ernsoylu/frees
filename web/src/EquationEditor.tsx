@@ -1,8 +1,8 @@
 import { helpUrl } from './helpUrl'
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useComputedColorScheme } from '@mantine/core'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
-import { Decoration, DecorationSet, EditorView, keymap, showTooltip, Tooltip } from '@codemirror/view'
+import { Decoration, DecorationSet, EditorView, keymap, showTooltip, Tooltip, ViewUpdate } from '@codemirror/view'
 import { Diagnostic, lintGutter, setDiagnostics } from '@codemirror/lint'
 import { REFERENCE_SLUGS } from './docsTopics'
 import { Extension, StateEffect, StateField } from '@codemirror/state'
@@ -33,6 +33,10 @@ export interface EquationEditorHandle {
   /** Select a 1-based line and scroll it into view. `focus: false` leaves
    *  keyboard focus where it is, for selection linked from another view. */
   goToLine: (line: number, opts?: { focus?: boolean }) => void
+  /** Apply range patches (UTF-16 offsets) as one editor transaction, but only
+   *  while the document is still `expected` — the text the ranges index.
+   *  Returns false, changing nothing, when another edit intervened. */
+  applyEdit: (changes: readonly { from: number; to: number; insert: string }[], expected: string) => boolean
   focus: () => void
 }
 
@@ -454,6 +458,8 @@ interface Props {
    *  serve only as the fallback for single-position failures. */
   errorList?: readonly EditorSyntaxError[] | null
   placeholder?: string
+  /** The caret moved to this offset (UTF-16), by the user or an edit. */
+  onCursor?: (at: number) => void
 }
 
 // F1 = contextual help: open the reference page for the documented symbol
@@ -482,7 +488,7 @@ const f1ContextualHelp = keymap.of([
 ])
 
 function EquationEditorInner(
-  { initialDoc, onChange, variables, errorLine, errorMessage, errorList, placeholder }: Readonly<Props>,
+  { initialDoc, onChange, variables, errorLine, errorMessage, errorList, placeholder, onCursor }: Readonly<Props>,
   ref: React.Ref<EquationEditorHandle>,
 ) {
   const cmRef = useRef<ReactCodeMirrorRef>(null)
@@ -496,6 +502,14 @@ function EquationEditorInner(
   // Read by the (stable) completion source so suggestions always reflect the
   // latest variable list without reconfiguring the editor.
   const namesRef = useRef({ functions: FUNCTION_NAMES, variables })
+  const onCursorRef = useRef(onCursor)
+  useEffect(() => {
+    onCursorRef.current = onCursor
+  })
+  // Only the user's caret: a load or a canvas edit moves it unfocused.
+  const reportCursor = useCallback((u: ViewUpdate) => {
+    if (u.selectionSet && u.view.hasFocus) onCursorRef.current?.(u.state.selection.main.head)
+  }, [])
   namesRef.current.variables = variables
 
   // Rebuild the theme/highlight when the Mantine colour scheme changes so the
@@ -559,6 +573,12 @@ function EquationEditorInner(
           view.focus()
         }
       },
+      applyEdit(changes, expected) {
+        const view = viewRef.current
+        if (!view || view.state.doc.toString() !== expected) return false
+        view.dispatch({ changes: [...changes], userEvent: 'input.schematic' })
+        return true
+      },
       setDoc(text: string) {
         const view = viewRef.current
         if (!view) return
@@ -597,6 +617,7 @@ function EquationEditorInner(
       onChange={(v) => {
         if (!programmaticRef.current) onChange(v)
       }}
+      onUpdate={reportCursor}
       extensions={extensions}
       placeholder={placeholder}
       theme="none"
