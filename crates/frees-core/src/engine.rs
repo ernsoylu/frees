@@ -418,13 +418,24 @@ pub struct InstanceIdentity {
     /// each `NAME.member` use — from the lexer, so comments, strings and
     /// same-spelled names in other scopes are never included.
     pub refs: Vec<crate::diag::Span>,
+    /// Each `name=value` argument's value as written, and the instantiation's
+    /// own closing parenthesis (empty when synthesised), where a new argument
+    /// goes. A nested instance's are in its definition's body.
+    pub params: Vec<(String, crate::diag::Span)>,
+    pub close: crate::diag::Span,
 }
 
-/// A user-authored `COMPONENT` definition.
+/// A user-authored component definition: a `COMPONENT … END` block or a
+/// port-bearing `function [ports] = Name(…) … end`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DefinitionIdentity {
     pub name: String,
     pub line: usize,
+    /// Byte range of the whole block, header to `END`.
+    pub span: crate::diag::Span,
+    /// Lowercase port and parameter names, in declaration order.
+    pub ports: Vec<String>,
+    pub params: Vec<String>,
 }
 
 /// Externally supplied per-variable solver information — one row of the
@@ -2439,7 +2450,7 @@ pub(crate) fn component_identities(
         &mut instances,
     );
     reference_spans(source, doc, &mut instances);
-    let definitions = definition_identities(source);
+    let definitions = definition_identities(doc, source);
     (instances, definitions)
 }
 
@@ -2510,6 +2521,15 @@ fn collect_instances(
             // The definition whose body is being walked declares this one.
             defined_in: stack.last().cloned(),
             refs: Vec::new(),
+            params: inst.param_spans.clone(),
+            close: if inst.span.end > inst.span.start {
+                crate::diag::Span {
+                    start: inst.span.end - 1,
+                    end: inst.span.end,
+                }
+            } else {
+                inst.span
+            },
         });
         // Expansion refuses cycles; Check still walks identities first, so a
         // self-instantiation must not recurse here (wasm/native abort).
@@ -2532,31 +2552,22 @@ fn collect_instances(
     }
 }
 
-fn definition_identities(source: &str) -> Vec<DefinitionIdentity> {
-    let mut out = Vec::new();
-    for (i, line) in source.lines().enumerate() {
-        let trimmed = line.trim_start();
-        let rest = if let Some(prefix) = trimmed.get(..9) {
-            if prefix.eq_ignore_ascii_case("component") {
-                trimmed[9..].trim_start()
-            } else {
-                continue;
-            }
-        } else {
-            continue;
-        };
-        let name: String = rest
-            .chars()
-            .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
-            .collect();
-        if !name.is_empty() {
-            out.push(DefinitionIdentity {
-                name: name.to_ascii_lowercase(),
-                line: i + 1,
-            });
-        }
-    }
-    out
+fn definition_identities(doc: &Document, source: &str) -> Vec<DefinitionIdentity> {
+    doc.definition_spans
+        .0
+        .iter()
+        .filter_map(|(name, span)| {
+            let def = doc.components.def(name)?;
+            let before = source.get(..span.start as usize).unwrap_or("");
+            Some(DefinitionIdentity {
+                name: name.clone(),
+                line: before.matches('\n').count() + 1,
+                span: *span,
+                ports: def.ports.clone(),
+                params: def.params.iter().map(|p| p.name.clone()).collect(),
+            })
+        })
+        .collect()
 }
 
 fn identity_advisories(doc: &Document, source: &str) -> Vec<Diagnostic> {
@@ -2564,7 +2575,7 @@ fn identity_advisories(doc: &Document, source: &str) -> Vec<Diagnostic> {
     if !doc.components.defs.is_empty() {
         if let Ok(lib) = crate::components::library::builtins() {
             let builtin: BTreeSet<String> = lib.iter().map(|e| e.def.name.clone()).collect();
-            let defs = definition_identities(source);
+            let defs = definition_identities(doc, source);
             for def in &doc.components.defs {
                 if builtin.contains(&def.name) {
                     let line = defs

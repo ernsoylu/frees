@@ -217,3 +217,46 @@ export function suggestFix(message: string, text: string, catalog: readonly { ty
   }
   return null
 }
+
+/**
+ * COMP-04: bind a parameter. A written value is replaced in place; an unbound
+ * parameter is added before the instantiation's `)`. Nothing else is touched.
+ */
+export function setParameter(text: string, inst: InstanceIdentityDto, name: string, value: string): SourceEdit | null {
+  const label = `Set ${inst.label}.${name} = ${value}`
+  const bound = inst.params?.find((p) => p.name === name.toLowerCase())
+  if (bound) return { label, changes: [{ from: bound.range[0], to: bound.range[1], insert: value }] }
+  if (!inst.close) return null
+  const at = inst.close[0]
+  const lead = text.slice(0, at).trimEnd().endsWith('(') ? '' : ', '
+  return { label, changes: [{ from: at, to: at, insert: `${lead}${name}=${value}` }] }
+}
+
+/**
+ * WIRE-09: put a configured block into an authored connection. Its port
+ * `toA` joins the rest of the connection and `toB` takes over the `branch`
+ * endpoint (for two endpoints, the second). The statement is rewritten in
+ * place, the declaration and the new connection appended; null when no
+ * connect statement owns the wire or `branch` is not one of its endpoints.
+ */
+export function insertIntoConnection(
+  text: string,
+  conn: ConnectionDto,
+  block: string,
+  map: { toA: string; toB: string; branch?: string },
+): SourceEdit | null {
+  const decl = [...block.matchAll(/^\s*([A-Za-z_]\w*)\s+([A-Za-z_]\w*)\s*\(/gm)].at(-1)
+  if (!conn.range || conn.alias || conn.inDefinition || !decl) return null
+  const ends = writtenEndpoints(text.slice(conn.range[0], conn.range[1]))
+  const branch = map.branch ?? ends.at(-1)!
+  const rest = ends.filter((e) => canonRef(e) !== canonRef(branch))
+  if (rest.length === ends.length || rest.length === 0) return null
+  const name = decl[2]
+  return {
+    label: `Insert ${name} into ${ends.join(', ')}`,
+    changes: [
+      { from: conn.range[0], to: conn.range[1], insert: `connect(${[...rest, `${name}.${map.toA}`].join(', ')})` },
+      appendStatement(text, `${block}\nconnect(${name}.${map.toB}, ${branch})`),
+    ],
+  }
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ConnectionDto, InstanceIdentityDto } from '../api'
-import { appendStatement, applyChanges, disconnectEndpoint, instanceAt, invertChanges, removeStatement, renamedIds, renameId, renameInstance, renameProblem, suggestFix } from './sourceEdit'
+import { appendStatement, applyChanges, disconnectEndpoint, insertIntoConnection, instanceAt, invertChanges, removeStatement, renamedIds, renameId, renameInstance, renameProblem, setParameter, suggestFix } from './sourceEdit'
 
 const TEXT = '// Kühler ✓ 🧊\nFan F(dP=1)\nconnect(A.out, F.in, B.in) // tee\nconnect(F.out, C.in)\nx = 1'
 const at = (s: string) => [TEXT.indexOf(s), TEXT.indexOf(s) + s.length] as [number, number]
@@ -89,5 +89,45 @@ describe('previewed fixes (RUN-09)', () => {
   it('offers nothing when no single fix is near', () => {
     expect(suggestFix("Unknown component type 'zzzzzz' for instance 'a'.", 'Zzzzzz A()\n', catalog)).toBeNull()
     expect(suggestFix('Singular Jacobian', 'x = 1', catalog)).toBeNull()
+  })
+})
+
+describe('parameter bindings (COMP-04)', () => {
+  const text = '// Lüfter ✓ 🧊\nMoistAirFan FAN(dP = 250 [Pa], eta=0.55)\nMoistAirSink SUP()\n'
+  const range = (s: string) => [text.indexOf(s), text.indexOf(s) + s.length] as [number, number]
+  const fan: InstanceIdentityDto = {
+    name: 'fan', label: 'FAN', type: 'MoistAirFan', line: 2, localType: false,
+    params: [{ name: 'dp', range: range('250 [Pa]') }, { name: 'eta', range: range('0.55') }],
+    close: [range('0.55)')[1] - 1, range('0.55)')[1]],
+  }
+  const sup: InstanceIdentityDto = { name: 'sup', label: 'SUP', type: 'MoistAirSink', line: 3, localType: false, params: [], close: [range('SUP()')[1] - 1, range('SUP()')[1]] }
+  const apply = (edit: ReturnType<typeof setParameter>) => applyChanges(text, edit!.changes)
+  it('replaces a written value and adds an unbound one before the parenthesis', () => {
+    expect(apply(setParameter(text, fan, 'dP', '300 [Pa]'))).toBe(text.replace('250 [Pa]', '300 [Pa]'))
+    expect(apply(setParameter(text, fan, 'Tin', 'T_room'))).toBe(text.replace('eta=0.55)', 'eta=0.55, Tin=T_room)'))
+    expect(apply(setParameter(text, sup, 'P', '1 [bar]'))).toBe(text.replace('SUP()', 'SUP(P=1 [bar])'))
+    expect(setParameter(text, { ...sup, close: null }, 'P', '1')).toBeNull()
+  })
+})
+
+describe('insertIntoConnection', () => {
+  const text = 'VoltageSource VS(E=10 [V])\nResistor R1(R=5 [ohm])\nGround G()\nconnect(VS.p, R1.a)\nconnect(VS.n, R1.b, G.port)\n'
+  const at = (s: string): [number, number] => [text.indexOf(s), text.indexOf(s) + s.length]
+  const pair = { domain: 'electrical', endpoints: ['vs.p', 'r1.a'], range: at('connect(VS.p, R1.a)') }
+  const star = { domain: 'electrical', endpoints: ['vs.n', 'r1.b', 'g.port'], range: at('connect(VS.n, R1.b, G.port)') }
+
+  it('splits a two-ended wire through the new block', () => {
+    const edit = insertIntoConnection(text, pair, 'Resistor R2(R=5 [ohm])', { toA: 'a', toB: 'b' })!
+    expect(applyChanges(text, edit.changes)).toBe(
+      text.replace('connect(VS.p, R1.a)', 'connect(VS.p, R2.a)') + 'Resistor R2(R=5 [ohm])\nconnect(R2.b, R1.a)\n',
+    )
+  })
+
+  it('takes one branch of a junction, and refuses what it cannot own', () => {
+    const edit = insertIntoConnection(text, star, 'Resistor RG(R=1 [ohm])', { toA: 'a', toB: 'b', branch: 'G.port' })!
+    expect(applyChanges(text, edit.changes)).toContain('connect(VS.n, R1.b, RG.a)')
+    expect(applyChanges(text, edit.changes)).toContain('Resistor RG(R=1 [ohm])\nconnect(RG.b, G.port)\n')
+    expect(insertIntoConnection(text, { ...star, range: null }, 'Resistor RG()', { toA: 'a', toB: 'b' })).toBeNull()
+    expect(insertIntoConnection(text, star, 'Resistor RG()', { toA: 'a', toB: 'b', branch: 'X.y' })).toBeNull()
   })
 })

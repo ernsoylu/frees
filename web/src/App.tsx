@@ -1,5 +1,6 @@
 import { tableInputIssues } from './tableValidation'
 import { resolvePlotSource } from './plots/sources'
+import { CANVAS_COMMANDS, runCanvasCommand } from './schematic/commands'
 import { flushSync } from 'react-dom'
 import { helpUrl } from './helpUrl'
 import { ChangeEvent, lazy, startTransition, Suspense, useCallback, useEffect, useEffectEvent, useMemo, useState, useRef, type ReactNode } from 'react'
@@ -2606,6 +2607,20 @@ export default function App() {
       ],
     },
     {
+      // CFG-10: canvas commands; each opens the schematic, then runs there.
+      group: 'Schematic',
+      actions: CANVAS_COMMANDS.map((c) => ({
+        id: `canvas-${c.id}`,
+        label: c.label,
+        description: c.keys.length ? `${c.keys.join('+')} on the drawing` : undefined,
+        leftSection: <IconSitemap size={18} />,
+        onClick: () => {
+          dockRef.current?.open('schematic')
+          runCanvasCommand(c.id)
+        },
+      })),
+    },
+    {
       group: 'Create',
       actions: [
         { id: 'new-param-table', label: 'Add parametric table', leftSection: <IconTable size={18} />, onClick: () => createTable('parametric') },
@@ -2830,7 +2845,6 @@ export default function App() {
             onSelectLine={selectLine}
             onEmitStatement={emitFromSchematic}
             onSourceEdit={(changes, expected) => editorRef.current?.applyEdit(changes, expected) ?? false}
-            onInsertBlock={insertComponentBlock}
             presentation={schematic}
             onPresentationChange={setSchematic}
             highlightIds={cursorInstance ? [...instancesInDiagnosis(checkResult?.message ?? ''), cursorInstance] : instancesInDiagnosis(checkResult?.message ?? '')}

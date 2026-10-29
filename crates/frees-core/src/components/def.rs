@@ -251,6 +251,9 @@ pub struct ComponentInst {
     /// Byte range of the whole instantiation in the parsed source; empty when
     /// synthesised. Navigation and editing metadata, outside equality like `line`.
     pub span: Span,
+    /// Byte range of each `name=value` argument's value, in written order; the
+    /// closing parenthesis is the last byte of `span`. Editing metadata like `span`.
+    pub param_spans: Vec<(String, Span)>,
 }
 
 impl PartialEq for ComponentInst {
@@ -439,6 +442,7 @@ mod tests {
                 source_text: "Pump P1(s1, s2)".into(),
                 line: 0,
                 span: Default::default(),
+                param_spans: Vec::new(),
             }],
             vec![],
         );

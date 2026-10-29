@@ -1477,13 +1477,28 @@ fn check_response(report: &CheckReport, source: Option<&str>) -> String {
                     "refs": source.map(|map| {
                         i.refs.iter().filter_map(|span| map.range(*span)).collect::<Vec<_>>()
                     }),
+                    "params": source.map(|map| {
+                        i.params
+                            .iter()
+                            .filter_map(|(name, span)| Some(json!({ "name": name, "range": map.range(*span)? })))
+                            .collect::<Vec<_>>()
+                    }),
+                    "close": source.and_then(|map| map.range(i.close)),
                 })
             })
             .collect::<Vec<_>>(),
         "definitions": report
             .definitions
             .iter()
-            .map(|d| json!({ "name": d.name, "line": d.line }))
+            .map(|d| {
+                json!({
+                    "name": d.name,
+                    "line": d.line,
+                    "range": source.and_then(|map| map.range(d.span)),
+                    "ports": d.ports,
+                    "params": d.params,
+                })
+            })
             .collect::<Vec<_>>(),
     })
     .to_string()

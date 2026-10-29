@@ -20,3 +20,11 @@ body,
 .frees-row-toggle:hover {
   background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6));
 }
+
+/* CFG-09: on a touch screen the schematic toolbar's controls are finger-sized. */
+@media (pointer: coarse) {
+  [data-schematic-toolbar] button {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}

@@ -533,8 +533,13 @@ Click a block to pin the card and jump to the line that declares it in the edito
 | drag the background | pan |
 | Ctrl/⌘ + scroll | zoom |
 | **Fit to window** | frame the whole network |
-| **Reset layout** | discard your arrangement, return to the automatic one |
-| **Export SVG** | the whole drawing as a vector file, ready to paste into a report |
+| **Reset layout** | preview the automatic arrangement; Apply or Cancel (locked blocks stay) |
+| **Export…** | SVG, PNG or print/PDF of the whole model, the current view or the selection, with the legend, values and run context you choose |
+| **List** (\`L\`) | every component and connection as a list: inspect, delete or open each without the drawing |
+
+**Subsystems.** Select blocks and choose **Edit › Extract subsystem…** to turn them into one local component. The preview names the ports, the parameters passed in and the equations re-pointed into the subsystem, and checks the result before anything is written. **Model tree** and the breadcrumbs open a subsystem; inside it, **Interface…** renames, adds or removes ports with a plan of every statement that changes. **Export component…** and **Import components…** move a definition between documents. An import never overwrites one you already have unless you tick *replace mine*.
+
+Every canvas command is also in the command palette (Ctrl/⌘ + K, group *Schematic*), and the shortcuts sheet (\`?\`) lists the canvas keys. They act only while the drawing has focus, never while you type in a field.
 
 The automatic layout keeps the network framed until you first zoom, pan or drag — after that it leaves the view alone.
 

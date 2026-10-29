@@ -196,6 +196,13 @@ export interface SchematicPresentation {
   areas: SchematicArea[]
   view: ViewSettings
   styles: BlockStyles
+  /** WIRE-07: hand-placed bends by `routeKey`; a locked route is never changed by a drag. */
+  routes: Record<string, WireRoute>
+}
+
+export interface WireRoute {
+  points: { x: number; y: number }[]
+  locked?: boolean
 }
 
 /** How a block draws, beyond the theme: an outline accent and readout digits. */
@@ -229,6 +236,7 @@ export const EMPTY_PRESENTATION: SchematicPresentation = {
   areas: [],
   view: DEFAULT_VIEW,
   styles: EMPTY_STYLES,
+  routes: {},
 }
 
 /** Coordinates past this, or more entries than this, are a malformed or
@@ -255,7 +263,7 @@ const record = (v: unknown): Record<string, unknown> | null =>
 const id = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= MAX_TEXT
 const coord = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= MAX_COORD
 /** A block id: an instance path, or a `$` junction. */
-const ref = (v: unknown): v is string => id(v) && /^\$?[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$/.test(v)
+const ref = (v: unknown): v is string => id(v) && /^\$?[A-Za-z_][\w$]*(\.[A-Za-z_][\w$]*)*$/.test(v)
 
 /** One style, keeping only well-formed fields; `bad` counts what was dropped. */
 function styleOf(v: unknown): { style: BlockStyle | null; bad: number } {
@@ -365,7 +373,17 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
   }
   const styles = stylesOf(raw.styles)
   repaired += styles.repaired
-  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles }, repaired }
+  const routes: Record<string, WireRoute> = {}
+  for (const [key, r] of Object.entries(record(raw.routes) ?? {})) {
+    const { points, locked: fixed } = record(r) ?? {}
+    const pts = Array.isArray(points) ? points.map(record) : null
+    if (Object.keys(routes).length < MAX_ENTRIES && key.length <= MAX_TEXT && pts && pts.length <= 64 && pts.every((q) => q && coord(q.x) && coord(q.y)) && (fixed === undefined || typeof fixed === 'boolean')) {
+      routes[key] = { points: pts.map((q) => ({ x: q!.x as number, y: q!.y as number })), ...(fixed ? { locked: true } : {}) }
+    } else {
+      repaired++
+    }
+  }
+  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes }, repaired }
 }
 
 /**
@@ -390,4 +408,24 @@ export function resolveLegacy(
     }
   }
   return { presentation: { ...presentation, positions, legacyOffsets }, unresolved: Object.keys(legacyOffsets).length }
+}
+
+/**
+ * VIEW-04: hand `targets` back to the automatic layout. Locked blocks keep
+ * their place and locked routes their bends; an unlocked route touching a
+ * moved block goes too, so it re-routes against the new places.
+ */
+export function arrangeBlocks(p: SchematicPresentation, targets: Iterable<string>): { presentation: SchematicPresentation; moved: string[] } {
+  const locked = new Set(p.locked)
+  const moved = [...targets].filter((id) => !locked.has(id))
+  const gone = new Set(moved)
+  const touches = (key: string) => key.split('|').some((end) => gone.has(end.slice(0, end.lastIndexOf('.'))))
+  return {
+    moved,
+    presentation: {
+      ...p,
+      positions: Object.fromEntries(Object.entries(p.positions).filter(([id]) => !gone.has(id))),
+      routes: Object.fromEntries(Object.entries(p.routes ?? {}).filter(([key, r]) => r.locked || !touches(key))),
+    },
+  }
 }
