@@ -969,3 +969,23 @@ connect(B1.b, SNK.in)\n";
     assert_eq!(d["ports"], json!(["a", "b"]));
     assert_eq!(d["params"], json!(["l"]));
 }
+
+/// RUN-03: display-unit conversions — offsets for bare temperature scales,
+/// factors for compound units, and a refusal across dimensions.
+#[test]
+fn unit_conversions_scale_shift_and_refuse() {
+    let v = parsed(&frees::unit_conversions("C", r#"["K","F","kPa"]"#));
+    let units = v["units"].as_array().unwrap();
+    assert!((units[0]["scale"].as_f64().unwrap() - 1.0).abs() < 1e-12);
+    assert!((units[0]["shift"].as_f64().unwrap() - 273.15).abs() < 1e-9);
+    // 100 C = 212 F
+    let f = &units[1];
+    assert!(
+        (100.0 * f["scale"].as_f64().unwrap() + f["shift"].as_f64().unwrap() - 212.0).abs() < 1e-9
+    );
+    assert!(units[2]["error"].is_string());
+    let v = parsed(&frees::unit_conversions("kJ/kg-C", r#"["J/kg-K"]"#));
+    assert!((v["units"][0]["scale"].as_f64().unwrap() - 1000.0).abs() < 1e-9);
+    assert!(v["units"][0]["shift"].as_f64().unwrap().abs() < 1e-12);
+    assert!(parsed(&frees::unit_conversions("furlongs-ish", "[]"))["error"].is_string());
+}

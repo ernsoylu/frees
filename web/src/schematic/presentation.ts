@@ -6,6 +6,7 @@ import {
   type SchematicNode,
   type SchematicOffsets,
 } from './layout'
+import { renameId } from './sourceEdit'
 
 /**
  * How the canvas is presented (VIEW-03, VIEW-05). None of this changes the
@@ -198,6 +199,83 @@ export interface SchematicPresentation {
   styles: BlockStyles
   /** WIRE-07: hand-placed bends by `routeKey`; a locked route is never changed by a drag. */
   routes: Record<string, WireRoute>
+  /** RUN-03: the variable a block's badge shows instead of the automatic one, by block id (lower-case names). */
+  badges: Record<string, string>
+  /** RUN-03: pinned watch rows, in order (lower-case variable names). */
+  watch: string[]
+  /** RUN-03: how a variable reads, by lower-case name. Display only: inputs are never rewritten. */
+  formats: Record<string, VariableFormat>
+  /** RUN-04/WIRE-10: the metric the wires are coloured by (`domain:member`, '' for none) and measured-flow arrows. */
+  overlay: { metric: string; arrows: boolean }
+  /** VIEW-08: named views saved with the project. */
+  views: SavedView[]
+  /** VIEW-09: notes, callouts, variable cards and legends, each drawn in one scope. */
+  annotations: Annotation[]
+}
+
+/** VIEW-09: an annotation; callouts and cards link to a block or variable by its id, so a rename moves the link. */
+export interface Annotation {
+  id: string
+  kind: 'note' | 'callout' | 'card' | 'legend'
+  scope: string
+  at: { x: number; y: number }
+  text: string
+  /** callout: the block it points at; card: the variable it shows; '' otherwise. */
+  target: string
+}
+
+/** SYNC-04: every presentation key and link under a rename, matching whole dotted segments. */
+export function renamePresentation(p: SchematicPresentation, renames: ReadonlyMap<string, string>): SchematicPresentation {
+  const id = (k: string) => renameId(k, renames)
+  const move = <V,>(r: Record<string, V>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [id(k), v]))
+  const badges = (b: Record<string, string>) => Object.fromEntries(Object.entries(b).map(([k, v]) => [id(k), id(v)]))
+  return {
+    ...p,
+    positions: move(p.positions),
+    legacyOffsets: move(p.legacyOffsets),
+    locked: p.locked.map(id),
+    areas: p.areas.map((a) => ({ ...a, members: a.members.map(id) })),
+    styles: { ...(p.styles ?? EMPTY_STYLES), instances: move((p.styles ?? EMPTY_STYLES).instances) },
+    badges: badges(p.badges ?? {}),
+    watch: (p.watch ?? []).map(id),
+    formats: move(p.formats ?? {}),
+    views: (p.views ?? []).map((v) => ({ ...v, scope: id(v.scope), badges: badges(v.badges), focus: v.focus && { ...v.focus, id: id(v.focus.id) } })),
+    annotations: (p.annotations ?? []).map((a) => ({ ...a, scope: id(a.scope), target: id(a.target) })),
+  }
+}
+
+/** VIEW-08: what a named view restores — where, how framed, what is shown and how it reads. */
+export interface SavedView {
+  name: string
+  /** The subsystem path it looks into ('' = the model). */
+  scope: string
+  camera: { x: number; y: number; zoom: number }
+  view: ViewSettings
+  overlay: SchematicPresentation['overlay']
+  badges: Record<string, string>
+  /** An isolation or highlight command in force, if any. */
+  focus: { kind: 'neighbours' | 'trace' | 'circuit'; id: string } | null
+}
+
+export type ViewPreset = 'names' | 'engineering' | 'debug' | 'presentation'
+
+/** VIEW-08 presets: view settings and overlay only — never positions, routes or the document. */
+export function applyPreset(p: SchematicPresentation, preset: ViewPreset): SchematicPresentation {
+  const view = { ...p.view }
+  const off = { metric: '', arrows: false }
+  if (preset === 'names') return { ...p, view: { ...view, detail: 'names', portLabels: false }, overlay: off }
+  if (preset === 'engineering') return { ...p, view: { ...view, detail: 'full', portLabels: false }, overlay: { ...p.overlay, arrows: true } }
+  if (preset === 'debug') return { ...p, view: { ...view, detail: 'full', portLabels: true, grouping: 'domain' }, overlay: p.overlay }
+  return { ...p, view: { ...view, detail: 'full', portLabels: false, background: 'plain', guides: false }, overlay: off }
+}
+
+/** A display unit (`shown = value · scale + shift`, valid while the variable is in `from`) and significant digits. */
+export interface VariableFormat {
+  unit?: string
+  from?: string
+  scale?: number
+  shift?: number
+  digits?: number
 }
 
 export interface WireRoute {
@@ -211,6 +289,36 @@ export interface BlockStyle {
   accent?: string
   /** Significant digits of the block's readout badge. */
   precision?: number
+  /** COMP-07: quarter turns clockwise, then a left–right mirror; the ports move with the symbol, the text stays upright. */
+  rotate?: 0 | 90 | 180 | 270
+  mirror?: boolean
+  /** COMP-07: the block's own level of detail, over the view's. */
+  density?: 'names' | 'full'
+  /** COMP-07: where the name is drawn, and its size in px. */
+  label?: 'inside' | 'above' | 'below'
+  labelSize?: number
+}
+
+export const LABEL_SIZES = [11, 12, 13, 14, 16, 18]
+const TURN_CW: Record<PortSide, PortSide> = { left: 'top', top: 'right', right: 'bottom', bottom: 'left' }
+const FLIP: Record<PortSide, PortSide> = { left: 'right', right: 'left', top: 'top', bottom: 'bottom' }
+
+/** COMP-07: each block's ports turned and mirrored with its symbol on the same box; port names never change. */
+export function transformSymbols(layout: SchematicLayout, styles: BlockStyles): SchematicLayout {
+  let changed = false
+  const nodes = layout.nodes.map((n) => {
+    const { rotate = 0, mirror = false } = n.kind === 'instance' ? styleFor(styles, n.id, n.type ?? '') : {}
+    if (!rotate && !mirror) return n
+    changed = true
+    const ports = n.ports.map((p) => {
+      let [u, v, side] = [n.w ? p.dx / n.w : 0, n.h ? p.dy / n.h : 0, p.side]
+      if (mirror) [u, side] = [1 - u, FLIP[side]]
+      for (let k = 0; k < rotate / 90; k++) [u, v, side] = [1 - v, u, TURN_CW[side]]
+      return { ...p, side, dx: u * n.w, dy: v * n.h }
+    })
+    return { ...n, ports }
+  })
+  return changed ? { ...layout, nodes } : layout
 }
 
 /** CFG-01 style scopes. A block takes its own, then its type's, then the project's. */
@@ -237,6 +345,12 @@ export const EMPTY_PRESENTATION: SchematicPresentation = {
   view: DEFAULT_VIEW,
   styles: EMPTY_STYLES,
   routes: {},
+  badges: {},
+  watch: [],
+  formats: {},
+  overlay: { metric: '', arrows: false },
+  views: [],
+  annotations: [],
 }
 
 /** Coordinates past this, or more entries than this, are a malformed or
@@ -264,6 +378,92 @@ const id = (v: unknown): v is string => typeof v === 'string' && v.length > 0 &&
 const coord = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= MAX_COORD
 /** A block id: an instance path, or a `$` junction. */
 const ref = (v: unknown): v is string => id(v) && /^\$?[A-Za-z_][\w$]*(\.[A-Za-z_][\w$]*)*$/.test(v)
+/** A solver variable name: a dotted path, possibly indexed (`x[2]`). */
+const variable = (v: unknown): v is string => id(v) && /^[a-z_][\w$]*(\.[a-z_][\w$]*)*(\[\d+(,\d+)?\])?$/.test(v)
+
+function viewOf(v: unknown): { view: ViewSettings; bad: number } {
+  const given = record(v) ?? {}
+  const view = { ...DEFAULT_VIEW }
+  let bad = 0
+  for (const key of Object.keys(VIEW_CHOICES) as (keyof ViewSettings)[]) {
+    if (!(key in given)) continue
+    if ((VIEW_CHOICES[key] as readonly unknown[]).includes(given[key])) (view as Record<string, unknown>)[key] = given[key]
+    else bad++
+  }
+  return { view, bad }
+}
+
+function overlayOf(v: unknown): { overlay: SchematicPresentation['overlay']; bad: number } {
+  const { metric, arrows } = record(v) ?? {}
+  const overlay = { metric: typeof metric === 'string' && /^([a-z]+:[a-z]+)?$/.test(metric) ? metric : '', arrows: arrows === true }
+  return { overlay, bad: v !== undefined && (overlay.metric !== metric || overlay.arrows !== arrows) ? 1 : 0 }
+}
+
+function badgesOf(v: unknown): { badges: Record<string, string>; bad: number } {
+  const badges: Record<string, string> = {}
+  let bad = 0
+  for (const [key, name] of Object.entries(record(v) ?? {})) {
+    if (Object.keys(badges).length < MAX_ENTRIES && ref(key) && variable(name)) badges[key] = name
+    else bad++
+  }
+  return { badges, bad }
+}
+
+const MAX_VIEWS = 50
+const FOCUS_KINDS = ['neighbours', 'trace', 'circuit']
+
+/** One saved view, whole or not at all: a view that would restore half its state is dropped. */
+function savedViewOf(v: unknown): SavedView | null {
+  const raw = record(v)
+  const camera = record(raw?.camera)
+  const focus = raw?.focus === null || raw?.focus === undefined ? null : record(raw.focus)
+  if (!raw || typeof raw.name !== 'string' || !raw.name.trim() || raw.name.length > 60) return null
+  if (!(raw.scope === '' || ref(raw.scope)) || !camera || !coord(camera.x) || !coord(camera.y) || typeof camera.zoom !== 'number' || !(camera.zoom > 0 && camera.zoom <= 16)) return null
+  if (focus && (!FOCUS_KINDS.includes(focus.kind as string) || !ref(focus.id))) return null
+  const view = viewOf(raw.view)
+  const overlay = overlayOf(raw.overlay)
+  const badges = badgesOf(raw.badges)
+  if (view.bad + overlay.bad + badges.bad > 0) return null
+  return {
+    name: raw.name,
+    scope: raw.scope as string,
+    camera: { x: camera.x, y: camera.y, zoom: camera.zoom },
+    view: view.view,
+    overlay: overlay.overlay,
+    badges: badges.badges,
+    focus: focus ? { kind: focus.kind as NonNullable<SavedView['focus']>['kind'], id: focus.id as string } : null,
+  }
+}
+
+const ANNOTATION_KINDS = ['note', 'callout', 'card', 'legend']
+
+function annotationOf(v: unknown): Annotation | null {
+  const raw = record(v)
+  const at = record(raw?.at)
+  if (!raw || typeof raw.id !== 'string' || !/^n\d{1,6}$/.test(raw.id) || !ANNOTATION_KINDS.includes(raw.kind as string)) return null
+  if (!(raw.scope === '' || ref(raw.scope)) || !at || !coord(at.x) || !coord(at.y) || typeof raw.text !== 'string' || raw.text.length > 2000) return null
+  const kind = raw.kind as Annotation['kind']
+  const linked = kind === 'callout' ? ref(raw.target) : kind === 'card' ? variable(raw.target) : raw.target === ''
+  return linked ? { id: raw.id, kind, scope: raw.scope as string, at: { x: at.x, y: at.y }, text: raw.text, target: raw.target as string } : null
+}
+
+function formatOf(v: unknown): VariableFormat | null {
+  const raw = record(v)
+  if (!raw) return null
+  const { unit, from, scale, shift, digits } = raw
+  const text = (t: unknown) => typeof t === 'string' && t.length > 0 && t.length <= 40
+  const num = (n: unknown) => typeof n === 'number' && Number.isFinite(n)
+  const out: VariableFormat = {}
+  if (unit !== undefined) {
+    if (!text(unit) || !text(from) || !num(scale) || scale === 0 || !num(shift)) return null
+    Object.assign(out, { unit, from, scale, shift })
+  }
+  if (digits !== undefined) {
+    if (!Number.isInteger(digits) || (digits as number) < 2 || (digits as number) > 10) return null
+    out.digits = digits as number
+  }
+  return Object.keys(out).length > 0 ? out : null
+}
 
 /** One style, keeping only well-formed fields; `bad` counts what was dropped. */
 function styleOf(v: unknown): { style: BlockStyle | null; bad: number } {
@@ -274,6 +474,11 @@ function styleOf(v: unknown): { style: BlockStyle | null; bad: number } {
   for (const [key, value] of Object.entries(raw)) {
     if (key === 'accent' && typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)) style.accent = value
     else if (key === 'precision' && Number.isInteger(value) && (value as number) >= 2 && (value as number) <= 8) style.precision = value as number
+    else if (key === 'rotate' && [0, 90, 180, 270].includes(value as number)) style.rotate = value as BlockStyle['rotate']
+    else if (key === 'mirror' && typeof value === 'boolean') style.mirror = value
+    else if (key === 'density' && (value === 'names' || value === 'full')) style.density = value
+    else if (key === 'label' && ['inside', 'above', 'below'].includes(value as string)) style.label = value as BlockStyle['label']
+    else if (key === 'labelSize' && LABEL_SIZES.includes(value as number)) style.labelSize = value as number
     else bad++
   }
   return { style, bad }
@@ -361,16 +566,9 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
       repaired++
     }
   }
-  const given = record(raw.view) ?? {}
-  const view = { ...DEFAULT_VIEW }
-  for (const key of Object.keys(VIEW_CHOICES) as (keyof ViewSettings)[]) {
-    if (!(key in given)) continue
-    if ((VIEW_CHOICES[key] as readonly unknown[]).includes(given[key])) {
-      ;(view as Record<string, unknown>)[key] = given[key]
-    } else {
-      repaired++
-    }
-  }
+  const parsedView = viewOf(raw.view)
+  const view = parsedView.view
+  repaired += parsedView.bad
   const styles = stylesOf(raw.styles)
   repaired += styles.repaired
   const routes: Record<string, WireRoute> = {}
@@ -383,7 +581,32 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
       repaired++
     }
   }
-  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes }, repaired }
+  const parsedBadges = badgesOf(raw.badges)
+  const badges = parsedBadges.badges
+  repaired += parsedBadges.bad
+  const watch = [...new Set(list(raw.watch).filter(variable))].slice(0, MAX_ENTRIES)
+  repaired += list(raw.watch).length - watch.length
+  const formats: Record<string, VariableFormat> = {}
+  for (const [key, f] of Object.entries(record(raw.formats) ?? {})) {
+    const format = formatOf(f)
+    if (Object.keys(formats).length < MAX_ENTRIES && variable(key) && format) formats[key] = format
+    else repaired++
+  }
+  const parsedOverlay = overlayOf(raw.overlay)
+  repaired += parsedOverlay.bad
+  const views: SavedView[] = []
+  for (const v of list(raw.views)) {
+    const saved = savedViewOf(v)
+    if (saved && views.length < MAX_VIEWS && !views.some((x) => x.name === saved.name)) views.push(saved)
+    else repaired++
+  }
+  const annotations: Annotation[] = []
+  for (const a of list(raw.annotations)) {
+    const note = annotationOf(a)
+    if (note && annotations.length < MAX_ENTRIES && !annotations.some((x) => x.id === note.id)) annotations.push(note)
+    else repaired++
+  }
+  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes, badges, watch, formats, overlay: parsedOverlay.overlay, views, annotations }, repaired }
 }
 
 /**

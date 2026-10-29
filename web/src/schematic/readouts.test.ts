@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { badgeFor, formatCompact, indexVariables, readoutFor } from './readouts'
+import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor } from './readouts'
 import { layoutSchematic, type Connection } from './layout'
 import type { VariableResult } from '../api'
 
@@ -150,5 +150,14 @@ describe('formatCompact', () => {
     expect(formatCompact(0)).toBe('0')
     expect(formatCompact(1.2e7)).toBe('1.200e+7')
     expect(formatCompact(1.2e-5)).toBe('1.200e-5')
+  })
+})
+
+describe('formatReading (RUN-03)', () => {
+  it('converts while the unit still matches, flags a stale choice, and rounds', () => {
+    const c = { unit: 'F', from: 'C', scale: 1.8, shift: 32, digits: 4 }
+    expect(formatReading({ value: 100, units: 'C' }, c)).toEqual({ text: '212', units: 'F', stale: false })
+    expect(formatReading({ value: 373.16, units: 'K' }, c)).toEqual({ text: '373.2', units: 'K', stale: true })
+    expect(formatReading({ value: 1.23456, units: 'kW' }, { digits: 3 })).toEqual({ text: '1.23', units: 'kW', stale: false })
   })
 })

@@ -15,8 +15,11 @@
 
 import type { ComponentParamResult, ComponentResult, VariableResult } from '../api'
 import type { SchematicEdge, SchematicNode } from './layout'
+import type { VariableFormat } from './presentation'
 
 export interface Reading {
+  /** The solver variable, as the solve reported it. */
+  name: string
   label: string
   value: number
   units: string
@@ -41,7 +44,7 @@ export interface NodeReadout {
  * T) exists as a variable only when the document referenced it, and inventing
  * a blank row for every member it did not would bury the ones it did.
  */
-const MEMBERS: Record<string, [string, string][]> = {
+export const MEMBERS: Record<string, [string, string][]> = {
   fluid: [
     ['p', 'P'],
     ['t', 'T'],
@@ -171,7 +174,7 @@ function membersOf(
   for (const [member, label] of MEMBERS[domain.toLowerCase()] ?? MEMBERS.fluid) {
     const v = values.get(`${stream}.${member}`.toLowerCase())
     if (v && Number.isFinite(v.value)) {
-      readings.push({ label, value: v.value, units: v.units })
+      readings.push({ name: v.name, label, value: v.value, units: v.units })
     }
   }
   return readings
@@ -199,7 +202,7 @@ function outputReadings(
       continue
     }
     if (Number.isFinite(v.value)) {
-      out.push({ label: v.name.slice(prefix.length), value: v.value, units: v.units })
+      out.push({ name: v.name, label: v.name.slice(prefix.length), value: v.value, units: v.units })
     }
   }
   return out.sort((a, b) => a.label.localeCompare(b.label))
@@ -237,6 +240,17 @@ function describeParamValue(p: ComponentParamResult): string {
   }
   const unit = p.units ? ` ${p.units}` : ''
   return formatCompact(p.value) + unit
+}
+
+/**
+ * RUN-03: a value as the user asked to read it. A display unit applies only
+ * while the variable still carries the unit it was converted from; otherwise
+ * the value shows in its own unit and `stale` says the choice no longer fits.
+ */
+export function formatReading(r: { value: number; units: string }, f?: VariableFormat): { text: string; units: string; stale: boolean } {
+  const converts = Boolean(f?.unit && f.from === r.units && f.scale !== undefined)
+  const value = converts ? r.value * f!.scale! + (f!.shift ?? 0) : r.value
+  return { text: formatCompact(value, f?.digits), units: converts ? f!.unit! : r.units, stale: Boolean(f?.unit) && !converts }
 }
 
 /** Compact fixed/exponential rendering — a hover card has no room for 8 digits. */

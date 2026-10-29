@@ -1564,6 +1564,32 @@ pub fn reference() -> String {
     .to_string()
 }
 
+/// RUN-03: how a value written in `from` reads in other units — each target as
+/// `{unit, scale, shift}` with `shown = value · scale + shift`, or `{unit, error}`.
+/// A bare `C` or `F` is a temperature scale with an offset; inside a compound
+/// unit it is a per-degree factor, as everywhere in the engine.
+#[wasm_bindgen]
+pub fn unit_conversions(from: &str, to_json: &str) -> String {
+    let source = match UnitRegistry::parse_with_offset(from) {
+        Ok(q) => q,
+        Err(e) => return json!({ "error": e.to_string(), "units": [] }).to_string(),
+    };
+    let targets: Vec<String> = serde_json::from_str(to_json).unwrap_or_default();
+    let units: Vec<Value> = targets
+        .iter()
+        .map(|unit| match UnitRegistry::parse_with_offset(unit) {
+            Ok(target) if target.dims == source.dims => json!({
+                "unit": unit,
+                "scale": source.factor / target.factor,
+                "shift": (source.offset - target.offset) / target.factor,
+            }),
+            Ok(_) => json!({ "unit": unit, "error": format!("{unit} does not measure the same quantity as {from}.") }),
+            Err(e) => json!({ "unit": unit, "error": e.to_string() }),
+        })
+        .collect();
+    json!({ "units": units }).to_string()
+}
+
 /// Every registered unit: symbol, the SI dimension it measures, and the factor
 /// to SI base units.
 fn reference_units() -> Vec<Value> {

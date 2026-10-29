@@ -75,9 +75,9 @@ history keeps the detailed narrative of every closed item.
 
 Cards, answer key, thresholds and the pinned build are in [`R15_PILOT.md`](R15_PILOT.md) (signed 2026-09-12). Still to do: run five engineering participants through scalar solve (≤ 5 min), component chain (≤ 10 min) and missing-boundary recovery (≤ 3 min); record times, assistance and feedback. Never fabricate participant outcomes.
 
-### Schematic workspace (CR-SCHEMATIC-01) — 01a–01c closed
+### Schematic workspace (CR-SCHEMATIC-01) — 01a–01d closed
 
-Design proposal and phased scope in [`docs/schematic-workspace-change-request.md`](docs/schematic-workspace-change-request.md): 01a readable canvas, 01b editing foundation, 01c complete authoring, 01d explain and present, plus a triggered backlog. 01a started and closed on 2026-10-28; 01b–01d are not approved yet.
+Design proposal and phased scope in [`docs/schematic-workspace-change-request.md`](docs/schematic-workspace-change-request.md): 01a readable canvas, 01b editing foundation, 01c complete authoring, 01d explain and present, plus a triggered backlog. 01a started and closed on 2026-10-28; 01b–01d were each approved in turn, and 01d closed on 2026-10-29.
 
 01a (readable canvas) work order. Each slice is checked off here when it lands, with the evidence that closes it:
 
@@ -164,6 +164,149 @@ Design proposal and phased scope in [`docs/schematic-workspace-change-request.md
    - **Ceilings.** Shortcuts cannot be remapped, so there are no collisions to detect. On a block whose ports sit closer than a finger, the targets share the gap between them; zoom in, or use the list.
 
 **01c closed 2026-10-29.** Gates on the closing tree: workspace 3,419 tests, parity corpus green, clippy clean (native and wasm32), `cargo fmt --check` clean, WASM 4,437.1 KiB raw / 1,989.7 KiB gzipped, vitest 793/793 in 69 files, lint 0 errors (90 warnings, unchanged), check-docs 754/754, check-examples 809/809 (2,898 assertions), schematic baseline 37 passed with the CI-only visual test skipped locally. AC-05 and AC-09 now take the first of two matching texts, since the live region repeats each canvas note. Carried forward: structured diagnostic codes and per-instance attribution of free quantities, the remaining CFG-02 styling, remappable shortcuts, theme-independent export colours, and 01d (explain and present), which still needs approval.
+
+01d (explain and present) started 2026-10-29 on `schematic-01d`, approved by the owner after 01c closed. Work order; each slice ends with its acceptance journey:
+
+1. **Done 2026-10-29.** Search (VIEW-07). `schematic/search.ts` searches the last drawn Check in one pass over blocks, types (one hit per type and scope), ports, nets (by alias or endpoint), parameter bindings as written, source statements and Check's issues. Each hit carries its scope and the blocks to select; a statement selects the blocks it names through each instance's `refs`, so a line inside a definition lands in its subsystem. Hits that start with the query rank first, 20 per kind. The canvas opens it from a Search button, the `/` key or the palette: picking a hit opens its scope, selects and centres its blocks at 100 % or less, moves the editor's selection to its line without taking the view (a hit with nothing to draw reveals the line instead) and announces it. The breadcrumb now spells a local type as written (`Pair`, not `pair`). Evidence: the `VIEW-07` journey on a model with a subsystem and a free block walks every kind: `r2` opens SUB1 with R2 selected and centred; Back restores the root camera the user zoomed; `resistor` selects both resistors; a net its two blocks; `R_load` the binding's block; `vs.p` centres VS in place; `I_load` selects SUB1; `not connected` selects SPARE and is announced; `zzz` says "Nothing matches." Unit test: `search.test.ts`, on the real engine. Ceiling: issue text keeps Check's lower-case instance names, and the editor's line follows only when the editor is mounted beside the canvas.
+2. **Done 2026-10-29.** Displayed variables and watch (RUN-03). **Engine:** `unit_conversions(from, [to…])` in the WASM bridge (worker method `unitConversions`) returns `{unit, scale, shift}` per target, so `shown = value · scale + shift`, or why a target does not fit. It uses the registry's own parser: a bare `C`/`F` carries its offset and a compound `kJ/kg-C` is per degree. Test in `dto_parity.rs`. **Presentation:** `badges` (block → the variable its badge shows), `watch` (ordered rows) and `formats` (variable → display unit converted from the unit it was solved in, and 2–10 significant digits), all validated and counted by the sanitizer. **Canvas:** a pinned card's readings each have Show on the block, Watch and Format. The format popover takes a typed unit (`mA`, `bar`, `g/s`) and refuses one of another quantity with the engine's message. The badge and the Watch panel read in the chosen unit; a unit chosen for a variable whose solved unit later changes reads in the solved unit, marked. A Watch row selects its block (opening its scope and centring it, announcing the port) and is marked while its block is selected. **Evidence:** the `RUN-03` journey solves the two-resistor model, shows `R1.a.I` on R1 (`a I = 0.66667 A`), watches it and `R1.a.V`, is refused `kW`, sets `mA` and 3 digits (`667 mA` on the row and the badge), leaves the saved document byte-identical, and cross-selects rows and blocks. Unit tests: `formatReading`, sanitizer round-trip. **Ceilings:** one badge variable per block, since a block has one badge line; a value on a shared-stream net (`s2.p`) has no owning block, so its row selects nothing; the unit field offers no list, because the registry's symbols are lower-case and it has no compound entries.
+3. **Done 2026-10-29.** Result overlays and flow arrows (RUN-04, WIRE-10). `schematic/overlay.ts`:
+   - `overlayMetrics` lists the `domain:member` quantities some wire's stream has a finite solved value for, each with its unit.
+   - `edgeReadings` puts one metric on one scale. Only that domain's wires in that unit are scaled. A wire whose stream has no such variable is `missing`, a NaN is `nonfinite`, another unit is `unit`; nothing is interpolated.
+   - `flowAlong` gives the measured direction from the library's sign conventions: electrical I and heat Q̇ are positive into a port; fluid ṁ runs from a component's `in` to its `out`, so a port's role comes from its name. Zero gives 0 (no arrow). A fluid port named neither `in` nor `out`, or a domain with no flow, gives null (no arrow).
+
+   The presentation stores `overlay {metric, arrows}`, validated. The toolbar's Overlay picks the metric and turns arrows on. Valued wires take a viridis colour and a width of 1.5–5 px. Missing wires are dashed, non-finite ones dotted red, another unit dash-dot, other domains faded. A wire's tooltip carries its value. A legend gives the metric, unit, gradient, minimum and maximum, the meaning of each marking and the arrow convention. A stale value cannot appear, because any edit withdraws the solve (AC-10).
+
+   **Evidence:** the `RUN-04/WIRE-10` journey on the two-resistor model:
+   - only `electrical V [V]` and `electrical I [A]` are offered;
+   - the scale reads 0–10;
+   - the VS.p wire is the widest (5 px);
+   - with arrows on, the VS.p–R1.a arrow points at R1 (current leaves VS at p);
+   - the saved document is unchanged.
+
+   Unit tests cover the metric offer, the scale, every state, and forward, reverse, zero and no-convention flow. **Ceilings:** fluid port roles come from the in/out naming until the engine reports port roles; signal causality is not drawn, because the canvas draws no orientation arrows to confuse with flow; the export does not yet carry the overlay legend.
+4. **Done 2026-10-29.** Cross-feature handoff (RUN-06). A pinned card's values each have an Open in… menu, next to Watch from slice 2. Each action reuses an app window:
+   - **Plot** opens the X-Y plot dialog seeded from a run parametric table that has the variable, x from its first other column. It is disabled otherwise, because one steady solve is a single point.
+   - **Add to a parametric table** adds a column to the latest GUI table (or a new one), clears that table's results as Configure does, and opens it.
+   - **Property diagram of its fluid** opens the property-plot dialog with the stream's fluid. It is disabled for a value with no fluid stream.
+   - **Sensitivity of this output** opens the Sensitivity dialog, which selects that output once it has run.
+
+   Each disabled item states its reason. App owns availability and the run (`handoff` prop); the canvas only adds the fluid of the variable's stream. Parameter edits keep the inspector's one validation path from 01c. **Evidence:** the `RUN-06` journey on the two-resistor model checks:
+   - Plot is disabled with its reason;
+   - Property diagram is disabled ("Not a fluid stream with a named fluid.");
+   - Sensitivity opens;
+   - Add to a parametric table creates `Parametric 1` and opens it.
+
+   The fluid and plot paths are exercised in AC-11 (slice 9).
+5. **Done 2026-10-29.** Presets and saved views (VIEW-08). A toolbar Views popover offers four presets and the project's named views.
+   - **Presets** (`applyPreset` in `schematic/presentation.ts`) change view settings and the overlay only, never positions, routes or the document. *Names* shows block names without port labels and turns the overlay off. *Engineering* shows full detail and flow arrows. *Debug* adds port labels and groups by domain. *Presentation* uses a plain background, no guides and no overlay.
+   - **Saved views** are stored in the presentation as `views`, so they travel with the project file. Each records the scope, camera, view settings, overlay, block readouts (`badges`) and any isolation or highlight focus. The sanitizer keeps a view whole or drops it and counts it; a view is never half-restored. Saving under an existing name replaces it.
+   - **Applying a view** is one undo step for the presentation. It opens the scope, then sets the camera and the focus. A view whose scope or focus block is no longer in the model is disabled and says why.
+   - **Out of views:** device-local panel preferences and the selection.
+   - **Evidence:** the `VIEW-08` journey on the subsystem model:
+     - *Debug* stores port labels and domain grouping;
+     - searches into SUB1, zooms and saves "Inside";
+     - goes Back and applies *Names*;
+     - applying "Inside" reopens SUB1 at the same on-screen box for R1 and brings back Debug's settings;
+     - saves the project file, starts a new project, reopens the file, applies "Inside" again and deletes it;
+     - the saved document is byte-identical.
+
+     Unit test: the sanitizer keeps a whole view and drops a duplicate name, zero zoom, an unknown detail and an unknown focus; presets leave positions alone.
+   - **Ceiling:** "Home" stays Fit all; a default view is not designated.
+6. **Done 2026-10-29.** Linked annotations (VIEW-09).
+   - **Model.** The presentation's `annotations` hold notes, callouts, variable cards and legends. Each is drawn in one scope. A callout links to a block id; a card links to a variable name. The sanitizer drops a malformed id, kind, position or link and counts it. Regions are the existing named areas (VIEW-05), which already link to their member blocks.
+   - **Rename.** `renamePresentation` now migrates every presentation key and link, by whole dotted segments. Rename used to move positions, locks, areas and styles only; it now also moves RUN-03's badges, watch rows and formats, VIEW-08's saved views (scope, readouts, focus) and annotation targets. It is unit-tested with `r1` → `ra` leaving `r10` alone.
+   - **Broken links.** A link is checked against the last Check's instances and variables, not the last solve. A callout whose block is gone says "Link broken: … no longer exists" (or "is in another subsystem"). A card whose variable Check no longer reports does the same. Both are drawn dashed red. A card with no solve says "Not solved" and never shows the previous number.
+   - **Canvas.**
+     - A toolbar **Annotate** menu adds a Note, a Callout to the one selected block, or the line Legend, cascading from the view's top-left corner (the margin Fit leaves), so a new one covers neither the drawing's middle nor the last one. A pinned card's value gets a third action, a card on the canvas.
+     - An annotation drags to move (one undo step). Click or Enter opens its text with Delete.
+     - Export's Annotations option drops annotations with the areas. Fit and export frame annotations in the scope.
+   - **Evidence:** the `VIEW-09` journey on the two-resistor model:
+     - adds a card for `R1.a.i` (`0.66667 A`), a callout to R1 with a leader line, a two-line note and the legend;
+     - drags the note 60 px; the saved document is byte-identical;
+     - renames R1 to RL: the targets become `rl.a.i` and `rl`, nothing is broken, and the card reads "Not solved" because the rename withdrew the solve;
+     - deletes RL: both links read broken; Undo mends them;
+     - deletes the legend from its dialog.
+   - **Ceilings:** a callout points at a block, not a port or wire. Equation cards come with slice 7.
+7. **Done 2026-10-29.** Equation-only documents (SYNC-10; AC-16). When Check reports variables but the document declares no components, the Schematic view shows an equation view instead of the empty canvas.
+   - **Explanation and insertion.** It says the model is equations only, with no physical network to draw, and offers Add component and Paste.
+   - **Variable cards.** Cards are VIEW-09 card annotations in the model scope, so they ride the project and appear on the canvas once components exist. Before a solve, each variable Check found can be pinned. A card reads its value, "Not solved", or "Link broken: y no longer exists" once Check stops reporting it.
+   - **Dependency view.** App now passes the solve's `blocks` to the canvas. `schematic/dependencies.ts`:
+     - `blockDependencies` links a block to each earlier block whose solved variables its equations name;
+     - `lineOfEquation` finds the source line an equation was written on.
+
+     The view draws the blocks in the solver's order. A block of several equations is marked "solved together" and its equations carry no order. Dependencies are dashed arcs with arrowheads and a caption saying they are not physical connections; no wire or node is drawn. A variable toggles its card; an equation opens its line in the editor. Any edit withdraws the solve, so the view goes with it (AC-10).
+   - **Evidence:** the `AC-16` journey on a five-equation model:
+     - before a solve, the explanation and Check's variables; `y`'s card reads "Not solved";
+     - after the solve, four blocks, with block 3 "solved together: solves w, z", and exactly four dependency arcs (1→2 via x, 2→3 via y, 1→4 via x, 3→4 via z);
+     - no `[data-node]` or `path[data-net]`;
+     - the card reads `5`; `q` is pinned;
+     - `z - w = 1` opens its line;
+     - renaming `y` to `yy` in the source turns `y`'s card broken while `q` reads "Not solved";
+     - the card is removed.
+
+     Unit test: `dependencies.test.ts` on the real solve.
+   - **Ceilings:** dependencies come from scanning the solver's equation text for solved names (`ponytail:` note; use the engine's per-block incidence once the solve reports it). A variable renamed in the editor is not followed, since only component renames are model edits; its card shows broken. Equation cards link to the line by exact text, so an equation the parser rewrote reveals nothing.
+8. **Done 2026-10-29.** Symbol transforms (COMP-07). The CFG-01 block style, scoped by block, type and project, gains five fields:
+   - `rotate` (0/90/180/270, clockwise) and `mirror` (left–right);
+   - `density` (name only or full card, over the view's detail);
+   - `label` (inside, above or below);
+   - `labelSize` (11–18 px).
+
+   The sanitizer validates each and counts what it drops. `transformSymbols` (in `presentation.ts`) runs after `arrangeBase`, so routing, port hits, export and Fit all see the turned ports. It mirrors, then turns, each port's side and its relative place on the same box. Port names never change, and junctions are left alone. The glyph turns and mirrors inside its square; the name, type and badge stay upright. A name placed outside is centred on the block with a halo. The style editor adds Rotate, Mirror, Detail, Name position and Name size.
+
+   **Evidence:** the `COMP-07` journey on the two-resistor model:
+   - R1's ports start on its bottom edge;
+   - 90° moves both to the left edge with `a` above `b`, and the VS–R1 wire still ends on `a`;
+   - Mirror flips their order, and the wire still ends on `a`;
+   - the name goes below at 16 px;
+   - R1 alone shows its name only (R2 keeps its badge);
+   - the saved style is `{rotate: 90, mirror: true, label: 'below', labelSize: 16, density: 'names'}`;
+   - the document is byte-identical and a new solve reads the same 0.66667 A.
+
+   Unit test: every rotation and mirror combination on a three-port block, and the style sanitizer.
+
+   **Ceilings:** the box keeps its size when turned (the ports move round it), so a long block turned 90° stays long. Fit does not frame a name drawn outside the block.
+9. **Done 2026-10-29.** Exit.
+   - **AC-11 on the EV model.**
+     - It traces from the chiller's refrigerant side (CHLR), its coolant side (CHLC) and the battery's thermal link (BATT).
+     - It watches `CHLR.in.p`, then groups by domain. The same 26 blocks are drawn, none duplicated, and the watched value is unchanged, so nothing re-solved.
+     - *Property diagram of its fluid* opens the property plot on R1234yf. It used to open with an empty fluid, because the schematic passes the engine's lower-case `r1234yf`. `PlotConfigModal` now matches a seeded fluid to its own list case-insensitively.
+     - *Add to a parametric table* puts `CHLR.in.p` and then `CHLR.q` into Parametric 1. A table edit withdraws the steady result (AC-10), so the journey solves again before the second one.
+     - Solve runs the table's three rows, and *Plot* then opens the X-Y dialog on Parametric 1 with x `chlr.in.p` and y `chlr.q`. The rows are blank because EV fixes its own inputs, so this proves the wiring, not a sweep.
+   - **AC-15, without sheets and custom symbols.**
+     - It saves an Engineering and a Presentation view, adds a note and a card for `R1.a.I`, and shows that card in mA (`666.67 mA`).
+     - The light theme re-inks the annotations.
+     - The SVG export carries the note and the card's value, and leaves out every annotation with Annotations unchecked.
+     - It saves the project file, starts a new project, reopens and solves. The card, the note, the unit and both views come back, and applying Presentation sets the plain background. The document is byte-identical.
+     - Not covered: another sheet, a custom symbol, and deleting a visual occurrence. All three need VIEW-10 sheets or COMP-08, which are in the backlog.
+   - **500 components.**
+     - The fixture is the chilled-water floor scaled to 83 zones: 502 blocks and 750 drawn wire paths. It runs on Check alone.
+     - Check to drawn takes 2.0–2.2 s on this machine, against the 2 s aim.
+     - Selection p95 is 148 ms and search p95 165 ms, against the 200 ms budget. Both are measured inside the page, from the click or keystroke to the painted frame, over 20 selections and 12 queries; through the harness they read 257 and 375 ms.
+     - The test records and does not assert these numbers, since CI runners vary.
+     - Layout still runs on the UI thread. Moving it off is the open item if a larger model or a slower machine misses 2 s; rendering is within budget, so D13's canvas decision stands.
+   - **Found on the way.**
+     - A new annotation now starts at the view's top-left margin. At the centre, it covered a block in AC-15.
+     - Fit and export frame annotations; a note outside the blocks used to be clipped.
+     - In a docked panel, the Annotate and Views buttons wrap the toolbar to another row, and R1's pinned card then covers R2. AC-08 now adds R2 with Shift+Enter.
+     - AC-14's palette helper now waits for the command palette to close. In the full run, its closing transition still held focus in the search field. `?` then landed in an input, and the shortcuts handler rightly ignored it.
+
+**01d closed 2026-10-29.** Gates on the closing tree:
+- workspace 3,420 tests and the parity corpus, green;
+- clippy (native and wasm32) and `cargo fmt --check`, clean;
+- WASM 4,441.3 KiB raw / 1,991.3 KiB gzipped;
+- vitest 802/802 in 72 files;
+- lint 0 errors (90 warnings, unchanged);
+- check-docs 754/754;
+- check-examples 809/809 (2,898 assertions);
+- the Docker visual baseline, unchanged;
+- schematic e2e 48 passed, with the CI-only visual test skipped locally.
+
+Carried forward:
+- layout off the UI thread, if a larger model misses the 2 s Check-to-drawn aim;
+- the engine's per-block incidence, to replace SYNC-10's text scan;
+- sheets (VIEW-10), custom symbols (COMP-08) and visual-occurrence delete, all in the backlog;
+- from 01c: structured diagnostic codes and per-instance attribution, the remaining CFG-02 styling, remappable shortcuts, and theme-independent export colours.
 
 Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` against `51a2ea2` (the spec asserts each fix): Fit no longer applies the manual zoom-out floor, so auto-fit frames all 100 dense-floor instances; manual zoom-out can reach the fitted view. Fit and the zoom-out floor also frame dragged nodes, using the same drawing bounds as SVG export, and a drag or pan now stops auto-fit as the code comment intended. Circuit frames grow to enclose members dragged past them (`framedGroups` in `layout.ts`), and never shrink. `routeEdge` now keeps every segment past the port stubs clear of every component box, the endpoints' own included, against live (dragged) positions; the baseline measured 0 wire samples under components on all three models, down from 63, 110 and 1,898. Hover and selection no longer dim the rest of the model (the hovered node and its wires are emphasised instead). Clicking a node selects its declaration in the editor without bringing the Editor tab forward or taking focus (`goToLine(line, { focus: false })`); the readout card's reveal action is the explicit navigation. Before the first Check the canvas says "connections appear after Check" instead of reporting document errors; the orange error notice remains for a check that ran without producing topology. Below the zoom at which a 12.5 px label would draw under 12 px, nodes collapse to a name chip held at 12 px on screen (glyph, type and value badge hidden; full name in the tooltip and inspector). The chip may overhang its box into the free gap beside it, and a name that still does not fit is shortened with "…". Auto-fit labels went from 5 px (EV) and 3 px (dense floor) to at least 12 px on all three models; on the dense floor only the two crowded mid-row names (pump, riser) are shortened.
 

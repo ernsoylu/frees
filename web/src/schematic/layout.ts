@@ -331,6 +331,9 @@ export function scopeOf(id: string): string {
 /** The scope a connection endpoint (`sub1.r1.b`, `sub1$a`, `vs.p`) belongs to. */
 export const endpointScope = (raw: string) => scopeOf(splitEndpoint(raw).instance)
 
+/** The block a connection endpoint is drawn on: `sub1.r1` for `sub1.r1.b`. */
+export const endpointBlock = (raw: string) => splitEndpoint(raw).instance
+
 function nodeWidth(label: string, type?: string): number {
   const longest = Math.max(label.length, (type ?? '').length)
   return Math.max(NODE_MIN_W, Math.round(longest * CHAR_W) + NODE_PAD)

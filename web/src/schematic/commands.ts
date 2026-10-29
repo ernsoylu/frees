@@ -4,6 +4,7 @@
 export const CANVAS_COMMANDS = [
   { id: 'add', label: 'Add component', keys: ['A'] },
   { id: 'list', label: 'Component and connection list', keys: ['L'] },
+  { id: 'search', label: 'Search the model', keys: ['/'] },
   { id: 'fit', label: 'Fit drawing', keys: ['Shift', '1'] },
   { id: 'fit-selection', label: 'Fit selection', keys: ['Shift', '2'] },
   { id: 'select-all', label: 'Select all components', keys: ['Ctrl', 'A'] },
