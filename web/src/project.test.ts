@@ -191,3 +191,12 @@ describe('projectOnlyNotes', () => {
     expect(notes.join(' ')).toMatch(/legacy analyzer/)
   })
 })
+
+describe('import validation (CFG-07)', () => {
+  it('refuses a file larger than any project before reading it', async () => {
+    let read = false
+    const huge = { size: 65 * 1024 * 1024, text: async () => ((read = true), '{}') } as unknown as File
+    await expect(readProjectFile(huge)).rejects.toThrow(/at most 64 MB/)
+    expect(read).toBe(false)
+  })
+})

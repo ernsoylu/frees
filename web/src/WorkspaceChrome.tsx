@@ -748,6 +748,8 @@ interface TopBarProps {
   complexMode: boolean
   checkResult: CheckResponse | null
   result: SolveResponse | null
+  /** The last solve or check was stopped before it reported (RUN-01). */
+  stopped?: boolean
   tableChecking: boolean
   tableSolving: boolean
   tableCheckResult: CheckResponse | null
@@ -808,6 +810,16 @@ function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
 function statusPillFor(props: Readonly<TopBarProps>) {
   if (props.isTable) {
     return tablePill(props.tableResults, props.tableCheckResult, props.tableCheckMessage, props.tableStats)
+  }
+  if (props.stopped) {
+    return {
+      color: 'orange',
+      label: 'Stopped',
+      message: props.result
+        ? 'Stopped before finishing. The values shown are from the last completed run.'
+        : 'Stopped before a result. Your edits are kept; Solve again to run.',
+      warnings: [],
+    }
   }
   if (props.result) return solvePill(props.result)
   if (props.checkResult) return checkPill(props.checkResult)

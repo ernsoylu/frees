@@ -178,18 +178,45 @@ export interface CheckResponse {
   /** Connection topology of the component network (domain + instance.port
    *  endpoints per node) — the rendered schematic's data layer. */
   connections?: ConnectionDto[]
+  /** Every instance port, wired or not, with its domain. Empty when the
+   *  component layer did not expand. */
+  ports?: PortDto[]
   /** Component instances with source lines, for schematic navigation. */
   instances?: InstanceIdentityDto[]
   /** User COMPONENT definitions in the document. */
   definitions?: DefinitionIdentityDto[]
 }
 
+/** `[from, to)` in UTF-16 code units of the editor text — CodeMirror positions.
+ *  Null when unknown, or when the checked text was not the editor's (an
+ *  override rewrote it). */
+export type SourceRange = [number, number] | null
+
 export interface InstanceIdentityDto {
   name: string
   label: string
   type: string
   line: number
+  /** The instantiation that created it; a nested instance reports its parent's. */
+  range?: SourceRange
   localType: boolean
+  /** The definition whose body declares it; null at top level. Editing a
+   *  nested instance edits that definition, so every instance of it changes. */
+  definedIn?: string | null
+  /** Every place its name is written in its own scope: the declaration and each
+   *  `NAME.member` use. Null when the checked text was not the editor's. */
+  refs?: [number, number][] | null
+}
+
+/** One port of one instance, as the engine classified it. */
+export interface PortDto {
+  instance: string
+  port: string
+  domain: string
+  /** Fluid connector type; null outside the fluid domain. */
+  connector?: string | null
+  /** Joined to another port by a connect or a shared stream name. */
+  connected: boolean
 }
 
 export interface DefinitionIdentityDto {
@@ -212,6 +239,13 @@ export interface ConnectionDto {
    *  use — `chlr.in` for a connect-wired free port, `s2` for a shared-name
    *  stream. Lets the schematic show an endpoint's solved state. */
   streams?: string[]
+  /** The connect(...) statement this node was written as; null for a shared
+   *  stream, which no single statement owns. */
+  range?: SourceRange
+  /** The stream name a shared-stream junction joins on. */
+  alias?: string | null
+  /** Written inside a component definition: editing it changes every instance. */
+  inDefinition?: boolean
 }
 
 /** A fluid state table parsed from a STATE TABLE name(...) ... END block: the
@@ -314,6 +348,7 @@ export async function check(
       parametricTables: [],
       stateTableDefs: [],
       connections: data.connections ?? [],
+      ports: data.ports ?? [],
       instances: data.instances ?? [],
       definitions: data.definitions ?? [],
     }

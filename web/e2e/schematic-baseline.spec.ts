@@ -75,20 +75,21 @@ const MODELS = [
 test.use({ serviceWorkers: 'block', viewport: { width: 1440, height: 960 } })
 test.skip(({ browserName }) => browserName !== 'chromium', 'Evidence is recorded on one engine.')
 
-async function openSolved(page: Page, text: string) {
+async function openSolved(page: Page, text: string, run: 'Solve' | 'Check' = 'Solve') {
   const source = 'https://raw.example/schematic-baseline.frees'
   await page.route(source, (route) => route.fulfill({ contentType: 'text/plain', body: text }))
   await page.goto('/?url=' + encodeURIComponent(source))
   // CodeMirror renders only visible lines, so wait on the first one.
   await expect(page.locator('.cm-content')).toContainText(text.split('\n')[0], { timeout: 60_000 })
-  await page.getByRole('button', { name: 'Solve', exact: true }).click()
-  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 120_000 })
+  await page.getByRole('button', { name: run, exact: true }).click()
+  if (run === 'Solve') await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 120_000 })
   await page.locator('body').click({ position: { x: 5, y: 5 } })
   await page.keyboard.press('Control+K')
   await page.getByPlaceholder('Search views, tools, and actions…').fill('Schematic')
   await page.keyboard.press('Enter')
   const svg = page.getByRole('application', { name: /Component network schematic/ })
   await expect(svg).toBeVisible()
+  await expect(svg.locator('[data-node]').first()).toBeVisible({ timeout: 120_000 })
   return svg
 }
 
@@ -107,7 +108,7 @@ function measure(svg: Locator) {
         box: box(g.querySelector('rect')!),
         labelPx: Math.round(g.querySelector('text')!.getBoundingClientRect().height * 10) / 10,
       }))
-    const wires = [...root.querySelectorAll(':scope > g:nth-of-type(2) > path')] as SVGPathElement[]
+    const wires = [...root.querySelectorAll(':scope > g:nth-of-type(2) path[data-net]')] as SVGPathElement[]
     const frames = [...root.querySelectorAll(':scope > g:first-of-type rect')].map(box)
     const view = box(root)
     const inside = (p: { x: number; y: number }, b: { x: number; y: number; w: number; h: number }, inset: number) =>
@@ -1005,4 +1006,312 @@ test('visual regression: EV at Fit and at 100 %, dark and light', async ({ page 
     await page.keyboard.press('Shift+Digit0')
     await expect(svg).toHaveScreenshot(`ev-100-${theme}.png`, shot)
   }
+})
+
+test('AC-10: a late solve is never shown as current; broken source keeps the previous drawing', async ({ page }, testInfo) => {
+  // Hold solve requests back while `window.holdSolve` is set, so an edit lands
+  // before the older result returns.
+  await page.addInitScript(() => {
+    const post = Worker.prototype.postMessage
+    Worker.prototype.postMessage = function (this: Worker, message: unknown, ...rest: unknown[]) {
+      const send = () => (post as (...a: unknown[]) => void).call(this, message, ...rest)
+      const w = window as unknown as { holdSolve?: boolean; heldSolves?: number }
+      if (w.holdSolve && (message as { method?: string } | null)?.method === 'solve') {
+        w.heldSolves = (w.heldSolves ?? 0) + 1
+        setTimeout(send, 2000)
+      } else send()
+    } as typeof Worker.prototype.postMessage
+  })
+  const svg = await openSolved(page, HUMID_AIR)
+  await dragBy(page, svg, 'fan', 140, 90)
+  const fan = await placeOf(svg, 'fan')
+  const view = async (name: string) => {
+    await page.locator('body').click({ position: { x: 5, y: 5 } })
+    await page.keyboard.press('Control+K')
+    await page.getByPlaceholder('Search views, tools, and actions…').fill(name)
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.mantine-Spotlight-overlay')).toHaveCount(0) // it fades over the canvas
+  }
+  const solved = page.getByText(/^Solved/i).first()
+  const solveButton = page.getByRole('button', { name: 'Solve', exact: true })
+
+  // Start a solve, edit while it is in flight, and let the older result arrive.
+  await page.evaluate(() => ((window as unknown as { holdSolve: boolean }).holdSolve = true))
+  await view('Editor')
+  await solveButton.click()
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+End')
+  await page.keyboard.type('\n// edited while solving')
+  await page.waitForTimeout(3500) // past the held result
+  const heldSolves = await page.evaluate(() => (window as unknown as { heldSolves?: number }).heldSolves ?? 0)
+  expect(heldSolves).toBe(1)
+  await expect(solved).toBeHidden()
+
+  // RUN-01: a stopped run says so until the next edit, check or solve.
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await solveButton.click()
+  await page.getByRole('button', { name: 'Stop', exact: true }).click()
+  await expect(page.getByText('Stopped', { exact: true })).toBeVisible()
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+End')
+  await page.keyboard.type(' ')
+  await expect(page.getByText('Stopped', { exact: true })).toBeHidden()
+
+  // Break the source: the canvas keeps the last drawing, labelled, at its layout.
+  await page.keyboard.type('\nbroken = (')
+  await expect(page.getByText('Syntax error').first()).toBeVisible({ timeout: 10_000 })
+  await view('Schematic')
+  const note = page.getByTestId('schematic-previous')
+  await expect(note).toContainText('Source has errors; showing previous model')
+  await expect(svg.locator('[data-node]')).toHaveCount(5)
+  await expect(svg.locator('path[data-net]')).toHaveCount(5)
+  expect(await placeOf(svg, 'fan')).toEqual(fan)
+  // Model edits wait for a valid source; arranging still works.
+  await expect(page.getByLabel('Connect from port')).toHaveCount(0)
+  await dragBy(page, svg, 'fan', -90, 70)
+  expect(await placeOf(svg, 'fan')).not.toEqual(fan)
+
+  // Error navigation brings the editor forward at the broken line.
+  await note.getByRole('button', { name: /Go to error/ }).click()
+  await expect(page.locator('.cm-activeLine')).toContainText('broken = (')
+  await record(testInfo, 'evidence', { heldSolves, heldSolveShownAsCurrent: false, previousNodes: 5, previousWires: 5, fanKeptAt: fan })
+})
+
+// CR-SCHEMATIC-01b journeys. Every model edit made on the canvas is a patch of
+// the editor text, undone from the canvas toolbar as one step.
+
+/** Three-way junction at G.port written as two statements; SRC.p, C1.p and Q.port open. */
+const PARTIAL = `VoltageSource SRC(E = 2.5)
+Ground G()
+Capacitor C1(C = 1, V0 = 0)
+HeatSource Q(Q = 10)
+connect(SRC.n, G.port)
+connect(C1.n, G.port)
+`
+async function showView(page: Page, name: string) {
+  await page.locator('body').click({ position: { x: 5, y: 5 } })
+  await page.keyboard.press('Control+K')
+  await page.getByPlaceholder('Search views, tools, and actions…').fill(name)
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.mantine-Spotlight-overlay')).toHaveCount(0) // it fades over the canvas
+}
+// The editor's DOM is detached while the canvas is in front; its text reaches
+// the project autosave, which is what a reload would restore.
+const savedText = (page: Page) => page.evaluate(() => (JSON.parse(localStorage.getItem('frees.project') ?? '{}') as { text?: string }).text)
+const editorText = (page: Page) => expect.poll(() => savedText(page), { timeout: 10_000 })
+const portAt = async (svg: Locator, ref: string) => {
+  const b = (await svg.locator(`[data-port="${ref}"] circle`).first().boundingBox())!
+  return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
+}
+async function openWire(svg: Locator, name: RegExp) {
+  await svg.getByRole('button', { name }).focus()
+  await svg.page().keyboard.press('Enter')
+  await expect(svg.page().getByTestId('wire-card')).toBeVisible()
+}
+
+test('AC-05: legal wires connect, illegal ones are refused, a partial network stays editable', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, PARTIAL, 'Check')
+  await expect(svg.locator('path[data-net]')).toHaveCount(2)
+  // WIRE-03: the engine's unjoined ports are hollow and listed.
+  for (const ref of ['src.p', 'c1.p', 'q.port']) {
+    await expect(svg.locator(`[data-port="${ref}"]`)).toHaveAttribute('data-connected', 'false')
+  }
+  await expect(svg.locator('[data-port="g.port"]')).toHaveAttribute('data-connected', 'true')
+  await page.getByTestId('schematic-issues').click()
+  const issues = page.getByRole('menuitem')
+  await expect(issues.filter({ hasText: /src\.p is not connected/i })).toBeEnabled()
+  // The whole-system diagnosis names no single object, so it points nowhere.
+  await expect(issues.filter({ hasText: /underspecified/ })).toBeDisabled()
+  await page.keyboard.press('Escape')
+
+  // Drag from SRC.p: the ports say whether they can take it before release.
+  const from = await portAt(svg, 'src.p')
+  const heat = await portAt(svg, 'q.port')
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(heat.x, heat.y, { steps: 10 })
+  await expect(svg.getByTestId('wire-drag')).toHaveCount(1)
+  await expect(svg.locator('[data-port="q.port"]')).toHaveAttribute('data-compat', 'prohibited')
+  await expect(svg.locator('[data-port="c1.p"]')).toHaveAttribute('data-compat', 'allowed')
+  await page.mouse.up()
+  await expect(page.getByText(/Cannot wire electrical src\.p to heat q\.port/i)).toBeVisible()
+  await editorText(page).not.toMatch(/connect\(SRC\.p, Q\.port\)/i)
+
+  const cap = await portAt(svg, 'c1.p')
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(cap.x, cap.y, { steps: 10 })
+  await page.mouse.up()
+  await editorText(page).toMatch(/connect\(SRC\.p, C1\.p\)/i)
+  // Drawn as pending until the next Check, then as a real wire.
+  await expect(svg.locator('path[data-net]')).toHaveCount(3, { timeout: 15_000 })
+  await expect(svg.locator('[data-provisional]')).toHaveCount(0)
+  await expect(svg.locator('[data-port="src.p"]')).toHaveAttribute('data-connected', 'true')
+  await expect(svg.locator('[data-port="q.port"]')).toHaveAttribute('data-connected', 'false')
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled()
+  await record(testInfo, 'evidence', { refused: 'src.p → q.port (electrical → heat)', connected: 'src.p → c1.p', wiresAfter: 3 })
+})
+
+test('AC-06: inspect, remove and disconnect authored connections; preview and undo whole changes', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, PARTIAL, 'Check')
+  const card = page.getByTestId('wire-card')
+  await openWire(svg, /Wire c1\.n → g\.port/i)
+  await expect(card.getByTestId('wire-owner')).toHaveText('connect statement, line 6')
+  await card.getByRole('button', { name: 'Remove connection' }).click()
+  await expect(card.getByTestId('wire-diff')).toHaveText('- connect(C1.n, G.port)')
+  await expect(card).toContainText(/c1\.n left unconnected/i)
+  await expect(card).toContainText(/g\.port still joined via line 5/i)
+  await card.getByRole('button', { name: 'Apply' }).click()
+  await expect(svg.locator('path[data-net]')).toHaveCount(1, { timeout: 15_000 })
+  await editorText(page).not.toContain('connect(C1.n, G.port)')
+  await expect(svg.locator('[data-port="c1.n"]')).toHaveAttribute('data-connected', 'false')
+  await expect(svg.locator('[data-port="g.port"]')).toHaveAttribute('data-connected', 'true')
+
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(svg.locator('path[data-net]')).toHaveCount(2, { timeout: 15_000 })
+  await editorText(page).toBe(PARTIAL)
+
+  // Disconnect one endpoint: with two ends, the statement goes. Preview only.
+  await openWire(svg, /Wire src\.n → g\.port/i)
+  await card.getByRole('button', { name: /Disconnect g\.port/i }).click()
+  await expect(card.getByTestId('wire-diff')).toHaveText('- connect(SRC.n, G.port)')
+  await card.getByRole('button', { name: 'Cancel' }).click()
+  // The whole net is both statements, removed and restored as one step.
+  await card.getByRole('button', { name: 'Delete whole net' }).click()
+  await expect(card.getByTestId('wire-diff')).toHaveText('- connect(SRC.n, G.port)\n- connect(C1.n, G.port)')
+  await card.getByRole('button', { name: 'Apply' }).click()
+  await expect(svg.locator('path[data-net]')).toHaveCount(0, { timeout: 15_000 })
+  await editorText(page).not.toMatch(/connect\(/)
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(svg.locator('path[data-net]')).toHaveCount(2, { timeout: 15_000 })
+  await editorText(page).toBe(PARTIAL)
+  await page.getByRole('button', { name: 'Redo' }).click()
+  await expect(svg.locator('path[data-net]')).toHaveCount(0, { timeout: 15_000 })
+
+  // A shared-stream relationship has no statement to edit; the card says why.
+  await page.evaluate(() => localStorage.clear()) // reopen on the editor, not the restored canvas
+  const shared = await openSolved(
+    page,
+    `MoistAirSource ROOM(s1, P=101325 [Pa], T=299 [K], W=0.012, mdot=0.6 [kg/s])
+MoistAirFan FAN(s1, s2, dP=250 [Pa], eta=0.55)
+MoistAirSink SUP()
+connect(FAN.out, SUP.in)
+`,
+  )
+  await openWire(shared, /Wire room\.out → fan\.in/i)
+  await expect(card.getByTestId('wire-owner')).toHaveText('Shared stream s1')
+  await expect(card).toContainText('no connect statement owns it')
+  await expect(card.getByRole('button', { name: 'Remove connection' })).toHaveCount(0)
+  await expect(card.getByRole('button', { name: 'Open source' })).toBeVisible()
+  await record(testInfo, 'evidence', { removed: 'connect(C1.n, G.port)', stillJoined: 'g.port via line 5', netUndoneAsOneStep: true })
+})
+
+const NESTED = `// inner.out and SRC.out in a comment — ✓ 🧊
+function [a, b] = Box()
+port(a)
+port(b)
+LiquidPipe inner(fluid$=Water, L=1 [m], D=0.05 [m], rough=1e-4 [m])
+connect(a, inner.in)
+connect(INNER.out, b)
+end
+function [a, b] = Crate()
+port(a)
+port(b)
+LiquidPipe inner(fluid$=Water, L=2 [m], D=0.05 [m], rough=1e-4 [m])
+connect(a, inner.in)
+connect(inner.out, b)
+end
+LiquidSource SRC(fluid$=Water, mdot=1 [kg/s], P=200000 [Pa], T=300 [K])
+Box B1()
+Crate C1()
+LiquidSink Inner()
+connect(SRC.out, B1.a)
+connect(B1.b, C1.a)
+connect(C1.b, inner.in)
+`
+
+test('AC-04: scoped rename; other scopes, comments and layout hold; editor caret selects', async ({ page }, testInfo) => {
+  // `Inner` shares its local name with each subsystem's `inner` and is used as
+  // `inner.in`; subsystems draw as their own blocks, so their insides are renamed
+  // from the source (scoping is unit-tested in sourceEdit.test.ts).
+  const svg = await openSolved(page, NESTED)
+  await dragBy(page, svg, 'inner', 60, 80)
+  const placed = await placeOf(svg, 'inner')
+  await svg.locator('[data-node="inner"]').click()
+  await page.getByRole('button', { name: 'Rename', exact: true }).click()
+  const field = page.getByLabel('New instance name')
+  await field.fill('b1')
+  await page.keyboard.press('Enter')
+  await expect(page.getByText('B1 already uses that name here.')).toBeVisible()
+  await field.fill('2x')
+  await page.keyboard.press('Enter')
+  await expect(page.getByText(/A name starts with a letter/)).toBeVisible()
+  await field.fill('Outlet')
+  await page.keyboard.press('Enter')
+  const expected = NESTED.replace('LiquidSink Inner()', 'LiquidSink Outlet()').replace('connect(C1.b, inner.in)', 'connect(C1.b, Outlet.in)')
+  await editorText(page).toBe(expected)
+  // After the check, the renamed block keeps its place; the subsystems are untouched.
+  await expect(svg.locator('[data-node="outlet"]')).toHaveCount(1, { timeout: 15_000 })
+  expect(await placeOf(svg, 'outlet')).toEqual(placed)
+  await expect(svg.getByRole('button', { name: 'B1.inner.in port' })).toHaveCount(1)
+  await expect(svg.getByRole('button', { name: 'C1.inner.in port' })).toHaveCount(1)
+
+  // SYNC-09: the editor caret on a declaration highlights its block.
+  await showView(page, 'Editor')
+  await page.locator('.cm-line', { hasText: 'LiquidSource SRC' }).click()
+  await showView(page, 'Schematic')
+  await expect(svg.locator('[data-node="src"]')).toHaveAttribute('aria-pressed', 'true')
+
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await editorText(page).toBe(NESTED)
+  await expect(svg.locator('[data-node="inner"]')).toHaveCount(1, { timeout: 15_000 })
+  expect(await placeOf(svg, 'inner')).toEqual(placed)
+  await record(testInfo, 'evidence', { renamed: 'Inner → Outlet (declaration + inner.in)', kept: ['Box inner/INNER', 'Crate inner', 'comment'], placed })
+})
+
+test('AC-13: style scopes persist; source-only exports say what stays behind; fixes are previewed', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, HUMID_AIR)
+  await svg.locator('[data-node="fan"]').click()
+  const editor = page.getByTestId('style-editor')
+  await editor.getByLabel('Readout digits').click()
+  await page.getByRole('option', { name: '3', exact: true }).click()
+  await editor.getByText('Project', { exact: true }).click()
+  await editor.getByLabel('Outline colour').fill('#cc3300')
+  await expect(svg.locator('[data-node="sup"] rect').first()).toHaveAttribute('stroke', '#cc3300')
+  // Saved with the project and back after a reload.
+  await expect
+    .poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').schematic?.styles))
+    .toEqual({ project: { accent: '#cc3300' }, types: {}, instances: { fan: { precision: 3 } } })
+  await page.waitForTimeout(1500)
+  await page.reload()
+  await expect(svg).toBeVisible({ timeout: 60_000 })
+  const welcome = page.getByRole('dialog').filter({ hasText: 'Welcome to frees' })
+  if (await welcome.waitFor({ timeout: 15_000 }).then(() => true, () => false)) {
+    await page.keyboard.press('Escape')
+    await expect(welcome).toBeHidden()
+  }
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await expect(svg.locator('[data-node="sup"] rect').first()).toHaveAttribute('stroke', '#cc3300', { timeout: 60_000 })
+
+  // CFG-04: an equation-only export names the layout it leaves out.
+  await page.keyboard.press('Control+K')
+  await page.getByPlaceholder('Search views, tools, and actions…').fill('Export equation text')
+  const download = page.waitForEvent('download')
+  await page.keyboard.press('Enter')
+  await download
+  await expect(page.getByText(/Not included .*schematic layout \(positions, locks, areas, styles\)/)).toBeVisible()
+
+  // RUN-09: a duplicate name gets a previewed, undoable fix.
+  await showView(page, 'Editor')
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+End')
+  await page.keyboard.type('\nMoistAirSink SUP()')
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await showView(page, 'Schematic')
+  await expect(page.getByTestId('schematic-fix')).toContainText('Rename the second SUP to SUP2')
+  await page.getByRole('button', { name: 'Apply fix' }).click()
+  await editorText(page).toContain('MoistAirSink SUP2()')
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await editorText(page).toMatch(/MoistAirSink SUP\(\)$/)
+  await record(testInfo, 'evidence', { styles: { project: { accent: '#cc3300' }, fan: { precision: 3 } }, fix: 'Rename the second SUP to SUP2' })
 })

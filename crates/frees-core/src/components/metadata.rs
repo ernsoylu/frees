@@ -594,6 +594,7 @@ mod tests {
             source_text: "TwoPhaseEvaporatorUA CHLR(s1, s2, fluid$=R1234yf, UA=UA_chl_r, SH=5)"
                 .into(),
             line: 0,
+            span: Default::default(),
         };
         let comps = build_from_instances(&[inst], &[VariableRow::new("UA_chl_r", 575.46, "W/K")]);
         assert_eq!(comps.len(), 1);

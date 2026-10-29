@@ -267,6 +267,7 @@ mod tests {
             params,
             source_text: format!("{type_name} {name}()"),
             line: 0,
+            span: Default::default(),
         }
     }
 

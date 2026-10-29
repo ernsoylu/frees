@@ -1,6 +1,6 @@
 # CR-SCHEMATIC-01 — Configurable, bidirectional modeling workspace
 
-Status: scope confirmed; first complete design proposal delivered. Draft date: 2026-10-26. Scope confirmed: 2026-10-28. Split into phases 01a–01d plus a triggered backlog: 2026-10-28 (section 10). Repository baseline: `51a2ea2`. 01a delivered and closed 2026-10-28 (on `b9ca60b`); canvas decision D13 in section 7.4. 01b–01d not yet approved.
+Status: scope confirmed; first complete design proposal delivered. Draft date: 2026-10-26. Scope confirmed: 2026-10-28. Split into phases 01a–01d plus a triggered backlog: 2026-10-28 (section 10). Repository baseline: `51a2ea2`. 01a delivered and closed 2026-10-28 (on `b9ca60b`); canvas decision D13 in section 7.4. 01b delivered and closed 2026-10-29 (on `4665ccd`); its record and ceilings are in NEXT_STEPS.md. 01c–01d not yet approved.
 
 ## 1. Recommendation and intended outcome
 

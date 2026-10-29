@@ -390,6 +390,9 @@ pub struct CheckReport {
     /// Connection topology for the schematic — the same payload Solve reports,
     /// so Check can draw and validate wiring without a solve.
     pub connections: Vec<crate::components::expander::Connection>,
+    /// Every instance port with its domain, connected or not; empty when the
+    /// component layer did not expand.
+    pub ports: Vec<crate::components::expander::PortInfo>,
     /// Top-level and nested instance identities with source lines.
     pub instances: Vec<InstanceIdentity>,
     /// User `COMPONENT` definitions (local) with source lines.
@@ -403,7 +406,18 @@ pub struct InstanceIdentity {
     pub label: String,
     pub type_name: String,
     pub line: usize,
+    /// Byte range of the instantiation that created it: its own for a top-level
+    /// instance, the parent's for a nested one (see `line`).
+    pub span: crate::diag::Span,
     pub local_type: bool,
+    /// The `COMPONENT`/`FUNCTION` whose body declares it; `None` at top level.
+    /// Editing a nested instance edits that definition, so every instance of
+    /// it changes.
+    pub defined_in: Option<String>,
+    /// Every place its name is written in its own scope — the declaration and
+    /// each `NAME.member` use — from the lexer, so comments, strings and
+    /// same-spelled names in other scopes are never included.
+    pub refs: Vec<crate::diag::Span>,
 }
 
 /// A user-authored `COMPONENT` definition.
@@ -1807,6 +1821,7 @@ pub fn check_with_tables_complex(
     check_diagnostics.extend(identity_advisories(&doc, source));
     let mut member_units: BTreeMap<String, String> = BTreeMap::new();
     let mut layer_connections: Vec<crate::components::expander::Connection> = Vec::new();
+    let mut layer_ports: Vec<crate::components::expander::PortInfo> = Vec::new();
     // The DYNAMIC bodies after the component layer rewrote their dotted
     // references, for the unit check below.
     let mut dynamics = doc.dynamics.clone();
@@ -1819,6 +1834,7 @@ pub fn check_with_tables_complex(
         let components = expand_component_layer(&mut doc, &mut check_diagnostics)?;
         member_units = components.member_units;
         layer_connections = components.connections.clone();
+        layer_ports = components.ports.clone();
         dynamics.clone_from(&doc.dynamics);
         parsed_names = doc.display_names.clone();
         let statements = std::mem::take(&mut doc.statements);
@@ -1881,6 +1897,7 @@ pub fn check_with_tables_complex(
                 diagnostics: check_diagnostics,
                 plots: doc.blocks.plots.clone(),
                 connections: layer_connections,
+                ports: layer_ports,
                 instances: identities.0.clone(),
                 definitions: identities.1.clone(),
             });
@@ -1915,6 +1932,7 @@ pub fn check_with_tables_complex(
             diagnostics: check_diagnostics,
             plots: doc.blocks.plots.clone(),
             connections: layer_connections.clone(),
+            ports: layer_ports.clone(),
             instances: identities.0.clone(),
             definitions: identities.1.clone(),
         });
@@ -1972,6 +1990,7 @@ pub fn check_with_tables_complex(
         diagnostics,
         plots: doc.blocks.plots.clone(),
         connections: layer_connections,
+        ports: layer_ports,
         instances: identities.0,
         definitions: identities.1,
     };
@@ -2018,6 +2037,8 @@ struct ComponentLayer {
     instances: Vec<crate::components::metadata::ComponentInstMeta>,
     /// The connection topology, for [`Solution::component_connections`].
     connections: Vec<crate::components::expander::Connection>,
+    /// Every instance port, for [`CheckReport::ports`].
+    ports: Vec<crate::components::expander::PortInfo>,
 }
 
 /// Expand the acausal `COMPONENT`/`connect` layer into flat scalar equations
@@ -2127,7 +2148,7 @@ fn expand_component_layer(
     let mut display_names = std::mem::take(&mut doc.display_names);
 
     let builtins = crate::components::library::builtins()?;
-    let (equations, statements, member_units, connections) = {
+    let (equations, statements, member_units, connections, ports) = {
         let mut expander = crate::components::expander::ComponentExpander::new(
             builtins.defs(),
             &components.defs,
@@ -2159,7 +2180,13 @@ fn expand_component_layer(
         } else {
             equations
         };
-        (equations, statements, member_units, expander.connections())
+        (
+            equations,
+            statements,
+            member_units,
+            expander.connections(),
+            expander.ports(),
+        )
     };
 
     doc.statements = statements;
@@ -2176,6 +2203,7 @@ fn expand_component_layer(
         member_units,
         instances,
         connections,
+        ports,
     })
 }
 
@@ -2404,20 +2432,52 @@ pub(crate) fn component_identities(
     collect_instances(
         &doc.components.instances,
         "",
-        0,
+        (0, crate::diag::Span::default()),
         &doc.components.defs,
         &local_types,
         &mut Vec::new(),
         &mut instances,
     );
+    reference_spans(source, doc, &mut instances);
     let definitions = definition_identities(source);
     (instances, definitions)
+}
+
+/// Fill each identity's `refs`: an identifier is a reference to instance `n`
+/// when it is `n`'s declaration (`Type n(`) or the head of a dotted access
+/// (`n.port`), not itself a member (`x.n`), and written in `n`'s scope.
+fn reference_spans(source: &str, doc: &Document, identities: &mut [InstanceIdentity]) {
+    use crate::token::TokenKind;
+    let Ok(tokens) = crate::lexer::tokenize(source) else {
+        return;
+    };
+    for (i, token) in tokens.iter().enumerate() {
+        let TokenKind::Ident(name) = &token.kind else {
+            continue;
+        };
+        let prev = i.checked_sub(1).map(|p| &tokens[p].kind);
+        let next = tokens.get(i + 1).map(|t| &t.kind);
+        let declares =
+            matches!(prev, Some(TokenKind::Ident(_))) && matches!(next, Some(TokenKind::LParen));
+        if matches!(prev, Some(TokenKind::Dot))
+            || !(declares || matches!(next, Some(TokenKind::Dot)))
+        {
+            continue;
+        }
+        let scope = doc.definition_spans.enclosing(token.span.start);
+        for id in identities.iter_mut() {
+            let local = id.name.rsplit('.').next().unwrap_or(&id.name);
+            if local.eq_ignore_ascii_case(name) && id.defined_in.as_deref() == scope {
+                id.refs.push(token.span);
+            }
+        }
+    }
 }
 
 fn collect_instances(
     insts: &[crate::components::def::ComponentInst],
     scope: &str,
-    parent_line: usize,
+    parent: (usize, crate::diag::Span),
     user_defs: &[crate::components::def::ComponentDef],
     local_types: &BTreeSet<String>,
     stack: &mut Vec<String>,
@@ -2435,17 +2495,21 @@ fn collect_instances(
         // Nested children share the COMPONENT-body declaration line. Point
         // them at the parent instantiation so a repeated child name in two
         // scopes navigates to the instance that created this one.
-        let line = if scope.is_empty() {
-            inst.line
+        let (line, span) = if scope.is_empty() {
+            (inst.line, inst.span)
         } else {
-            parent_line
+            parent
         };
         out.push(InstanceIdentity {
             name: name.clone(),
             label,
             type_name: inst.type_name.clone(),
             line,
+            span,
             local_type: local_types.contains(&inst.type_name),
+            // The definition whose body is being walked declares this one.
+            defined_in: stack.last().cloned(),
+            refs: Vec::new(),
         });
         // Expansion refuses cycles; Check still walks identities first, so a
         // self-instantiation must not recurse here (wasm/native abort).
@@ -2457,11 +2521,7 @@ fn collect_instances(
             collect_instances(
                 &def.sub_instances,
                 &name,
-                if scope.is_empty() {
-                    inst.line
-                } else {
-                    parent_line
-                },
+                (line, span),
                 user_defs,
                 local_types,
                 stack,
@@ -2799,6 +2859,7 @@ fn syntax_failure_report(source: &str, err: &FreesError) -> CheckReport {
         diagnostics: vec![diagnostic],
         // A document that did not parse declares nothing.
         plots: Vec::new(),
+        ports: Vec::new(),
         connections: Vec::new(),
         instances: Vec::new(),
         definitions: Vec::new(),

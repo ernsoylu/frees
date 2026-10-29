@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EV_TOPOLOGY } from './evTopology.fixture'
 import { layoutSchematic, pathOf, routeAll, type SchematicGroup, type SchematicNode } from './layout'
-import { arrangeBase, EMPTY_PRESENTATION, framesFor, guideSnap, resolveLegacy, snapToGrid } from './presentation'
+import { arrangeBase, EMPTY_PRESENTATION, framesFor, guideSnap, resolveLegacy, sanitizePresentation, snapToGrid, styleFor } from './presentation'
 import { boxesEntered } from '../test/schematicPaths'
 
 const ev = layoutSchematic(EV_TOPOLOGY)
@@ -103,5 +103,29 @@ describe('resolveLegacy', () => {
     expect(presentation.positions.batt).toEqual({ x: 5, y: 6 }) // a v4 position wins
     expect(presentation.legacyOffsets).toEqual({ gone: { dx: 9, dy: 9 } })
     expect(unresolved).toBe(1)
+  })
+})
+
+describe('style scopes (CFG-01) and identifier validation (CFG-07)', () => {
+  it('takes the block, then its type, then the project', () => {
+    const styles = { project: { accent: '#111111', precision: 3 }, types: { pump: { accent: '#222222' } }, instances: { p1: { precision: 6 } } }
+    expect(styleFor(styles, 'p1', 'Pump')).toEqual({ accent: '#222222', precision: 6 })
+    expect(styleFor(styles, 'p2', 'Pump')).toEqual({ accent: '#222222', precision: 3 })
+    expect(styleFor(styles, 'v1', 'Valve')).toEqual({ accent: '#111111', precision: 3 })
+  })
+  it('drops malformed styles and ids that name no block, and counts them', () => {
+    const { presentation, repaired } = sanitizePresentation({
+      positions: { 'u1.p': { x: 1, y: 2 }, $node3: { x: 0, y: 0 }, 'not an id': { x: 0, y: 0 } },
+      locked: ['u1', 'x;y'],
+      styles: {
+        project: { accent: 'red', precision: 4 },
+        types: { pump: { accent: '#abcdef' }, 'Bad Type': { precision: 3 } },
+        instances: { p1: { precision: 99, accent: '#000000' } },
+      },
+    })
+    expect(Object.keys(presentation.positions)).toEqual(['u1.p', '$node3'])
+    expect(presentation.locked).toEqual(['u1'])
+    expect(presentation.styles).toEqual({ project: { precision: 4 }, types: { pump: { accent: '#abcdef' } }, instances: { p1: { accent: '#000000' } } })
+    expect(repaired).toBe(5) // position, lock, project accent, bad type key, precision 99
   })
 })

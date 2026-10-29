@@ -52,7 +52,9 @@ pub enum ProcStatement {
     /// Canonical component port declaration inside a unified function.
     Port { name: String },
     /// Canonical component connection inside a unified function.
-    Connect { ports: Vec<String> },
+    Connect {
+        decl: crate::components::def::ConnectDecl,
+    },
     /// Canonical nested component instance inside a unified component.
     Instance { instance: ComponentInst },
     /// Canonical construction-time component variant.

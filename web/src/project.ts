@@ -304,8 +304,9 @@ export function projectOnlyNotes(slices: ProjectSlices & { digitizer?: unknown }
     notes.push(`${slices.sliders!.length} slider override(s)`)
   }
   const s = slices.schematic
-  if (s && (Object.keys(s.positions).length || Object.keys(s.legacyOffsets).length || s.locked.length || s.areas.length)) {
-    notes.push('schematic layout (positions, locks, areas)')
+  const styled = s && (Object.keys(s.styles.project).length || Object.keys(s.styles.types).length || Object.keys(s.styles.instances).length)
+  if (s && (Object.keys(s.positions).length || Object.keys(s.legacyOffsets).length || s.locked.length || s.areas.length || styled)) {
+    notes.push('schematic layout (positions, locks, areas, styles)')
   }
   if ((slices.spreadsheets ?? []).length) {
     notes.push('legacy spreadsheet slice')
@@ -408,8 +409,14 @@ export async function saveProjectToHandle(
   return writeToHandle(handle, JSON.stringify(project, null, 2))
 }
 
+/** Larger than any project a person writes; past it, the file is not one. */
+export const MAX_PROJECT_BYTES = 64 * 1024 * 1024
+
 /** Read and validate an opened `.frees` file. */
 export async function readProjectFile(file: File): Promise<FreesProject> {
+  if (file.size > MAX_PROJECT_BYTES) {
+    throw new Error(`This file is ${(file.size / 1048576).toFixed(0)} MB; a .frees project is at most ${MAX_PROJECT_BYTES / 1048576} MB.`)
+  }
   const raw = await file.text()
   const parsed = JSON.parse(raw)
   if (!parsed || typeof parsed !== 'object' || !('version' in parsed)) {

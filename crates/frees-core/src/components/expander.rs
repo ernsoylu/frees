@@ -80,7 +80,7 @@ use crate::components::domains::{
     self, ConnectorTypes, Domain, InstanceView, JunctionRule, StreamMembers,
 };
 use crate::components::variant::{string_token, VariantScope};
-use crate::diag::{FreesError, Result};
+use crate::diag::{FreesError, Result, Span};
 
 /// Stream member → property-function name for **derived** state properties.
 ///
@@ -150,6 +150,27 @@ pub struct Connection {
     pub connector: Option<String>,
     pub fluid: Option<String>,
     pub streams: Vec<String>,
+    /// The `connect(...)` statement this node was written as; `None` for a
+    /// shared-stream junction, which no single statement owns.
+    pub source: Option<Span>,
+    /// The stream name a shared-stream junction joins on; `None` for a `connect`.
+    pub alias: Option<String>,
+    /// Written inside a `COMPONENT` body, so changing it changes every instance.
+    pub in_definition: bool,
+}
+
+/// One port of one instance, connected or not — what the schematic needs to
+/// show a free port before a solve.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PortInfo {
+    /// Instance name; a subsystem's boundary port is reported on the subsystem.
+    pub instance: String,
+    pub port: String,
+    pub domain: Domain,
+    /// The fluid connector type; `None` outside the fluid domain.
+    pub connector: Option<String>,
+    /// Joined to another port by a `connect` or a shared stream name.
+    pub connected: bool,
 }
 
 // ── Insertion-ordered map ───────────────────────────────────────────────────
@@ -599,6 +620,52 @@ impl<'d, 'n> ComponentExpander<'d, 'n> {
         out
     }
 
+    /// Every instance port with its domain, connected or not. A port is
+    /// connected when a `connect` names its stream or another port shares it.
+    pub fn ports(&self) -> Vec<PortInfo> {
+        let net = &self.net;
+        let mut uses: HashMap<&str, usize> = HashMap::new();
+        for ri in &net.instances {
+            for stream in ri.streams() {
+                *uses.entry(stream).or_default() += 1;
+            }
+        }
+        let mut joined: BTreeSet<&str> = uses
+            .into_iter()
+            .filter(|(_, n)| *n > 1)
+            .map(|(stream, _)| stream)
+            .collect();
+        for c in &net.connects {
+            joined.extend(c.ports.iter().filter_map(|r| net.stream_of(r, c).ok()));
+        }
+        let info = |instance: &str, port: &str, stream: &str| {
+            let domain = domains::endpoint_domain(stream, &net.stream_members);
+            PortInfo {
+                instance: instance.to_string(),
+                port: port.to_string(),
+                domain,
+                connector: (domain == Domain::Fluid)
+                    .then(|| domains::node_fluid_type(&[stream], &net.connector_types).to_string()),
+                connected: joined.contains(stream),
+            }
+        };
+        let mut out: Vec<PortInfo> = net
+            .instances
+            .iter()
+            .flat_map(|ri| {
+                ri.port_to_stream
+                    .iter()
+                    .map(|(port, stream)| info(&ri.inst.name, port, stream))
+            })
+            .collect();
+        for (reference, stream) in &net.port_alias {
+            if let Some((instance, port)) = reference.rsplit_once('.') {
+                out.push(info(instance, port, stream));
+            }
+        }
+        out
+    }
+
     fn rewrite_statement(&mut self, s: Statement) -> Result<Statement> {
         match s {
             Statement::Eq(eq) => Ok(Statement::Eq(Equation::new(
@@ -800,6 +867,7 @@ fn flatten_instance<'d>(
                 params: sub_params,
                 source_text: sub.source_text.clone(),
                 line: sub.line,
+                span: sub.span,
             },
             defs,
             out_insts,
@@ -822,6 +890,7 @@ fn flatten_instance<'d>(
                 .iter()
                 .map(|r| !r.contains('.') && def.ports.contains(&r.to_ascii_lowercase()))
                 .collect(),
+            span: sc.span,
         });
     }
     stack.pop();
@@ -1988,7 +2057,11 @@ impl Network<'_> {
                     Err(_) => r.clone(),
                 })
                 .collect();
-            out.push(self.connection(&streams, c.ports.clone(), endpoint_streams));
+            out.push(Connection {
+                source: (c.span.end > c.span.start).then_some(c.span),
+                in_definition: !c.boundary.is_empty(),
+                ..self.connection(&streams, c.ports.clone(), endpoint_streams)
+            });
         }
         out
     }
@@ -2018,7 +2091,10 @@ impl Network<'_> {
             let display = self.display_stream(stream).to_string();
             let streams = vec![stream.to_string()];
             let repeated = vec![display; endpoints.len()];
-            out.push(self.connection(&streams, endpoints.clone(), repeated));
+            out.push(Connection {
+                alias: Some(stream.to_string()),
+                ..self.connection(&streams, endpoints.clone(), repeated)
+            });
         }
         out
     }
@@ -2053,6 +2129,9 @@ impl Network<'_> {
             connector,
             fluid,
             streams: endpoint_streams,
+            source: None,
+            alias: None,
+            in_definition: false,
         }
     }
 }
@@ -2222,6 +2301,7 @@ mod tests {
             params: overrides,
             source_text: format!("{type_name} {name}(…)"),
             line: 0,
+            span: Default::default(),
         }
     }
 
@@ -2230,6 +2310,7 @@ mod tests {
             ports: refs.iter().map(|r| r.to_ascii_lowercase()).collect(),
             source_text: format!("connect({})", refs.join(",")),
             boundary: Vec::new(),
+            span: Default::default(),
         }
     }
 
@@ -5481,6 +5562,7 @@ mod tests {
                 params: ParamOverrides::new(),
                 source_text: format!("{name} U1()"),
                 line: 0,
+                span: Default::default(),
             }];
             let mut display = BTreeMap::new();
             let result = (|| -> Result<usize> {

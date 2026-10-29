@@ -3,7 +3,7 @@
 // stops the obvious mistakes (same instance, mixed bond-graph domain,
 // reconnecting an existing node) before a `connect(...)` is inserted.
 
-import type { ConnectionDto } from '../api'
+import type { ConnectionDto, PortDto } from '../api'
 import { COMPONENT_CATALOG } from '../componentCatalog'
 
 export interface WireEndpoint {
@@ -15,8 +15,43 @@ export interface WireEndpoint {
 }
 
 export type WirePreview =
-  | { ok: true }
+  | { ok: true; pending?: string }
   | { ok: false; reason: string }
+
+/** Whether two ports may be joined, from the engine's port metadata (WIRE-02). */
+export type Compatibility =
+  | { kind: 'allowed' }
+  | { kind: 'prohibited'; reason: string }
+  | { kind: 'unknown'; reason: string }
+
+/** The connector a fluid port of any family accepts. */
+const ANY_FLUID = 'fluid'
+
+/**
+ * Engine-classified compatibility. Unknown — a port the last Check did not
+ * classify, such as one just declared — is neither allowed nor refused: the
+ * wire may be added and Check decides.
+ */
+export function compatibility(a: PortDto | undefined, b: PortDto | undefined): Compatibility {
+  const name = (p: PortDto) => `${p.instance}.${p.port}`
+  if (!a || !b) {
+    const known = a ?? b
+    return { kind: 'unknown', reason: `Pending: Check has not classified ${known ? `the port joining ${name(known)}` : 'either port'} yet.` }
+  }
+  if (a.domain !== b.domain) {
+    return { kind: 'prohibited', reason: `Cannot wire ${a.domain} ${name(a)} to ${b.domain} ${name(b)}.` }
+  }
+  const [ca, cb] = [a.connector ?? ANY_FLUID, b.connector ?? ANY_FLUID]
+  if (a.domain === 'fluid' && ca !== cb && ca !== ANY_FLUID && cb !== ANY_FLUID) {
+    return { kind: 'prohibited', reason: `Cannot join a ${ca} line (${name(a)}) to a ${cb} line (${name(b)}).` }
+  }
+  return { kind: 'allowed' }
+}
+
+/** Port metadata by `instance.port`, lowercase. */
+export function portIndex(ports: readonly PortDto[] | undefined): Map<string, PortDto> {
+  return new Map((ports ?? []).map((p) => [`${p.instance}.${p.port}`.toLowerCase(), p]))
+}
 
 const LIBRARY_DOMAIN: Record<string, string> = {
   ac: 'fluid',
@@ -87,6 +122,7 @@ export function previewWire(
   from: WireEndpoint,
   to: WireEndpoint,
   connections: readonly ConnectionDto[] = [],
+  ports?: ReadonlyMap<string, PortDto>,
 ): WirePreview {
   if (from.instance.toLowerCase() === to.instance.toLowerCase()) {
     return { ok: false, reason: 'Pick a port on a different component.' }
@@ -99,6 +135,13 @@ export function previewWire(
       reason: `${aRef} and ${bRef} are already in the same connection — not added.`,
     }
   }
+  // Engine metadata decides when the last Check classified both ports.
+  if (ports && ports.size > 0) {
+    const key = (ep: WireEndpoint) => `${ep.instance}.${ep.port}`.toLowerCase()
+    const c = compatibility(ports.get(key(from)), ports.get(key(to)))
+    if (c.kind === 'prohibited') return { ok: false, reason: c.reason }
+    if (c.kind === 'allowed') return { ok: true }
+  }
   const da = previewDomain(from.type, from.port)
   const db = previewDomain(to.type, to.port)
   // Unknown/custom connectors: do not invent a physics assumption.
@@ -108,7 +151,7 @@ export function previewWire(
       reason: `Cannot wire ${da} ${aRef} to ${db} ${bRef}.`,
     }
   }
-  return { ok: true }
+  return { ok: true, pending: `${aRef} — ${bRef}: compatibility is decided by Check.` }
 }
 
 export function connectStatement(from: WireEndpoint, to: WireEndpoint): string {
@@ -153,3 +196,26 @@ export function hasUnknownUnitWarning(warnings: readonly string[]): boolean {
 
 export const LOCAL_ENGINE_FAILURE =
   'The in-browser solver failed. Use Stop to reset the worker, then Check again.'
+
+/** Every connection joined to `index` through shared endpoints — one physical net. */
+export function netConnections(connections: readonly ConnectionDto[], index: number): number[] {
+  const seen = new Set([index])
+  const ends = new Set(connections[index]?.endpoints.map(canonRef))
+  for (let grew = true; grew; ) {
+    grew = false
+    connections.forEach((c, k) => {
+      if (!seen.has(k) && c.endpoints.some((e) => ends.has(canonRef(e)))) {
+        seen.add(k)
+        c.endpoints.forEach((e) => ends.add(canonRef(e)))
+        grew = true
+      }
+    })
+  }
+  return [...seen].sort((a, b) => a - b)
+}
+
+/** The connections other than `removed` that still touch `endpoint`. */
+export function joinedElsewhere(connections: readonly ConnectionDto[], removed: ReadonlySet<number>, endpoint: string): number[] {
+  const ref = canonRef(endpoint)
+  return connections.flatMap((c, k) => (!removed.has(k) && c.endpoints.some((e) => canonRef(e) === ref) ? [k] : []))
+}

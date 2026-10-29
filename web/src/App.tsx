@@ -114,6 +114,7 @@ const SchematicTab = lazy(() => import('./schematic/SchematicTab'))
 import { declaredInstances } from './schematic/declaration'
 import { instancesInDiagnosis, LOCAL_ENGINE_FAILURE } from './schematic/wiring'
 import { EMPTY_PRESENTATION, type SchematicPresentation } from './schematic/presentation'
+import { instanceAt } from './schematic/sourceEdit'
 const DigitizerTab = lazy(() =>
   import('./DigitizerTab').then((m) => ({ default: m.DigitizerTab })),
 )
@@ -436,7 +437,12 @@ export default function App() {
       )
   }, [])
 
+  // currentSlices is built further down, from state declared after this.
+  const currentSlicesRef = useRef<(() => ProjectSlices) | null>(null)
   const handleShareLink = useCallback(() => {
+    // CFG-04: the link carries the equations only; say what stays behind.
+    const slices = currentSlicesRef.current?.()
+    const notes = slices ? projectOnlyNotes(buildProject(slices)) : []
     const url = buildShareUrl(textRef.current)
     if (url === null) {
       notifications.show({
@@ -450,7 +456,9 @@ export default function App() {
       () => notifications.show({
         color: 'teal',
         title: 'Share link copied',
-        message: 'Anyone opening it gets this exact document. Nothing is stored on a server.',
+        message: `Anyone opening it gets this exact document. Nothing is stored on a server.${
+          notes.length ? ` Not in the link (send the .frees project to include them): ${notes.join('; ')}.` : ''
+        }`,
       }),
       () => { globalThis.prompt('Copy the share link:', url) },
     )
@@ -501,6 +509,9 @@ export default function App() {
     }
   }, [sharedBoot])
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null)
+  const [stopped, setStopped] = useState(false)
+  // SYNC-09: the instance the editor caret is on, highlighted on the canvas.
+  const [cursorInstance, setCursorInstance] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<SolveResponse | null>(null)
   // Printable calculation report (browser print-to-PDF): the last successful
@@ -855,6 +866,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, pinnedSliders, schematic],
   )
+  useEffect(() => {
+    currentSlicesRef.current = currentSlices
+  }, [currentSlices])
 
   // Debounced autosave of the entire workspace to a single localStorage key,
   // superseding the scattered per-feature keys as the source of truth on reload.
@@ -1577,6 +1591,7 @@ export default function App() {
     // Guarded so only the first edit after a check/solve pays an urgent render.
     if (checkResult) setCheckResult(null)
     if (result) setResult(null)
+    if (stopped) setStopped(false)
     if (lastSolvedWithFillMissing) setLastSolvedWithFillMissing(false)
     invalidateTable()
     if (idleCheckTimer.current) clearTimeout(idleCheckTimer.current)
@@ -1724,6 +1739,7 @@ export default function App() {
     flushTableEdits()
     const requestRevision = modelRevisionRef.current.startCheck()
     setChecking(true)
+    setStopped(false)
     setResult(null)
     setLastSolvedWithFillMissing(false)
     try {
@@ -2089,6 +2105,7 @@ export default function App() {
     if (solving || !canRun) return false
     const solveRevision = modelRevisionRef.current.current
     setSolving(true)
+    setStopped(false)
     setSolveProgress(0)
     try {
       const activePlots = overridePlots ?? plots
@@ -2190,6 +2207,7 @@ export default function App() {
   }
 
   function onStop() {
+    if (solving || checking) setStopped(true)
     stopSolve()
     setSolving(false)
     setSolvingTableId(null)
@@ -2756,6 +2774,7 @@ export default function App() {
               ref={editorRef}
               initialDoc={() => textRef.current}
               onChange={onTextChange}
+              onCursor={(at) => setCursorInstance(instanceAt(checkResult?.instances, at))}
               variables={variables}
               errorLine={errorLine}
               errorMessage={result?.error ?? checkResult?.message ?? null}
@@ -2810,10 +2829,11 @@ export default function App() {
             onRevealLine={goToLine}
             onSelectLine={selectLine}
             onEmitStatement={emitFromSchematic}
+            onSourceEdit={(changes, expected) => editorRef.current?.applyEdit(changes, expected) ?? false}
             onInsertBlock={insertComponentBlock}
             presentation={schematic}
             onPresentationChange={setSchematic}
-            highlightIds={instancesInDiagnosis(checkResult?.message ?? '')}
+            highlightIds={cursorInstance ? [...instancesInDiagnosis(checkResult?.message ?? ''), cursorInstance] : instancesInDiagnosis(checkResult?.message ?? '')}
           />
         </Suspense>
       </div>
@@ -3237,6 +3257,7 @@ export default function App() {
           complexMode={complexMode}
           checkResult={checkResult}
           result={result}
+          stopped={stopped}
           tableChecking={checkingTableId === focusedParam?.id}
           tableSolving={solvingTableId === focusedParam?.id}
           tableCheckResult={tableCheckResult}
