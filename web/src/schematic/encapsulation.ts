@@ -7,7 +7,7 @@ import type { CheckResponse } from '../api'
 import { COMPONENT_CATALOG } from '../componentCatalog'
 import { stripComments } from './declaration'
 import type { SchematicPresentation } from './presentation'
-import { removeStatement, writtenEndpoints, type SourceChange, type SourceEdit } from './sourceEdit'
+import { removeStatement, stripUnits, trimDigits, writtenEndpoints, type SourceChange, type SourceEdit } from './sourceEdit'
 
 export interface Extraction {
   edit: SourceEdit
@@ -83,7 +83,7 @@ export function extractSubsystem(
   const taken = new Set<string>()
   const ports = boundary.map((b) => {
     let port = (count.get(local(b.inside[0]).toLowerCase()) ?? 0) > 1 ? b.inside[0].replace('.', '_').replace(/\./g, '_') : local(b.inside[0])
-    for (let k = 2; taken.has(port.toLowerCase()); k++) port = `${port.replace(/\d+$/, '')}${k}`
+    for (let k = 2; taken.has(port.toLowerCase()); k++) port = `${trimDigits(port)}${k}`
     taken.add(port.toLowerCase())
     let first = true
     const rewritten = b.ends.flatMap((e) => (!ids.has(head(e)) ? [e] : first ? ((first = false), [`${name}.${port}`]) : []))
@@ -101,7 +101,7 @@ export function extractSubsystem(
   for (const i of picked) {
     for (const p of i.params ?? []) {
       if (p.name.endsWith('$')) continue
-      const value = text.slice(p.range[0], p.range[1]).replace(/\[[^\]]*\]/g, ' ')
+      const value = stripUnits(text.slice(p.range[0], p.range[1]))
       for (const [token] of value.matchAll(/\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\b(?!\s*\()/g)) {
         if (ids.has(head(token)) || !new RegExp(`\\b${escape(token.split('.')[0])}\\b`, 'i').test(rest)) continue
         captures.set(token.replace(/\./g, '_'), token)
@@ -200,10 +200,11 @@ export function editInterface(text: string, check: CheckResponse | null, type: s
   const ports = def.ports ?? []
   const has = (p: string) => ports.some((q) => q.toLowerCase() === p.toLowerCase())
   const bare = (p: string) => new RegExp(`(?<![.\\w$])${escape(p)}(?![\\w$])`, 'gi')
-  const header = /^[^\n]*?\[([^\]]*)\]/.exec(body)
-  if (!header) return plan([], [`${type} has no port list to edit.`])
-  const listAt = from + header[0].indexOf('[') + 1
-  const list = header[1]
+  const open = body.slice(0, (body.indexOf('\n') + 1 || body.length + 1) - 1).indexOf('[')
+  const close = open < 0 ? -1 : body.indexOf(']', open)
+  if (close < 0) return plan([], [`${type} has no port list to edit.`])
+  const listAt = from + open + 1
+  const list = body.slice(open + 1, close)
   // `INST.port` written after each reference to an instance of the definition.
   const memberUses = (p: string) =>
     users.flatMap((i) =>
@@ -226,7 +227,7 @@ export function editInterface(text: string, check: CheckResponse | null, type: s
     if (!IDENT.test(p)) return plan([], [`"${p}" is not a valid port name.`])
     if (has(p)) return plan([], [`${type} already has a port ${p}.`])
     const lastPort = [...body.matchAll(/^[ \t]*port\s*\([^)]*\)[^\n]*$/gim)].at(-1)
-    const at = lastPort ? from + lastPort.index + lastPort[0].length : listAt + list.length + body.slice(header[0].length).indexOf('\n') + 1
+    const at = lastPort ? from + lastPort.index + lastPort[0].length : listAt + list.length + body.slice(close + 1).indexOf('\n') + 1
     const indent = lastPort ? /^[ \t]*/.exec(lastPort[0])![0] : '  '
     return plan([{ from: listAt + list.length, to: listAt + list.length, insert: list.trim() ? `, ${p}` : p }, { from: at, to: at, insert: `\n${indent}port(${p})` }], [])
   }
@@ -293,9 +294,17 @@ export function definitionClosure(text: string, check: CheckResponse | null, typ
 export function componentFile(text: string, check: CheckResponse | null, type: string, description: string): string {
   const defs = definitionClosure(text, check, type)
   // Names as written in each definition's header, not Check's lower case.
-  const header = (t: string) => /\[([^\]]*)\]\s*=\s*(\w+)\s*\(([^)]*)\)/.exec(t)
+  const header = (t: string) => {
+    const open = t.indexOf('[')
+    const close = t.indexOf(']', open)
+    const eq = t.indexOf('=', close)
+    const paren = t.indexOf('(', eq)
+    const end = t.indexOf(')', paren)
+    const name = t.slice(eq + 1, paren).trim()
+    return open < 0 || close < 0 || eq < 0 || paren < 0 || end < 0 || !/^\w+$/.test(name) ? null : [t, t.slice(open + 1, close), name, t.slice(paren + 1, end)]
+  }
   const own = header(defs.find((d) => d.name === type.toLowerCase())?.text ?? '')
-  const list = (s: string | undefined) => (s ?? '').split(',').map((p) => p.replace(/\[[^\]]*\]/g, '').trim()).filter(Boolean).join(', ') || 'none'
+  const list = (s: string | undefined) => (s ?? '').split(',').map((p) => stripUnits(p, '').trim()).filter(Boolean).join(', ') || 'none'
   const builtIn = [...new Set((check?.instances ?? []).filter((i) => i.definedIn && !i.localType && defs.some((d) => d.name === i.definedIn!.toLowerCase())).map((i) => i.type.toLowerCase()))]
   const uses = [
     ...defs.filter((d) => d.name !== type.toLowerCase()).map((d) => header(d.text)?.[2] ?? d.name),

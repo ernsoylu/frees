@@ -1260,7 +1260,7 @@ export function routeAll(
  */
 export function routeKey(e: Pick<SchematicEdge, 'from' | 'to' | 'fromPort' | 'toPort'>): string {
   const end = (id: string, port?: string) => (id.startsWith('$node') ? '*' : `${id}.${port ?? ''}`)
-  return [end(e.from, e.fromPort), end(e.to, e.toPort)].sort().join('|')
+  return [end(e.from, e.fromPort), end(e.to, e.toPort)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).join('|')
 }
 
 /**

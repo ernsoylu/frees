@@ -73,6 +73,7 @@ import {
   invertChanges,
   removeStatement,
   renamedIds,
+  lastDeclaration,
   renameId,
   renameInstance,
   renameProblem,
@@ -883,7 +884,7 @@ export default function SchematicTab({
   // configures a library type, and the block lands where it was asked for,
   // its declaration and its position one undo step.
   const [quickAdd, setQuickAdd] = useState<{ screen: { x: number; y: number }; at: { x: number; y: number } } | null>(null)
-  const [placing, setPlacing] = useState<{ type: string; at: { x: number; y: number }; then?: (block: string) => void } | null>(null)
+  const [placing, setPlacing] = useState<{ type: string; at: { x: number; y: number }; after?: (block: string) => void } | null>(null)
   const localTypes = useMemo(() => {
     const out = new Map([...declaredComponentTypes(text)].map((t) => [t, t]))
     for (const d of drawnCheck?.definitions ?? []) {
@@ -906,7 +907,7 @@ export default function SchematicTab({
     setQuickAdd({ screen: { x: Math.max(8, cx - (r?.left ?? 0) - 170), y: Math.max(8, cy - (r?.top ?? 0)) }, at: toDrawing(cx, cy) })
   }
   const placeBlock = (block: string, at: { x: number; y: number }) => {
-    const decl = [...block.matchAll(/^\s*([A-Za-z_]\w*)\s+([A-Za-z_]\w*)\s*\(/gm)].at(-1)
+    const decl = lastDeclaration(block)
     const id = decl?.[2].toLowerCase()
     runEdit(
       { label: `Add ${decl?.[2] ?? 'component'}`, changes: [appendStatement(text, block)] },
@@ -940,7 +941,7 @@ export default function SchematicTab({
             initialType={placing.type}
             existingNames={takenNames}
             onClose={() => setPlacing(null)}
-            onInsert={(block) => (placing.then ? placing.then(block) : placeBlock(block, placing.at))}
+            onInsert={(block) => (placing.after ? placing.after(block) : placeBlock(block, placing.at))}
           />
         </Suspense>
       )}
@@ -1075,7 +1076,7 @@ export default function SchematicTab({
   }
   const applyInsert = () => {
     if (!insertEdit || !insertConn || !insertDraft) return
-    const id = /^\s*\w+\s+(\w+)/m.exec(insertDraft.block!.split('\n').at(-1)!)?.[1].toLowerCase()
+    const id = lastDeclaration(insertDraft.block!)?.[2].toLowerCase()
     const centres = [insertDraft.branch, insertEnds.find((e) => canonRef(e) !== canonRef(insertDraft.branch))!]
       .map((e) => positioned.get(e.split('.')[0].trim().toLowerCase()))
       .filter((n): n is SchematicNode => Boolean(n))
@@ -1118,7 +1119,7 @@ export default function SchematicTab({
                 const local = (drawnCheck?.definitions ?? []).some((d) => d.name === insertDraft.type!.toLowerCase())
                 const add = (block: string) => setInsertDraft((d) => d && { ...d, block })
                 if (local) add(`${insertDraft.type} ${suggestInstanceName(insertDraft.type!, takenNames)}()`)
-                else setPlacing({ type: insertDraft.type!, at: { x: 0, y: 0 }, then: add })
+                else setPlacing({ type: insertDraft.type!, at: { x: 0, y: 0 }, after: add })
               }}
             >
               Configure…
@@ -1876,8 +1877,10 @@ export default function SchematicTab({
   // handlers this render defined; an empty canvas offers only placement.
   const commands = useRef<Partial<Record<CanvasCommand, () => void>>>({})
   useEffect(() => {
-    for (const c of CANVAS_COMMANDS) canvasHandlers.set(c.id, () => commands.current[c.id]?.())
-    return () => canvasHandlers.clear()
+    for (const c of CANVAS_COMMANDS) canvasHandlers[c.id] = () => commands.current[c.id]?.()
+    return () => {
+      for (const c of CANVAS_COMMANDS) delete canvasHandlers[c.id]
+    }
   }, [])
   useEffect(() => {
     // The full set only once the render got past the empty-canvas return.

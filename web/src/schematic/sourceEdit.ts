@@ -245,7 +245,7 @@ export function insertIntoConnection(
   block: string,
   map: { toA: string; toB: string; branch?: string },
 ): SourceEdit | null {
-  const decl = [...block.matchAll(/^\s*([A-Za-z_]\w*)\s+([A-Za-z_]\w*)\s*\(/gm)].at(-1)
+  const decl = lastDeclaration(block)
   if (!conn.range || conn.alias || conn.inDefinition || !decl) return null
   const ends = writtenEndpoints(text.slice(conn.range[0], conn.range[1]))
   const branch = map.branch ?? ends.at(-1)!
@@ -259,4 +259,29 @@ export function insertIntoConnection(
       appendStatement(text, `${block}\nconnect(${name}.${map.toB}, ${branch})`),
     ],
   }
+}
+
+/** The last `Type NAME(` declaration in `block`: `[match, Type, NAME]` with its index. */
+export function lastDeclaration(block: string): RegExpMatchArray | undefined {
+  return [...block.matchAll(/^[ \t]*([A-Za-z_]\w*)[ \t]+([A-Za-z_]\w*)[ \t]*\(/gm)].at(-1)
+}
+
+/** `s` with each `[unit]` replaced by `by`, in one pass. */
+export function stripUnits(s: string, by = ' '): string {
+  let out = ''
+  let at = 0
+  for (let open = s.indexOf('['); open >= 0; open = s.indexOf('[', at)) {
+    const close = s.indexOf(']', open)
+    if (close < 0) break
+    out += s.slice(at, open) + by
+    at = close + 1
+  }
+  return out + s.slice(at)
+}
+
+/** `name` without its trailing digits. */
+export function trimDigits(name: string): string {
+  let k = name.length
+  while (k > 0 && name[k - 1] >= '0' && name[k - 1] <= '9') k--
+  return name.slice(0, k)
 }

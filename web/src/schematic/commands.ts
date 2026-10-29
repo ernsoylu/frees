@@ -23,11 +23,11 @@ export const CANVAS_COMMANDS = [
 export type CanvasCommand = (typeof CANVAS_COMMANDS)[number]['id']
 
 /** The mounted canvas's handlers, which the palette runs. */
-export const canvasHandlers = new Map<CanvasCommand, () => void>()
+export const canvasHandlers: Partial<Record<CanvasCommand, () => void>> = {}
 
 /** Run `id` once the canvas is mounted (opening its view can mount it a few frames later). */
 export function runCanvasCommand(id: CanvasCommand, frames = 30): void {
-  const run = canvasHandlers.get(id)
+  const run = canvasHandlers[id]
   if (run) run()
   else if (frames > 0) requestAnimationFrame(() => runCanvasCommand(id, frames - 1))
 }

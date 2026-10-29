@@ -5,7 +5,7 @@
 import type { CheckResponse } from '../api'
 import { stripComments } from './declaration'
 import type { SchematicPresentation } from './presentation'
-import { removeStatement, writtenEndpoints, type SourceChange, type SourceEdit } from './sourceEdit'
+import { removeStatement, stripUnits, trimDigits, writtenEndpoints, type SourceChange, type SourceEdit } from './sourceEdit'
 
 type Pos = Record<string, { x: number; y: number }>
 
@@ -66,7 +66,7 @@ export function copyFragment(text: string, check: CheckResponse | null, ids: Rea
   for (const i of picked) {
     for (const p of i.params ?? []) {
       if (p.name.endsWith('$')) continue
-      const value = text.slice(p.range[0], p.range[1]).replace(/\[[^\]]*\]/g, ' ')
+      const value = stripUnits(text.slice(p.range[0], p.range[1]))
       for (const m of value.matchAll(/\b([A-Za-z_]\w*)\b(?!\s*\()/g)) uses.add(m[1])
     }
   }
@@ -111,7 +111,7 @@ export function pasteFragment(
   for (const inst of fragment.instances) {
     let name = inst.name
     if (used.has(name.toLowerCase())) {
-      const base = name.replace(/\d+$/, '') || name
+      const base = trimDigits(name) || name
       let k = 2
       while (used.has(`${base}${k}`.toLowerCase())) k++
       name = `${base}${k}`
