@@ -5,7 +5,7 @@ import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { Decoration, DecorationSet, EditorView, keymap, showTooltip, Tooltip, ViewUpdate } from '@codemirror/view'
 import { Diagnostic, lintGutter, setDiagnostics } from '@codemirror/lint'
 import { REFERENCE_SLUGS } from './docsTopics'
-import { Extension, StateEffect, StateField } from '@codemirror/state'
+import { Extension, StateEffect, StateField, Transaction } from '@codemirror/state'
 import { HighlightStyle, StreamLanguage, StringStream, syntaxHighlighting } from '@codemirror/language'
 import { CompletionContext, CompletionResult } from '@codemirror/autocomplete'
 import { tags } from '@lezer/highlight'
@@ -576,7 +576,9 @@ function EquationEditorInner(
       applyEdit(changes, expected) {
         const view = viewRef.current
         if (!view || view.state.doc.toString() !== expected) return false
-        view.dispatch({ changes: [...changes], userEvent: 'input.schematic' })
+        // The canvas timeline owns this edit; kept out of the editor's history
+        // so the two undos never replay one change twice.
+        view.dispatch({ changes: [...changes], userEvent: 'input.schematic', annotations: Transaction.addToHistory.of(false) })
         return true
       },
       setDoc(text: string) {
