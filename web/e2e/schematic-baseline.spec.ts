@@ -1939,6 +1939,8 @@ test('AC-14: insert, configure, connect, inspect, solve and export from the keyb
       await page.keyboard.type(field[1])
     }
     await press(wizard.getByRole('button', { name: 'Add to System' }))
+    // The closing wizard still holds focus; the next key must reach the canvas.
+    await expect(wizard).toBeHidden()
   }
 
   // Insert and configure: the palette's canvas command, then the canvas's own `a` key.
@@ -1958,6 +1960,7 @@ test('AC-14: insert, configure, connect, inspect, solve and export from the keyb
   await page.keyboard.type('round')
   await page.keyboard.press('Enter')
   await press(wizard.getByRole('button', { name: 'Add to System' }))
+  await expect(wizard).toBeHidden()
   await editorText(page).toContain('Ground GROU()')
 
   // Check is announced; connect through the port fields, each announced.

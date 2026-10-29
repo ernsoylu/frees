@@ -755,8 +755,7 @@ export default function App() {
       // Blurring is how an in-progress grid cell or input edit gets committed
       // before a check/solve reads it. The equation editor has nothing pending —
       // its keystrokes are already in the document — so blurring it would only
-      // throw the caret out of the text the caller is about to check, which the
-      // 700 ms live lint would then do on every typing pause.
+      // throw the caret out of the text the caller is about to check.
       const active = document.activeElement
       if (active instanceof HTMLElement && !active.closest('.cm-editor')) active.blur()
     })
@@ -1741,7 +1740,11 @@ export default function App() {
 
   async function onCheck(fromLint = false): Promise<CheckResponse | null> {
     if (checking) return null
-    flushTableEdits()
+    // The live lint was not asked for, so it must not take focus from whatever
+    // the user is typing in (a quick-add search, an inspector field); it reads
+    // what is already committed.
+    if (fromLint) flushTablesWorkbook()
+    else flushTableEdits()
     const requestRevision = modelRevisionRef.current.startCheck()
     setChecking(true)
     setStopped(false)
