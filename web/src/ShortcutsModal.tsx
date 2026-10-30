@@ -1,5 +1,5 @@
 import { Kbd, Modal, Stack, Table, Text } from '@mantine/core'
-import { CANVAS_COMMANDS } from './schematic/commands'
+import { CANVAS_COMMANDS, canvasKeys, keysOf } from './schematic/commands'
 
 interface Props {
   opened: boolean
@@ -24,11 +24,15 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ['?'], action: 'Show this shortcuts list' },
 ]
 
-// The schematic's own keys act only while the drawing has focus.
-const CANVAS: Shortcut[] = CANVAS_COMMANDS.filter((c) => c.keys.length > 0).map((c) => ({
-  keys: c.keys.map((k) => (k === 'Ctrl' ? mod : k)),
-  action: `Schematic: ${c.label}`,
-}))
+// The schematic's own keys act only while the drawing has focus; single keys
+// show as the user rebound them.
+const canvasShortcuts = (): Shortcut[] => {
+  const keys = canvasKeys()
+  return CANVAS_COMMANDS.filter((c) => c.keys.length > 0).map((c) => ({
+    keys: keysOf(c, keys).map((k) => (k === 'Ctrl' ? mod : k)),
+    action: `Schematic: ${c.label}`,
+  }))
+}
 
 // A read-only reference of the global keyboard shortcuts, opened with "?" or
 // from the command palette — so hotkeys aren't only discoverable via the
@@ -39,7 +43,7 @@ export default function ShortcutsModal({ opened, onClose }: Readonly<Props>) {
       <Stack gap="sm">
         <Table verticalSpacing="xs">
           <Table.Tbody>
-            {[...SHORTCUTS, ...CANVAS].map((s) => (
+            {[...SHORTCUTS, ...(opened ? canvasShortcuts() : [])].map((s) => (
               <Table.Tr key={s.action}>
                 <Table.Td style={{ width: 140, whiteSpace: 'nowrap' }}>
                   {s.keys.map((k, i) => (

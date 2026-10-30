@@ -26,7 +26,7 @@ describe('blockDependencies (SYNC-10)', () => {
     expect(blockDependencies(blocks)).toEqual([
       { from: 0, to: 1, via: ['x'] },
       { from: 1, to: 2, via: ['y'] },
-      { from: 0, to: 3, via: ['X'] },
+      { from: 0, to: 3, via: ['x'] },
       { from: 2, to: 3, via: ['z'] },
     ])
     expect(lineOfEquation(TEXT, 'y = x^2 + 1')).toBe(2)

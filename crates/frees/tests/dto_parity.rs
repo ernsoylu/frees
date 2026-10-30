@@ -97,15 +97,14 @@ fn assert_solve_envelope(v: &Value) {
         assert_key(var, "value", Value::is_f64);
         assert_key(var, "units", Value::is_string);
     }
-    // Every BlockResult row: {index: number, equations: string[], variables: string[]}.
+    // Every BlockResult row: {index: number, equations: string[], variables: string[], reads: string[]}.
     for block in v["blocks"].as_array().unwrap() {
         assert_key(block, "index", Value::is_u64);
-        assert_key(block, "equations", |e| {
-            e.as_array().is_some_and(|a| a.iter().all(Value::is_string))
-        });
-        assert_key(block, "variables", |e| {
-            e.as_array().is_some_and(|a| a.iter().all(Value::is_string))
-        });
+        for key in ["equations", "variables", "reads"] {
+            assert_key(block, key, |e| {
+                e.as_array().is_some_and(|a| a.iter().all(Value::is_string))
+            });
+        }
     }
     // Every ResidualResult row: {equation: string, value: number}.
     for r in v["residuals"].as_array().unwrap() {

@@ -155,6 +155,11 @@ describe('shown variables (RUN-03)', () => {
     expect([presentation.badges, presentation.watch, presentation.formats]).toEqual([shown.badges, shown.watch, shown.formats])
     expect(repaired).toBe(7) // two badges, a duplicate and a number in watch, three formats
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: 'fluid:p', arrows: true } }).presentation.overlay).toEqual({ metric: 'fluid:p', arrows: true })
+    // CFG-02: a line colour is kept only for a known kind and as #rrggbb; a bad width falls back.
+    const lines = sanitizePresentation({ ...EMPTY_PRESENTATION, view: { ...EMPTY_PRESENTATION.view, lineWidth: 'huge' }, lineColors: { electrical: '#FF00FF', twophase: 'red', piping: '#123456' } })
+    expect(lines.presentation.lineColors).toEqual({ electrical: '#ff00ff' })
+    expect(lines.presentation.view.lineWidth).toBe('normal')
+    expect(lines.repaired).toBe(3)
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: 'drop table', arrows: 1 } })).toMatchObject({ presentation: { overlay: { metric: '', arrows: false } }, repaired: 1 })
   })
 })

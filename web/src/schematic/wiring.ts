@@ -3,7 +3,7 @@
 // stops the obvious mistakes (same instance, mixed bond-graph domain,
 // reconnecting an existing node) before a `connect(...)` is inserted.
 
-import type { ConnectionDto, PortDto } from '../api'
+import type { ConnectionDto, Diagnosis, PortDto } from '../api'
 import { COMPONENT_CATALOG } from '../componentCatalog'
 
 export interface WireEndpoint {
@@ -158,36 +158,34 @@ export function connectStatement(from: WireEndpoint, to: WireEndpoint): string {
   return `connect(${endpointRef(from)}, ${endpointRef(to)})`
 }
 
-/** Instance ids mentioned as free/redundant quantities in a Check diagnosis. */
-export function instancesInDiagnosis(message: string): string[] {
-  const names = new Set<string>()
-  const re = /\b([A-Za-z_][A-Za-z0-9_]*)\.(?:[A-Za-z_][A-Za-z0-9_]*)/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(message)) !== null) {
-    names.add(m[1].toLowerCase())
+/**
+ * The instances a Check refusal names, from the engine's diagnosis. A free
+ * quantity belongs to the deepest declared instance its name starts with;
+ * the other codes name their instance first. Each owner keeps the members
+ * the diagnosis lists for it.
+ */
+export function diagnosisOwners(diagnosis: Diagnosis | null | undefined, instances: readonly { name: string }[]): { instance: string; members: string[] }[] {
+  if (!diagnosis) return []
+  if (diagnosis.code !== 'underspecified' && diagnosis.code !== 'singular') {
+    const first = diagnosis.subjects[0]
+    return first ? [{ instance: first.toLowerCase(), members: [] }] : []
   }
-  return [...names]
+  const known = new Set(instances.map((i) => i.name.toLowerCase()))
+  const owners = new Map<string, string[]>()
+  for (const name of diagnosis.subjects) {
+    const parts = name.toLowerCase().split('.')
+    let k = parts.length - 1
+    while (k > 0 && !known.has(parts.slice(0, k).join('.'))) k--
+    if (k === 0) continue
+    const id = parts.slice(0, k).join('.')
+    owners.set(id, [...(owners.get(id) ?? []), name])
+  }
+  return [...owners].map(([instance, members]) => ({ instance, members }))
 }
 
-/** Group dotted member names by instance for a compact next-action list. */
-export function groupByInstance(names: readonly string[]): { instance: string; members: string[] }[] {
-  const map = new Map<string, string[]>()
-  for (const raw of names) {
-    const name = raw.trim()
-    const dot = name.indexOf('.')
-    const instance = (dot >= 0 ? name.slice(0, dot) : name).toLowerCase()
-    const list = map.get(instance) ?? []
-    list.push(name)
-    map.set(instance, list)
-  }
-  return [...map.entries()].map(([instance, members]) => ({ instance, members }))
-}
-
-export function parseFreeQuantities(message: string): string[] {
-  const m = /Free quantit(?:y|ies) \(no defining relation\):\s*([^\n]+)/i.exec(message)
-  if (!m) return []
-  const section = m[1].split(/\. Coupled|\. A common/)[0]
-  return [...section.matchAll(/[A-Za-z_][\w$]*(?:\.[A-Za-z_][\w$]*)+/g)].map((x) => x[0])
+/** An instance id and the subsystems around it, so whichever scope is open marks it. */
+export function withEnclosing(ids: readonly string[]): string[] {
+  return [...new Set(ids.flatMap((id) => id.split('.').map((_, k, p) => p.slice(0, k + 1).join('.'))))]
 }
 
 export function hasUnknownUnitWarning(warnings: readonly string[]): boolean {

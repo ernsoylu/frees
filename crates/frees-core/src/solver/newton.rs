@@ -2071,7 +2071,7 @@ mod tests {
             &s,
         );
         match report {
-            Err(FreesError::Solver { message }) => {
+            Err(FreesError::Solver { message, .. }) => {
                 assert!(message.contains("stalled"), "message = {message}");
             }
             other => panic!("expected a solver error, got {other:?}"),
@@ -2166,7 +2166,7 @@ mod tests {
             &s,
         );
         match report {
-            Err(FreesError::Solver { message }) => {
+            Err(FreesError::Solver { message, .. }) => {
                 assert!(message.contains("did not converge"), "message = {message}");
                 assert!(message.contains('3'), "message = {message}");
             }
@@ -2728,7 +2728,7 @@ mod tests {
             None,
         );
         match outcome {
-            Err(FreesError::Solver { message }) => {
+            Err(FreesError::Solver { message, .. }) => {
                 assert!(message.contains("singular"), "message = {message}");
             }
             other => {
@@ -3146,7 +3146,7 @@ mod tests {
             Some(&bounds),
         );
         match report {
-            Err(FreesError::Solver { message }) => {
+            Err(FreesError::Solver { message, .. }) => {
                 assert!(
                     message.contains("stalled") || message.contains("Constrained"),
                     "message = {message}"

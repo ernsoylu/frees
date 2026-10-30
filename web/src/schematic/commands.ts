@@ -32,3 +32,49 @@ export function runCanvasCommand(id: CanvasCommand, frames = 30): void {
   if (run) run()
   else if (frames > 0) requestAnimationFrame(() => runCanvasCommand(id, frames - 1))
 }
+
+/**
+ * CFG-08: the canvas's single-key commands a user can rebind, with their
+ * defaults. Chords (Ctrl+…, Shift+digit), Delete and the arrows are platform
+ * conventions and stay fixed. The choice is the user's, not the project's,
+ * so it lives in this browser's storage.
+ */
+export const REMAPPABLE = { add: 'a', list: 'l', search: '/' } as const
+export type Remappable = keyof typeof REMAPPABLE
+export type CanvasKeys = Record<Remappable, string>
+const KEYS_STORE = 'frees.canvasKeys'
+
+/** Why `key` cannot take `id`, or null when it can. */
+export function keyProblem(keys: CanvasKeys, id: Remappable, key: string): string | null {
+  if ([...key].length !== 1 || !key.trim()) return 'One character'
+  if (key === '?') return '? opens the shortcuts list'
+  const other = (Object.keys(keys) as Remappable[]).find((k) => k !== id && keys[k].toLowerCase() === key.toLowerCase())
+  return other ? `Already ${CANVAS_COMMANDS.find((c) => c.id === other)!.label}` : null
+}
+
+export function canvasKeys(): CanvasKeys {
+  const keys: CanvasKeys = { ...REMAPPABLE }
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEYS_STORE) ?? '{}') as Partial<CanvasKeys>
+    for (const id of Object.keys(REMAPPABLE) as Remappable[]) {
+      const key = saved[id]
+      if (typeof key === 'string' && !keyProblem(keys, id, key)) keys[id] = key.toLowerCase()
+    }
+  } catch {
+    // No storage, or a damaged entry: the defaults stand.
+  }
+  return keys
+}
+
+export function saveCanvasKeys(keys: CanvasKeys): void {
+  try {
+    localStorage.setItem(KEYS_STORE, JSON.stringify(keys))
+  } catch {
+    // Private mode: the keys last this session only.
+  }
+}
+
+/** The keys a command is shown with, after any rebinding. */
+export function keysOf(c: (typeof CANVAS_COMMANDS)[number], keys: CanvasKeys = canvasKeys()): readonly string[] {
+  return c.id in keys ? [keys[c.id as Remappable].toUpperCase()] : c.keys
+}

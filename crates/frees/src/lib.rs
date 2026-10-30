@@ -1015,6 +1015,11 @@ fn solve_success(
                     .iter()
                     .map(|v| display_of(&solution.display_names, v))
                     .collect::<Vec<_>>(),
+                "reads": block
+                    .reads
+                    .iter()
+                    .map(|v| display_of(&solution.display_names, v))
+                    .collect::<Vec<_>>(),
             })
         })
         .collect();
@@ -1312,6 +1317,11 @@ fn solve_failure(
                             .iter()
                             .map(|v| display_of(&partial.display_names, v))
                             .collect::<Vec<_>>(),
+                        "reads": block
+                            .reads
+                            .iter()
+                            .map(|v| display_of(&partial.display_names, v))
+                            .collect::<Vec<_>>(),
                     })
                 })
                 .collect();
@@ -1432,6 +1442,7 @@ fn check_response(report: &CheckReport, source: Option<&str>) -> String {
         "unknowns": report.unknown_count,
         "variables": variables,
         "unitWarnings": report.unit_warnings,
+        "diagnosis": report.diagnosis.as_ref().map(|d| json!({ "code": d.code, "subjects": d.subjects })),
         "inferredUnits": inferred_units,
         "message": report.message,
         "errorLine": report.error_line,
@@ -2083,6 +2094,27 @@ mod tests {
         // A dimensionless "-" and an absent unit both pass through untouched.
         let units = variable(&v, "x")["units"].as_str().unwrap();
         assert!(units.is_empty() || units == "-", "{v}");
+    }
+
+    // ── CheckResponse.diagnosis: what a refusal names, by code ─────────────
+
+    #[test]
+    fn check_names_what_a_refusal_is_about() {
+        let diagnosis = |src: &str| parsed(&check(src, "{}"))["diagnosis"].clone();
+        assert_eq!(
+            diagnosis("Resistor R1(R=1 [ohm])\nResistor R1(R=2 [ohm])\n"),
+            serde_json::json!({ "code": "duplicate-instance", "subjects": ["r1"] })
+        );
+        assert_eq!(diagnosis("Resistr R1(R=1 [ohm])\n")["code"], "unknown-type");
+        assert_eq!(
+            diagnosis("Resistor R1(R=1 [ohm])\nGround G()\nconnect(R1.zz, G.port)\n"),
+            serde_json::json!({ "code": "unknown-port", "subjects": ["r1", "zz"] })
+        );
+        assert_eq!(
+            diagnosis("x + y = 3\n"),
+            serde_json::json!({ "code": "underspecified", "subjects": ["y"] })
+        );
+        assert_eq!(diagnosis("x = 3\n"), Value::Null);
     }
 
     // ── SolveResponse: a solving document with units ───────────────────────

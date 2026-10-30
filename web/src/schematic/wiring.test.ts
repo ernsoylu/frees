@@ -6,13 +6,12 @@ import {
   netConnections,
   joinedElsewhere,
   connectStatement,
-  groupByInstance,
+  diagnosisOwners,
   hasUnknownUnitWarning,
-  instancesInDiagnosis,
-  parseFreeQuantities,
   previewDomain,
   previewWire,
   searchLibrary,
+  withEnclosing,
 } from './wiring'
 
 describe('previewDomain', () => {
@@ -125,16 +124,17 @@ describe('connectStatement', () => {
 })
 
 describe('diagnosis helpers', () => {
-  it('extracts free quantities and groups them by instance', () => {
-    const msg =
-      'There are 5 equations and 7 variables. The problem is underspecified and cannot be solved. ' +
-      'Free quantities (no defining relation): LINE.in.P, LINE.out.P, RET.in.mdot.'
-    expect(parseFreeQuantities(msg)).toEqual(['LINE.in.P', 'LINE.out.P', 'RET.in.mdot'])
-    expect(instancesInDiagnosis(msg).sort()).toEqual(['line', 'ret'])
-    expect(groupByInstance(parseFreeQuantities(msg)).map((g) => g.instance).sort()).toEqual([
-      'line',
-      'ret',
+  it('attributes free quantities to the deepest declared instance', () => {
+    const instances = [{ name: 'LINE' }, { name: 'SUB' }, { name: 'sub.r1' }]
+    const free = { code: 'underspecified' as const, subjects: ['line.in.p', 'line.out.p', 'sub.r1.a.i', 'sub.x', 'y'] }
+    expect(diagnosisOwners(free, instances)).toEqual([
+      { instance: 'line', members: ['line.in.p', 'line.out.p'] },
+      { instance: 'sub.r1', members: ['sub.r1.a.i'] },
+      { instance: 'sub', members: ['sub.x'] },
     ])
+    expect(withEnclosing(['sub.r1', 'line'])).toEqual(['sub', 'sub.r1', 'line'])
+    expect(diagnosisOwners({ code: 'unknown-port', subjects: ['SRC', 'nn'] }, [])).toEqual([{ instance: 'src', members: [] }])
+    expect(diagnosisOwners(null, instances)).toEqual([])
   })
 
   it('detects unknown-unit warnings', () => {

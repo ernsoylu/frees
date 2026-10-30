@@ -1123,9 +1123,17 @@ test('AC-05: legal wires connect, illegal ones are refused, a partial network st
   await page.getByTestId('schematic-issues').click()
   const issues = page.getByRole('menuitem')
   await expect(issues.filter({ hasText: /src\.p is not connected/i })).toBeEnabled()
-  // The whole-system diagnosis names no single object, so it points nowhere.
+  // The whole-system diagnosis names no single object, so it points nowhere;
+  // the engine's free quantities each point at the instance that owns them.
   await expect(issues.filter({ hasText: /underspecified/ })).toBeDisabled()
+  await expect(issues.filter({ hasText: 'No defining relation for c1.vc' })).toBeEnabled()
+  await expect(issues.filter({ hasText: 'No defining relation for src.p.i' })).toBeEnabled()
+  // Both owners are marked on the canvas; the ground is not.
+  await expect(svg.locator('[data-node="c1"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(svg.locator('[data-node="src"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(svg.locator('[data-node="g"]')).toHaveAttribute('aria-pressed', 'false')
   await page.keyboard.press('Escape')
+  await expect(issues).toHaveCount(0) // the closing menu would cover SRC.p
 
   // Drag from SRC.p: the ports say whether they can take it before release.
   const from = await portAt(svg, 'src.p')
@@ -1883,6 +1891,15 @@ test('CFG-05: export SVG, PNG and print for the model or a selection, with backg
   await dialog.getByText('White').click()
   const whole = (await save()).body.toString()
   expect(whole).toContain('fill="#ffffff"')
+  // The app is dark; on white the drawing takes the light colours, not the screen's.
+  expect(whole).toContain('fill="#f8f9fa"')
+  expect(whole).not.toContain('#25292e')
+  await page.getByRole('button', { name: 'Export…' }).click()
+  await dialog.getByText('Whole model').click()
+  await dialog.getByText('Theme').click()
+  const themed = (await save()).body.toString()
+  expect(themed).toContain('fill="#25292e"')
+  expect(themed).not.toContain('#f8f9fa')
   for (const id of ['room', 'hp', 'coil', 'fan', 'sup']) expect(whole).toContain(`data-node="${id}"`)
   expect(whole).toContain('data-badge')
   const width = Number(/<svg[^>]* width="(\d+)"/.exec(whole)![1])
@@ -2326,6 +2343,58 @@ test('COMP-07: rotate, mirror, detail and name placement per block; ports keep t
   await expect(page.getByText('0.66667 A').first()).toBeVisible()
   await testInfo.attach('comp07.png', { body: await svg.screenshot(), contentType: 'image/png' })
   await record(testInfo, 'evidence', { before, turned })
+})
+
+test('CFG-02: line width and a project colour per line kind, refused where it would not read, with the dash kept and the document unchanged', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, PAIR)
+  const wire = svg.locator('path[data-net]').first()
+  await expect(wire).toHaveAttribute('stroke', '#ffd43b') // electrical, dark theme
+  await expect(wire).toHaveAttribute('stroke-width', '2')
+  const dash = await wire.getAttribute('stroke-dasharray')
+  await page.getByRole('button', { name: 'View settings' }).click()
+  await page.getByText('Bold', { exact: true }).click()
+  await expect(wire).toHaveAttribute('stroke-width', '3')
+  // A grey that holds contrast only on the light canvas is kept but not drawn here.
+  const colour = page.getByRole('textbox', { name: 'electrical line colour' })
+  await colour.fill('#5c5f66')
+  await expect(page.locator('[data-line-faint="electrical"]')).toBeVisible()
+  await expect(wire).toHaveAttribute('stroke', '#ffd43b')
+  await colour.fill('#ff00ff')
+  await expect(page.locator('[data-line-faint]')).toHaveCount(0)
+  await expect(wire).toHaveAttribute('stroke', '#ff00ff')
+  await expect(wire).toHaveAttribute('stroke-dasharray', dash ?? '')
+  await expect
+    .poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').schematic?.lineColors))
+    .toEqual({ electrical: '#ff00ff' })
+  await editorText(page).toBe(PAIR)
+  await record(testInfo, 'evidence', { width: 3, colour: '#ff00ff', refused: '#5c5f66 on dark' })
+})
+
+test('CFG-08: a single canvas key is rebound in this browser, a clash is refused, and the sheet shows the binding', async ({ page }, testInfo) => {
+  const svg = await openSolved(page, PAIR)
+  const canvas = svg.locator('..')
+  const quick = page.getByTestId('quick-add')
+  await page.getByRole('button', { name: 'View settings' }).click()
+  const add = page.getByRole('textbox', { name: 'Key for Add component' })
+  await add.press('l')
+  await expect(page.getByText('Already Component and connection list')).toBeVisible()
+  await add.press('n')
+  await expect(add).toHaveValue('N')
+  await page.keyboard.press('Escape')
+  await canvas.focus()
+  await page.keyboard.press('a')
+  await expect(quick).toHaveCount(0)
+  await page.keyboard.press('n')
+  await expect(quick).toBeVisible()
+  await page.keyboard.press('Escape')
+  // The binding is this browser's, not the project's, and the shortcuts sheet names it.
+  expect(await page.evaluate(() => localStorage.getItem('frees.canvasKeys'))).toBe(JSON.stringify({ add: 'n', list: 'l', search: '/' }))
+  await expect(quick).toHaveCount(0)
+  await page.locator('body').focus()
+  await page.keyboard.press('Shift+?')
+  const sheet = page.getByRole('dialog', { name: 'Keyboard Shortcuts' })
+  await expect(sheet.getByRole('row', { name: /Schematic: Add component/ })).toContainText('N')
+  await record(testInfo, 'evidence', { add: 'N', refused: 'L (list)' })
 })
 
 test('AC-11: trace coolant, refrigerant and thermal links on the EV model; open a component\'s values in watch, table, plot and state windows; grouping never duplicates equipment or re-solves', async ({ page }, testInfo) => {

@@ -370,6 +370,9 @@ pub struct CheckReport {
     /// (The Rust parser stops at the first error, so at most one entry today;
     /// the Java engine collects up to eight.)
     pub errors: Vec<SyntaxErrorInfo>,
+    /// What the refusal in [`CheckReport::message`] is about, when the engine
+    /// can name it; `None` on success and for refusals without a code.
+    pub diagnosis: Option<crate::diag::Diagnosis>,
     /// Lowercase variable name → inferred display unit (`inferredUnits` in
     /// `api.ts`): units [`crate::units::checker`] derived dimensionally,
     /// overlaid by units read off annotated literal assignments — the Java
@@ -1903,6 +1906,7 @@ pub fn check_with_tables_complex(
                 message: err.to_string_message(),
                 error_line: None,
                 errors: Vec::new(),
+                diagnosis: err.diagnosis().cloned(),
                 inferred_units: BTreeMap::new(),
                 unit_warnings: Vec::new(),
                 diagnostics: check_diagnostics,
@@ -1938,6 +1942,7 @@ pub fn check_with_tables_complex(
             ),
             error_line: None,
             errors: Vec::new(),
+            diagnosis: None,
             inferred_units: unit_report.inferred,
             unit_warnings: merge_advisory_warnings(unit_report.warnings, &check_diagnostics),
             diagnostics: check_diagnostics,
@@ -1996,6 +2001,7 @@ pub fn check_with_tables_complex(
         message: String::new(),
         error_line: None,
         errors: Vec::new(),
+        diagnosis: None,
         inferred_units,
         unit_warnings: merge_advisory_warnings(unit_report.warnings, &diagnostics),
         diagnostics,
@@ -2017,6 +2023,7 @@ pub fn check_with_tables_complex(
         }),
         Err(err) => Ok(CheckReport {
             message: err.to_string_message(),
+            diagnosis: err.diagnosis().cloned(),
             ..base
         }),
     }
@@ -2865,6 +2872,7 @@ fn syntax_failure_report(source: &str, err: &FreesError) -> CheckReport {
         message: format!("Syntax error: {first_line}"),
         error_line,
         errors,
+        diagnosis: err.diagnosis().cloned(),
         inferred_units: BTreeMap::new(),
         unit_warnings: Vec::new(),
         diagnostics: vec![diagnostic],
@@ -5066,10 +5074,19 @@ fn try_merge_bidirectional(
     if merged_indices.is_empty() {
         return None;
     }
+    let mut reads: Vec<String> = std::iter::once(failed_index)
+        .chain(merged_indices.iter().copied())
+        .flat_map(|k| blocks[k].reads.iter())
+        .filter(|v| !merged_var_set.contains(*v))
+        .cloned()
+        .collect();
+    reads.sort();
+    reads.dedup();
     Some((
         Block {
             equations: merged_equations,
             variables: merged_vars,
+            reads,
         },
         merged_indices,
     ))
@@ -5573,7 +5590,13 @@ fn annotate(err: FreesError, index: usize, equations: &[&Equation]) -> FreesErro
         quoted.join("\n  ")
     );
     match err {
-        FreesError::Parse { span, .. } => FreesError::Parse { message, span },
+        FreesError::Parse {
+            span, diagnosis, ..
+        } => FreesError::Parse {
+            message,
+            span,
+            diagnosis,
+        },
         _ => FreesError::solver(message),
     }
 }
@@ -5620,7 +5643,7 @@ impl FreesError {
     pub fn to_string_message(&self) -> String {
         match self {
             FreesError::Parse { message, .. }
-            | FreesError::Solver { message }
+            | FreesError::Solver { message, .. }
             | FreesError::Property { message }
             | FreesError::Evaluation { message } => message.clone(),
             FreesError::UnknownUnit { unit } => format!("unknown unit: {unit}"),

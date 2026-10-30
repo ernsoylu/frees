@@ -129,6 +129,22 @@ impl fmt::Display for Diagnostic {
     }
 }
 
+/// What a refusal is about, for a front end that acts on it rather than on
+/// the message text: a stable `code` and the model objects it names.
+///
+/// | code | subjects |
+/// | --- | --- |
+/// | `duplicate-instance` | the instance name |
+/// | `unknown-type` | the instance name, the type as written |
+/// | `unknown-port` | the instance name, the port as written |
+/// | `underspecified`, `singular` | the free quantities, spelled as in the message (`src.p.i`) |
+/// | `overspecified` | none |
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Diagnosis {
+    pub code: &'static str,
+    pub subjects: Vec<String>,
+}
+
 /// Errors raised by the engine.
 ///
 /// `Parse` corresponds to the Java `ParseException`, `Solver` to
@@ -136,10 +152,17 @@ impl fmt::Display for Diagnostic {
 #[derive(Debug, Clone, PartialEq)]
 pub enum FreesError {
     /// Lexing or parsing failed. A hard failure — the document is not a program.
-    Parse { message: String, span: Option<Span> },
+    Parse {
+        message: String,
+        span: Option<Span>,
+        diagnosis: Option<Box<Diagnosis>>,
+    },
     /// The document parsed but cannot be solved as written (degrees of freedom,
     /// unmatched variables, singular block, no convergence).
-    Solver { message: String },
+    Solver {
+        message: String,
+        diagnosis: Option<Box<Diagnosis>>,
+    },
     /// A property call failed for the current state point.
     Property { message: String },
     /// An intrinsic was called with the wrong arity or argument types.
@@ -153,6 +176,7 @@ impl FreesError {
         FreesError::Parse {
             message: message.into(),
             span: None,
+            diagnosis: None,
         }
     }
 
@@ -160,12 +184,33 @@ impl FreesError {
         FreesError::Parse {
             message: message.into(),
             span: Some(span),
+            diagnosis: None,
         }
     }
 
     pub fn solver(message: impl Into<String>) -> FreesError {
         FreesError::Solver {
             message: message.into(),
+            diagnosis: None,
+        }
+    }
+
+    /// Attach a [`Diagnosis`]; only parse and solver refusals carry one.
+    pub fn with_diagnosis(mut self, code: &'static str, subjects: Vec<String>) -> FreesError {
+        if let FreesError::Parse { diagnosis, .. } | FreesError::Solver { diagnosis, .. } =
+            &mut self
+        {
+            *diagnosis = Some(Box::new(Diagnosis { code, subjects }));
+        }
+        self
+    }
+
+    pub fn diagnosis(&self) -> Option<&Diagnosis> {
+        match self {
+            FreesError::Parse { diagnosis, .. } | FreesError::Solver { diagnosis, .. } => {
+                diagnosis.as_deref()
+            }
+            _ => None,
         }
     }
 
@@ -193,7 +238,7 @@ impl fmt::Display for FreesError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             FreesError::Parse { message, .. } => write!(f, "parse error: {message}"),
-            FreesError::Solver { message } => write!(f, "solver error: {message}"),
+            FreesError::Solver { message, .. } => write!(f, "solver error: {message}"),
             FreesError::Property { message } => write!(f, "property error: {message}"),
             FreesError::Evaluation { message } => write!(f, "evaluation error: {message}"),
             FreesError::UnknownUnit { unit } => write!(f, "unknown unit: {unit}"),

@@ -877,6 +877,7 @@ mod tests {
         let block = Block {
             equations: vec![0],
             variables: vec!["b".into(), "a".into()],
+            reads: Vec::new(),
         };
         let mk = |a: f64, b: f64| {
             let mut s = Scope::default();

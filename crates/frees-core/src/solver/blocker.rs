@@ -37,6 +37,9 @@ pub struct Block {
     pub equations: Vec<usize>,
     /// Unknowns solved by this block, sorted.
     pub variables: Vec<String>,
+    /// Unknowns of other blocks that this block's equations read, sorted: the
+    /// block's incoming edges in the solve order.
+    pub reads: Vec<String>,
 }
 
 impl Block {
@@ -66,8 +69,15 @@ pub fn block_system(equations: &[Equation], knowns: &HashSet<String>) -> Result<
 
     let structure = Structure::new(equations, knowns);
 
-    if structure.vars.len() != equations.len() {
-        return Err(FreesError::solver(structure.causality_diagnosis()));
+    let (n, m) = (equations.len(), structure.vars.len());
+    if m != n {
+        let code = if n < m {
+            "underspecified"
+        } else {
+            "overspecified"
+        };
+        return Err(FreesError::solver(structure.causality_diagnosis())
+            .with_diagnosis(code, structure.free_quantities()));
     }
 
     let matching = structure.maximum_matching();
@@ -76,7 +86,8 @@ pub fn block_system(equations: &[Equation], knowns: &HashSet<String>) -> Result<
             "The equation system is structurally singular: no complete assignment of \
              equations to variables exists. {}",
             structure.causality_diagnosis()
-        )));
+        ))
+        .with_diagnosis("singular", structure.free_quantities()));
     }
 
     Ok(BlockingReport {
@@ -309,9 +320,21 @@ impl<'a> Structure<'a> {
                     })
                     .collect();
                 variables.sort();
+                let mut reads: Vec<String> = equations
+                    .iter()
+                    .flat_map(|&i| &self.adjacency[i])
+                    .filter(|&&v| {
+                        let j = matching.var_to_eq[v];
+                        j != NIL && equations.binary_search(&j).is_err()
+                    })
+                    .map(|&v| self.vars[v].clone())
+                    .collect();
+                reads.sort();
+                reads.dedup();
                 Block {
                     equations,
                     variables,
+                    reads,
                 }
             })
             .collect()
@@ -361,6 +384,17 @@ impl<'a> Structure<'a> {
             }
         }
         sb
+    }
+
+    /// The unknowns a maximum matching leaves without a defining equation, in
+    /// variable order and the message's spelling (`src.p.i`, not `src$p$i`):
+    /// the subjects of an under- or singular [`crate::diag::Diagnosis`].
+    fn free_quantities(&self) -> Vec<String> {
+        let matching = self.maximum_matching();
+        (0..self.vars.len())
+            .filter(|&v| matching.var_to_eq[v] == NIL)
+            .map(|v| display_name(&self.vars[v]))
+            .collect()
     }
 
     fn append_free_quantities(&self, sb: &mut String, matching: &Matching, hint: bool) {
@@ -530,7 +564,7 @@ mod tests {
 
     fn err_message(equations: &[Equation], knowns: &HashSet<String>) -> String {
         match block_system(equations, knowns) {
-            Err(FreesError::Solver { message }) => message,
+            Err(FreesError::Solver { message, .. }) => message,
             other => panic!("expected a solver error, got {other:?}"),
         }
     }
@@ -803,6 +837,13 @@ mod tests {
         assert_eq!(report.blocks.len(), 3);
         assert_eq!(vars_of(&report), vec![vec!["a"], vec!["x", "y"], vec!["w"]]);
         assert_eq!(eqs_of(&report), vec![vec![2], vec![1, 3], vec![0]]);
+        // Reads name only other blocks' unknowns, never the block's own.
+        let reads: Vec<Vec<&str>> = report
+            .blocks
+            .iter()
+            .map(|b| b.reads.iter().map(String::as_str).collect())
+            .collect();
+        assert_eq!(reads, vec![vec![], vec!["a"], vec!["x", "y"]]);
         assert!(report.blocks[0].is_scalar());
         assert!(!report.blocks[1].is_scalar());
         assert!(report.blocks[2].is_scalar());
