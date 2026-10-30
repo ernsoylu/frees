@@ -5058,6 +5058,7 @@ function edgeTitle(e: SchematicEdge): string {
 }
 
 function endpointName(instance: string, port?: string): string {
+  if (instance.includes('$node$')) return 'junction'
   return port ? `${instance}.${port}` : instance
 }
 

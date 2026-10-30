@@ -64,6 +64,7 @@ describe('instance identity at the caret and under rename (SYNC-04/09)', () => {
     expect([...renames]).toEqual([['u1.p', 'u1.q'], ['u2.p', 'u2.q']])
     expect(renameId('u2.p.wall', renames)).toBe('u2.q.wall')
     expect(renameId('u2.pump', renames)).toBe('u2.pump')
+    expect(renameId('u2$node$u2.p.wall', renames)).toBe('u2$node$u2.q.wall')
   })
 })
 
