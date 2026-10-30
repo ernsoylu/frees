@@ -4,7 +4,7 @@
 // text outside the patched ranges is preserved byte for byte. Positions are
 // UTF-16 offsets, the editor's (and the check DTO's `range`) units.
 
-import type { ConnectionDto, InstanceIdentityDto } from '../api'
+import type { ConnectionDto, Diagnosis, InstanceIdentityDto } from '../api'
 import { canonRef } from './wiring'
 
 /** Replace `[from, to)` with `insert`. */
@@ -181,41 +181,43 @@ function declarations(text: string) {
 }
 
 /**
- * RUN-09: a reversible patch for a diagnostic whose cure is unambiguous — a
+ * RUN-09: a reversible patch for a diagnosis whose cure is unambiguous — a
  * duplicate instance name, or a component type or port one typo away from a
- * real one. Null when the message is anything else or no single fix exists.
+ * real one. Null for any other diagnosis or when no single fix exists.
  */
-export function suggestFix(message: string, text: string, catalog: readonly { type: string; ports: readonly string[] }[]): SourceEdit | null {
+export function suggestFix(diagnosis: Diagnosis | null | undefined, text: string, catalog: readonly { type: string; ports: readonly string[] }[]): SourceEdit | null {
   const decls = declarations(text)
   const declOf = (name: string) => decls.filter((d) => d.name.toLowerCase() === name.toLowerCase())
-  const dup = /Component instance '(\w+)' is declared more than once/.exec(message)
-  if (dup) {
-    const last = declOf(dup[1]).at(-1)
-    if (!last) return null
-    const taken = new Set(decls.map((d) => d.name.toLowerCase()))
-    let k = 2
-    while (taken.has(`${last.name}${k}`.toLowerCase())) k++
-    const next = `${last.name}${k}`
-    return { label: `Rename the second ${last.name} to ${next}`, changes: [{ from: last.nameFrom, to: last.nameFrom + last.name.length, insert: next }] }
+  const [instance = '', other = ''] = diagnosis?.subjects ?? []
+  switch (diagnosis?.code) {
+    case 'duplicate-instance': {
+      const last = declOf(instance).at(-1)
+      if (!last) return null
+      const taken = new Set(decls.map((d) => d.name.toLowerCase()))
+      let k = 2
+      while (taken.has(`${last.name}${k}`.toLowerCase())) k++
+      const next = `${last.name}${k}`
+      return { label: `Rename the second ${last.name} to ${next}`, changes: [{ from: last.nameFrom, to: last.nameFrom + last.name.length, insert: next }] }
+    }
+    case 'unknown-type': {
+      const decl = declOf(instance)[0]
+      const local = [...text.matchAll(/^[ \t]*COMPONENT[ \t]+([A-Za-z_]\w*)/gim)].map((m) => m[1])
+      const best = decl && closest(decl.type, [...catalog.map((c) => c.type), ...local])
+      return best ? { label: `Change type ${decl.type} to ${best}`, changes: [{ from: decl.typeFrom, to: decl.typeFrom + decl.type.length, insert: best }] } : null
+    }
+    case 'unknown-port': {
+      const decl = declOf(instance)[0]
+      const ports = decl ? (catalog.find((c) => c.type.toLowerCase() === decl.type.toLowerCase())?.ports ?? []) : []
+      const best = closest(other, ports)
+      // Where the bad port is written: the first connect naming it.
+      const use = new RegExp(`^[ \\t]*connect[ \\t]*\\(.*?\\b${instance}[ \\t]*\\.[ \\t]*(${other})\\b`, 'im').exec(text)
+      if (!decl || !best || !use) return null
+      const from = use.index + use[0].length - use[1].length
+      return { label: `Change port ${decl.name}.${use[1]} to ${best}`, changes: [{ from, to: from + use[1].length, insert: best }] }
+    }
+    default:
+      return null
   }
-  const type = /Unknown component type '(\w+)' for instance '(\w+)'/.exec(message)
-  if (type) {
-    const decl = declOf(type[2])[0]
-    const local = [...text.matchAll(/^[ \t]*COMPONENT[ \t]+([A-Za-z_]\w*)/gim)].map((m) => m[1])
-    const best = decl && closest(decl.type, [...catalog.map((c) => c.type), ...local])
-    return best ? { label: `Change type ${decl.type} to ${best}`, changes: [{ from: decl.typeFrom, to: decl.typeFrom + decl.type.length, insert: best }] } : null
-  }
-  const port = /'(\w+)\.(\w+)' is not a port/.exec(message)
-  if (port) {
-    const decl = declOf(port[1])[0]
-    const ports = decl ? (catalog.find((c) => c.type.toLowerCase() === decl.type.toLowerCase())?.ports ?? []) : []
-    const best = closest(port[2], ports)
-    const use = new RegExp(`^[ \\t]*connect[ \\t]*\\(.*?\\b${port[1]}[ \\t]*\\.[ \\t]*(${port[2]})\\b`, 'im').exec(text)
-    if (!best || !use) return null
-    const from = use.index + use[0].length - use[1].length
-    return { label: `Change port ${decl.name}.${use[1]} to ${best}`, changes: [{ from, to: from + use[1].length, insert: best }] }
-  }
-  return null
 }
 
 /**

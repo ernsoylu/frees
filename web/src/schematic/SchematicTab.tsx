@@ -45,7 +45,7 @@ import {
   declaredComponentTypes,
   declaredInstances,
 } from './declaration'
-import { buildLineStyles, lineId, lineLabel, SCHEMATIC_INK, type LineStyle, type SchematicInk } from './palette'
+import { buildLineStyles, fits, LINE_KINDS, lineId, lineLabel, SCHEMATIC_INK, type LineStyle, type SchematicInk, type Scheme } from './palette'
 import {
   arrangeDeltas,
   connectedTo,
@@ -96,7 +96,7 @@ import { searchModel, type SearchHit } from './search'
 import { blockDependencies, lineOfEquation, type BlockLink } from './dependencies'
 import { formatParamValue, paramValueError, suggestInstanceName } from '../componentText'
 import { QuickAdd } from './QuickAdd'
-import { CANVAS_COMMANDS, canvasHandlers, type CanvasCommand } from './commands'
+import { CANVAS_COMMANDS, canvasHandlers, canvasKeys, keyProblem, REMAPPABLE, saveCanvasKeys, type CanvasCommand, type Remappable } from './commands'
 import { copyFragment, deleteImpact, loadFragment, pasteFragment, storeFragment, withoutBlocks, type DeleteImpact, type Fragment, type PasteResult } from './clipboard'
 import { boxAround, contains, frameBox, visibleBox, zoomAbout, type Box, type View } from './viewport'
 import {
@@ -129,6 +129,7 @@ import {
   compatibility,
   COMPONENT_DRAG_TYPE,
   connectStatement,
+  diagnosisOwners,
   endpointRef,
   joinedElsewhere,
   netConnections,
@@ -167,13 +168,14 @@ const ARRANGE_ITEMS: ({ op: ArrangeOp; label: string } | null)[] = [
   { op: 'spread-x', label: 'Distribute horizontally' },
   { op: 'spread-y', label: 'Distribute vertically' },
 ]
-const VIEW_CHOICES: { key: 'background' | 'grid' | 'spacing' | 'orientation' | 'grouping' | 'detail'; label: string; data: string[][] }[] = [
+const VIEW_CHOICES: { key: 'background' | 'grid' | 'spacing' | 'orientation' | 'grouping' | 'detail' | 'lineWidth'; label: string; data: string[][] }[] = [
   { key: 'orientation', label: 'Flow', data: [['horizontal', 'Left to right'], ['vertical', 'Top to bottom']] },
   { key: 'spacing', label: 'Spacing', data: [['compact', 'Compact'], ['normal', 'Normal'], ['roomy', 'Roomy']] },
   { key: 'grouping', label: 'Frames', data: [['circuit', 'Circuit'], ['domain', 'Domain'], ['none', 'None']] },
   { key: 'detail', label: 'Blocks', data: [['full', 'Full'], ['names', 'Names only']] },
   { key: 'background', label: 'Background', data: [['plain', 'Plain'], ['dots', 'Dots'], ['grid', 'Grid']] },
   { key: 'grid', label: 'Grid size', data: [['8', '8'], ['16', '16'], ['32', '32']] },
+  { key: 'lineWidth', label: 'Line width', data: [['thin', 'Thin'], ['normal', 'Regular'], ['bold', 'Bold']] },
 ]
 /** Snap and guide pull, in screen pixels. */
 const GUIDE_PX = 6
@@ -421,6 +423,17 @@ export default function SchematicTab({
   const [listOpen, setListOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const toggle = (key: 'snap' | 'guides' | 'portLabels', on: boolean) => setSettings((s) => ({ ...s, [key]: on }))
+  // CFG-08: this user's single-key canvas commands, and a rebinding being typed.
+  const [keys, setKeys] = useState(canvasKeys)
+  const [keyNote, setKeyNote] = useState<{ id: Remappable; text: string } | null>(null)
+  const rebind = (id: Remappable, key: string) => {
+    const problem = keyProblem(keys, id, key)
+    if (problem) return setKeyNote({ id, text: problem })
+    const next = { ...keys, [id]: key.toLowerCase() }
+    setKeys(next)
+    saveCanvasKeys(next)
+    setKeyNote(null)
+  }
   // A user area being named (VIEW-05), and v3 positions that matched no block.
   const [areaName, setAreaName] = useState<string | null>(null)
   const [unresolved, setUnresolved] = useState(0)
@@ -445,7 +458,7 @@ export default function SchematicTab({
   const sourceBroken = showingPrevious && checkResult !== null
   const errorLine = checkResult?.errorLine ?? checkResult?.errors?.[0]?.line ?? null
   const fix = useMemo(
-    () => (checkResult && !checkResult.solvable && onSourceEdit ? suggestFix(checkResult.message, text, COMPONENT_CATALOG) : null),
+    () => (checkResult && !checkResult.solvable && onSourceEdit ? suggestFix(checkResult.diagnosis, text, COMPONENT_CATALOG) : null),
     [checkResult, text, onSourceEdit],
   )
   const drawnCheck = showingPrevious ? previous : checkResult
@@ -467,12 +480,16 @@ export default function SchematicTab({
     return out
   }, [drawnCheck])
   // RUN-08: everything Check reported, each pointing at what it names. Only
-  // what the engine attributes is attributed: a whole-system message points nowhere.
+  // what the engine attributes is attributed: the whole-system message points
+  // nowhere, and each instance owning a free quantity gets its own item.
   const issues = useMemo(() => {
     const out: { severity: 'error' | 'warning'; text: string; line?: number; instance?: string }[] = []
     for (const e of checkResult?.errors ?? []) out.push({ severity: 'error', text: e.message, line: e.line })
     if (checkResult && !checkResult.solvable && !checkResult.errors?.length && checkResult.message) {
       out.push({ severity: 'error', text: checkResult.message, line: checkResult.errorLine ?? undefined })
+      for (const o of diagnosisOwners(checkResult.diagnosis, checkResult.instances ?? [])) {
+        if (o.members.length) out.push({ severity: 'error', text: `No defining relation for ${o.members.join(', ')}`, instance: o.instance })
+      }
     }
     for (const p of drawnCheck?.ports ?? []) {
       if (!p.connected) out.push({ severity: 'warning', text: `${p.instance}.${p.port} is not connected`, instance: p.instance })
@@ -563,8 +580,15 @@ export default function SchematicTab({
   )
 
   const scheme = useComputedColorScheme('dark')
-  const ink = SCHEMATIC_INK[scheme]
-  const styles = useMemo(() => buildLineStyles(layout.lines, scheme), [layout.lines, scheme])
+  // While a drawing is captured (CFG-05), blocks render in full, never as name
+  // chips, and in the export's colours rather than the screen's.
+  const [printing, setPrinting] = useState<Scheme | null>(null)
+  const paint = printing ?? scheme
+  const ink = SCHEMATIC_INK[paint]
+  const lineCustom = useMemo(() => ({ width: settings.lineWidth, colors: pres.lineColors ?? {} }), [settings.lineWidth, pres.lineColors])
+  const styles = useMemo(() => buildLineStyles(layout.lines, paint, lineCustom), [layout.lines, paint, lineCustom])
+  // CFG-02: the line kinds this drawing uses, each colour editable.
+  const lineKinds = useMemo(() => [...new Set(layout.lines.map((k) => (k.domain === 'fluid' ? (k.connector ?? 'fluid') : k.domain).toLowerCase()))].filter((k) => LINE_KINDS.includes(k)), [layout.lines])
   const styleOf = useCallback(
     (id: string): LineStyle => styles.get(id) ?? { color: ink.borderTerminal, width: 1.8 },
     [styles, ink],
@@ -1820,8 +1844,6 @@ export default function SchematicTab({
 
   // CFG-05: the drawing as a file or a page, without the editing affordances.
   const [exportOpts, setExportOpts] = useState<ExportOptions | null>(null)
-  // While a drawing is captured, blocks render in full, never as name chips.
-  const [printing, setPrinting] = useState(false)
   const runContext = [
     variables?.length ? `Solved: ${variables.length} variables` : 'Not solved: no results shown',
     showingPrevious ? 'drawing from the last valid Check (the source has errors)' : null,
@@ -1837,12 +1859,16 @@ export default function SchematicTab({
         : o.region === 'selection'
           ? boxAround(selection.flatMap((id) => positioned.get(id) ?? []), CHIP_OVERHANG + 5, 20)
           : bounds
-    flushSync(() => setPrinting(true))
+    // On paper or a transparent page the drawing takes the light colours,
+    // whatever the screen shows; only a Theme background keeps the screen's.
+    const paper: Scheme = o.background === 'theme' ? scheme : 'light'
+    flushSync(() => setPrinting(paper))
     const clone = svgRef.current && box ? (svgRef.current.cloneNode(true) as SVGSVGElement) : null
-    setPrinting(false)
+    setPrinting(null)
     if (!clone || !box) return null
-    const legend = layout.lines.map((key) => ({ label: lineLabel(key, fluidSpelling), style: styleOf(lineId(key)) }))
-    return drawingFile(clone, box, o, { ink, picked: new Set(selection), legend, context: runContext, issues })
+    const paperStyles = buildLineStyles(layout.lines, paper, lineCustom)
+    const legend = layout.lines.map((key) => ({ label: lineLabel(key, fluidSpelling), style: paperStyles.get(lineId(key)) ?? { color: SCHEMATIC_INK[paper].borderTerminal, width: 1.8 } }))
+    return drawingFile(clone, box, o, { ink: SCHEMATIC_INK[paper], picked: new Set(selection), legend, context: runContext, issues })
   }
   const exportDrawing = async (o: ExportOptions) => {
     const drawing = drawingSvg(o)
@@ -2720,6 +2746,61 @@ export default function SchematicTab({
                 <Switch size="xs" label="Snap to grid" checked={settings.snap} onChange={(e) => toggle('snap', e.currentTarget.checked)} />
                 <Switch size="xs" label="Alignment guides" checked={settings.guides} onChange={(e) => toggle('guides', e.currentTarget.checked)} />
                 <Switch size="xs" label="Port names" checked={settings.portLabels} onChange={(e) => toggle('portLabels', e.currentTarget.checked)} />
+                <Text size="xs" c="dimmed">
+                  Keys on the drawing (this browser)
+                </Text>
+                <Group gap={6} grow>
+                  {(Object.keys(REMAPPABLE) as Remappable[]).map((id) => (
+                    <TextInput
+                      key={id}
+                      size="xs"
+                      label={{ add: 'Add', list: 'List', search: 'Search' }[id]}
+                      aria-label={`Key for ${CANVAS_COMMANDS.find((c) => c.id === id)!.label}`}
+                      value={keys[id].toUpperCase()}
+                      error={keyNote?.id === id ? keyNote.text : undefined}
+                      onKeyDown={(e) => {
+                        // The pressed key is the binding; Tab and Escape keep their jobs.
+                        if (e.key === 'Tab' || e.key === 'Escape' || e.ctrlKey || e.metaKey || e.altKey) return
+                        e.preventDefault()
+                        rebind(id, e.key)
+                      }}
+                      onChange={() => {}}
+                    />
+                  ))}
+                </Group>
+                {lineKinds.length > 0 && (
+                  <Text size="xs" c="dimmed">
+                    Line colours (the dash pattern stays)
+                  </Text>
+                )}
+                {lineKinds.map((kind) => {
+                  const chosen = pres.lineColors?.[kind]
+                  return (
+                    <div key={kind}>
+                      <ColorInput
+                        size="xs"
+                        label={kind}
+                        aria-label={`${kind} line colour`}
+                        placeholder="Default"
+                        format="hex"
+                        value={chosen ?? ''}
+                        onChange={(v) => {
+                          const next = /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : undefined
+                          if (next === chosen) return
+                          updatePres((p) => {
+                            const { [kind]: _, ...rest } = p.lineColors ?? {}
+                            return { ...p, lineColors: next ? { ...rest, [kind]: next } : rest }
+                          }, `Colour ${kind} lines`)
+                        }}
+                      />
+                      {chosen && !fits(chosen, scheme) && (
+                        <Text size="xs" c="orange" data-line-faint={kind}>
+                          Too faint on this theme; the default is drawn here.
+                        </Text>
+                      )}
+                    </div>
+                  )
+                })}
               </Stack>
             </Popover.Dropdown>
           </Popover>
@@ -2859,17 +2940,19 @@ export default function SchematicTab({
             command()
             return
           }
-          if (e.key === 'l' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          const plain = !e.ctrlKey && !e.metaKey && !e.altKey
+          const is = (id: Remappable) => plain && e.key.toLowerCase() === keys[id]
+          if (is('list')) {
             e.preventDefault()
             setListOpen((o) => !o)
             return
           }
-          if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (is('search')) {
             e.preventDefault()
             setSearchOpen(true)
             return
           }
-          if (e.key === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey && onSourceEdit && !sourceBroken) {
+          if (is('add') && onSourceEdit && !sourceBroken) {
             e.preventDefault()
             openQuickAdd()
             return
@@ -3132,11 +3215,11 @@ export default function SchematicTab({
                   key={n.id}
                   node={n}
                   faded={out}
-                  zoom={printing ? 1 : zoom}
+                  zoom={printing !== null ? 1 : zoom}
                   room={chipRoom.get(n.id) ?? { left: Infinity, right: Infinity }}
                   ink={ink}
                   locked={lockedIds.has(n.id)}
-                  namesOnly={!printing && settings.detail === 'names'}
+                  namesOnly={printing === null && settings.detail === 'names'}
                   portLabels={settings.portLabels}
                   badge={badgeOf(n)}
                   active={active === n.id}

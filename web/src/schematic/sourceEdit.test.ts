@@ -1,3 +1,4 @@
+import type { Diagnosis } from '../api'
 import { describe, expect, it } from 'vitest'
 import type { ConnectionDto, InstanceIdentityDto } from '../api'
 import { appendStatement, applyChanges, disconnectEndpoint, insertIntoConnection, instanceAt, invertChanges, removeStatement, renamedIds, renameId, renameInstance, renameProblem, setParameter, suggestFix } from './sourceEdit'
@@ -71,24 +72,25 @@ describe('previewed fixes (RUN-09)', () => {
     { type: 'VoltageSource', ports: ['p', 'n'] },
     { type: 'Ground', ports: ['port'] },
   ]
-  const fix = (message: string, text: string) => {
-    const edit = suggestFix(message, text, catalog)
+  const fix = (code: Diagnosis['code'], subjects: string[], text: string) => {
+    const edit = suggestFix({ code, subjects }, text, catalog)
     return edit && [edit.label, applyChanges(text, edit.changes)]
   }
   it('renames a duplicate, retypes a typo and repairs a port', () => {
-    expect(fix("Component instance 'src' is declared more than once.", 'VoltageSource SRC(E = 2)\nVoltageSource SRC(E = 3)\n')).toEqual([
+    expect(fix('duplicate-instance', ['src'], 'VoltageSource SRC(E = 2)\nVoltageSource SRC(E = 3)\n')).toEqual([
       'Rename the second SRC to SRC2',
       'VoltageSource SRC(E = 2)\nVoltageSource SRC2(E = 3)\n',
     ])
-    expect(fix("Unknown component type 'voltagesorce' for instance 'src'.", 'VoltageSorce SRC(E = 2)\n')?.[1]).toBe('VoltageSource SRC(E = 2)\n')
-    expect(fix("connect(...): 'src.nn' is not a port (instance.port) or a stream name.", 'VoltageSource SRC(E = 2)\nGround G()\nconnect(SRC.nn, G.port)\n')).toEqual([
+    expect(fix('unknown-type', ['src', 'voltagesorce'], 'VoltageSorce SRC(E = 2)\n')?.[1]).toBe('VoltageSource SRC(E = 2)\n')
+    expect(fix('unknown-port', ['src', 'nn'], 'VoltageSource SRC(E = 2)\nGround G()\nconnect(SRC.nn, G.port)\n')).toEqual([
       'Change port SRC.nn to n',
       'VoltageSource SRC(E = 2)\nGround G()\nconnect(SRC.n, G.port)\n',
     ])
   })
   it('offers nothing when no single fix is near', () => {
-    expect(suggestFix("Unknown component type 'zzzzzz' for instance 'a'.", 'Zzzzzz A()\n', catalog)).toBeNull()
-    expect(suggestFix('Singular Jacobian', 'x = 1', catalog)).toBeNull()
+    expect(fix('unknown-type', ['a', 'zzzzzz'], 'Zzzzzz A()\n')).toBeNull()
+    expect(fix('underspecified', ['y'], 'x + y = 3')).toBeNull()
+    expect(suggestFix(null, 'x = 1', catalog)).toBeNull()
   })
 })
 

@@ -1569,7 +1569,7 @@ impl<'a> DynamicSolver<'a> {
         };
         match outcome {
             Ok(()) => Ok(()),
-            Err(FreesError::Solver { message })
+            Err(FreesError::Solver { message, .. })
                 if message.contains("underspecified")
                     || message.contains("structurally singular") =>
             {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLineStyles, contrast, lineId, lineLabel, SCHEMATIC_INK, type LineKey } from './palette'
+import { buildLineStyles, contrast, fits, lineId, lineLabel, SCHEMATIC_INK, type LineKey } from './palette'
 
 const fluid = (connector: string, f: string): LineKey => ({ domain: 'fluid', connector, fluid: f })
 
@@ -20,6 +20,21 @@ describe('lineId', () => {
 })
 
 describe('buildLineStyles', () => {
+  it('takes a chosen colour only where it still reads, leads a ramp with it, and scales widths (CFG-02)', () => {
+    const keys: LineKey[] = [{ domain: 'electrical' }, { domain: 'fluid', connector: 'liquid', fluid: 'a' }, { domain: 'fluid', connector: 'liquid', fluid: 'b' }]
+    // Dark grey reads on the light canvas, not on the dark one.
+    const custom = { width: 'bold' as const, colors: { electrical: '#5c5f66', liquid: '#000000' } }
+    const light = buildLineStyles(keys, 'light', custom)
+    expect(light.get('electrical')).toMatchObject({ color: '#5c5f66', width: 3 })
+    expect(light.get('fluid:liquid:a')?.color).toBe('#000000')
+    expect(light.get('fluid:liquid:b')?.color).toBe('#0b4a85') // the second fluid keeps its own shade
+    const dark = buildLineStyles(keys, 'dark', custom)
+    expect(dark.get('electrical')?.color).toBe('#ffd43b')
+    expect(dark.get('fluid:liquid:a')?.color).toBe('#4dabf7')
+    expect(buildLineStyles(keys, 'dark', { width: 'thin', colors: {} }).get('fluid:liquid:a')?.width).toBeCloseTo(1.68)
+    expect(fits('#5c5f66', 'dark')).toBe(false)
+    expect(fits('red', 'light')).toBe(false)
+  })
   it('gives every fluid family its own colour', () => {
     // These are the connector types the expander can report; each has to be
     // visually distinct or two circuits read as one.

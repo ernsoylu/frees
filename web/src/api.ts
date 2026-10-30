@@ -42,6 +42,8 @@ export interface BlockResult {
   index: number
   equations: string[]
   variables: string[]
+  /** Unknowns of other blocks this block's equations read (the engine's incidence). */
+  reads: string[]
 }
 
 export interface ResidualResult {
@@ -154,6 +156,15 @@ export interface ComponentResult {
   params: ComponentParamResult[]
 }
 
+/** What a Check refusal is about (engine `Diagnosis`): a stable code and the
+ *  objects it names. `duplicate-instance` [instance], `unknown-type` [instance,
+ *  type], `unknown-port` [instance, port], `underspecified`/`singular` the free
+ *  quantities as the message spells them (`src.p.i`), `overspecified` none. */
+export interface Diagnosis {
+  code: 'duplicate-instance' | 'unknown-type' | 'unknown-port' | 'underspecified' | 'singular' | 'overspecified'
+  subjects: string[]
+}
+
 export interface CheckResponse {
   solvable: boolean
   equations: number
@@ -167,6 +178,7 @@ export interface CheckResponse {
   /** Every syntax error the parse collected (line/column 1-based), so the
    *  editor can mark them all — errorLine keeps pointing at the first. */
   errors?: { line: number; column: number; message: string }[]
+  diagnosis?: Diagnosis | null
   /** Function tables parsed from TABLE ... END blocks in the editor text. */
   codeTables?: FunctionTableDto[]
   /** Parametric run-tables parsed from PARAMETRIC ... END blocks. */
@@ -351,6 +363,7 @@ export async function check(
       message: data.message ?? '',
       errorLine: data.errorLine ?? null,
       errors: data.errors ?? [],
+      diagnosis: data.diagnosis ?? null,
       // PLOT blocks reach the boundary (Phase 9), so the Plots tab populates
       // from a Check as well as from a Solve. The rest are not produced by the
       // wasm boundary yet; the App.tsx call sites treat empty collections as

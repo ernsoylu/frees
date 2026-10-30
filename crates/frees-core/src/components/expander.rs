@@ -444,7 +444,8 @@ impl<'d, 'n> ComponentExpander<'d, 'n> {
             {
                 return Err(FreesError::parse(format!(
                     "Component instance '{name}' is declared more than once."
-                )));
+                ))
+                .with_diagnosis("duplicate-instance", vec![name]));
             }
             instances.push(resolved);
         }
@@ -955,7 +956,11 @@ fn resolve<'d>(
         return Err(FreesError::parse(format!(
             "Unknown component type '{}' for instance '{}'. Define it with COMPONENT {}(...).",
             inst.type_name, inst.name, inst.type_name
-        )));
+        ))
+        .with_diagnosis(
+            "unknown-type",
+            vec![inst.name.clone(), inst.type_name.clone()],
+        ));
     };
     // Two instantiation styles: shared-name (every port bound positionally to a
     // stream) or connector (no positional args — ports are "free", bound to
@@ -1296,7 +1301,11 @@ impl Network<'_> {
                 "connect(...): '{reference}' is not a port (instance.port) or a stream \
                  name. {}",
                 c.source_text
-            ))),
+            ))
+            .with_diagnosis(
+                "unknown-port",
+                vec![instance_name.to_string(), port.to_string()],
+            )),
         }
     }
 

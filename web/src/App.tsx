@@ -1,6 +1,6 @@
 import { tableInputIssues } from './tableValidation'
 import { resolvePlotSource } from './plots/sources'
-import { CANVAS_COMMANDS, runCanvasCommand } from './schematic/commands'
+import { CANVAS_COMMANDS, keysOf, runCanvasCommand } from './schematic/commands'
 import type { SchematicHandoff } from './schematic/SchematicTab'
 import { flushSync } from 'react-dom'
 import { helpUrl } from './helpUrl'
@@ -114,7 +114,7 @@ import { applyColumnFill } from './tablesGrid/tableGridModel'
 // is first shown (wrapped in <Suspense> at their render sites below).
 const SchematicTab = lazy(() => import('./schematic/SchematicTab'))
 import { declaredInstances } from './schematic/declaration'
-import { instancesInDiagnosis, LOCAL_ENGINE_FAILURE } from './schematic/wiring'
+import { diagnosisOwners, LOCAL_ENGINE_FAILURE, withEnclosing } from './schematic/wiring'
 import { EMPTY_PRESENTATION, type SchematicPresentation } from './schematic/presentation'
 import { instanceAt } from './schematic/sourceEdit'
 const DigitizerTab = lazy(() =>
@@ -2647,7 +2647,7 @@ export default function App() {
       actions: CANVAS_COMMANDS.map((c) => ({
         id: `canvas-${c.id}`,
         label: c.label,
-        description: c.keys.length ? `${c.keys.join('+')} on the drawing` : undefined,
+        description: c.keys.length ? `${keysOf(c).join('+')} on the drawing` : undefined,
         leftSection: <IconSitemap size={18} />,
         onClick: () => {
           dockRef.current?.open('schematic')
@@ -2884,7 +2884,7 @@ export default function App() {
             presentation={schematic}
             onPresentationChange={setSchematic}
             handoff={{ reason: handoffReason, run: handoff }}
-            highlightIds={cursorInstance ? [...instancesInDiagnosis(checkResult?.message ?? ''), cursorInstance] : instancesInDiagnosis(checkResult?.message ?? '')}
+            highlightIds={[...withEnclosing(diagnosisOwners(checkResult?.diagnosis, checkResult?.instances ?? []).map((o) => o.instance)), ...(cursorInstance ? [cursorInstance] : [])]}
           />
         </Suspense>
       </div>

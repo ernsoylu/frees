@@ -145,6 +145,21 @@ export function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05)
 }
 
+/** CFG-02: the project's line width and its colour per line kind (domain or fluid connector). */
+export interface LineCustom {
+  width: 'thin' | 'normal' | 'bold'
+  colors: Readonly<Record<string, string>>
+}
+export const NO_CUSTOM: LineCustom = { width: 'normal', colors: {} }
+export const LINE_WIDTHS = { thin: 0.7, normal: 1, bold: 1.5 } as const
+/** Every line kind a colour can be chosen for, in legend order. */
+export const LINE_KINDS = [...Object.keys(CONNECTOR_RAMPS.dark), ...Object.keys(DOMAIN_COLORS.dark)]
+
+/** A chosen line colour is used only while it holds 3:1 against the scheme's canvas, as the defaults do. */
+export function fits(color: string | undefined, scheme: Scheme): color is string {
+  return color !== undefined && /^#[0-9a-f]{6}$/i.test(color) && contrast(color, SCHEMATIC_INK[scheme].canvas) >= 3
+}
+
 /** How a line is drawn, beyond its color. A causal SIGNAL is not a physical
  *  flow — block-diagram convention draws it thin and dashed, which also keeps
  *  it from competing with the pipework it supervises. */
@@ -182,8 +197,11 @@ export function lineId(key: LineKey): string {
  * stays stable for a given document: assignment walks the fluids of each
  * connector in sorted order, never in discovery order.
  */
-export function buildLineStyles(keys: readonly LineKey[], scheme: Scheme = 'dark'): Map<string, LineStyle> {
+export function buildLineStyles(keys: readonly LineKey[], scheme: Scheme = 'dark', custom: LineCustom = NO_CUSTOM): Map<string, LineStyle> {
   const out = new Map<string, LineStyle>()
+  const k = LINE_WIDTHS[custom.width]
+  // A chosen colour replaces the default only where it still reads on this canvas.
+  const chosen = (kind: string, fallback: string) => (fits(custom.colors[kind], scheme) ? custom.colors[kind] : fallback)
   const fluidsByConnector = new Map<string, Set<string>>()
 
   for (const key of keys) {
@@ -191,8 +209,8 @@ export function buildLineStyles(keys: readonly LineKey[], scheme: Scheme = 'dark
     if ((key.domain?.toLowerCase() ?? '') !== 'fluid') {
       const domain = key.domain?.toLowerCase() ?? ''
       out.set(id, {
-        color: DOMAIN_COLORS[scheme][domain] ?? UNKNOWN[scheme],
-        width: domain === 'signal' ? 1.4 : 2,
+        color: chosen(domain, DOMAIN_COLORS[scheme][domain] ?? UNKNOWN[scheme]),
+        width: (domain === 'signal' ? 1.4 : 2) * k,
         dash: DASHES[domain],
         cap: domain === 'heat' ? 'round' : undefined,
       })
@@ -209,9 +227,11 @@ export function buildLineStyles(keys: readonly LineKey[], scheme: Scheme = 'dark
   }
 
   for (const [connector, fluids] of fluidsByConnector) {
-    const ramp = CONNECTOR_RAMPS[scheme][connector] ?? [UNKNOWN[scheme]]
+    const [first, ...rest] = CONNECTOR_RAMPS[scheme][connector] ?? [UNKNOWN[scheme]]
+    // The chosen colour leads the connector's ramp; a second fluid keeps its own shade.
+    const ramp = [chosen(connector, first), ...rest]
     ;[...fluids].sort((a, b) => a.localeCompare(b)).forEach((fluid, i) => {
-      out.set(`fluid:${connector}:${fluid}`, { color: ramp[i % ramp.length], width: 2.4, dash: DASHES[connector] })
+      out.set(`fluid:${connector}:${fluid}`, { color: ramp[i % ramp.length], width: 2.4 * k, dash: DASHES[connector] })
     })
   }
   return out

@@ -7,6 +7,7 @@ import {
   type SchematicOffsets,
 } from './layout'
 import { renameId } from './sourceEdit'
+import { LINE_KINDS } from './palette'
 
 /**
  * How the canvas is presented (VIEW-03, VIEW-05). None of this changes the
@@ -25,6 +26,8 @@ export interface ViewSettings {
   /** Block detail: the full card, or the name only. */
   detail: 'full' | 'names'
   portLabels: boolean
+  /** CFG-02: every line drawn thinner or bolder than the default. */
+  lineWidth: 'thin' | 'normal' | 'bold'
 }
 
 /** Readable on a small model without touching a setting. */
@@ -38,6 +41,7 @@ export const DEFAULT_VIEW: ViewSettings = {
   grouping: 'circuit',
   detail: 'full',
   portLabels: false,
+  lineWidth: 'normal',
 }
 
 const SPACING = { compact: 0.85, normal: 1, roomy: 1.25 } as const
@@ -211,6 +215,8 @@ export interface SchematicPresentation {
   views: SavedView[]
   /** VIEW-09: notes, callouts, variable cards and legends, each drawn in one scope. */
   annotations: Annotation[]
+  /** CFG-02: the project's colour per line kind (`LINE_KINDS`), `#rrggbb`; used where it holds contrast. */
+  lineColors: Record<string, string>
 }
 
 /** VIEW-09: an annotation; callouts and cards link to a block or variable by its id, so a rename moves the link. */
@@ -351,6 +357,7 @@ export const EMPTY_PRESENTATION: SchematicPresentation = {
   overlay: { metric: '', arrows: false },
   views: [],
   annotations: [],
+  lineColors: {},
 }
 
 /** Coordinates past this, or more entries than this, are a malformed or
@@ -370,6 +377,7 @@ const VIEW_CHOICES: { [K in keyof ViewSettings]: readonly ViewSettings[K][] } = 
   grouping: ['circuit', 'domain', 'none'],
   detail: ['full', 'names'],
   portLabels: [false, true],
+  lineWidth: ['thin', 'normal', 'bold'],
 }
 
 const record = (v: unknown): Record<string, unknown> | null =>
@@ -606,7 +614,12 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
     if (note && annotations.length < MAX_ENTRIES && !annotations.some((x) => x.id === note.id)) annotations.push(note)
     else repaired++
   }
-  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes, badges, watch, formats, overlay: parsedOverlay.overlay, views, annotations }, repaired }
+  const lineColors: Record<string, string> = {}
+  for (const [kind, color] of Object.entries(record(raw.lineColors) ?? {})) {
+    if (LINE_KINDS.includes(kind) && typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color)) lineColors[kind] = color.toLowerCase()
+    else repaired++
+  }
+  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes, badges, watch, formats, overlay: parsedOverlay.overlay, views, annotations, lineColors }, repaired }
 }
 
 /**

@@ -1093,6 +1093,7 @@ fn strip_constraint_variables(solution: &mut Solution, prefix: &str) {
         .retain(|r| !r.equation.trim_start().starts_with(prefix));
     solution.blocks.retain_mut(|b| {
         b.variables.retain(|v| !v.starts_with(prefix));
+        b.reads.retain(|v| !v.starts_with(prefix));
         !b.variables.is_empty()
     });
     solution.block_equations.retain_mut(|eqs| {

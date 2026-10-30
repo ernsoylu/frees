@@ -309,6 +309,70 @@ Carried forward:
 - sheets (VIEW-10), custom symbols (COMP-08) and visual-occurrence delete, all in the backlog;
 - from 01c: structured diagnostic codes and per-instance attribution, the remaining CFG-02 styling, remappable shortcuts, and theme-independent export colours.
 
+**Carry-forwards** started 2026-10-29 on `schematic-carry`, chosen by the owner after 01d merged (`bc88315`). Work order:
+
+1. **Done 2026-10-29.** Per-block incidence from the engine.
+   - Each solve block carries `reads`: the other blocks' unknowns that its equations read, sorted. `tarjan_blocks` takes them from the same matching that orders the blocks. A merged block (rank-deficient recovery) takes the union of its parts, less its own unknowns. The bridge emits them in display spelling, on success and on a partial failure.
+   - SYNC-10's `blockDependencies` now uses `reads` instead of scanning equation text, so its `ponytail:` ceiling is gone. A name in a comment or a string can no longer make a false link.
+   - **Evidence:**
+     - the mixed-system blocker test asserts `[[], [a], [x, y]]`;
+     - `dto_parity` requires `reads` on every block;
+     - `dependencies.test.ts` passes on the real solve, where block 4's link from block 1 is now spelled `x`, as first written;
+     - `AC-16` passes unchanged.
+   - WASM 4,444.7 KiB raw / 1,992.9 KiB gzipped.
+2. **Done 2026-10-29.** Structured diagnoses and attributed free quantities.
+   - **Engine:** a parse or solver refusal can carry a `Diagnosis {code, subjects}`. Check reports it as `diagnosis`.
+     - The expander tags `duplicate-instance` [instance], `unknown-type` [instance, type] and `unknown-port` [instance, port].
+     - The blocker tags `underspecified`, `overspecified` and `singular`. Under- and singular systems carry the free quantities from the maximum matching, spelled as in the message (`src.p.i`).
+     - Message texts are unchanged.
+   - **App:**
+     - RUN-09's `suggestFix` switches on the code, so the three message regexes are gone. Only the written port is still located in the source.
+     - `diagnosisOwners` gives each free quantity to the deepest declared instance its name starts with.
+     - The issue list adds one item per owner ("No defining relation for c1.vc"), which selects that block. The whole-system message still points nowhere.
+     - The canvas marks the owners and their enclosing subsystems. Before, a regex took the first dotted word of the message.
+     - The dead `parseFreeQuantities` and `groupByInstance` are deleted.
+   - **Evidence:**
+     - `check_names_what_a_refusal_is_about` asserts all four codes, and no diagnosis on success;
+     - `wiring.test.ts` checks deepest-owner attribution, with a top-level free quantity left unowned;
+     - `sourceEdit.test.ts` checks the three fixes by code;
+     - `AC-05`: c1.vc and src.p.i each point at their block, both blocks are marked, and the ground is not;
+     - `AC-13` passes unchanged.
+   - **Found on the way:** `api.ts` copied the check fields one by one and would have dropped `diagnosis`. AC-05 now waits for the taller issue menu to close before its drag.
+   - **Cost:** WASM 4,474.2 KiB raw / 1,998.0 KiB gzipped, +29.5 KiB. The likely cause, not measured, is that the boxed diagnosis makes the error enum one word larger, and every `Result` in the engine carries it. Within budget; worth a size profile if headroom tightens.
+3. **Done 2026-10-29.** Export colours follow the page, not the screen.
+   - A capture repaints the canvas once, synchronously, in the export's scheme, as print already did for full blocks.
+   - On a White or transparent background that is the light palette. A Theme background keeps the screen's.
+   - Block fills, text, ports, domain lines, annotations and the footer legend all come from the same palette, so no colour is translated after the fact.
+   - This closes the 01c ceiling, under which a dark-theme export kept dark blocks on white.
+   - **Evidence:** `CFG-05` in the default dark app: the White export carries the light block fill `#f8f9fa` and not the dark `#25292e`, and a Theme export the reverse. `AC-07`, `AC-14` and `AC-15` pass unchanged.
+4. **Done 2026-10-29.** The rest of CFG-02: line width and a project colour per line kind.
+   - Label precision (the readout digits of CFG-01) and density (COMP-07) were already in place.
+   - **Line width:** a view setting (Thin 0.7×, Regular, Bold 1.5×). Presets and saved views carry it.
+   - **Line colours:** `lineColors` holds a project colour per line kind, meaning a domain or a fluid connector.
+     - A colour is drawn only where it holds 3:1 against that theme's canvas, the rule the defaults are built to. Otherwise the panel says "Too faint on this theme" and that theme keeps its default.
+     - On a fluid connector, the colour leads the ramp, so a second fluid keeps its own shade.
+     - Dash patterns never change, so grayscale still reads.
+     - The sanitizer keeps only known kinds and `#rrggbb`.
+   - Exports use the same choices, in the export's palette.
+   - **Evidence:**
+     - `palette.test.ts`: contrast gating per theme, ramp lead, width scale;
+     - `presentation.test.ts`: three malformed entries dropped and counted;
+     - the `CFG-02: line width…` journey on the two-resistor model: bold makes the wire 3 px; `#5c5f66` on the dark canvas is refused with the note while the wire stays `#ffd43b`; `#ff00ff` is drawn with the dash unchanged; the project stores `{electrical: '#ff00ff'}`; the document is byte-identical.
+   - **Ceiling:** a colour cannot be chosen per working fluid, only per connector kind, and the canvas, block and text colours stay the theme's. Whole custom themes beyond line colours are not offered.
+5. **Done 2026-10-29.** Remappable canvas keys (CFG-08).
+   - **Scope:** the three single, unmodified keys can be rebound: Add (`A`), List (`L`) and Search (`/`). The chords (Ctrl+…, Shift+digit), Delete and the arrows are platform conventions and stay fixed.
+   - **Rules** (`commands.ts`): a binding is one character, is not `?`, and is not another command's key. Bindings are the user's, not the project's, so they live in this browser's storage. A damaged or clashing entry falls back to the default.
+   - The canvas handler, the shortcuts sheet and the palette's descriptions all read the effective keys.
+   - The View settings panel takes the new key as a key press in its field and names any clash.
+   - **Evidence:**
+     - `commands.test.ts`;
+     - the `CFG-08` journey: `L` is refused as Add's key ("Already Component and connection list"); after `N`, `A` no longer opens quick-add and `N` does; storage holds `{add: 'n', …}`; the shortcuts sheet's Add row reads `N`;
+     - `AC-14`, which presses the default keys, passes unchanged.
+6. **Re-scoped 2026-10-29, not started.** Layout off the UI thread, measured against the 500-component budget.
+   - Timed in the page on the 500-component floor (502 blocks, 750 wires), with temporary probes since removed: `layoutSchematic` takes 16 ms, while `routeAll` takes 808 ms. Routing, not layout, is most of the 2.0–2.2 s Check-to-drawn.
+   - So the next step is a profile of `routeAll`, to make routing cheaper with identical routes, before any worker. Each wire already prunes boxes to its candidates' extent, so the cost is likely in the candidate count or in `sharedLength`. That is unmeasured.
+   - A worker would also make every canvas reader asynchronous, so it stays the fallback.
+
 Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` against `51a2ea2` (the spec asserts each fix): Fit no longer applies the manual zoom-out floor, so auto-fit frames all 100 dense-floor instances; manual zoom-out can reach the fitted view. Fit and the zoom-out floor also frame dragged nodes, using the same drawing bounds as SVG export, and a drag or pan now stops auto-fit as the code comment intended. Circuit frames grow to enclose members dragged past them (`framedGroups` in `layout.ts`), and never shrink. `routeEdge` now keeps every segment past the port stubs clear of every component box, the endpoints' own included, against live (dragged) positions; the baseline measured 0 wire samples under components on all three models, down from 63, 110 and 1,898. Hover and selection no longer dim the rest of the model (the hovered node and its wires are emphasised instead). Clicking a node selects its declaration in the editor without bringing the Editor tab forward or taking focus (`goToLine(line, { focus: false })`); the readout card's reveal action is the explicit navigation. Before the first Check the canvas says "connections appear after Check" instead of reporting document errors; the orange error notice remains for a check that ran without producing topology. Below the zoom at which a 12.5 px label would draw under 12 px, nodes collapse to a name chip held at 12 px on screen (glyph, type and value badge hidden; full name in the tooltip and inspector). The chip may overhang its box into the free gap beside it, and a name that still does not fit is shortened with "…". Auto-fit labels went from 5 px (EV) and 3 px (dense floor) to at least 12 px on all three models; on the dense floor only the two crowded mid-row names (pump, riser) are shortened.
 
 ---
