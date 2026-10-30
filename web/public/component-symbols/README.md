@@ -6,12 +6,12 @@
 [FREES dark set](https://www.figma.com/design/SHIyfVVicYxMCbXqzedk8Z?node-id=61-212) ·
 [Dark examples](https://www.figma.com/design/SHIyfVVicYxMCbXqzedk8Z?node-id=61-440)
 
-The 36 standalone SVGs are exported from Figma masters at 96 × 96. They use
+The 38 standalone SVGs are exported from Figma masters at 96 × 96. They use
 monochrome strokes on a white tile; color is not required to interpret a symbol.
 Original master IDs are preserved in set `29:22`; additional masters are in
 frame `35:42`. All exports work offline without fonts or remote resources.
 
-The matching 36 SVGs in `dark/` use the original FREES palette: teal
+The matching 38 SVGs in `dark/` use the original FREES palette: teal
 `#12B886` on dark surface `#2E2E2E`. Their geometry is identical to the
 monochrome set. Figma dark masters live in frame `61:100` and bind to aliases
 of the existing FREES teal and surface tokens. The editor follows Mantine's
@@ -32,6 +32,7 @@ networks are not encoded.
 | Spring, gear pair, mass | ISO 14617 reference forms 2002, 2008 and 2001, visually checked in the [Part 7 preview](https://cdn.standards.iteh.ai/samples/33385/21ba8e50efe5470697990ef3e7d71b42/ISO-14617-7-2002.pdf). The old parts are superseded by [ISO 14617-2:2025](https://www.iso.org/standard/83364.html); the complete new edition has not been audited. |
 | Hydraulic pump/motor, cylinders, vented reservoir, restriction, check valve | [ISO 1219-1](https://www.iso.org/standard/60184.html) fluid-power conventions. Pump triangles point outward; motor triangles point inward. Hydraulic triangles are filled, while the circle remains open. |
 | Resistor, capacitor, inductor, battery, diode, fuse, motor, electrical reference | [IEC 60617](https://webstore.iec.ch/en/publication/2723), the electrical diagram standard. Public visual references: Autodesk's [resistors](https://help.autodesk.com/cloudhelp/2026/ENU/AutoCAD-Electrical/files/GUID-1D071951-D38E-4B15-8B9E-C30ECBD55C19.htm), [capacitors](https://help.autodesk.com/cloudhelp/2026/ENU/AutoCAD-Electrical/files/GUID-74580D46-0731-41A6-918D-2DB419114207.htm), [inductors](https://help.autodesk.com/cloudhelp/2016/ENU/AutoCAD-Electrical/files/GUID-BAD50DBF-0951-44A0-BB4C-A57B4A4ED895.htm) and [battery/ground](https://help.autodesk.com/cloudhelp/2016/ENU/AutoCAD-Electrical/files/GUID-1E3FDEAE-B4B2-417C-8075-108AA2C6E509.htm). |
+| Thermal resistance (conduction, convection, radiation, contact), thermal capacitance (thermal and PCM masses) | The thermal–electrical analogy of heat-transfer texts' thermal circuits: the resistor form for a resistance, and a capacitance drawn to the reference temperature for a lumped mass. Not an IEC 60617 claim. |
 | Turbine, ideal voltage/current source, damper, fixed mechanical support | Conventional process/circuit/mechanical sketches; no ISO/IEC conformance claim for these forms. |
 | Source/sink boundaries, controls, measurements, complex or unclassified models | Explicit functional/model blocks. No invented standard symbol. |
 | Pipe and junction | Plain connection line and joined branch with a filled junction dot. |

@@ -15,6 +15,7 @@ export const SHAPE_LABELS = {
   reservoir: 'vented reservoir', restrictor: 'flow restriction', 'check-valve': 'check valve',
   spring: 'spring', damper: 'mechanical damper', 'mechanical-ground': 'fixed support',
   gear: 'gear pair', mass: 'mass', pipe: 'pipe / duct',
+  'thermal-resistance': 'thermal resistance', 'thermal-capacitance': 'thermal capacitance',
 } as const
 
 export type Shape = keyof typeof SHAPE_LABELS
@@ -22,6 +23,8 @@ export interface Symbolism { shape: Shape; terminal: boolean }
 
 // Specific devices precede family rules: a hydraulic motor is not an electric motor.
 const RULES: { re: RegExp; shape: Shape }[] = [
+  { re: /^(conduction|convection|radiation|radiationtwosurface|contactresistance)$/i, shape: 'thermal-resistance' },
+  { re: /^(thermalmass|pcmmass)$/i, shape: 'thermal-capacitance' },
   { re: /^(resistor|heatingresistor|harnessresistance)$/i, shape: 'resistor' },
   { re: /^(supercapacitor|capacitor)$/i, shape: 'capacitor' },
   { re: /^inductor$/i, shape: 'inductor' },
@@ -102,6 +105,9 @@ const PATHS: Record<Shape, string> = {
   gear: CIRCLE + ' ' + LEADS + ' M.22 .78 L.78 .22',
   mass: 'M0 .5 H.25 M.25 .25 H.75 V.75 H.25 Z M.75 .5 H1',
   pipe: 'M0 .5 H1',
+  'thermal-resistance': 'M0 .5 H.2 M.2 .35 H.8 V.65 H.2 Z M.8 .5 H1',
+  // A lumped capacitance drawn to the reference temperature, as a thermal circuit draws it.
+  'thermal-capacitance': 'M.5 .05 V.36 M.22 .36 H.78 M.22 .5 H.78 M.5 .5 V.66 M.3 .66 H.7 M.38 .76 H.62 M.45 .86 H.55',
 }
 
 export function glyphPath(shape: Shape): string { return PATHS[shape] }
@@ -130,4 +136,5 @@ export const SYMBOL_CONVENTIONS: Record<Shape, string> = {
   reservoir: 'ISO 1219-1', restrictor: 'ISO 1219-1', 'check-valve': 'ISO 1219-1',
   spring: 'ISO 14617', gear: 'ISO 14617', mass: 'ISO 14617',
   damper: 'Mechanical convention', 'mechanical-ground': 'Mechanical convention', pipe: 'Connection',
+  'thermal-resistance': 'Thermal-electrical analogy', 'thermal-capacitance': 'Thermal-electrical analogy',
 }
