@@ -554,7 +554,7 @@ describe('manual routes (WIRE-07)', () => {
 
   it('keys a wire by its ports, independent of connection numbering', () => {
     expect(routeKey(e)).toBe('b.p|l.a')
-    expect(routeKey({ from: '$node7', to: 'l', toPort: 'a' })).toBe('*|l.a')
+    expect(routeKey({ from: '$node$b.p', to: 'l', toPort: 'a' })).toBe('*|l.a')
   })
 
   it('runs orthogonally through every bend and keeps them when an end moves', () => {
@@ -574,9 +574,17 @@ describe('manual routes (WIRE-07)', () => {
 })
 
 describe('scopes (HIER-01)', () => {
+  it('names a junction by its scope and first endpoint, not by statement order', () => {
+    const junctions = (cs: Connection[]) => layoutSchematic(cs).nodes.filter((n) => n.kind === 'junction').map((n) => n.id)
+    const root = conn('electrical', 'VS.n', 'R1.b', 'G.port')
+    const inner = conn('electrical', 'sub1.r2.b', 'sub1.r1.b', 'sub1$a')
+    expect(junctions([root])).toEqual(['$node$g.port'])
+    expect(junctions([inner])).toEqual(['sub1$node$sub1$a'])
+    expect(junctions([conn('electrical', 'x.a', 'y.a'), root])).toEqual(['$node$g.port'])
+  })
   it('places nested blocks and boundary nodes in their subsystem', () => {
     expect(['vs.p', 'sub1.r1_a', 'sub1.r1.b', 'sub1$r1_a', 'sub1.box.inner.in', 'sub1.box$a'].map(endpointScope)).toEqual(['', '', 'sub1', 'sub1', 'sub1.box', 'sub1.box'])
-    expect(['vs', 'sub1.r1', '$node3', 'sub1$a'].map(scopeOf)).toEqual(['', 'sub1', '', 'sub1'])
+    expect(['vs', 'sub1.r1', '$node$vs.n', 'sub1$a', 'sub1$node$sub1.r1.b'].map(scopeOf)).toEqual(['', 'sub1', '', 'sub1', 'sub1'])
     const l = layoutSchematic([{ domain: 'electrical', endpoints: ['sub1$a', 'sub1.r1.a'] }, { domain: 'electrical', endpoints: ['sub1.r1.b', 'sub1.r2.b'] }])
     expect(l.nodes.map((n) => n.id).sort()).toEqual(['sub1$a', 'sub1.r1', 'sub1.r2'])
   })

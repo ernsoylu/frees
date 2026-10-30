@@ -136,6 +136,11 @@ export function renamedIds(inst: InstanceIdentityDto, next: string, all: readonl
 
 /** `id` under the renames, matching whole dotted segments. */
 export function renameId(id: string, renames: ReadonlyMap<string, string>): string {
+  // A junction is named by its scope and one of its endpoints; rename both.
+  const junction = id.indexOf('$node$')
+  if (junction >= 0) {
+    return `${renameId(id.slice(0, junction), renames)}$node$${renameId(id.slice(junction + 6), renames)}`
+  }
   for (const [from, to] of renames) {
     if (id === from) return to
     if (id.startsWith(`${from}.`)) return to + id.slice(from.length)

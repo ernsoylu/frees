@@ -467,8 +467,11 @@ function buildGraph(
     }
     // A junction (3+ endpoints, or a degenerate 1-endpoint node) becomes its
     // own small node so the star reads as one shared node rather than a clique
-    // of edges that would imply pairwise connections.
-    const junctionId = `$node${index}`
+    // of edges that would imply pairwise connections. A port joins one set, so
+    // the set's first endpoint in sorted order names the junction, within its
+    // scope (`sub1$node$sub1.r1.b`), whatever the statements' order.
+    const first = conn.endpoints.map((raw) => raw.toLowerCase()).reduce<string | undefined>((a, b) => (a === undefined || b < a ? b : a), undefined) ?? ''
+    const junctionId = `${endpointScope(first)}$node$${first}`
     touch(junctionId, 'junction')
     ends.forEach((e, k) => {
       // Direction still comes from the port: feeders point into the junction.
@@ -1262,7 +1265,7 @@ export function routeAll(
  * joins at most one junction.
  */
 export function routeKey(e: Pick<SchematicEdge, 'from' | 'to' | 'fromPort' | 'toPort'>): string {
-  const end = (id: string, port?: string) => (id.startsWith('$node') ? '*' : `${id}.${port ?? ''}`)
+  const end = (id: string, port?: string) => (id.includes('$node$') ? '*' : `${id}.${port ?? ''}`)
   return [end(e.from, e.fromPort), end(e.to, e.toPort)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).join('|')
 }
 

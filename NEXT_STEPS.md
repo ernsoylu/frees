@@ -133,7 +133,7 @@ Design proposal and phased scope in [`docs/schematic-workspace-change-request.md
      - `AC-08` extracts R1 and R2, whose outer ends are both `a`. The preview lists the ports, the passed-in `R_load` and the re-pointed `I_load`; a clashing name is refused; the result checks at 20 equations and 20 variables; the text is unchanged until Extract. After Extract, the model solves, and `I_load` equals the original's to 12 digits (engine run on both texts). The tree opens SUB1 with R1 at its dragged position; Back and Forward work; one Undo restores the source and R1's place.
      - `HIER-04/05` inspects SUB1's `R_load` binding and renames `R1_a` to `hot` from inside the subsystem, with the 4-line plan asserted, then solves. It exports `Pair.frees` with its header and imports a differing copy: not imported until replace is ticked, then replaced as one undoable step.
    - **Ceilings.**
-     - Junction positions are keyed by connection index per scope, so a junction can take another scope's saved place.
+     - Junction positions were keyed by connection index per scope, so a junction could take another scope's saved place. Fixed 2026-10-30 (carry-forward 7).
      - Built-in types cannot be copied locally to customize: the library source is not exposed to the canvas.
      - The component file carries no parameter defaults or icon, because the language has neither for a function component.
      - A shared stream must be rewritten as `connect` before extraction.
@@ -383,6 +383,22 @@ Carried forward:
    - Earlier Check-to-drawn figures were taken with harness polling and are not comparable with the in-page ones.
    - A worker would also make every canvas reader asynchronous. It is not needed for this budget and remains the fallback.
    - **Ceiling** (`ponytail:` in `layout.ts`): every wire is still rerouted on each drag frame; the next step is rerouting only the wires near the moved blocks.
+7. **Done 2026-10-30.** Junction identity, closing the 01c ceiling "junction positions are keyed by connection index per scope". Owner-chosen after slice 6.
+   - **Defect:** a junction's id was `$node<index>`, the index of its connection within the scope drawn. Two defects followed:
+     - a junction in SUB1 and one at the root with the same index shared a saved position;
+     - an edit that added or removed an earlier connection renumbered the junctions, so a saved place moved to another junction.
+   - **Fix** (`buildGraph` in `layout.ts`): a port joins one connection set, so the set's first endpoint in sorted order names its junction, within its scope: `$node$g.port` at the root, `sub1$node$sub1$a` inside SUB1.
+     - `scopeOf` and the presentation's id check accept the new ids unchanged.
+     - `routeKey` recognises them.
+     - `renameId` renames the endpoint inside the id.
+     - A wire's accessible name and title read "junction" for that end instead of the internal id.
+   - **Migration:** a position saved under an old `$node<n>` key no longer matches. The junction is laid out afresh once, and the stale key is pruned at the next root-scope edit.
+   - **Evidence:**
+     - `layout.test.ts`: the same junction is named `$node$g.port` whether its statement comes first or second, and SUB1's is scoped;
+     - `sourceEdit.test.ts`: a rename reaches a junction key;
+     - the full vitest suite (805 tests);
+     - the schematic e2e (WIRE-09 now opens the junction branch by its port).
+   - **Ceiling:** a rename can still drop a junction's saved place, when the renamed endpoint stops being the set's first in sorted order.
 
 Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` against `51a2ea2` (the spec asserts each fix): Fit no longer applies the manual zoom-out floor, so auto-fit frames all 100 dense-floor instances; manual zoom-out can reach the fitted view. Fit and the zoom-out floor also frame dragged nodes, using the same drawing bounds as SVG export, and a drag or pan now stops auto-fit as the code comment intended. Circuit frames grow to enclose members dragged past them (`framedGroups` in `layout.ts`), and never shrink. `routeEdge` now keeps every segment past the port stubs clear of every component box, the endpoints' own included, against live (dragged) positions; the baseline measured 0 wire samples under components on all three models, down from 63, 110 and 1,898. Hover and selection no longer dim the rest of the model (the hovered node and its wires are emphasised instead). Clicking a node selects its declaration in the editor without bringing the Editor tab forward or taking focus (`goToLine(line, { focus: false })`); the readout card's reveal action is the explicit navigation. Before the first Check the canvas says "connections appear after Check" instead of reporting document errors; the orange error notice remains for a check that ran without producing topology. Below the zoom at which a 12.5 px label would draw under 12 px, nodes collapse to a name chip held at 12 px on screen (glyph, type and value badge hidden; full name in the tooltip and inspector). The chip may overhang its box into the free gap beside it, and a name that still does not fit is shortened with "…". Auto-fit labels went from 5 px (EV) and 3 px (dense floor) to at least 12 px on all three models; on the dense floor only the two crowded mid-row names (pump, riser) are shortened.
 
