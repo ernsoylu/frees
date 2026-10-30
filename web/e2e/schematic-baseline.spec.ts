@@ -1090,6 +1090,7 @@ Capacitor C1(C = 1, V0 = 0)
 HeatSource Q(Q = 10)
 connect(SRC.n, G.port)
 connect(C1.n, G.port)
+SigConstant K(k = 1)
 `
 async function showView(page: Page, name: string) {
   await page.locator('body').click({ position: { x: 5, y: 5 } })
@@ -1116,13 +1117,15 @@ test('AC-05: legal wires connect, illegal ones are refused, a partial network st
   const svg = await openSolved(page, PARTIAL, 'Check')
   await expect(svg.locator('path[data-net]')).toHaveCount(2)
   // WIRE-03: the engine's unjoined ports are hollow and listed.
-  for (const ref of ['src.p', 'c1.p', 'q.port']) {
+  for (const ref of ['src.p', 'c1.p', 'q.port', 'k.out']) {
     await expect(svg.locator(`[data-port="${ref}"]`)).toHaveAttribute('data-connected', 'false')
   }
   await expect(svg.locator('[data-port="g.port"]')).toHaveAttribute('data-connected', 'true')
   await page.getByTestId('schematic-issues').click()
   const issues = page.getByRole('menuitem')
   await expect(issues.filter({ hasText: /src\.p is not connected/i })).toBeEnabled()
+  // An open signal output is drawn hollow but is no gap: K computes it anyway.
+  await expect(issues.filter({ hasText: /k\.out/i })).toHaveCount(0)
   // The whole-system diagnosis names no single object, so it points nowhere;
   // the engine's free quantities each point at the instance that owns them.
   await expect(issues.filter({ hasText: /underspecified/ })).toBeDisabled()

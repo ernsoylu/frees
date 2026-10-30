@@ -98,6 +98,23 @@ describe('layoutSchematic', () => {
     expect(new Set(out.nodes.map((n) => n.x)).size).toBeGreaterThan(1)
   })
 
+  it('opens a closed loop at its pump, and only at a block on the loop', () => {
+    const x = (out: ReturnType<typeof layoutSchematic>, id: string) => out.nodes.find((n) => n.id === id)!.x
+    const loop = layoutSchematic(
+      [conn('fluid', 'tank.out', 'pmp.in'), conn('fluid', 'pmp.out', 'hx.in'), conn('fluid', 'hx.out', 'tank.in')],
+      new Map([['pmp', { label: 'PMP', type: 'LiquidPump' }]]),
+    )
+    expect(x(loop, 'pmp')).toBeLessThan(x(loop, 'hx'))
+    expect(x(loop, 'hx')).toBeLessThan(x(loop, 'tank'))
+    // hp carries two streams, so hp–coil is a loop; the fan after it is not on it.
+    const twin = layoutSchematic(
+      [conn('fluid', 'src.out', 'hp.in1'), conn('fluid', 'hp.out1', 'coil.in'), conn('fluid', 'coil.out', 'hp.in2'), conn('fluid', 'hp.out2', 'fan.in')],
+      new Map([['fan', { label: 'FAN', type: 'MoistAirFan' }]]),
+    )
+    expect(x(twin, 'src')).toBeLessThan(x(twin, 'hp'))
+    expect(x(twin, 'hp')).toBeLessThan(x(twin, 'fan'))
+  })
+
   it('takes display labels and types from the solve when available', () => {
     const out = layoutSchematic(
       [conn('fluid', 'pmp.out', 'tnk.in')],

@@ -422,11 +422,25 @@ Carried forward:
      - `evTopology.test.ts`: the chiller bridge's coupled pair faces each other;
      - the COMP-07 journey: a resistor's terminals lie on its left and right faces and turn to top and bottom with a quarter turn;
      - the EV visual baselines pass unchanged in the CI Playwright image: the EV's changed port faces stay within the 1 % pixel tolerance.
-   - **Not fixed** (findings from the same review):
-     - #11's liquid loop still crosses itself;
-     - a parameter binding to another block reads as "not connected";
-     - several components still draw the generic symbol;
-     - opening an example from a URL leaves its loading toast up.
+   - **Not fixed here** (findings from the same review): #11's liquid loop crossing itself, a parameter binding read as "not connected", generic symbols, and the URL-load toast. All four are taken up in item 9.
+9. **Done 2026-10-30.** The rest of the 20-example review.
+   - **Closed loops** (`layerCircuit` in `layout.ts`). A loop with no source used to be layered in one pass in member order, which scrambled its columns: #11's coolant loop drew 9 line hops.
+     - Now the loop is opened at one of its own blocks: its pump or compressor, else the block where the loop is entered, else its first block. The edges into that block from inside the loop are dropped and the layering rerun, so the loop reads as a chain from that block, with its closing edge drawn back.
+     - Only a block on a loop can open it. In #12 the fan sits after a two-stream heat pipe's loop, not on it.
+     - Over the 20 examples: wire length 38,948 → 34,820, line hops 29 → 15. #11 went from 9 hops to 1, #3 from 6 to 1, and #17 from 1 to 0. Overlap is unchanged at 235, and no wire runs through a block.
+     - #1's electrical ring now opens at PACK, which puts GND in the last column (+282 length, 1 hop).
+   - **Signal outputs** (`SchematicTab.tsx`). An open signal output is no longer listed as an issue, because its block computes it either way. This covers #6's `PID.out`, read by `VoltageSource SUPPLY(E = PID.out.sig)`, and #13's `IAE.out`, read as `iae.y`. It is still drawn hollow. An open input, or an open port of any other domain, is still listed.
+   - **Symbols** (`symbols.ts`, two new SVG pairs, and Figma masters `132:194`, `132:197`, `132:200` and `132:203` in frames `35:42` and `61:100`):
+     - `thermal-resistance` for Conduction, Convection, Radiation, RadiationTwoSurface and ContactResistance. It uses the resistor form.
+     - `thermal-capacitance` for ThermalMass and PCMMass: a capacitance drawn to the reference temperature.
+     - Both are labelled as the thermal–electrical analogy, not as IEC 60617.
+     - Signal blocks keep the functional-block box. That box is the control block-diagram convention, and the symbols README records the decision not to invent symbols for controls, measurements or complex models (PeltierTEC, RoadLoad and the like).
+   - **URL-load toast: not a defect.** The "Opened shared document" notice closes by itself 4–6 s after loading (measured with a temporary journey). The review's screenshots were taken inside that window.
+   - **Evidence:**
+     - `layout.test.ts`: a loop opens at its pump, and a twin-stream loop is not opened at the fan after it; the test fails on the previous layering;
+     - `componentPorts.test.tsx`: the new shapes, their SVGs, and the dark palette geometry;
+     - the AC-05 journey: `K.out` is drawn hollow and is not listed;
+     - screenshots of all 20 examples, checked by eye.
 
 Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` against `51a2ea2` (the spec asserts each fix): Fit no longer applies the manual zoom-out floor, so auto-fit frames all 100 dense-floor instances; manual zoom-out can reach the fitted view. Fit and the zoom-out floor also frame dragged nodes, using the same drawing bounds as SVG export, and a drag or pan now stops auto-fit as the code comment intended. Circuit frames grow to enclose members dragged past them (`framedGroups` in `layout.ts`), and never shrink. `routeEdge` now keeps every segment past the port stubs clear of every component box, the endpoints' own included, against live (dragged) positions; the baseline measured 0 wire samples under components on all three models, down from 63, 110 and 1,898. Hover and selection no longer dim the rest of the model (the hovered node and its wires are emphasised instead). Clicking a node selects its declaration in the editor without bringing the Editor tab forward or taking focus (`goToLine(line, { focus: false })`); the readout card's reveal action is the explicit navigation. Before the first Check the canvas says "connections appear after Check" instead of reporting document errors; the orange error notice remains for a check that ran without producing topology. Below the zoom at which a 12.5 px label would draw under 12 px, nodes collapse to a name chip held at 12 px on screen (glyph, type and value badge hidden; full name in the tooltip and inspector). The chip may overhang its box into the free gap beside it, and a name that still does not fit is shortened with "…". Auto-fit labels went from 5 px (EV) and 3 px (dense floor) to at least 12 px on all three models; on the dense floor only the two crowded mid-row names (pump, riser) are shortened.
 

@@ -491,8 +491,10 @@ export default function SchematicTab({
         if (o.members.length) out.push({ severity: 'error', text: `No defining relation for ${o.members.join(', ')}`, instance: o.instance })
       }
     }
+    // A signal output left open is not a gap: its block computes it either
+    // way, and a binding or an equation may read it (`E = PID.out.sig`).
     for (const p of drawnCheck?.ports ?? []) {
-      if (!p.connected) out.push({ severity: 'warning', text: `${p.instance}.${p.port} is not connected`, instance: p.instance })
+      if (!p.connected && !(p.domain === 'signal' && p.port.toLowerCase() === 'out')) out.push({ severity: 'warning', text: `${p.instance}.${p.port} is not connected`, instance: p.instance })
     }
     for (const w of checkResult?.unitWarnings ?? []) out.push({ severity: 'warning', text: w })
     return out

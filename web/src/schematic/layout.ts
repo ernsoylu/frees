@@ -613,20 +613,50 @@ function connectedComponents(adjacency: ReadonlyMap<string, Set<string>>): strin
  * Longest-path layering over the inferred flow direction, restricted to the
  * nodes of one circuit. Sources land in layer 0 and each node sits one layer
  * past its furthest upstream neighbour, which is what makes a circuit read left
- * to right. A cycle (a genuinely closed loop) cannot be layered by depth alone,
- * so the walk stops at nodes it has already placed — the loop then reads as a
- * chain with its closing edge drawn back, exactly as it is drawn by hand.
+ * to right. A closed loop has no source, so it is opened at one of its blocks:
+ * its pump or compressor, else where the loop is entered, else its first. The
+ * edges into that block from inside the loop are dropped and the layering
+ * rerun, so the loop reads as a chain from that block with its closing edge
+ * drawn back, as it is drawn by hand.
  */
-function layerCircuit(members: readonly string[], flow: ReadonlyMap<string, Set<string>>): string[][] {
+function layerCircuit(
+  members: readonly string[],
+  flow: ReadonlyMap<string, Set<string>>,
+  drives: (id: string) => boolean = () => false,
+): string[][] {
   const inSet = new Set(members)
-  const depth = longestPathDepths(members, inSet, flow)
-  placeCycleRemnants(members, depth, flow)
+  let open = flow
+  let depth = longestPathDepths(members, inSet, open)
+  while (depth.size < members.length) {
+    const left = new Set(members.filter((id) => !depth.has(id)))
+    const onLoop = [...left].filter((id) => reaches(id, id, left, open))
+    const entered = (id: string) => [...open].some(([from, to]) => depth.has(from) && to.has(id))
+    const seed = onLoop.find(drives) ?? onLoop.find(entered) ?? onLoop[0]
+    open = new Map([...open].map(([from, to]) => [from, depth.has(from) ? to : new Set([...to].filter((t) => t !== seed))]))
+    depth = longestPathDepths(members, inSet, open)
+  }
   return bucketByDepth(members, depth)
 }
 
+/** Whether a flow path within `among` leads from `from` back to `to`. */
+function reaches(from: string, to: string, among: ReadonlySet<string>, flow: ReadonlyMap<string, Set<string>>): boolean {
+  const seen = new Set<string>()
+  const stack = [from]
+  for (let id = stack.pop(); id !== undefined; id = stack.pop()) {
+    for (const next of flow.get(id) ?? []) {
+      if (next === to) return true
+      if (among.has(next) && !seen.has(next)) {
+        seen.add(next)
+        stack.push(next)
+      }
+    }
+  }
+  return false
+}
+
 /** Kahn's algorithm over the flow edges inside one circuit, recording each
- *  node's longest distance from a source. Nodes left in a cycle get no depth
- *  and are handled separately. */
+ *  node's longest distance from a source. Nodes in or after a cycle get no
+ *  depth. */
 function longestPathDepths(
   members: readonly string[],
   inSet: ReadonlySet<string>,
@@ -656,30 +686,11 @@ function longestPathDepths(
       }
     }
   }
-  return depth
-}
-
-/** A genuinely closed loop has no source to start from, so the topological
- *  walk never reaches it. Each remaining node is placed one layer past its
- *  deepest feeder that WAS placed — the loop then reads as a chain with its
- *  closing edge drawn back, exactly as it is drawn by hand. */
-function placeCycleRemnants(
-  members: readonly string[],
-  depth: Map<string, number>,
-  flow: ReadonlyMap<string, Set<string>>,
-): void {
+  // A node fed from a cycle got a provisional depth above; drop it with the cycle.
   for (const id of members) {
-    if (depth.has(id)) {
-      continue
-    }
-    let d = 0
-    for (const [from, tos] of flow) {
-      if (tos.has(id) && depth.has(from)) {
-        d = Math.max(d, (depth.get(from) ?? 0) + 1)
-      }
-    }
-    depth.set(id, d)
+    if (indegree.get(id)! > 0) depth.delete(id)
   }
+  return depth
 }
 
 /** Depth map → dense layer lists, one column per depth. */
@@ -1121,7 +1132,8 @@ function placeBandsHorizontally(
       const fed = new Set([...flow.values()].flatMap((to) => [...to]))
       const fluid = g.lines.get(line)?.domain === 'fluid'
       const junctions = ids.filter((id) => g.nodes.get(id)?.kind === 'junction')
-      const layers = layerCircuit(ids.filter((id) => fed.has(id) || !junctions.includes(id)), flow)
+      const drives = (id: string) => ['pump', 'compressor', 'hydraulic-pump'].includes(g.nodes.get(id)?.shape ?? '')
+      const layers = layerCircuit(ids.filter((id) => fed.has(id) || !junctions.includes(id)), flow, drives)
       orderLayers(layers, g.byLine.get(line) ?? new Map(), order)
       size = placeCircuit(layers, g.nodes, originX, 0)
       for (const id of junctions) if (!fluid || !fed.has(id)) placeJunction(id, ids, line, g)

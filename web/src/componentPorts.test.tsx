@@ -56,7 +56,8 @@ it('keeps electrical, fluid and mechanical devices distinct', () => {
     HydraulicDoubleActingCylinder: 'cylinder-double', PneumaticActuator: 'cylinder',
     HydraulicCheckValve: 'check-valve', HydraulicValve: 'restrictor', HydraulicTank: 'reservoir',
     LiquidTank: 'store', HeatExchanger: 'exchanger', HeaterCore: 'exchanger',
-    ThermalMass: 'block', MassGen: 'block', Conduction: 'block', DCDCConverter: 'block',
+    ThermalMass: 'thermal-capacitance', PCMMass: 'thermal-capacitance', Conduction: 'thermal-resistance',
+    Convection: 'thermal-resistance', ContactResistance: 'thermal-resistance', MassGen: 'block', WallRC: 'block', DCDCConverter: 'block',
     PneumaticValve52: 'block', CounterbalanceValve: 'block', Engine: 'block',
   }
   for (const [type, shape] of Object.entries(cases)) expect(symbolOf(type).shape, type).toBe(shape)
