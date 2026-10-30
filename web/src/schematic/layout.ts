@@ -1510,10 +1510,9 @@ export type Pt = { x: number; y: number }
  *  stub end is always outside its own block's clearance. */
 const CLEAR = 6
 
-// ponytail: every edge re-searches its lanes against every block whenever a
-// block moves (routeAll is memoised on positions, so once per drag frame). If
-// layouts grow to several hundred blocks, add a spatial index or reroute only
-// edges near the moved blocks.
+// ponytail: every edge is rerouted whenever a block moves (routeAll is
+// memoised on positions, so once per drag frame). If that frame grows too
+// slow, reroute only the edges near the moved blocks.
 function bestRoute(
   p1: Pt,
   q1: Pt,
@@ -1593,6 +1592,7 @@ function pickRoute(
     }
   }
   const boxes = allBoxes.filter((n) => n.x - CLEAR < x1 && n.x + n.w + CLEAR > x0 && n.y - CLEAR < y1 && n.y + n.h + CLEAR > y0)
+  const crossing = boxesAcross(boxes)
   // Shortest first (a stable sort keeps the preferred family ahead on ties).
   // The answer is the cheapest clear route counting `extra` (never negative),
   // so once a clear one is found, any candidate whose length alone costs as
@@ -1611,7 +1611,7 @@ function pickRoute(
       if (u.x === v.x && u.y === v.y) {
         continue
       }
-      for (const n of boxes) {
+      for (const n of crossing(u.x === v.x, u.x === v.x ? u.x : u.y)) {
         if (segmentHits(u, v, n) && ++hits >= limit) {
           break
         }
@@ -1635,6 +1635,35 @@ function routeCost(pts: Pt[]): number {
     cost += step > 0 ? step + 20 : 0
   }
   return cost
+}
+
+/**
+ * The boxes whose clearance a vertical (or horizontal) line at `at` crosses,
+ * found from the boxes sorted along the other axis: none starting more than
+ * the widest box before the line can reach it.
+ */
+function boxesAcross(boxes: readonly SchematicNode[]): (vertical: boolean, at: number) => SchematicNode[] {
+  const axis = (vertical: boolean) => {
+    const order = [...boxes].sort((a, b) => (vertical ? a.x - b.x : a.y - b.y))
+    const lo = order.map((n) => (vertical ? n.x : n.y) - CLEAR)
+    const hi = order.map((n) => (vertical ? n.x + n.w : n.y + n.h) + CLEAR)
+    return { order, lo, hi, widest: Math.max(0, ...order.map((_, i) => hi[i] - lo[i])) }
+  }
+  const index = [axis(false), axis(true)]
+  return (vertical, at) => {
+    const { order, lo, hi, widest } = index[vertical ? 1 : 0]
+    let [l, r] = [0, order.length]
+    while (l < r) {
+      const m = (l + r) >> 1
+      if (lo[m] <= at - widest) l = m + 1
+      else r = m
+    }
+    const out: SchematicNode[] = []
+    for (let i = l; i < order.length && lo[i] < at; i++) {
+      if (hi[i] > at) out.push(order[i])
+    }
+    return out
+  }
 }
 
 /** True when an axis-aligned segment enters a box's clearance. */
