@@ -136,7 +136,8 @@ describe('EV thermal-management example', () => {
   it('keeps the chiller bridge — the link that makes this one system — visible', () => {
     // `connect(CHLR.wall, CHLC.wall)` ties the refrigerant loop to the coolant
     // loop. It must stay a heat coupling between two DIFFERENT circuits, and
-    // attach on the vertical face so it cannot read as more pipework.
+    // attach on the faces that look at each other, top and bottom, so it
+    // cannot read as more pipework.
     const bridge = layout.edges.find(
       (e) => (e.from === 'chlr' && e.to === 'chlc') || (e.from === 'chlc' && e.to === 'chlr'),
     )
@@ -144,8 +145,9 @@ describe('EV thermal-management example', () => {
     expect(groupOf('chlr')).not.toBe(groupOf('chlc'))
 
     const side = (id: string) => node(id).ports.find((p) => p.port === 'wall')?.side
-    expect(side('chlr')).toBe('top')
-    expect(side('chlc')).toBe('top')
+    const [upper, lower] = node('chlr').y < node('chlc').y ? ['chlr', 'chlc'] : ['chlc', 'chlr']
+    expect(side(upper)).toBe('bottom')
+    expect(side(lower)).toBe('top')
   })
 
   it('renders the three shared nodes as junctions, not cliques', () => {
