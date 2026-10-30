@@ -470,7 +470,7 @@ function buildGraph(
     // of edges that would imply pairwise connections. A port joins one set, so
     // the set's first endpoint in sorted order names the junction, within its
     // scope (`sub1$node$sub1.r1.b`), whatever the statements' order.
-    const first = conn.endpoints.map((raw) => raw.toLowerCase()).sort()[0] ?? ''
+    const first = conn.endpoints.map((raw) => raw.toLowerCase()).reduce<string | undefined>((a, b) => (a === undefined || b < a ? b : a), undefined) ?? ''
     const junctionId = `${endpointScope(first)}$node$${first}`
     touch(junctionId, 'junction')
     ends.forEach((e, k) => {
