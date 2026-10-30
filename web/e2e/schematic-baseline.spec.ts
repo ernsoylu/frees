@@ -2306,14 +2306,14 @@ test('COMP-07: rotate, mirror, detail and name placement per block; ports keep t
       const a = centre(root.querySelector('[data-port="r1.a"] circle:last-of-type')!)
       return { a: port('a'), b: port('b'), wireOnA: Math.min(...ends.map((e) => Math.hypot(e.x - a.x, e.y - a.y))) < 2 }
     })
-  // The layout puts both ports on R1's bottom edge, a to the left of b.
+  // Each terminal faces its partner in the row: a on R1's left face, b on its right.
   const before = await geometry()
-  expect([before.a.dy === before.b.dy, before.a.dy > 0, before.a.dx < before.b.dx, before.wireOnA]).toEqual([true, true, true, true])
+  expect([before.a.dy === before.b.dy, before.a.dx < 0, before.b.dx > 0, before.wireOnA]).toEqual([true, true, true, true])
   await svg.locator('[data-node="r1"]').click()
   const editor = page.getByTestId('style-editor')
   await editor.getByText('90°', { exact: true }).click()
-  // A quarter turn clockwise: the bottom edge becomes the left, its left end the top.
-  await expect.poll(async () => (await geometry()).a.dx).toBeLessThan(0)
+  // A quarter turn clockwise: the left face becomes the top, the right the bottom.
+  await expect.poll(async () => (await geometry()).a.dy).toBeLessThan(0)
   let turned = await geometry()
   expect([turned.a.dx === turned.b.dx, turned.a.dy < turned.b.dy, turned.wireOnA]).toEqual([true, true, true])
   // Mirrored first, then turned: same side, the order flips.

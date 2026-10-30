@@ -293,9 +293,9 @@ describe('circuit grouping', () => {
 describe('port anchors', () => {
   const ports = new Map([['p', ['in', 'out', 'wall']]])
 
-  it('puts flow inlets left, outlets right and heat couplings on top', () => {
+  it('puts flow inlets left, outlets right and a coupling on the face toward its partner', () => {
     // A cross-domain coupling on the flow axis reads as more pipework; on the
-    // top face it reads as what it is.
+    // top or bottom face it reads as what it is. The heat band sits below.
     const out = layoutSchematic(
       [conn('fluid', 'p.out', 'q.in'), conn('fluid', 'z.out', 'p.in'), conn('heat', 'p.wall', 'm.port')],
       new Map(),
@@ -306,7 +306,7 @@ describe('port anchors', () => {
     const side = (port: string) => node?.ports.find((a) => a.port === port)?.side
     expect(side('in')).toBe('left')
     expect(side('out')).toBe('right')
-    expect(side('wall')).toBe('top')
+    expect(side('wall')).toBe('bottom')
   })
 
   it('places declared ports that are not wired yet', () => {
@@ -320,6 +320,30 @@ describe('port anchors', () => {
     const left = out.nodes.find((n) => n.id === 'p')?.ports.filter((a) => a.side === 'left') ?? []
     expect(left).toHaveLength(3)
     expect(new Set(left.map((a) => a.dy)).size).toBe(3)
+  })
+
+  it.each([
+    // p/n/port name no outlet, so the junction has no place in the flow order.
+    ['nothing feeds', [conn('electrical', 'sup.p', 'htr.p'), conn('electrical', 'sup.n', 'htr.n', 'gnd.port')]],
+    // b reads as an outlet, but in a circuit it is only a terminal.
+    ['a b terminal feeds', [conn('electrical', 'sup.p', 'htr.a'), conn('electrical', 'htr.b', 'sup.n', 'gnd.port')]],
+  ])('places a circuit junction %s among its members, and faces each terminal toward its partner', (_, conns) => {
+    const out = layoutSchematic(conns)
+    const at = (id: string) => out.nodes.find((n) => n.id === id)!
+    const centre = (n: SchematicNode) => ({ x: n.x + n.w / 2, y: n.y + n.h / 2 })
+    const j = centre(out.nodes.find((n) => n.kind === 'junction')!)
+    const members = ['sup', 'htr', 'gnd'].map((id) => centre(at(id)))
+    expect(j.x).toBeGreaterThan(Math.min(...members.map((m) => m.x)))
+    expect(j.x).toBeLessThan(Math.max(...members.map((m) => m.x)))
+    for (const e of out.edges) {
+      for (const [id, port, other] of [[e.from, e.fromPort, e.to], [e.to, e.toPort, e.from]] as const) {
+        const a = at(id).ports.find((q) => q.port === port)
+        if (!a) continue
+        const [from, to] = [centre(at(id)), centre(at(other))]
+        const toward = { left: to.x < from.x, right: to.x > from.x, top: to.y < from.y, bottom: to.y > from.y }[a.side]
+        expect(toward, `${id}.${port} on ${a.side}`).toBe(true)
+      }
+    }
   })
 
   it('gives junctions no ports', () => {
@@ -344,10 +368,12 @@ describe('routeEdge', () => {
   })
 
   it('leaves a node through the face its port sits on', () => {
-    // The heat coupling exits upward, so its first move is vertical.
+    // The heat coupling exits downward, toward the band below, so its first
+    // move is vertical.
     const heat = routeEdge(node('a'), node('m'), 'wall', 'port')
-    const [, , y0, , , y1] = heat.split(/[ ,]+/)
-    expect(Number(y1)).toBeLessThan(Number(y0))
+    const [, x0, y0, , x1, y1] = heat.split(/[ ,]+/)
+    expect(Number(x1)).toBe(Number(x0))
+    expect(Number(y1)).toBeGreaterThan(Number(y0))
   })
 
   it('survives a dragged node (recomputes from live positions)', () => {

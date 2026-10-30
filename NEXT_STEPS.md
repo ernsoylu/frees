@@ -399,6 +399,34 @@ Carried forward:
      - the full vitest suite (805 tests);
      - the schematic e2e (WIRE-09 now opens the junction branch by its port).
    - **Ceiling:** a rename can still drop a junction's saved place, when the renamed endpoint stops being the set's first in sorted order.
+8. **Done 2026-10-30.** Terminal faces and junction places, from an auto-arrange review of the 20 multi-domain examples. Screenshots and metrics were taken with temporary harnesses kept outside the repository.
+   - **Defects:**
+     - Both terminals of an electrical block (and the heat port of a thermal block) were fixed to the bottom face, so a source and its load were joined by wires that left downward and doubled back.
+     - A junction that nothing feeds (no outlet port on it) was layered as a lone source in the band's first column, at the frame edge, far from its members.
+     - Outside a fluid line, a junction fed by a terminal named `b` took a column of its own after that block. In #1 and #16 this drew a loop around the whole electrical band.
+   - **Fix** (`layout.ts`):
+     - `facePartners`, run after placement: each non-fluid port faces the block or junction it is wired to. A port of the block's own band uses a side face when its partner is in the same row. Any other port uses the top or bottom face toward its partner, so a pump's heat port stays off the flow axis. Fluid ports keep their inlet and outlet faces.
+     - `placeJunction`: a junction nothing feeds is left out of the layering. That junction, and every junction outside a fluid line, goes to the centre of its members in the band, or, when that falls on a block, to the nearest free gap beside one.
+     - Fed junctions still order the blocks, so the band's columns are unchanged.
+   - **Metrics** over the 20 examples (Node, the examples' own Check topology):
+
+     | | Wire length | Line hops | Overlap | Junction-to-member distance |
+     |---|---|---|---|---|
+     | Before | 54,988 | 65 | 670 | 5,380 |
+     | After | 38,948 | 29 | 235 | 3,879 |
+
+     - Wires through blocks: 0 before and after.
+     - Of the remaining overlap, most is in #15 (183) and #13 (32).
+   - **Evidence:**
+     - `layout.test.ts`: a feederless junction lies between its members and every terminal faces its partner;
+     - `evTopology.test.ts`: the chiller bridge's coupled pair faces each other;
+     - the COMP-07 journey: a resistor's terminals lie on its left and right faces and turn to top and bottom with a quarter turn;
+     - the EV visual baselines pass unchanged in the CI Playwright image: the EV's changed port faces stay within the 1 % pixel tolerance.
+   - **Not fixed** (findings from the same review):
+     - #11's liquid loop still crosses itself;
+     - a parameter binding to another block reads as "not connected";
+     - several components still draw the generic symbol;
+     - opening an example from a URL leaves its loading toast up.
 
 Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` against `51a2ea2` (the spec asserts each fix): Fit no longer applies the manual zoom-out floor, so auto-fit frames all 100 dense-floor instances; manual zoom-out can reach the fitted view. Fit and the zoom-out floor also frame dragged nodes, using the same drawing bounds as SVG export, and a drag or pan now stops auto-fit as the code comment intended. Circuit frames grow to enclose members dragged past them (`framedGroups` in `layout.ts`), and never shrink. `routeEdge` now keeps every segment past the port stubs clear of every component box, the endpoints' own included, against live (dragged) positions; the baseline measured 0 wire samples under components on all three models, down from 63, 110 and 1,898. Hover and selection no longer dim the rest of the model (the hovered node and its wires are emphasised instead). Clicking a node selects its declaration in the editor without bringing the Editor tab forward or taking focus (`goToLine(line, { focus: false })`); the readout card's reveal action is the explicit navigation. Before the first Check the canvas says "connections appear after Check" instead of reporting document errors; the orange error notice remains for a check that ran without producing topology. Below the zoom at which a 12.5 px label would draw under 12 px, nodes collapse to a name chip held at 12 px on screen (glyph, type and value badge hidden; full name in the tooltip and inspector). The chip may overhang its box into the free gap beside it, and a name that still does not fit is shortened with "…". Auto-fit labels went from 5 px (EV) and 3 px (dense floor) to at least 12 px on all three models; on the dense floor only the two crowded mid-row names (pump, riser) are shortened.
 

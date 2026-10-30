@@ -923,6 +923,32 @@ function placeCouplingRow(
   return { w: Math.max(0, cursor - ROW_GAP - originX), h: height }
 }
 
+/**
+ * Puts a junction at the centre of the members it joins in its own band, or,
+ * when that falls on a block, in the free gap beside a block nearest to it.
+ */
+function placeJunction(id: string, band: readonly string[], line: string, g: BuiltGraph): void {
+  const j = g.nodes.get(id)
+  const inBand = new Set(band)
+  const members = [...(g.byLine.get(line)?.get(id) ?? [])].filter((m) => inBand.has(m)).map((m) => g.nodes.get(m)!)
+  const blocks = band.map((m) => g.nodes.get(m)!).filter((n) => n.kind === 'instance')
+  if (!j || members.length === 0) return
+  const cx = members.reduce((s, n) => s + n.x + n.w / 2, 0) / members.length
+  const cy = members.reduce((s, n) => s + n.y + n.h / 2, 0) / members.length
+  const xs = [cx, ...blocks.flatMap((n) => [n.x - LAYER_GAP / 2, n.x + n.w + LAYER_GAP / 2])]
+  const ys = [cy, ...blocks.flatMap((n) => [n.y - ROW_GAP / 2, n.y + n.h + ROW_GAP / 2])]
+  const clear = (x: number, y: number) => blocks.every((n) => x < n.x - JUNCTION || x > n.x + n.w + JUNCTION || y < n.y - JUNCTION || y > n.y + n.h + JUNCTION)
+  let best = { x: cx, y: cy, d: Infinity }
+  for (const x of xs) {
+    for (const y of ys) {
+      const d = Math.hypot(x - cx, y - cy)
+      if (d < best.d && clear(x, y)) best = { x, y, d }
+    }
+  }
+  j.x = best.x - j.w / 2
+  j.y = best.y - j.h / 2
+}
+
 /** Places one circuit's layers in columns; returns its bounding size. */
 function placeCircuit(
   layers: string[][],
@@ -950,6 +976,31 @@ function placeCircuit(
     x += widest + LAYER_GAP
   })
   return { w: Math.max(0, x - LAYER_GAP - originX), h: tallest }
+}
+
+/**
+ * Once blocks are placed, each non-fluid port faces the block or junction it
+ * is wired to: a side face for a partner in the same row, when the port is of
+ * the block's own band (a terminal in a circuit); otherwise the top or bottom
+ * face toward it, so a port of another domain (the heat port of a pump) stays
+ * off the flow axis. Fluid ports keep their inlet/outlet faces.
+ */
+function facePartners(g: BuiltGraph): void {
+  const bandDomain = (n: SchematicNode) => g.lines.get(lineOfBand(n.group))?.domain
+  for (const e of g.edges) {
+    if (e.domain === 'fluid') continue
+    for (const [id, port, other] of [[e.from, e.fromPort, e.to], [e.to, e.toPort, e.from]] as const) {
+      const n = g.nodes.get(id)
+      const o = g.nodes.get(other)
+      const use = port === undefined ? undefined : g.portUse.get(id)?.get(port)
+      if (!n || !o || !use || n.kind !== 'instance') continue
+      const dx = o.x + o.w / 2 - (n.x + n.w / 2)
+      const dy = o.y + o.h / 2 - (n.y + n.h / 2)
+      const sameRow = Math.abs(dy) < (n.h + o.h) / 2
+      if (bandDomain(n) === e.domain && sameRow && dx !== 0) use.side = dx < 0 ? 'left' : 'right'
+      else if (dy !== 0) use.side = dy < 0 ? 'top' : 'bottom'
+    }
+  }
 }
 
 /** Port anchors for a node: wired ports take the side their line implies,
@@ -1025,6 +1076,7 @@ export function layoutSchematic(
   const sizes = placeBandsHorizontally(groupIds, members, order, g)
   const { groups, height, width } = stackBands(groupIds, members, sizes, g, groupLabel)
 
+  facePartners(g)
   for (const node of g.nodes.values()) {
     node.ports = anchorPorts(node, ports.get(node.id) ?? [], g.portUse.get(node.id) ?? new Map())
   }
@@ -1060,9 +1112,19 @@ function placeBandsHorizontally(
     // real structure of its own is layered.
     let size = placeCouplingRow(ids, g, line, originX, 0)
     if (!size) {
-      const layers = layerCircuit(ids, g.flow.get(line) ?? new Map())
+      // A junction nothing feeds (no port on it names an outlet) is left out
+      // of the flow order: layered, it became a source alone in the first
+      // column. Outside a fluid line, where an outlet is only a terminal that
+      // happens to be called b, a fed junction still orders the blocks but is
+      // drawn among its members rather than in a column of its own.
+      const flow = g.flow.get(line) ?? new Map<string, Set<string>>()
+      const fed = new Set([...flow.values()].flatMap((to) => [...to]))
+      const fluid = g.lines.get(line)?.domain === 'fluid'
+      const junctions = ids.filter((id) => g.nodes.get(id)?.kind === 'junction')
+      const layers = layerCircuit(ids.filter((id) => fed.has(id) || !junctions.includes(id)), flow)
       orderLayers(layers, g.byLine.get(line) ?? new Map(), order)
       size = placeCircuit(layers, g.nodes, originX, 0)
+      for (const id of junctions) if (!fluid || !fed.has(id)) placeJunction(id, ids, line, g)
     }
     sizes.set(groupId, size)
     for (const id of ids) {
