@@ -374,7 +374,13 @@ Carried forward:
    - **Change** (`boxesAcross` in `layout.ts`): each candidate segment runs along one line, so it is tested only against the blocks whose clearance crosses that line, found by binary search in the blocks sorted along the other axis. The set of blocks hit is unchanged, and the hit count does not depend on test order, so every route is unchanged. A uniform grid was tried and dropped (30 %, more code).
    - **Result:** Node 550 → ~295 ms. In the page, A/B with a temporary timer around `routeAll` (three runs each, probe removed): 800–935 ms before, 442–554 ms after.
    - **Evidence that routes are identical:** a byte-identical route map on the floor, and a differential run against the original router on 30 seeded rearrangements (30 % of blocks moved by up to ±20 or ±200 units, overlaps included): 0 differences. That harness was temporary. `layout.test.ts` and the schematic suite pass unchanged (174 tests).
-   - Check-to-drawn in the budget journey, back to back on this machine, three runs each: 3.03–3.25 s before, 2.91–3.11 s after. Both arms ran about 1 s slower than the 2.0–2.2 s recorded on 2026-10-29. That was not investigated, and it is unknown whether machine load (load average about 2) or the carry-forward branch accounts for it.
+   - Check-to-drawn in the budget journey, back to back on this machine, three runs each: 3.03–3.25 s before, 2.91–3.11 s after.
+   - Both arms ran about 1 s above the 2.0–2.2 s recorded on 2026-10-29, so that gap was profiled.
+     - The engine's `check` takes about 75 ms in Node, so it is not the cause.
+     - Much of the page's main-thread time belonged to the harness: while `expect(…).toBeVisible()` polled, Playwright built accessibility snapshots of the page (`ariaSnapshotForExpectFailure`, `captureSnapshot`). Their cost grows with the DOM, which includes about 1,090 elements from each of the toolbar's two connect-port pickers.
+     - The journey now times Check-to-drawn inside the page, as it already did selection: from the click to the painted frame with the first wire. It reads **1.57–2.04 s** (three runs), within the 2 s aim.
+     - Capping the pickers' rendered options (`limit={50}`) removed the elements but made no clear difference to the in-page time (1.61–1.84 s), so it was not kept.
+   - Earlier Check-to-drawn figures were taken with harness polling and are not comparable with the in-page ones.
    - A worker would also make every canvas reader asynchronous. It is not needed for this budget and remains the fallback.
    - **Ceiling** (`ponytail:` in `layout.ts`): every wire is still rerouted on each drag frame; the next step is rerouting only the wires near the moved blocks.
 

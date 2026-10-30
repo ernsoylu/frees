@@ -2587,10 +2587,18 @@ test('budget: 500 components — Check to drawn, selection and search latency, m
   await page.getByPlaceholder('Search views, tools, and actions…').fill('Schematic')
   await page.keyboard.press('Enter')
   const svg = page.getByRole('application', { name: /Component network schematic/ })
-  const t0 = Date.now()
-  await page.getByRole('button', { name: 'Check', exact: true }).click()
-  await expect(svg.locator('path[data-net]').first()).toBeVisible({ timeout: 120_000 })
-  const checkToDrawn = Date.now() - t0
+  // Timed inside the page, click to the painted frame with the first wire: an
+  // expect() polling the page builds accessibility snapshots on its main thread,
+  // which the user never pays for.
+  const checkToDrawn: number = await page.getByRole('button', { name: 'Check', exact: true }).evaluate(async (button: HTMLElement) => {
+    const frame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
+    const t = performance.now()
+    button.click()
+    while (!document.querySelector('[role="application"] path[data-net]')) await frame()
+    await frame()
+    return performance.now() - t
+  })
+  await expect(svg.locator('path[data-net]').first()).toBeVisible()
   const nodes = await svg.locator('[data-node]').count()
   const wires = await svg.locator('path[data-net]').count()
   expect(nodes).toBeGreaterThanOrEqual(500)
@@ -2635,7 +2643,7 @@ test('budget: 500 components — Check to drawn, selection and search latency, m
     return out
   })
   // ponytail: recorded, not asserted; CI runners vary too much for a hard 200 ms gate.
-  const measured = { nodes, wires, checkToDrawn, selectP95: Math.round(p95(select)), searchP95: Math.round(p95(search)) }
+  const measured = { nodes, wires, checkToDrawn: Math.round(checkToDrawn), selectP95: Math.round(p95(select)), searchP95: Math.round(p95(search)) }
   await record(testInfo, 'evidence', measured)
 })
 
