@@ -1648,7 +1648,7 @@ export default function SchematicTab({
     const problem = sourceBroken ? 'Fix the source errors first.' : renameProblem(inst, next, all)
     if (problem) return problem
     const renames = renamedIds(inst, next, all)
-    const done = runEdit(renameInstance(inst, next), (p) => renamePresentation(p, renames))
+    const done = runEdit(renameInstance(inst, next), (p) => renamePresentation(p, renames, drawnCheck?.connections))
     if (!done) return 'The source changed after the last Check; Check again, then retry.'
     setPinned(null)
     setSelected(new Set())
