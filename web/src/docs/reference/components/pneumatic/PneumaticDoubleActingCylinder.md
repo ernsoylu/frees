@@ -3,7 +3,7 @@ name: PneumaticDoubleActingCylinder
 category: Component (pneumatic)
 summary: "Double-acting pneumatic cylinder: two isothermal ideal-gas chambers at mid-stroke volumes and the rod force balance."
 related: []
-examples: []
+examples: [pneumatic-cylinder-stall-force]
 tags: [pneumaticdoubleactingcylinder, component, pneumatic, acausal]
 references: []
 ---

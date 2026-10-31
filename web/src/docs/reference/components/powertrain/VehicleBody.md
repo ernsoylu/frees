@@ -3,7 +3,7 @@ name: VehicleBody
 category: Component (powertrain)
 summary: "Longitudinal vehicle body: mass with aero drag, rolling resistance (tanh-signed) and grade load; velocity is the state."
 related: []
-examples: []
+examples: [vehicle-launch-equivalent-mass]
 tags: [vehiclebody, component, powertrain, acausal]
 references: []
 ---

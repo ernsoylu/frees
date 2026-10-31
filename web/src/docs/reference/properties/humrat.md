@@ -3,7 +3,7 @@ name: humrat
 category: Fluid Properties
 summary: Humidity ratio (kg water vapour per kg dry air) [kg/kg] of humid air (AirH2O) from three named inputs.
 related: []
-examples: []
+examples: [moist-air-adiabatic-mixing]
 tags: [humrat, property, humid-air, rustprop]
 references: []
 ---

@@ -3,7 +3,7 @@ name: PneumaticSupply
 category: Component (pneumatic)
 summary: A pneumatic pressure supply.
 related: []
-examples: [pneumatic-spring-actuator, pneumatic-sonic-restriction]
+examples: [pneumatic-spring-actuator, pneumatic-sonic-restriction, pneumatic-diaphragm-fill, pneumatic-cylinder-stall-force]
 tags: [pneumaticsupply, component, pneumatic, acausal]
 references:
   - "ISO 6358 — Pneumatic fluid power: flow-rate characteristics"

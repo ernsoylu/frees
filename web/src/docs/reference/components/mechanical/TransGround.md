@@ -3,7 +3,7 @@ name: TransGround
 category: Component (mechanical)
 summary: The translational reference (v = 0).
 related: []
-examples: [pneumatic-spring-actuator, hydraulic-spring-actuator, damped-actuator-motion]
+examples: [pneumatic-spring-actuator, hydraulic-spring-actuator, damped-actuator-motion, pneumatic-diaphragm-fill, pneumatic-cylinder-stall-force, hydraulic-vertical-cylinder]
 tags: [transground, component, mechanical, acausal]
 ---
 

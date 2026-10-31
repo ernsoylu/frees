@@ -3,7 +3,7 @@ name: TransSpring
 category: Component (mechanical)
 summary: Translational spring (the missing twin of TransDamper/TransMass).
 related: []
-examples: [pneumatic-spring-actuator, hydraulic-spring-actuator, damped-actuator-motion]
+examples: [pneumatic-spring-actuator, hydraulic-spring-actuator, damped-actuator-motion, pneumatic-diaphragm-fill]
 tags: [transspring, component, mechanical, acausal]
 references: []
 ---

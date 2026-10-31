@@ -3,7 +3,7 @@ name: ForceSource
 category: Component (mechanical)
 summary: A prescribed translational force.
 related: []
-examples: [damped-actuator-motion]
+examples: [damped-actuator-motion, hydraulic-vertical-cylinder]
 tags: [forcesource, component, mechanical, acausal]
 ---
 

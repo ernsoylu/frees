@@ -3,7 +3,7 @@ name: GravityDrain
 category: Component (liquid)
 summary: "Gravity drain (Torricelli): the C1 odd-symmetric flow law mdot|mdot| = (Cd*A)^2 * 2*rho*dP — smooth through zero head, reversible."
 related: []
-examples: []
+examples: [tank-orifice-draining]
 tags: [gravitydrain, component, liquid, acausal]
 references: []
 ---

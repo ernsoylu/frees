@@ -3,7 +3,7 @@ name: FinalValue
 category: ODE Results
 summary: Last value of a column in the integrated ODE (DYNAMIC) table.
 related: [MaxValue, MinValue, ODEValue, TimeAt]
-examples: [newton-cooling-transient]
+examples: [newton-cooling-transient, pneumatic-diaphragm-fill, damping-sensitivity-oscillators, drive-cycle-energy-sensitivity]
 tags: [ode, dynamic, accessor, final value, transient, trajectory]
 references: []
 ---
