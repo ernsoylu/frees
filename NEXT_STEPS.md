@@ -398,7 +398,7 @@ Carried forward:
      - `sourceEdit.test.ts`: a rename reaches a junction key;
      - the full vitest suite (805 tests);
      - the schematic e2e (WIRE-09 now opens the junction branch by its port).
-   - **Ceiling:** a rename can still drop a junction's saved place, when the renamed endpoint stops being the set's first in sorted order.
+   - **Ceiling, closed 2026-10-30:** a rename dropped a junction's saved place when it changed which endpoint sorts first (the renamed one sorting past another member, or another member's new name sorting ahead). `renamePresentation` now takes the drawn Check's connections and renames each junction through its whole set, with the same `junctionIdOf` that `buildGraph` names it by. Evidence: a `presentation.test.ts` case covering both directions, which fails without the fix; vitest 809/809.
 8. **Done 2026-10-30.** Terminal faces and junction places, from an auto-arrange review of the 20 multi-domain examples. Screenshots and metrics were taken with temporary harnesses kept outside the repository.
    - **Defects:**
      - Both terminals of an electrical block (and the heat port of a thermal block) were fixed to the bottom face, so a source and its load were joined by wires that left downward and doubled back.
@@ -460,6 +460,7 @@ Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` 
 - `frees-lsp` language server
 - Python/C++ model export
 - crates.io publishing
+- Lazy fluid chunks (bundle debt 2). Measured 2026-10-30 and left unbuilt until CI's 200 KiB headroom trigger fires (645.8 KiB now). At most ~700 KiB raw could move (24 fluids plus `mixture-data`). It needs a RustProp release with a runtime fluid registry and a compact fluid format first, then Check reporting the fluids a model uses so each worker installs them before solving. The PWA precaches every chunk, so the gain is time to first solve, not total download. The `ci.yml` header has the numbers.
 - `SharedArrayBuffer` sweeps (needs COOP/COEP)
 - Bounded surrogate property models
 - FMI/FMU 2.0/3.0

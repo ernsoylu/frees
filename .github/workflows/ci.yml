@@ -161,6 +161,26 @@ env:
   # critical-point tracer (`Tcrit`/`pcrit`/`rhocrit` for blends) and the 33
   # mixture keyed outputs: 4366.5 KiB raw / 1964.2 KiB gzipped, +33.2 KiB
   # raw. 85.3% of the ceiling, 753.5 KiB of headroom.
+  #
+  # 2026-10-30: debt (2) measured and re-scoped, not paid. The shipped module
+  # (4474.3 KiB raw, 645.8 KiB headroom) is 3195.2 KiB code and 1273.7 KiB
+  # data by twiggy's section split. What a split could move is the fluid data
+  # past the first four (~24 fluids at ~22 KiB, per the entries above) and
+  # `mixture-data` (~190 KiB): ~700 KiB raw at most. Three findings keep it
+  # unbuilt:
+  # - rustprop resolves fluids only through the compile-time
+  #   `rustprop_data::fluids::all()` over `&'static FluidData`, with no runtime
+  #   registry and no decoder (`rustprop-core` has no serde). The split needs a
+  #   RustProp release first: a registry plus a compact fluid format written
+  #   by `rustprop-datagen`. `install_from_bytes` cannot carry it; it reads
+  #   only the retired `FRPHTAB1` tables.
+  # - The PWA precaches every `.wasm` and `.json` (vite.config.ts) so the app
+  #   works offline, so an installed client downloads split chunks anyway. The
+  #   gain is time to first solve, not total bytes.
+  # - The engine is synchronous: Check would have to report the fluids a model
+  #   needs, and every pool worker install them, before a solve.
+  # "Overdue" in the 2026-09-10 entry records the raise that skipped this
+  # pay-down; it is not budget pressure. The trigger below stays the gate.
   WASM_BUDGET_KB: 5120
   WASM_LAZY_CHUNK_TRIGGER_KB: 200
 
