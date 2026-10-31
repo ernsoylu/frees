@@ -4,7 +4,7 @@ covers: [end, then, else, while, do, repeat, until]
 category: Language Keywords
 summary: Defines a reusable function, with IF/WHILE/REPEAT control flow in ordered bodies.
 related: [FOR, and, if, connect]
-examples: []
+examples: [drive-cycle-energy-sensitivity]
 tags: [keyword, function, procedure, control flow, if, while, repeat, loop]
 references: []
 ---

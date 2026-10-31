@@ -4,7 +4,7 @@ covers: [event]
 category: Language Keywords
 summary: Integrates a coupled ODE/DAE system in time and publishes its trajectory as an ODE Table.
 related: [LINEARIZE, PLOT, FinalValue, TimeAt, ODEValue, MaxValue]
-examples: []
+examples: [first-order-motor-step, damping-sensitivity-oscillators]
 tags: [keyword, block, transient, ode, dae, event, integrator, time]
 references: []
 ---

@@ -3,7 +3,7 @@ name: pearson
 category: Stats
 summary: Pearson linear correlation coefficient of two series.
 related: [corrcoef, spearman, cov]
-examples: []
+examples: [linear-regression-diagnostics]
 tags: [pearson, stats, correlation]
 ---
 

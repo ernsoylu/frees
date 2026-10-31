@@ -3,7 +3,7 @@ name: MoistAirSource
 category: Component (moistair)
 summary: A humid-air boundary supplying a stream of set state.
 related: []
-examples: []
+examples: [moist-air-adiabatic-mixing, cooling-coil-dehumidification, preheat-steam-humidifier-ip]
 tags: [moistairsource, component, moistair, acausal]
 ---
 

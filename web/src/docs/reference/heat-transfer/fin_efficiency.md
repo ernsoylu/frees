@@ -3,7 +3,7 @@ name: fin_efficiency
 category: Heat Transfer
 summary: Efficiency of a straight fin with an insulated tip.
 related: [hx_effectiveness, hx_eta_surf]
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, annular-fin-efficiency]
 tags: [fin, efficiency, extended surface, tanh, conduction]
 ---
 

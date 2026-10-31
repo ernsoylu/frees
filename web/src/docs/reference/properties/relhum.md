@@ -3,7 +3,7 @@ name: relhum
 category: Fluid Properties
 summary: Relative humidity (0–1) [–] of humid air (AirH2O) from three named inputs.
 related: []
-examples: []
+examples: [cooling-coil-dehumidification]
 tags: [relhum, property, humid-air, rustprop]
 references: []
 ---

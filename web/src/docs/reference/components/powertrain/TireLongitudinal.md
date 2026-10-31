@@ -3,7 +3,7 @@ name: TireLongitudinal
 category: Component (powertrain)
 summary: "Longitudinal tire (Pacejka-lite magic formula on longitudinal slip): bridges the wheel (rotational) to the vehicle (translational)."
 related: []
-examples: []
+examples: [vehicle-launch-equivalent-mass]
 tags: [tirelongitudinal, component, powertrain, acausal]
 references: []
 ---

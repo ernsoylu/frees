@@ -3,7 +3,7 @@ name: polyfit
 category: Stats
 summary: Least-squares polynomial fit; coefficients in ascending powers.
 related: [linfit, slope, intercept, r2]
-examples: []
+examples: [quadratic-regression]
 tags: [polyfit]
 ---
 

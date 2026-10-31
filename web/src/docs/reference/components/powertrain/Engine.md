@@ -3,7 +3,7 @@ name: Engine
 category: Component (powertrain)
 summary: An internal-combustion engine acting as a torque source.
 related: []
-examples: [engine-map-2d, engine-cycle-wiebe]
+examples: [engine-map-2d, engine-cycle-wiebe, vehicle-launch-equivalent-mass]
 tags: [engine, component, powertrain, acausal]
 ---
 

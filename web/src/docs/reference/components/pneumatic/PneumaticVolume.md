@@ -3,7 +3,7 @@ name: PneumaticVolume
 category: Component (pneumatic)
 summary: A pneumatic control volume (compressible capacitance).
 related: []
-examples: []
+examples: [pneumatic-diaphragm-fill, pneumatic-accumulator-equalization]
 tags: [pneumaticvolume, component, pneumatic, acausal]
 references:
   - "ISO 6358 — Pneumatic fluid power: flow-rate characteristics"

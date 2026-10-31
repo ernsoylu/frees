@@ -450,8 +450,30 @@ Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` 
 
 **Documentation programmes.**
 
-- **D.1** Wave B example tranches: pneumatic, hydraulic, powertrain, control, moist air, heat transfer, uncertainty (electrical is done).
-- **D.2** Wave C large-domain examples: two-phase, fluid, liquid.
+- **D.1** Wave B examples: **done 2026-10-31.** The 30-problem table is in Git at `ba2add6` (Phase 4.7b-4). Electrical B16–B18 and B30 landed in #28, and B22 was already the `uncertain-tank-inventory` gallery entry. The other 25 are now gallery entries in `examples.ts`, with CHECKs graded by `examples.test.ts` (units and values) and bound to 84 reference pages. The bank's answer was a cross-check, not the golden value.
+  - **Reproduced:**
+    - B1, B2, B3, B5, B7, B9, B10, B11, B12 and B29.
+    - B25 and B26, from Chapra & Canale's published data.
+    - B20 to 0.3 %, against the bank's rounded chart value.
+    - B4 to 0.1 % (a rounded g).
+    - B21 once read as two shell passes: its F = 0.975 is the two-shell value; one shell gives 0.891.
+    - B23 once read as the worst-case linear sum: 7.0 %; the root-sum-square is 4.4 %.
+  - **Not reproduced, stated in each model's header:**
+    - B6: Torricelli gives 13,616 s against the bank's 12,306 s.
+    - B8: the bank's answer depends on an unstated speed or drivetrain inertia.
+    - B13: about 2 % from chart reads.
+    - B14: the bank's latent load contradicts its own condensate rate.
+    - B15: the bank's heat and steam figures do not close one energy balance.
+    - B19: the bank's ε exceeds the counterflow bound at its own NTU and Cr.
+    - B24: the bank's data was not kept; Chapra's Example 17.1 is used instead.
+    - B27 and B28: the bank's inputs are incomplete, so each model states its own.
+  - **Conversion rate**, the input D.2 was waiting for: 25 of 25 converted to runnable models; 16 reproduce the bank's answer and 9 do not, each for a stated reason.
+  - **Not done:** the plan's corpus mirrors (`fixtures/corpus/example-*.frees`) were skipped, because no harness grades a corpus file without a golden.
+  - **Engine findings, not changed here:**
+    - user `function` arguments take no unit annotations;
+    - `step`/`stepinfo` over a few hundred samples take seconds;
+    - `PneumaticOrifice` passes forward flow only, so an overshooting volume traps pressure.
+- **D.2** Wave C large-domain examples: two-phase, fluid, liquid. Gallery use on 2026-10-30: fluid 0/31, two-phase 10/47, liquid 13/21. Its start condition, a measured Wave B conversion rate, is now met (D.1). One original motive is gone: `Pipe.md` already documents `rough` as absolute roughness [m], matching the `rough / D` in the code.
 - **D.3** The *frees Book* (mdBook) and a 30–50-model public gallery.
 - **D.4** Offline reference fixtures from NumPy/SciPy/statsmodels/SALib, with seeds and versions recorded. Passing examples do not establish estimator parity; D.4 and the R15 pilot stay separate from example execution.
 

@@ -3,7 +3,7 @@ name: ODEValue
 category: ODE Results
 summary: Value of an ODE (DYNAMIC) column interpolated at a given time.
 related: [FinalValue, MaxValue, TimeAt]
-examples: [damped-oscillator-ode]
+examples: [damped-oscillator-ode, gear-impedance-reflection, vehicle-launch-equivalent-mass, first-order-motor-step]
 tags: [ode, dynamic, accessor, interpolation, time, trajectory]
 references: []
 ---

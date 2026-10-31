@@ -3,7 +3,7 @@ name: besseli0
 category: Special Functions
 summary: Modified Bessel function of the first kind, order 0 — I_0(x).
 related: [besseli, besseli1, besselk0]
-examples: []
+examples: [annular-fin-efficiency]
 tags: [special function, modified bessel, i0, first kind]
 ---
 

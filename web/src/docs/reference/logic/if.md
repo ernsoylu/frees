@@ -3,7 +3,7 @@ name: if
 category: Logic
 summary: Inline three-way conditional based on comparing a and b.
 related: [min, max, sign, step]
-examples: [sounding-rocket-trajectory]
+examples: [sounding-rocket-trajectory, drive-cycle-energy-sensitivity]
 tags: [logic, conditional, branch, if, comparison]
 references: []
 ---

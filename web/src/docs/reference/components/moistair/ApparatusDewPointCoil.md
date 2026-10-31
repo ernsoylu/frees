@@ -3,7 +3,7 @@ name: ApparatusDewPointCoil
 category: Component (moistair)
 summary: "Cooling coil stated the way a designer actually sizes one: by its APPARATUS DEW POINT and its BYPASS FACTOR, not by an imposed leaving temperature."
 related: []
-examples: []
+examples: [cooling-coil-dehumidification]
 tags: [apparatusdewpointcoil, component, moistair, acausal]
 references: []
 ---

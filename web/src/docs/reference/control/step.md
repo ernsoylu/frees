@@ -3,7 +3,7 @@ name: step
 category: Control Systems
 summary: Unit step response of a transfer function over a time vector.
 related: [impulse, lsim, pole]
-examples: [control-analysis-report]
+examples: [control-analysis-report, second-order-step-metrics, pi-zero-overshoot]
 tags: [control, step response, transient, overshoot, time domain]
 ---
 

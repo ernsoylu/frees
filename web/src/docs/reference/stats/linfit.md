@@ -3,7 +3,7 @@ name: linfit
 category: Stats
 summary: Straight-line least-squares fit: slope, intercept and R².
 related: [polyfit, slope, intercept, r2]
-examples: []
+examples: [linear-regression-diagnostics, power-law-log-fit]
 tags: [linfit]
 ---
 

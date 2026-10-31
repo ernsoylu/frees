@@ -3,7 +3,7 @@ name: corrcoef
 category: Stats
 summary: Pearson correlation coefficient (alias of pearson).
 related: [pearson, spearman]
-examples: []
+examples: [linear-regression-diagnostics]
 tags: [corrcoef, stats, correlation]
 ---
 

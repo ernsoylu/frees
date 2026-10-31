@@ -3,7 +3,7 @@ name: LMTD
 category: Heat Transfer
 summary: Log-mean temperature difference of a heat exchanger.
 related: [hx_effectiveness, hx_NTU]
-examples: [hx-effectiveness-ntu]
+examples: [hx-effectiveness-ntu, shell-tube-lmtd-sizing]
 tags: [heat exchanger, lmtd, log-mean, temperature difference, duty]
 ---
 

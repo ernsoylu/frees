@@ -3,7 +3,7 @@ name: volume
 category: Fluid Properties
 summary: Specific volume [m^3/kg] of a fluid at a state fixed by named inputs.
 related: []
-examples: [rankine-cycle, thermo-compliance, engine-cycle-wiebe, uncertain-tank-inventory]
+examples: [rankine-cycle, thermo-compliance, engine-cycle-wiebe, uncertain-tank-inventory, moist-air-adiabatic-mixing]
 tags: [volume, property, fluid, rustprop]
 references: []
 ---

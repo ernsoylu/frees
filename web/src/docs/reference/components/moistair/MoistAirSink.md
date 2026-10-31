@@ -3,7 +3,7 @@ name: MoistAirSink
 category: Component (moistair)
 summary: A humid-air boundary absorbing a stream.
 related: []
-examples: []
+examples: [moist-air-adiabatic-mixing, cooling-coil-dehumidification, preheat-steam-humidifier-ip]
 tags: [moistairsink, component, moistair, acausal]
 ---
 
