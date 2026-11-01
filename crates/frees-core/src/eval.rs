@@ -3545,6 +3545,12 @@ const EULER_GAMMA: f64 = 0.577_215_664_901_532_9;
 /// Digamma ψ(x) — port of Apache `Gamma.digamma` (Bernardo's AS 103), with the
 /// tail recursion `ψ(x) = ψ(x+1) − 1/x` unrolled into a loop so a far-negative
 /// argument cannot overflow the stack.
+///
+/// One deliberate departure: Apache nests the asymptotic series as
+/// `inv·(1/12 + inv·(1/120 − inv/252))`, which flips the signs of its `x⁻⁴` and
+/// `x⁻⁶` terms against the series its own comment writes. That put every value
+/// ~2/(120·49⁴) ≈ 3e-9 off the true ψ, which the SciPy grade in
+/// `tests/reference_libraries.rs` caught; the nesting here is the series.
 fn digamma(x: f64) -> f64 {
     if x.is_nan() || x.is_infinite() {
         return x;
@@ -3561,7 +3567,7 @@ fn digamma(x: f64) -> f64 {
             let inv = 1.0 / (x * x);
             return shift + libm::log(x)
                 - 0.5 / x
-                - inv * (1.0 / 12.0 + inv * (1.0 / 120.0 - inv / 252.0));
+                - inv * (1.0 / 12.0 - inv * (1.0 / 120.0 - inv / 252.0));
         }
         shift -= 1.0 / x;
         x += 1.0;
@@ -8093,16 +8099,14 @@ mod tests {
     }
 
     #[test]
-    fn digamma_matches_apache_values() {
-        // These are the outputs of the *Apache algorithm* (AS 103 with the
-        // C_LIMIT = 49 recurrence), which accumulates ~1e-9 of rounding against
-        // the true ψ — Java parity means matching Apache's values, not scipy's.
-        close(c("digamma", &[1.0]), -0.5772156677920671);
-        close(c("digamma", &[4.7]), 1.4374238069006702);
-        close(c("digamma", &[-1.5]), 0.7031566378697294);
-        close(c("digamma", &[120.0]), 4.783319289038156);
-        // At x ≥ 49 the direct expansion is ~1e-10 from the true digamma.
-        assert!((c("digamma", &[120.0]) - 4.783319289118529).abs() < 1e-9);
+    fn digamma_matches_scipy() {
+        // `scipy.special.digamma`. Apache's sign slip in the asymptotic series
+        // (see `digamma`) put each of these ~3e-9 off; the series is now right.
+        close(c("digamma", &[1.0]), -0.5772156649015329);
+        close(c("digamma", &[4.7]), 1.4374238096317817);
+        close(c("digamma", &[-1.5]), 0.7031566406452434);
+        close(c("digamma", &[49.0]), 3.881581510162586);
+        close(c("digamma", &[120.0]), 4.783319289118529);
     }
 
     #[test]

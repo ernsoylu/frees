@@ -23,13 +23,13 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Dynamic Systems**: Adaptive Dormand-Prince Runge-Kutta (`ode45`), 5th-order Radau IIA (`radau5`/`radauiia`), and variable-coefficient DAE BDF/IDA with zero-crossing event root-finding.
 - **Properties**: Pure-Rust CoolProp 8.0.0 implementation (`rustprop`) for high-accuracy Helmholtz equations of state, cubic EoS, incompressibles, and psychrometrics (`HAPropsSI`). 28 real fluids are linked; 26 are served on the diagram picker — every pure fluid the alias table names. The ten low-GWP refrigerant blends (R448A–R455A, R513A, R515B) are served through rustprop's `heos-mixtures` engine and match CoolProp 8.0.0 to the last digit; R515B, which CoolProp does not predefine, is spelled out as its two components. Mixtures have no property diagrams. **rustprop is the property backend on every target** (decision D12): the precomputed `(P,h)`/`FRAUX1` tables D1 and D7 introduced are gone, and `props/tables.rs` retains only the `install_from_bytes` runtime fetch seam. Do not reintroduce a linked table path.
 - **Component Library**: 295+ standard acausal components spanning fluid networks, thermal systems, moist air HVAC, mechanics, and electrical circuits.
-- **Experimental Data & Statistics** (`crates/frees-core/src/analysis/`): weighted/bounded/robust curve fitting and dynamic calibration with SVD parameter covariance; correlated and non-Gaussian input uncertainty declared in the document as `Correlation(A, B) = ρ` and `DistributionOf(X) = Uniform(…)`; truncated inverse-CDF sampling; seeded Latin-hypercube and scrambled Sobol designs; Sobol' and Morris global sensitivity. `signal.rs` carries an `O(n log n)` transform (radix-2 + Bluestein, any length) and the sensor kernels behind the `Detrend`, `Smooth`, `Window`, `Filter`, `FiltFilt`, `XCorr`, and `Welch` multi-output functions.
+- **Experimental Data & Statistics** (`crates/frees-core/src/analysis/`): weighted/bounded/robust curve fitting and dynamic calibration with SVD parameter covariance; correlated and non-Gaussian input uncertainty declared in the document as `Correlation(A, B) = ρ` and `DistributionOf(X) = Uniform(…)`; truncated inverse-CDF sampling; seeded Latin-hypercube and scrambled Sobol designs; Sobol' and Morris global sensitivity. `signal.rs` carries an `O(n log n)` transform (radix-2 + Bluestein, any length) and the sensor kernels behind the `Detrend`, `Smooth`, `Window`, `Filter`, `FiltFilt`, `XCorr`, and `Welch` multi-output functions. All of it is graded against NumPy/SciPy/statsmodels/SALib outputs frozen in `fixtures/stats/reference.json` (`tests/reference_libraries.rs`); regenerate that file with `tools/stats-ref/gen.py`, never by hand.
 - **Worker Pool**: Up to 4 Web Workers executing independent parametric sweep chunks in parallel with weighted progress, preserving deterministic row ordering.
 - **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-10-29: 4,474.2 KiB raw / 1,998.0 KiB gzipped, 645.8 KiB headroom). Raised from 4,096 on 2026-09-10, owner-authorized, to link every fluid the alias table names; the `ci.yml` header carries the full ledger and records that the lazy-chunk pay-down is now overdue.
 - **Test Suite Health**:
-  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,421 tests pass across all workspace crates.
+  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,428 tests pass across all workspace crates.
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 72 test files, 802 tests passing (needs the built `web/src/wasm/pkg`).
+  - `vitest run` (Node 22): 73 test files, 808 tests passing (needs the built `web/src/wasm/pkg`).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
   - `npm run check-examples`: 809/809 documentation blocks (2,898 assertions), including the 20 multi-domain examples and their 19 optimization requests. Every graded block must also check with zero unit warnings.
@@ -99,6 +99,7 @@ cargo test --workspace -- --skip golden_corpus_parity
 cargo test -p frees-core --test prepared_solver
 cargo test -p frees-core --test dae_sparse_direct
 cargo test -p frees-core --test constrained_optimizer
+cargo test -p frees-core --test reference_libraries   # grades stats/fit/signal/sampling/sensitivity against fixtures/stats (tools/stats-ref/gen.py)
 cargo test -p frees --test overrides
 
 # Replay full golden regression corpus (sharded or release)

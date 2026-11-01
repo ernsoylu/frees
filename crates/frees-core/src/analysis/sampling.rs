@@ -151,9 +151,13 @@ fn latin_hypercube(n: usize, dimensions: usize, seed: i64) -> Vec<Vec<f64>> {
 /// coefficients as a bit field, the first `degree` odd initial numbers)`.
 ///
 /// Dimension 1 needs no entry — it is the van der Corput sequence, `v[k] =
-/// 2^(32−k)`. The table is the standard primitive-polynomial construction; its
-/// correctness is not taken on faith, it is *pinned by the net property* in
-/// `sobol_is_a_balanced_net`, which fails for any wrong row.
+/// 2^(32−k)`. The rows are Joe & Kuo's `new-joe-kuo-6.21201`, the set SciPy's
+/// `qmc.Sobol` ships, and `tests/reference_libraries.rs` pins every point
+/// against SciPy's unscrambled sequence. The net property in
+/// `sobol_is_a_balanced_net_in_every_dimension` is not enough on its own: any odd `m_k < 2^k`
+/// passes it, which is how rows 27–32 carried non-Joe–Kuo seeds until the
+/// SciPy grade caught them. Joe–Kuo's are chosen for their two-dimensional
+/// projections, which the one-dimensional net test cannot see.
 const SOBOL_DIRECTIONS: &[(usize, u32, &[u32])] = &[
     (1, 0, &[1]),
     (2, 1, &[1, 3]),
@@ -180,12 +184,12 @@ const SOBOL_DIRECTIONS: &[(usize, u32, &[u32])] = &[
     (7, 14, &[1, 3, 1, 13, 9, 35, 107]),
     (7, 19, &[1, 3, 1, 5, 27, 61, 31]),
     (7, 21, &[1, 1, 5, 11, 19, 41, 61]),
-    (7, 28, &[1, 3, 5, 3, 3, 13, 43]),
-    (7, 31, &[1, 1, 7, 13, 11, 47, 73]),
-    (7, 32, &[1, 3, 7, 5, 31, 37, 23]),
-    (7, 37, &[1, 1, 3, 9, 25, 33, 35]),
-    (7, 41, &[1, 3, 7, 3, 5, 59, 107]),
-    (7, 42, &[1, 3, 1, 15, 13, 15, 15]),
+    (7, 28, &[1, 3, 5, 3, 3, 13, 69]),
+    (7, 31, &[1, 1, 7, 13, 1, 19, 1]),
+    (7, 32, &[1, 3, 7, 5, 13, 19, 59]),
+    (7, 37, &[1, 1, 3, 9, 25, 29, 41]),
+    (7, 41, &[1, 3, 5, 13, 23, 1, 55]),
+    (7, 42, &[1, 3, 7, 3, 13, 59, 17]),
 ];
 
 /// The largest input dimension a Sobol design can cover.
