@@ -1627,7 +1627,860 @@ PARAMETRIC bridge (r5, R_eq)
   r5 = 10:10:50
 END
 { CHECK R_eq 20.9459459459459 1e-9 }`,
-  }
+  },
+  {
+    id: 'pneumatic-diaphragm-fill',
+    title: 'Orifice-fed diaphragm actuator',
+    description: 'Solve (F2), then inspect the dynamic table. A spring-loaded diaphragm fills through an orifice until the spring balances 20 kPa.',
+    category: 'Pneumatics',
+    text: `{ A 1774 mm2 diaphragm on a 1.33 N/mm spring is fed at 20 kPa gauge through an
+  ISO 6358 orifice into a 15 cm3 chamber. The stem (0.1 kg) is critically damped:
+  the orifice passes forward flow only, so an overshoot would trap a little extra
+  pressure in the chamber. At rest the stroke is dP*A/k = 26.68 mm and the
+  chamber holds the full 20.0 kPa, the textbook answer. }
+PneumaticSupply supply(fluid$=Air, P=120000 [Pa], T=293.15 [K])
+PneumaticOrifice feed(fluid$=Air, C=2e-9 [m^3/s-Pa], b=0.3)
+PneumaticVolume chamber(V=15e-6 [m^3], T=293.15 [K], R=287 [J/kg-K], P0=100000 [Pa])
+PneumaticActuator diaphragm(fluid$=Air, area=0.001774 [m^2], Patm=100000 [Pa])
+TransMass stem(m=0.1 [kg], v0=0 [m/s])
+TransSpring spring(k=1330 [N/m], x0=0 [m])
+TransDamper damper(c=23.0651251893416 [kg/s])
+TransGround ground()
+connect(supply.out, feed.in)
+connect(feed.out, chamber.in)
+connect(chamber.out, diaphragm.in)
+connect(diaphragm.rod, stem.port, spring.a, damper.a)
+connect(spring.b, damper.b, ground.port)
+DYNAMIC fill(method=ode45, time=0..1, points=201)
+END
+z_final = FinalValue('spring.x') * 1 [m]
+dP_final = FinalValue('chamber.in.P') * 1 [Pa] - 100000 [Pa]
+z_static = 20000 [Pa] * 0.001774 [m^2] / 1330 [N/m]
+{ CHECK z_final 0.0266767055718817 1e-07 }
+{ CHECK dP_final 20000.0103451566 0.1 }
+{ CHECK z_static 0.0266766917293233 1e-12 }`,
+  },
+  {
+    id: 'pneumatic-cylinder-stall-force',
+    title: 'Double-acting cylinder stall force',
+    description: 'Solve (F2). Net rod force of a 25 mm bore cylinder at 7 barA, rod side vented.',
+    category: 'Pneumatics',
+    text: `{ 25 mm bore, 12 mm rod, 7.0 barA on the cap side and atmosphere (1.013 barA)
+  on the rod side, rod held still. The component reports the force of the two
+  chamber pressures on the piston; atmosphere also pushes on the rod end outside
+  the cylinder, so the net force is (P1 - Patm) * A_cap = 293.88 N. }
+D = 0.025 [m]
+d_rod = 0.012 [m]
+A_cap = pi# * D^2 / 4
+A_annulus = pi# * (D^2 - d_rod^2) / 4
+P_atm = 101300 [Pa]
+PneumaticSupply supply(fluid$=Air, P=700000 [Pa], T=293.15 [K])
+PneumaticSupply exhaust(fluid$=Air, P=P_atm, T=293.15 [K])
+PneumaticDoubleActingCylinder cyl(Aa=A_cap, Ab=A_annulus, R=287 [J/kg-K], T=293.15 [K], Va0=1e-5 [m^3], Vb0=1e-5 [m^3], Pa0=700000 [Pa], Pb0=P_atm)
+TransGround stop()
+connect(supply.out, cyl.a)
+connect(exhaust.out, cyl.b)
+connect(cyl.rod, stop.port)
+F_chambers = -cyl.rod.f
+F_rod_end = P_atm * pi# * d_rod^2 / 4
+F_net = F_chambers - F_rod_end
+{ CHECK F_chambers 305.342935355394 1e-06 }
+{ CHECK F_rod_end 11.4567600891113 1e-08 }
+{ CHECK F_net 293.886175266283 1e-06 }`,
+  },
+  {
+    id: 'pneumatic-accumulator-equalization',
+    title: 'Three accumulators equalizing',
+    description: 'Solve (F2), then inspect the dynamic table. Three air receivers equalize through a large and a small orifice.',
+    category: 'Pneumatics',
+    text: `{ Receivers of 20, 20 and 100 L at 15, 10 and 1 barA, joined in a chain by a
+  500 mm2 and a 20 mm2 orifice (ISO 6358 conductance taken as 2e-9 m3/(s Pa)
+  per mm2, b = 0.5). Isothermal mass conservation fixes the end state:
+  sum(P*V)/sum(V) = 4.2857 barA (textbook 4.29 barA). The large orifice
+  equalizes the first two receivers within seconds; the small one sets the
+  long tail into the third. }
+function [port] = ClosedEnd(T [K], domain$ = gas)
+port(port)
+  port.mdot = 0
+  port.h    = Enthalpy(Air, P=port.P, T=T)
+end
+function [port] = GasCap(domain$ = gas)
+port(port)
+  port.mdot = 0
+end
+ClosedEnd        head(T=293.15 [K])
+PneumaticVolume  tank1(V=0.020 [m^3], T=293.15 [K], R=287 [J/kg-K], P0=1500000 [Pa])
+PneumaticOrifice big(fluid$=Air, C=1e-6 [m^3/s-Pa], b=0.5)
+PneumaticVolume  tank2(V=0.020 [m^3], T=293.15 [K], R=287 [J/kg-K], P0=1000000 [Pa])
+PneumaticOrifice small(fluid$=Air, C=4e-8 [m^3/s-Pa], b=0.5)
+PneumaticVolume  tank3(V=0.100 [m^3], T=293.15 [K], R=287 [J/kg-K], P0=100000 [Pa])
+GasCap           tail()
+connect(head.port, tank1.in)
+connect(tank1.out, big.in)
+connect(big.out, tank2.in)
+connect(tank2.out, small.in)
+connect(small.out, tank3.in)
+connect(tank3.out, tail.port)
+DYNAMIC equalize(method=ode23s, time=0..200, points=201)
+END
+P1_final = FinalValue('tank1.in.P') * 1 [Pa]
+P2_final = FinalValue('tank2.in.P') * 1 [Pa]
+P3_final = FinalValue('tank3.in.P') * 1 [Pa]
+P_mass_balance = (1500000 [Pa] * 0.020 [m^3] + 1000000 [Pa] * 0.020 [m^3] + 100000 [Pa] * 0.100 [m^3]) / (0.140 [m^3])
+{ CHECK P1_final 428570.809647344 5 }
+{ CHECK P2_final 428571.41397698 5 }
+{ CHECK P3_final 428571.555275133 5 }
+{ CHECK P_mass_balance 428571.428571429 1e-06 }`,
+  },
+  {
+    id: 'hydraulic-vertical-cylinder',
+    title: 'Vertical cylinder under weight and spring',
+    description: 'Solve (F2). Oil pressure that holds a 3.2 kg piston against a 150 N spring.',
+    category: 'Hydraulics',
+    text: `{ A vertical cylinder of 35 cm2 bore, blocked inlet, carries a 3.2 kg piston
+  and a 150 N spring load; the far side is at 95 kPa. The force balance gives
+  P = Patm + (m g + F_spring) / A = 146.83 kPa. The source bank lists
+  146.97 kPa, 0.1 % higher, consistent with a rounded g. }
+function [port] = OilCap(domain$ = oil)
+port(port)
+  port.mdot = 0
+  port.h    = 0
+end
+m_piston = 3.2 [kg]
+g = 9.81 [m/s^2]
+A = 0.0035 [m^2]
+P_atm = 95000 [Pa]
+F_spring = 150 [N]
+OilCap            blocked()
+HydraulicCylinder cyl(rho=870 [kg/m^3], beta=1.5e9 [Pa], V0=0.0002 [m^3], area=A, Patm=P_atm, P0=150000 [Pa])
+TransMass         piston(m=m_piston, v0=0 [m/s])
+ForceSource       weight(F=m_piston * g)
+ForceSource       spring(F=F_spring)
+TransGround       ground()
+connect(blocked.port, cyl.in)
+connect(cyl.rod, piston.port, weight.b, spring.b)
+connect(weight.a, spring.a, ground.port)
+P_oil = cyl.in.P
+P_hand = P_atm + (m_piston * g + F_spring) / A
+{ CHECK P_oil 146826.285714286 1e-06 }
+{ CHECK P_hand 146826.285714286 1e-06 }`,
+  },
+  {
+    id: 'hydraulic-orifice-lpm',
+    title: 'Sharp-edged orifice in L/min',
+    description: 'Solve (F2). Oil flow through a 3 mm orifice at 40 bar, reported in L/min.',
+    category: 'Hydraulics',
+    text: `{ Inputs written in engineering units ([mm], [bar]) are stored in SI, so the
+  model reads as the problem does. Q = Cd * A * sqrt(2 dP / rho) with Cd = 0.61:
+  4.159e-4 m3/s, or 24.95 L/min (textbook 4.16e-4 m3/s, 24.97 L/min). }
+d = 3 [mm]
+C_d = 0.61
+rho = 860 [kg/m^3]
+dP = 40 [bar]
+P_tank = 1 [bar]
+CdA = C_d * pi# * d^2 / 4
+HydraulicSupply  pump(P=P_tank + dP)
+HydraulicOrifice jet(CdA=CdA, rho=rho)
+HydraulicTank    tank(P=P_tank)
+connect(pump.out, jet.in)
+connect(jet.out, tank.port)
+GUESS jet.in.mdot = 0.4
+Q = jet.in.mdot / rho
+Q_lpm = Q / (1 [l/min])  { the flow as a count of litres per minute }
+Q_hand = CdA * sqrt(2 * dP / rho)
+{ CHECK Q 0.00041587038427498 1e-12 }
+{ CHECK Q_lpm 24.9522230564988 1e-06 }
+{ CHECK Q_hand 0.00041587038427498 1e-12 }`,
+  },
+  {
+    id: 'tank-orifice-draining',
+    title: 'Tank draining through a bottom orifice',
+    description: 'Solve (F2), then inspect the dynamic table. A 3 m tank drains through a 3 cm orifice.',
+    category: 'Fluids',
+    text: `{ A 3.0 m diameter open tank, 2.75 m of water, drains through a 3 cm bottom
+  orifice (Cd = 0.55). Torricelli gives the time to empty in closed form,
+  t = (D/d)^2 / Cd * sqrt(2 H0 / g) = 13,616 s, and the time to fall to a
+  quarter of the height is half of it. The simulated level reaches H0/4 at
+  that time. The source bank lists 12,306 s to empty, which the stated inputs
+  do not reproduce. }
+function [port] = NoInflow(domain$ = liquid)
+port(port)
+  port.mdot = 0
+  port.h    = 104900
+end
+function [port] = Atmosphere(P [Pa], domain$ = liquid)
+port(port)
+  port.P = P
+end
+D = 3.0 [m]
+H0 = 2.75 [m]
+d_o = 0.03 [m]
+C = 0.55
+rho = 998 [kg/m^3]
+g = 9.80665 [m/s^2]
+NoInflow     lid()
+OpenTank     tank(A_t=pi# * D^2 / 4, P0=101325 [Pa], rho=rho, L0=H0)
+GravityDrain orifice(Cd=C, A_d=pi# * d_o^2 / 4, rho=rho)
+Atmosphere   outside(P=101325 [Pa])
+connect(lid.port, tank.in)
+connect(tank.out, orifice.in)
+connect(orifice.out, outside.port)
+DYNAMIC drain(method=ode45, time=0..14000, points=1401)
+END
+t_quarter = TimeAt('tank.lvl', H0 / 4) * 1 [s]
+t_empty_hand = (D / d_o)^2 / C * sqrt(2 * H0 / g)
+t_quarter_hand = t_empty_hand * (1 - sqrt(1/4))
+{ CHECK t_quarter 6808.13866650534 0.01 }
+{ CHECK t_empty_hand 13616.2751079056 1e-06 }
+{ CHECK t_quarter_hand 6808.13755395278 1e-06 }`,
+  },
+  {
+    id: 'gear-impedance-reflection',
+    title: 'Gear train and reflected stiffness',
+    description: 'Solve (F2), then inspect the dynamic table. A 25:50 gear reflects an output spring to the input shaft.',
+    category: 'Mechanical',
+    text: `{ A 10 N-m motor drives a 1 kg-m2 rotor through a 25:50 gear into a
+  4 N-m/rad shaft spring. Seen from the input the spring is K2 / GR^2 =
+  1 N-m/rad, so the rotor rings at 1 rad/s. Released from rest, the output
+  twist swings to twice its static value T2 / K2 = 5 rad and peaks at
+  t = pi s. }
+N1 = 25
+N2 = 50
+GR = N2 / N1
+T1 = 10 [N-m]
+K2 = 4 [N-m]
+J1 = 1 [kg-m^2]
+TorqueSource     motor(T=T1)
+Inertia          rotor(J=J1, w0=0 [rad/s])
+Gear             mesh(ratio=GR)
+RotationalSpring shaft(k=K2, theta0=0 [rad])
+MechGround       frame1()
+MechGround       frame2()
+connect(motor.a, rotor.port, mesh.in)
+connect(motor.b, frame1.port)
+connect(mesh.out, shaft.a)
+connect(shaft.b, frame2.port)
+DYNAMIC release(method=ode45, time=0..10, points=1001)
+END
+K_e = K2 / GR^2
+T2 = GR * T1
+theta2_static = T2 / K2
+omega_n = sqrt(K_e / J1)
+theta2_peak = MaxValue('shaft.theta') * 1 [rad]
+t_peak = pi# / omega_n
+theta2_at_peak = ODEValue('shaft.theta', t_peak / (1 [s])) * 1 [rad]
+{ CHECK GR 2.0 1e-12 }
+{ CHECK K_e 1.0 1e-12 }
+{ CHECK T2 20.0 1e-12 }
+{ CHECK theta2_static 5.0 1e-12 }
+{ CHECK theta2_peak 9.99999245795475 0.0001 }
+{ CHECK theta2_at_peak 9.9999653735619 0.0001 }`,
+  },
+  {
+    id: 'vehicle-launch-equivalent-mass',
+    title: 'Vehicle acceleration with rotating inertia',
+    description: 'Solve (F2), then inspect the dynamic table. Engine, gearbox, wheels and body; the wheels add equivalent mass.',
+    category: 'Powertrain',
+    text: `{ 2165 kg car, four 22.9 kg wheels (r = 0.33 m, taken as discs), 325 N-m at
+  the engine through 4.28:1 at 85 % efficiency, Cd = 0.38, A = 1.86 m2,
+  fr = 0.02, from 10 m/s. The wheels add J/r^2 = 45.8 kg of equivalent mass.
+  A slip tyre joins the wheel inertia to the body; a rigid joint would make
+  the system index-2. The simulated acceleration over 0.5-1 s matches
+  (F_t - F_res) / m_eq at the mid speed. The source bank's 1.203 m/s2 depends
+  on a speed or drivetrain inertia it does not state. }
+m = 2165 [kg]
+m_wheel = 22.9 [kg]
+r = 0.33 [m]
+T_e = 325 [N-m]
+i_g = 4.28
+eta = 0.85
+C_d = 0.38
+A_f = 1.86 [m^2]
+f_r = 0.02
+rho_air = 1.225 [kg/m^3]
+v_0 = 10 [m/s]
+J_wheels = 4 * 0.5 * m_wheel * r^2
+Engine       engine(Tmax=T_e, throttle=1, bf=0 [N-m-s])
+Transmission gearbox(ratio=i_g, eta=eta)
+Inertia      wheels(J=J_wheels, w0=v_0 / r * 1 [rad])
+TireLongitudinal tyre(r=r, Fz=m * 9.80665 [m/s^2], B=10, C=1.9, D=1.0, epsv=0.1 [m/s])
+VehicleBody  body(m=m, Cd=C_d, Af=A_f, rhoA=rho_air, Crr=f_r, grade=0 [rad], v0=v_0)
+connect(engine.shaft, gearbox.in)
+connect(gearbox.out, wheels.port, tyre.wheel)
+connect(tyre.veh, body.port)
+DYNAMIC launch(method=ode45, time=0..1, points=101)
+END
+v_a = ODEValue('body.port.vel', 0.5) * 1 [m/s]
+v_b = ODEValue('body.port.vel', 1.0) * 1 [m/s]
+a_sim = (v_b - v_a) / 0.5 [s]
+v_mid = (v_a + v_b) / 2
+F_t = T_e * i_g * eta / r
+F_res = 0.5 * rho_air * C_d * A_f * v_mid^2 + f_r * m * 9.80665 [m/s^2]
+m_eq = m + J_wheels / r^2
+a_hand = (F_t - F_res) / m_eq
+{ CHECK a_sim 1.40436851073671 0.0001 }
+{ CHECK a_hand 1.40463315299653 0.0001 }
+{ CHECK m_eq 2210.8 1e-09 }`,
+  },
+  {
+    id: 'capstan-belt-friction',
+    title: 'Belt friction lifting a load',
+    description: 'Solve (F2). Capstan equation in US customary units.',
+    category: 'Mechanics',
+    text: `{ A rope wrapped half a turn round a fixed drum (f = 0.30) lifts 50 lbf.
+  The capstan equation P = W * exp(f * theta) gives 128.3 lbf. Inputs in
+  [lbf] and [deg] are stored in SI; dividing by one unit reads a result back
+  in that unit. }
+W = 50 [lbf]
+f = 0.30
+theta = 180 [deg]
+P = W * exp(f * theta)
+P_lbf = P / (1 [lbf])
+P_N = P / (1 [N])
+{ CHECK P 570.780761615404 1e-08 }
+{ CHECK P_lbf 128.316619760407 1e-08 }`,
+  },
+  {
+    id: 'second-order-step-metrics',
+    title: 'Second-order step response metrics',
+    description: 'Solve (F2). Natural frequency, damping, peak time, overshoot and settling time of 121/(s^2+11s+121).',
+    category: 'Control Systems',
+    text: `{ T(s) = 121 / (s^2 + 11 s + 121): wn = 11 rad/s, zeta = 0.5. stepinfo
+  measures the sampled response (5 ms grid) against the closed-form metrics:
+  Tp = 0.330 s, OS = 16.3 %. The textbook settling time, 0.727 s, is the
+  4 / (zeta wn) estimate; the measured 2 % settling time is 0.734 s. }
+num = [0, 0, 121]
+den = [1, 11, 121]
+tv = 0:0.005:2
+[ys] = step(num, den, tv)
+[Tr, Tp, Ts, OS] = stepinfo(tv, ys)
+omega_n = sqrt(den[3])
+zeta = den[2] / (2 * omega_n)
+Tp_formula = pi# / (omega_n * sqrt(1 - zeta^2))
+OS_formula = 100 * exp(-zeta * pi# / sqrt(1 - zeta^2))
+Ts_formula = 4 / (zeta * omega_n)
+{ CHECK omega_n 11.0 1e-12 }
+{ CHECK zeta 0.5 1e-12 }
+{ CHECK Tp 0.33 1e-09 }
+{ CHECK OS 16.3054379807141 1e-06 }
+{ CHECK Ts 0.734080151892073 1e-06 }
+{ CHECK Tp_formula 0.32978170258804 1e-09 }
+{ CHECK OS_formula 16.303353482158 1e-09 }
+{ CHECK Ts_formula 0.727272727272727 1e-12 }`,
+  },
+  {
+    id: 'pi-zero-overshoot',
+    title: 'PI control with zero overshoot',
+    description: 'Solve (F2). A PI zero at 0.1 on 800/(s^2+101s+100) gives no overshoot and no steady-state error.',
+    category: 'Control Systems',
+    text: `{ Plant 800 / (s^2 + 101 s + 100) under PI control Kp (s + zc) / s with
+  Kp = 0.48, zc = 0.10, unity feedback. The step never overshoots (the peak is
+  the last sample) and the closed-loop DC gain is exactly 1, so e_ss = 0. The
+  price is a slow tail from the closed-loop pole near the PI zero. }
+K_p = 0.48
+z_c = 0.10
+num_c = [K_p, K_p * z_c]
+den_c = [1, 0]
+num_p = [0, 0, 800]
+den_p = [1, 101, 100]
+[num_l, den_l] = series(num_c, den_c, num_p, den_p)
+num_h = [1]
+den_h = [1]
+[num_t, den_t] = feedback(num_l, den_l, num_h, den_h)
+tv = 0:0.5:80
+[ys] = step(num_t, den_t, tv)
+[Tr, Tp, Ts, OS] = stepinfo(tv, ys)
+y_80 = ys[161]
+e_ss = 1 - num_t[4] / den_t[4]
+y_peak = max(ys[1:161])
+{ CHECK OS 0.0 1e-09 }
+{ CHECK e_ss 0.0 1e-12 }
+{ CHECK y_80 0.999691373519896 1e-06 }
+{ CHECK y_peak 0.999691373519896 1e-06 }`,
+  },
+  {
+    id: 'first-order-motor-step',
+    title: 'First-order motor speed step',
+    description: 'Solve (F2), then inspect the dynamic table. Time constant of G = 1000/(0.00992 s + 1).',
+    category: 'Control Systems',
+    text: `{ Motor speed G(s) = 1000 / (0.00992 s + 1) under a unit step. TimeAt finds
+  when the speed reaches 63.2 % of 1000 rad/s, which is the time constant,
+  9.92 ms; ODEValue reads the speed at that instant. }
+K = 1000 [rad/s]
+tau = 0.00992 [s]
+DYNAMIC spinup(method=ode45, time=0..0.05, points=501, rtol=1e-9)
+  der(w) = (K * 1 - w) / tau
+  w(0) = 0
+END
+w_ss = K
+t_63 = TimeAt('w', 1000 * (1 - exp(-1))) * 1 [s]
+w_at_tau = ODEValue('w', 0.00992) * 1 [rad/s]
+fraction_at_tau = w_at_tau / w_ss
+{ CHECK t_63 0.00992008065196089 1e-07 }
+{ CHECK w_at_tau 632.117576902679 0.001 }
+{ CHECK fraction_at_tau 0.632117576902679 1e-06 }`,
+  },
+  {
+    id: 'moist-air-adiabatic-mixing',
+    title: 'Adiabatic mixing of two air streams',
+    description: 'Solve (F2). 1000 L/s of warm air mixes with 500 L/s of cool air.',
+    category: 'HVAC',
+    text: `{ 1.0 m3/s at 38 C DB / 24 C WB mixes with 0.5 m3/s at 16 C DB / 10 C WB at
+  101.325 kPa. Volume flows become dry-air mass flows through each stream's
+  specific volume; the box conserves dry air, water and enthalpy. Result:
+  W3 = 0.01028, h3 = 56.79 kJ/kg, T3 = 303.46 K (30.31 C). The source bank,
+  read from a chart, lists 30.67 C, 57.77 kJ/kg and 0.01053. }
+P = 101325 [Pa]
+Vdot_1 = 1.000 [m^3/s]
+T_1 = 38 [C]
+Twb_1 = 24 [C]
+Vdot_2 = 0.500 [m^3/s]
+T_2 = 16 [C]
+Twb_2 = 10 [C]
+W_1 = HumRat(AirH2O, T=T_1, P=P, B=Twb_1)
+W_2 = HumRat(AirH2O, T=T_2, P=P, B=Twb_2)
+v_1 = Volume(AirH2O, T=T_1, P=P, W=W_1)
+v_2 = Volume(AirH2O, T=T_2, P=P, W=W_2)
+MoistAirSource hot(P=P, T=T_1, W=W_1, mdot=Vdot_1 / v_1)
+MoistAirSource cool(P=P, T=T_2, W=W_2, mdot=Vdot_2 / v_2)
+MixingBox      box()
+MoistAirSink   supply()
+connect(hot.out, box.in1)
+connect(cool.out, box.in2)
+connect(box.out, supply.in)
+W_3 = box.out.W
+h_3 = box.out.h
+T_3 = Temperature(AirH2O, H=h_3, P=P, W=W_3)
+{ CHECK W_3 0.0102845692818076 1e-08 }
+{ CHECK h_3 56788.562311828 0.01 }
+{ CHECK T_3 303.464657436987 0.0001 }`,
+  },
+  {
+    id: 'cooling-coil-dehumidification',
+    title: 'Cooling and dehumidifying coil',
+    description: 'Solve (F2). Back-solve the apparatus dew point and bypass factor for 28 C/50 % to 13 C/90 %.',
+    category: 'HVAC',
+    text: `{ 1.5 kg/s of air from 28 C / 50 % to 13 C / 90 %. The coil's apparatus dew
+  point and bypass factor are unknowns, fixed by the two leaving conditions.
+  The coil line crosses saturation twice; the GUESS picks the physical
+  crossing near 10 C (the other is near -22 C). Condensate 0.00519 kg/s
+  matches the source bank (0.0051), but its 7.66 kW latent load contradicts
+  that rate (0.0051 kg/s x 2.5 MJ/kg = 12.8 kW); this model gives 13.09 kW. }
+P = 101325 [Pa]
+mdot = 1.5 [kg/s]
+T_in = 28 [C]
+RH_in = 0.50
+T_out = 13 [C]
+RH_out = 0.90
+W_in = HumRat(AirH2O, T=T_in, P=P, R=RH_in)
+MoistAirSource        room(P=P, T=T_in, W=W_in, mdot=mdot)
+ApparatusDewPointCoil coil(T_adp=T_adp, BF=BF)
+MoistAirSink          supply()
+connect(room.out, coil.in)
+connect(coil.out, supply.in)
+coil.T_out = T_out
+RelHum(AirH2O, T=T_out, P=P, W=coil.out.W) = RH_out
+GUESS T_adp = 283.6
+GUESS BF = 0.1
+Q_total = coil.Q_air
+Q_sensible = coil.Q_sens
+Q_latent = Q_total - Q_sensible
+SHR = coil.SHR
+condensate = coil.mdot_w
+{ CHECK T_adp 283.396143144343 0.0001 }
+{ CHECK BF 0.15410050953991 1e-06 }
+{ CHECK Q_total 36241.4405317929 0.1 }
+{ CHECK Q_sensible 23148.5195341037 0.1 }
+{ CHECK Q_latent 13092.9209976892 0.1 }
+{ CHECK SHR 0.6387306683849 1e-06 }
+{ CHECK condensate 0.00519166771651502 1e-08 }`,
+  },
+  {
+    id: 'preheat-steam-humidifier-ip',
+    title: 'Preheat coil and steam humidifier (IP units)',
+    description: 'Solve (F2). Winter air heated and humidified to 90 F / 40 %, in US customary units.',
+    category: 'HVAC',
+    text: `{ 235 lbm/min of dry air at 40 F DB / 36 F WB is preheated, then a steam
+  humidifier (h_g = 1156.9 Btu/lbm) brings it to 90 F / 40 %. Unknown: the
+  preheat leaving temperature. The energy balance closes to rounding, giving
+  163,700 Btu/hr of heat and 120.8 lbm/hr of steam. The source bank lists
+  112,518 Btu/hr and 125.8 lbm/hr; with this steam enthalpy its heat and steam
+  figures do not close the same balance. }
+P = 14.696 [psi]
+mdot = 235 [lbm/min]
+T_in = 40 [F]
+Twb_in = 36 [F]
+T_out = 90 [F]
+RH_out = 0.40
+h_steam = 1156.9 [Btu/lbm]
+W_in = HumRat(AirH2O, T=T_in, P=P, B=Twb_in)
+W_out = HumRat(AirH2O, T=T_out, P=P, R=RH_out)
+MoistAirSource  outdoor(P=P, T=T_in, W=W_in, mdot=mdot)
+HeatingCoil     preheat(Q=Q_coil)
+SteamHumidifier steam(W_set=W_out, h_steam=h_steam)
+MoistAirSink    supply()
+connect(outdoor.out, preheat.in)
+connect(preheat.out, steam.in)
+connect(steam.out, supply.in)
+Temperature(AirH2O, H=steam.out.h, P=P, W=steam.out.W) = T_out
+h_mid = Enthalpy(AirH2O, T=T_mid, P=P, W=W_in)
+Q_coil = mdot * (h_mid - outdoor.out.h)
+GUESS T_mid = 300
+steam_lbm_hr = steam.mdot_w / (1 [lbm/hr])
+Q_btu_hr = Q_coil / (1 [Btu/hr])
+h_in = outdoor.out.h
+h_out = steam.out.h
+balance = Q_coil + steam.mdot_w * h_steam - mdot * (h_out - h_in)
+{ CHECK Q_coil 47981.0628232086 0.01 }
+{ CHECK Q_btu_hr 163718.182060797 0.05 }
+{ CHECK steam_lbm_hr 120.799347918465 1e-05 }
+{ CHECK balance -1.45519152283669e-11 1e-06 }`,
+  },
+  {
+    id: 'crossflow-hx-effectiveness',
+    title: 'Cross-flow exchanger by effectiveness-NTU',
+    description: 'Solve (F2). Effectiveness, duty and outlet temperatures of a cross-flow exchanger, both fluids unmixed.',
+    category: 'Heat Transfer',
+    text: `{ UA = 1000 W/K; hot stream 90 C, 3 kg/s, cp 2100; cold stream 20 C,
+  2 kg/s, cp 1009. Cr = 0.3203 and NTU = 0.4955 as in the textbook.
+  The correlation gives eps = 0.364 and q = 51.40 kW. The source bank's
+  eps = 0.388 exceeds the counterflow effectiveness at the same NTU and Cr
+  (0.371, computed below), which bounds every arrangement, so it is a chart
+  misread. }
+UA = 200 [W/K] * 5
+T_h_in = 90 [C]
+mdot_h = 3 [kg/s]
+cp_h = 2100 [J/kg-K]
+T_c_in = 20 [C]
+mdot_c = 2 [kg/s]
+cp_c = 1009 [J/kg-K]
+C_h = mdot_h * cp_h
+C_c = mdot_c * cp_c
+C_min = min(C_h, C_c)
+C_max = max(C_h, C_c)
+C_r = C_min / C_max
+NTU = UA / C_min
+epsilon = hx_effectiveness('crossflow_both_unmixed', NTU, C_r)
+q = epsilon * C_min * (T_h_in - T_c_in)
+T_c_out = T_c_in + q / C_c
+T_h_out = T_h_in - q / C_h
+eps_counterflow = hx_effectiveness('counterflow', NTU, C_r)
+eps_cmin_mixed = hx_effectiveness('crossflow_cmin_mixed', NTU, C_r)
+{ CHECK C_r 0.32031746031746 1e-09 }
+{ CHECK NTU 0.495540138751239 1e-09 }
+{ CHECK epsilon 0.363868503817334 1e-09 }
+{ CHECK q 51400.0648492367 0.0001 }
+{ CHECK T_c_out 318.620795267213 1e-06 }
+{ CHECK T_h_out 354.99125954774 1e-06 }
+{ CHECK eps_counterflow 0.370754891621542 1e-09 }`,
+  },
+  {
+    id: 'annular-fin-efficiency',
+    title: 'Annular fin efficiency and heat loss',
+    description: 'Solve (F2). Bessel-function efficiency of annular fins on a 2.5 cm tube.',
+    category: 'Heat Transfer',
+    text: `{ Aluminium annular fins (k = 160 W/m-K), r1 = 12.5 mm, r2 = 22.5 mm, 1 mm
+  thick, 100 per metre, h = 200 W/m2-K, base 170 C, air 30 C, insulated tip.
+  The exact Bessel-function efficiency at mL = 0.5 is 0.9005 (chart 0.90),
+  the overall surface efficiency 0.9247 (0.924), and the loss 7,524 W per
+  metre of tube (textbook 7,503 W/m from the rounded chart value). }
+D_o = 0.025 [m]
+r_1 = D_o / 2
+r_2 = 0.0225 [m]
+t = 0.001 [m]
+N = 100 [1/m]
+k = 160 [W/m-K]
+h = 200 [W/m^2-K]
+T_b = 170 [C]
+T_inf = 30 [C]
+m = sqrt(2 * h / (k * t))
+L = r_2 - r_1
+mL = m * L
+x_1 = m * r_1
+x_2 = m * r_2
+eta_f = 2 * r_1 / (m * (r_2^2 - r_1^2)) * (besselk1(x_1) * besseli1(x_2) - besseli1(x_1) * besselk1(x_2)) / (besseli0(x_1) * besselk1(x_2) + besselk0(x_1) * besseli1(x_2))
+A_fin = N * 2 * pi# * (r_2^2 - r_1^2)
+A_base = 2 * pi# * r_1 * (1 - N * t)
+eta_o = (A_base + eta_f * A_fin) / (A_base + A_fin)
+Q_per_m = h * (A_base + eta_f * A_fin) * (T_b - T_inf)
+Q_bare = h * 2 * pi# * r_1 * (T_b - T_inf)
+{ CHECK mL 0.5 1e-12 }
+{ CHECK eta_f 0.900515768104082 1e-09 }
+{ CHECK eta_o 0.924714635322008 1e-09 }
+{ CHECK Q_per_m 7524.14866593597 1e-06 }`,
+  },
+  {
+    id: 'shell-tube-lmtd-sizing',
+    title: 'Shell-and-tube sizing by LMTD',
+    description: 'Solve (F2). Area and tube count for a 150.75 kW exchanger with two shell passes.',
+    category: 'Heat Transfer',
+    text: `{ 150.75 kW, U = 400 W/m2-K, hot 100 -> 60 C, cold 20 -> 50 C, 26.67 mm
+  tubes 2 m long. Counterflow LMTD 44.81 K. The textbook's F = 0.975 is the
+  two-shell-pass value; one shell pass gives 0.891 (shown for contrast), so
+  this exchanger uses two. A = 8.63 m2, 52 tubes. }
+q = 150.75 [kW]
+U = 400 [W/m^2-K]
+T_h_in = 100 [C]
+T_h_out = 60 [C]
+T_c_in = 20 [C]
+T_c_out = 50 [C]
+d_o = 0.02667 [m]
+L = 2 [m]
+N_shells = 2
+dT_lm = LMTD(T_h_in - T_c_out, T_h_out - T_c_in)
+P_eff = (T_c_out - T_c_in) / (T_h_in - T_c_in)
+R_cap = (T_h_in - T_h_out) / (T_c_out - T_c_in)
+S = sqrt(R_cap^2 + 1)
+X = ((1 - P_eff * R_cap) / (1 - P_eff))^(1 / N_shells)
+P_1 = (1 - X) / (R_cap - X)
+F = S / (R_cap - 1) * ln((1 - P_1) / (1 - P_1 * R_cap)) / ln((2 - P_1 * (R_cap + 1 - S)) / (2 - P_1 * (R_cap + 1 + S)))
+F_one_shell = S / (R_cap - 1) * ln((1 - P_eff) / (1 - P_eff * R_cap)) / ln((2 - P_eff * (R_cap + 1 - S)) / (2 - P_eff * (R_cap + 1 + S)))
+A = q / (U * F * dT_lm)
+N_exact = A / (pi# * d_o * L)
+N_tubes = ceil(N_exact)
+{ CHECK dT_lm 44.8142011772455 1e-09 }
+{ CHECK F 0.974570771805907 1e-09 }
+{ CHECK F_one_shell 0.890605633012191 1e-09 }
+{ CHECK A 8.62915535068924 1e-08 }
+{ CHECK N_tubes 52.0 1e-12 }`,
+  },
+  {
+    id: 'beam-deflection-uncertainty',
+    title: 'Beam deflection uncertainty',
+    description: 'Solve (F2). Root-sum-square and worst-case uncertainty of a cantilever deflection.',
+    category: 'Uncertainty',
+    text: `{ Cantilever under a distributed load, y = w L^4 / (8 E I), with
+  w = 750 +/- 30 N/m, L = 9.0 +/- 0.03 m, E = 7.5e9 +/- 5e7 Pa and
+  I = 5e-4 +/- 5e-6 m4. UncertaintyOf propagates first-order, root-sum-
+  square: +/- 0.00719 m (4.4 %). The textbook's +/- 0.01148 m (7.0 %) is the
+  worst-case linear sum, computed below. }
+w = 750 [N/m]
+L = 9.0 [m]
+E = 7.5e9 [Pa]
+I = 5e-4 [m^4]
+y = w * L^4 / (8 * E * I)
+UncertaintyOf(w) = 30 [N/m]
+UncertaintyOf(L) = 0.03 [m]
+UncertaintyOf(E) = 5e7 [Pa]
+UncertaintyOf(I) = 5e-6 [m^4]
+u_y = UncertaintyOf(y)
+rel_rss = u_y / y
+rel_worst = 30 [N/m] / w + 4 * 0.03 [m] / L + 5e7 [Pa] / E + 5e-6 [m^4] / I
+u_y_worst = rel_worst * y
+{ CHECK y 0.164025 1e-12 }
+{ CHECK u_y 0.00719136230459362 1e-09 }
+{ CHECK rel_rss 0.0438430867525903 1e-09 }
+{ CHECK rel_worst 0.07 1e-12 }
+{ CHECK u_y_worst 0.01148175 1e-09 }`,
+  },
+  {
+    id: 'linear-regression-diagnostics',
+    title: 'Linear regression with diagnostics',
+    description: 'Solve (F2). Slope, intercept, standard error and correlation of seven points.',
+    category: 'Statistics',
+    text: `{ Least-squares line through seven points, with the standard error of the
+  estimate s_y/x = sqrt(S_r / (n - 2)) and the correlation coefficient.
+  Data and published answers: Chapra & Canale, Numerical Methods for
+  Engineers, Examples 17.1-17.2 (a1 = 0.8392857, a0 = 0.07142857,
+  s_y/x = 0.7735, r = 0.932). The original problem's data was not kept. }
+x = [1, 2, 3, 4, 5, 6, 7]
+y = [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5]
+[a_1, a_0, r_sq] = linfit(x, y)
+r = pearson([1, 2, 3, 4, 5, 6, 7], [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5])
+r_cc = corrcoef([1, 2, 3, 4, 5, 6, 7], [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5])
+n = 7
+FOR i = 1 TO 7
+  e2[i] = (y[i] - (a_0 + a_1 * x[i]))^2
+END
+S_r = sum(e2[1:7])
+s_yx = sqrt(S_r / (n - 2))
+{ CHECK a_1 0.839285714285714 1e-12 }
+{ CHECK a_0 0.0714285714285714 1e-12 }
+{ CHECK r_sq 0.868317610062893 1e-12 }
+{ CHECK r 0.931835613218819 1e-12 }
+{ CHECK S_r 2.99107142857143 1e-10 }
+{ CHECK s_yx 0.773443136703847 1e-10 }`,
+  },
+  {
+    id: 'quadratic-regression',
+    title: 'Quadratic regression',
+    description: 'Solve (F2). Second-order polynomial fit of six points, with its standard error.',
+    category: 'Statistics',
+    text: `{ Second-order least-squares polynomial through six points. polyfit
+  returns the coefficients constant term first. Data and published answer:
+  Chapra & Canale, Example 17.5: y = 2.47857 + 2.35929 x + 1.86071 x^2,
+  s_y/x = 1.12, r^2 = 0.99851. }
+x = [0, 1, 2, 3, 4, 5]
+y = [2.1, 7.7, 13.6, 27.2, 40.9, 61.1]
+[c] = polyfit(x, y, 2)
+n = 6
+FOR i = 1 TO 6
+  e2[i] = (y[i] - (c[1] + c[2] * x[i] + c[3] * x[i]^2))^2
+END
+S_r = sum(e2[1:6])
+y_mean = sum(y[1:6]) / n
+FOR i = 1 TO 6
+  d2[i] = (y[i] - y_mean)^2
+END
+S_t = sum(d2[1:6])
+s_yx = sqrt(S_r / (n - 3))
+r_sq = (S_t - S_r) / S_t
+{ CHECK c[1] 2.47857142857142 1e-09 }
+{ CHECK c[2] 2.35928571428572 1e-09 }
+{ CHECK c[3] 1.86071428571429 1e-09 }
+{ CHECK s_yx 1.11752277062132 1e-09 }
+{ CHECK r_sq 0.998509357298405 1e-12 }`,
+  },
+  {
+    id: 'power-law-log-fit',
+    title: 'Power law by log linearization',
+    description: 'Solve (F2). Fit y = alpha x^beta by a straight line through log10 data.',
+    category: 'Statistics',
+    text: `{ y = alpha * x^beta becomes log10(y) = log10(alpha) + beta * log10(x), a
+  straight line. Data and published answer: Chapra & Canale, Example 17.4:
+  y = 0.5 x^1.75. The fit minimizes error in log10(y), so it weights relative
+  rather than absolute error; a direct nonlinear fit of the same data would
+  give slightly different coefficients. }
+x = [1, 2, 3, 4, 5]
+y = [0.5, 1.7, 3.4, 5.7, 8.4]
+FOR i = 1 TO 5
+  lx[i] = log10(x[i])
+  ly[i] = log10(y[i])
+END
+[beta_2, log_alpha, r_sq_log] = linfit(lx[1:5], ly[1:5])
+alpha_2 = 10^log_alpha
+y_at_2_5 = alpha_2 * 2.5^beta_2
+{ CHECK beta_2 1.75172364807736 1e-09 }
+{ CHECK alpha_2 0.500933649097749 1e-09 }
+{ CHECK r_sq_log 0.999967195116412 1e-12 }`,
+  },
+  {
+    id: 'damping-sensitivity-oscillators',
+    title: 'Damping sensitivity of a soft and a stiff oscillator',
+    description: 'Solve (F2), then inspect the dynamic table. Central-difference dx/db at t = 5 s for k = 1 and k = 50 N/m.',
+    category: 'Sensitivity',
+    text: `{ A 1 kg mass under a 1 N step, damping b = 3 N-s/m, read at t = 5 s. Each
+  system runs twice, at b - 1 % and b + 1 %, for a central difference. The
+  stiff oscillator (k = 50 N/m) has settled at F/k, so its position no longer
+  depends on b: dx/db ~ 0. The soft one (k = 1 N/m) is still creeping toward
+  1 m, so more damping slows it: dx/db = -0.122 m/(N-s/m). The source bank's
+  k, b grid and time are not stated in full; these inputs are this model's own. }
+m = 1 [kg]
+F = 1 [N]
+b = 3 [N-s/m]
+db = 0.01 * b
+k_soft = 1 [N/m]
+k_stiff = 50 [N/m]
+DYNAMIC respond(method=ode45, time=0..5, points=501, rtol=1e-10)
+  der(xs_lo) = vs_lo
+  der(vs_lo) = (1 - (3 - 0.03) * vs_lo - 1 * xs_lo) / 1
+  der(xs_hi) = vs_hi
+  der(vs_hi) = (1 - (3 + 0.03) * vs_hi - 1 * xs_hi) / 1
+  der(xk_lo) = vk_lo
+  der(vk_lo) = (1 - (3 - 0.03) * vk_lo - 50 * xk_lo) / 1
+  der(xk_hi) = vk_hi
+  der(vk_hi) = (1 - (3 + 0.03) * vk_hi - 50 * xk_hi) / 1
+  xs_lo(0) = 0
+  vs_lo(0) = 0
+  xs_hi(0) = 0
+  vs_hi(0) = 0
+  xk_lo(0) = 0
+  vk_lo(0) = 0
+  xk_hi(0) = 0
+  vk_hi(0) = 0
+END
+x_soft = 0.5 * (FinalValue('xs_lo') + FinalValue('xs_hi')) * 1 [m]
+x_stiff = 0.5 * (FinalValue('xk_lo') + FinalValue('xk_hi')) * 1 [m]
+dxdb_soft = (FinalValue('xs_hi') - FinalValue('xs_lo')) * 1 [m] / (2 * db)
+dxdb_stiff = (FinalValue('xk_hi') - FinalValue('xk_lo')) * 1 [m] / (2 * db)
+x_static_soft = F / k_soft
+x_static_stiff = F / k_stiff
+{ CHECK x_soft 0.826607132893831 1e-06 }
+{ CHECK x_stiff 0.0200110768396382 1e-06 }
+{ CHECK dxdb_soft -0.121613772423779 1e-05 }
+{ CHECK dxdb_stiff -2.8986855849245e-05 1e-05 }`,
+  },
+  {
+    id: 'drive-cycle-energy-sensitivity',
+    title: 'Normalized drive-cycle energy sensitivity',
+    description: 'Solve (F2). Normalized sensitivities of cycle traction energy to mass, drag area and rolling resistance.',
+    category: 'Sensitivity',
+    text: `{ A 1200 kg car (CdA = 0.60 m2, cr = 0.010) accelerates to 20 m/s in 20 s,
+  cruises 160 s and brakes for 20 s; braking returns nothing. Traction energy
+  integrates max(0, F v). Each parameter is raised 1 % in its own copy of the
+  integral; S = (dE/E) / (dp/p). Energy is linear in each parameter within
+  each phase, so the hand decomposition below gives the same indices: mass
+  carries inertia and rolling, drag area carries aero. The source bank's cycle
+  is not stated; this one is the model's own. }
+function P = traction(m, CdA, c_r, v, a)
+  F := m * a + m * 9.81 * c_r + 0.5 * 1.2 * CdA * v^2
+  P := max(0, F * v)
+end
+m = 1200 [kg]
+CdA = 0.60 [m^2]
+c_r = 0.010
+dp = 0.01
+DYNAMIC cycle(method=ode45, time=0..200, points=2001, rtol=1e-9)
+  v = min(time, min(20, 200 - time))
+  a = If(time, 20, 1, 0, If(time, 180, 0, 0, -1))
+  der(E_0)  = traction(1200, 0.60, 0.010, v, a)
+  der(E_m)  = traction(1200 * 1.01, 0.60, 0.010, v, a)
+  der(E_C)  = traction(1200, 0.60 * 1.01, 0.010, v, a)
+  der(E_cr) = traction(1200, 0.60, 0.010 * 1.01, v, a)
+  E_0(0) = 0
+  E_m(0) = 0
+  E_C(0) = 0
+  E_cr(0) = 0
+END
+E0 = FinalValue('E_0') * 1 [J]
+S_m = (FinalValue('E_m') * 1 [J] - E0) / (dp * E0)
+S_CdA = (FinalValue('E_C') * 1 [J] - E0) / (dp * E0)
+S_cr = (FinalValue('E_cr') * 1 [J] - E0) / (dp * E0)
+E_inertia = 0.5 * m * (20 [m/s])^2
+D_traction = 0.5 * 20 [m/s] * 20 [s] + 20 [m/s] * 160 [s]
+E_rolling = m * 9.81 [m/s^2] * c_r * D_traction
+E_aero = 0.5 * 1.2 [kg/m^3] * CdA * ((20 [m/s])^4 / (4 * 1 [m/s^2]) + (20 [m/s])^3 * 160 [s])
+E_hand = E_inertia + E_rolling + E_aero
+S_m_hand = (E_inertia + E_rolling) / E_hand
+S_CdA_hand = E_aero / E_hand
+S_cr_hand = E_rolling / E_hand
+{ CHECK E0 1115447.8413277 1 }
+{ CHECK S_m 0.5739828452802 1e-06 }
+{ CHECK S_CdA 0.42601715472081 1e-06 }
+{ CHECK S_cr 0.35882263264625 1e-06 }
+{ CHECK E_hand 1115448.0 1e-06 }
+{ CHECK S_m_hand 0.573982830217097 1e-09 }`,
+  },
+  {
+    id: 'feedback-error-sensitivity',
+    title: 'Feedback steady-state error and sensitivity',
+    description: 'Solve (F2). Steady-state error and the sensitivity of the closed loop to plant gain.',
+    category: 'Control Systems',
+    text: `{ Closed loop T = a b / (a b + K) with a = 100, b = 1, K = 10. The
+  steady-state error is e = K / (a b + K) = 0.0909; tripling the gain to
+  a = 300 cuts it to 0.0323. The sensitivity of T to a, S = (dT/da)(a/T), is
+  also K / (a b + K): high loop gain makes the output insensitive to the plant.
+  The central difference confirms the analytic value. }
+a = 100
+b = 1
+K = 10
+T = a * b / (a * b + K)
+e_ss = 1 - T
+e_ss_formula = K / (a * b + K)
+a_hi = 300
+e_ss_hi = K / (a_hi * b + K)
+S_a = K / (a * b + K)
+da = 1e-4 * a
+T_up = (a + da) * b / ((a + da) * b + K)
+T_dn = (a - da) * b / ((a - da) * b + K)
+S_a_numeric = (T_up - T_dn) / (2 * da) * a / T
+S_K = -K / (a * b + K)
+{ CHECK e_ss 0.0909090909090909 1e-12 }
+{ CHECK e_ss_hi 0.032258064516129 1e-12 }
+{ CHECK S_a 0.0909090909090909 1e-12 }
+{ CHECK S_a_numeric 0.0909090916603739 1e-08 }
+{ CHECK S_K -0.0909090909090909 1e-12 }`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

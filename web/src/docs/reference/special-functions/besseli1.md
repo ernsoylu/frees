@@ -3,7 +3,7 @@ name: besseli1
 category: Special Functions
 summary: Modified Bessel function of the first kind, order 1 — I_1(x).
 related: [besseli, besseli0, besselk1]
-examples: []
+examples: [annular-fin-efficiency]
 tags: [special function, modified bessel, i1, first kind]
 ---
 

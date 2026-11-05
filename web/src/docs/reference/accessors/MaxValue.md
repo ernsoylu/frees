@@ -3,7 +3,7 @@ name: MaxValue
 category: ODE Results
 summary: Peak value of a column in the integrated ODE (DYNAMIC) table.
 related: [MinValue, FinalValue, TimeAt, ODEValue]
-examples: [newton-cooling-transient]
+examples: [newton-cooling-transient, gear-impedance-reflection]
 tags: [ode, dynamic, accessor, maximum, peak, transient, trajectory]
 references: []
 ---

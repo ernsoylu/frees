@@ -3,7 +3,7 @@ name: ceil
 category: Math
 summary: Ceiling
 related: []
-examples: []
+examples: [shell-tube-lmtd-sizing]
 tags: [ceil, math]
 references: []
 ---

@@ -3,7 +3,7 @@ name: SteamHumidifier
 category: Component (moistair)
 summary: Steam (isothermal) humidifier.
 related: []
-examples: []
+examples: [preheat-steam-humidifier-ip]
 tags: [steamhumidifier, component, moistair, acausal]
 references: []
 ---

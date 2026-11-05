@@ -3,7 +3,7 @@ name: TimeAt
 category: ODE Results
 summary: Time at which an ODE (DYNAMIC) column first crosses a target value.
 related: [ODEValue, FinalValue, MaxValue]
-examples: [newton-cooling-transient]
+examples: [newton-cooling-transient, tank-orifice-draining, first-order-motor-step]
 tags: [ode, dynamic, accessor, crossing, time, event, trajectory]
 references: []
 ---

@@ -3,7 +3,7 @@ name: OpenTank
 category: Component (liquid)
 summary: "Open (vented) tank: level state from the flow imbalance; the inlet sees the free surface (P0), the outlet the gravity head at the base."
 related: []
-examples: []
+examples: [tank-orifice-draining]
 tags: [opentank, component, liquid, acausal]
 references: []
 ---

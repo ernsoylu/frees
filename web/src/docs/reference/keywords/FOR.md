@@ -4,7 +4,7 @@ covers: [to]
 category: Language Keywords
 summary: Repeats equations or assignments over an integer index.
 related: [FUNCTION]
-examples: []
+examples: [linear-regression-diagnostics, quadratic-regression]
 tags: [keyword, loop, for, array, index]
 references: []
 ---

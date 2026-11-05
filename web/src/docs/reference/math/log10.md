@@ -3,7 +3,7 @@ name: log10
 category: Math
 summary: Base-10 logarithm
 related: []
-examples: []
+examples: [power-law-log-fit]
 tags: [log10, math]
 references: []
 ---

@@ -3,7 +3,7 @@ name: feedback
 category: Control Systems
 summary: Close a feedback loop, T = G1/(1 + G1·G2).
 related: [series, margin, pole]
-examples: [cruise-control]
+examples: [cruise-control, pi-zero-overshoot, feedback-error-sensitivity]
 tags: [control, feedback, closed loop, block diagram, transfer function]
 ---
 

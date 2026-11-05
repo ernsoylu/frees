@@ -3,7 +3,7 @@ name: hx_effectiveness
 category: Heat Transfer
 summary: Heat-exchanger effectiveness ε(NTU, Cr) for a given flow arrangement.
 related: [hx_NTU, LMTD, fin_efficiency]
-examples: [hx-effectiveness-ntu]
+examples: [hx-effectiveness-ntu, crossflow-hx-effectiveness]
 tags: [heat exchanger, effectiveness, ntu, epsilon, counterflow, parallelflow, crossflow, shell and tube, evaporator, condenser]
 ---
 
