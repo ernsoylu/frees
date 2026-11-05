@@ -3,7 +3,7 @@ name: T0_T
 category: Compressible Flow
 summary: Isentropic stagnation-to-static temperature ratio T0/T(M, k).
 related: [P0_P, mach_A_Astar, stagnationtemp]
-examples: [cd-nozzle-shock]
+examples: [cd-nozzle-shock, converging-diverging-nozzle]
 tags: [compressible, isentropic, stagnation, temperature, mach, nozzle]
 ---
 

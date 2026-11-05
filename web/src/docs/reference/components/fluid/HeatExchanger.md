@@ -3,7 +3,7 @@ name: HeatExchanger
 category: Component (fluid)
 summary: Transfers heat between two fluid streams across a wall.
 related: []
-examples: []
+examples: [shower-heat-exchanger]
 tags: [heatexchanger, component, fluid, acausal]
 ---
 

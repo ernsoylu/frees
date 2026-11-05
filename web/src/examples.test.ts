@@ -54,6 +54,19 @@ it.each<[string, Record<string, string>]>([
   ['damping-sensitivity-oscillators', { x_soft: 'm', x_stiff: 'm', dxdb_soft: 'm s/kg', dxdb_stiff: 'm s/kg' }],
   ['drive-cycle-energy-sensitivity', { E0: 'J', S_m: '-', S_CdA: '-', S_cr: '-', E_hand: 'J', S_m_hand: '-' }],
   ['feedback-error-sensitivity', { e_ss: '-', e_ss_hi: '-', S_a: '-', S_a_numeric: '-', S_K: '-' }],
+  ['rankine-ideal-cycle', { W_pump: 'W', W_turb: 'W', Q_in: 'W', eta_th: '-', x_4: '-' }],
+  ['rankine-open-feedwater-heater', { y: '-', Q_in: 'W', W_net: 'W', eta_th: '-' }],
+  ['regenerative-gas-turbine', { W_C: 'W', W_T: 'W', r_bw: '-', T_2a: 'K', T_4a: 'K', Q_in: 'W', eta_th: '-' }],
+  ['steam-turbine-efficiency', { m_dot: 'kg/s' }],
+  ['air-compressor-efficiency', { T_2s: 'K', T_2a: 'K', W_in: 'W' }],
+  ['ideal-vapor-compression-cycle', { Q_L: 'W', W_in: 'W', Q_H: 'W', COP_R: '-' }],
+  ['square-duct-friction-loss', { Re: '-', f: '-', H_air: 'm', H_water: 'm' }],
+  ['gravity-pipe-flow', { U: 'm/s', f: '-', Q: 'm^3/s' }],
+  ['parallel-pipe-branches', { q_B: 'm^3/s', q_A: 'm^3/s', f_A: '-', f_B: '-', q_B_equal_f: 'm^3/s' }],
+  ['pipeline-pump-head', { V: 'm/s', f: '-', h_f: 'm', H_pump: 'm' }],
+  ['shower-heat-exchanger', { Q: 'W', A_lmtd: 'm^2', T_two_zone: 'K' }],
+  ['converging-diverging-nozzle', { A_e: 'm^2', T_star: 'K', P_star: 'Pa', V_star: 'm/s', m_dot: 'kg/s', Ma_exit: '-', P_e: 'Pa', T_e: 'K', V_e: 'm/s' }],
+  ['draining-tank-time-constant', { tau: 's', level_ratio: '-', Re_0: '-' }],
 ])('%s solves with physical units and preserves its checked results', (id, units) => {
   const example = EXAMPLES.find(example => example.id === id)!
   const result = JSON.parse(solve(example.text, '{}'))

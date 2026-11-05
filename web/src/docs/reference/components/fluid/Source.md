@@ -3,7 +3,7 @@ name: Source
 category: Component (fluid)
 summary: A fluid boundary that supplies a stream at set conditions.
 related: []
-examples: []
+examples: [steam-turbine-efficiency, gravity-pipe-flow, shower-heat-exchanger, converging-diverging-nozzle]
 tags: [source, component, fluid, acausal]
 ---
 

@@ -3,7 +3,7 @@ name: Boiler
 category: Component (fluid)
 summary: Adds heat to a fluid stream, raising its enthalpy (and generating vapor at saturation).
 related: []
-examples: []
+examples: [rankine-ideal-cycle, regenerative-gas-turbine, ideal-vapor-compression-cycle]
 tags: [boiler, component, fluid, acausal]
 ---
 

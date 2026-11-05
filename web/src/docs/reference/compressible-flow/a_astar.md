@@ -3,7 +3,7 @@ name: a_astar
 category: Compressible Flow
 summary: Isentropic area ratio A/A*
 related: []
-examples: []
+examples: [converging-diverging-nozzle]
 tags: [astar, compressible, flow]
 ---
 

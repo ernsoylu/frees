@@ -3,7 +3,7 @@ name: Splitter
 category: Component (fluid)
 summary: Divides a fluid stream into two branches.
 related: []
-examples: []
+examples: [rankine-open-feedwater-heater, parallel-pipe-branches]
 tags: [splitter, component, fluid, acausal]
 ---
 

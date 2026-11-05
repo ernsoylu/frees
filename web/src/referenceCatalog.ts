@@ -6412,7 +6412,7 @@ Instantiated in the verified example below:
     category: `Component (fluid)`,
     summary: `A fluid accumulator — a compliance volume that stores fluid under pressure and buffers flow transients.`,
     related: [],
-    examples: [],
+    examples: [`draining-tank-time-constant`],
     tags: [`accumulator`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -6572,7 +6572,7 @@ a1.p = 54020.4954
     category: `Component (fluid)`,
     summary: `Adds heat to a fluid stream, raising its enthalpy (and generating vapor at saturation).`,
     related: [],
-    examples: [],
+    examples: [`rankine-ideal-cycle`, `regenerative-gas-turbine`, `ideal-vapor-compression-cycle`],
     tags: [`boiler`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -6845,7 +6845,7 @@ a2.p = 397000
     category: `Component (fluid)`,
     summary: `Raises the pressure of a fluid stream, computing the work from an isentropic efficiency.`,
     related: [`CompressorMap`, `TwoPhaseCompressor`],
-    examples: [`ev-thermal-management`],
+    examples: [`ev-thermal-management`, `air-compressor-efficiency`, `regenerative-gas-turbine`, `ideal-vapor-compression-cycle`],
     tags: [`compressor`, `compressor-family`, `data:eta`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7054,7 +7054,7 @@ a1.p = 100000
     category: `Component (fluid)`,
     summary: `Rejects heat from a fluid stream to a coolant/ambient, condensing it.`,
     related: [],
-    examples: [],
+    examples: [`rankine-ideal-cycle`, `rankine-open-feedwater-heater`, `ideal-vapor-compression-cycle`],
     tags: [`condenser`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7132,7 +7132,7 @@ p1.v = 0.001010271149
     category: `Component (fluid)`,
     summary: `A flow passage that imposes a pressure drop on the stream.`,
     related: [],
-    examples: [],
+    examples: [`square-duct-friction-loss`, `draining-tank-time-constant`],
     tags: [`duct`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7176,6 +7176,8 @@ f &= \\text{friction\\_factor}\\left(re_{d}, \\frac{rough}{d}\\right) \\\\
 out.p &= in.p - \\frac{f\\cdot \\frac{l}{d}\\cdot rho\\cdot v\\cdot \\left|v\\right|}{2}
 \\end{aligned}
 $$
+
+Duct has no enthalpy equation: it fixes \`out.P\` and \`out.mdot\`, not \`out.h\`. In a chain that needs a downstream enthalpy, write \`d.out.h = d.in.h\`. At a free outlet, pin \`d.out.P\` instead of attaching a \`Sink\` (see \`draining-tank-time-constant\`).
 
 ## Examples
 
@@ -7540,7 +7542,7 @@ f1.out.p = 101505
     category: `Component (fluid)`,
     summary: `Measures the mass flow of a stream (a pass-through sensor).`,
     related: [],
-    examples: [],
+    examples: [`parallel-pipe-branches`],
     tags: [`flowsensor`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7702,7 +7704,7 @@ a1.p = 101325
     category: `Component (fluid)`,
     summary: `Transfers heat between two fluid streams across a wall.`,
     related: [],
-    examples: [],
+    examples: [`shower-heat-exchanger`],
     tags: [`heatexchanger`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7791,7 +7793,7 @@ c_in.p = 200000
     category: `Component (fluid)`,
     summary: `Combines two fluid streams into one, with flow-weighted enthalpy mixing.`,
     related: [],
-    examples: [],
+    examples: [`rankine-open-feedwater-heater`, `parallel-pipe-branches`],
     tags: [`mixer`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7822,6 +7824,8 @@ out.mdot &= in1.mdot + in2.mdot \\\\
 out.mdot\\cdot out.h &= in1.mdot\\cdot in1.h + in2.mdot\\cdot in2.h
 \\end{aligned}
 $$
+
+Only \`in1\` sets the outlet pressure; nothing ties \`in2.P\` to it. That suits an open feedwater heater, where the pump and the bleed line each fix their own pressure. In a parallel network whose branch drops decide the split, add \`mix.in2.P = mix.in1.P\` (see \`parallel-pipe-branches\`).
 
 ## Examples
 
@@ -7859,7 +7863,7 @@ s1.p = 100000
     category: `Component (fluid)`,
     summary: `Accelerates a flow, converting enthalpy into kinetic energy.`,
     related: [],
-    examples: [`cd-nozzle-shock`],
+    examples: [`cd-nozzle-shock`, `converging-diverging-nozzle`],
     tags: [`nozzle`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7946,7 +7950,7 @@ Related gallery example:
     category: `Component (fluid)`,
     summary: `A flow passage that imposes a frictional pressure drop.`,
     related: [],
-    examples: [],
+    examples: [`gravity-pipe-flow`, `parallel-pipe-branches`, `pipeline-pump-head`],
     tags: [`pipe`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8121,7 +8125,7 @@ sh1.tau = 124.7774754
     category: `Component (fluid)`,
     summary: `Raises the pressure of a liquid stream, computing the work from a pump efficiency.`,
     related: [`PumpMap`, `LiquidPump`],
-    examples: [`pump-sizing`, `rankine-cycle`],
+    examples: [`pump-sizing`, `rankine-cycle`, `rankine-ideal-cycle`, `rankine-open-feedwater-heater`],
     tags: [`pump`, `pump-family`, `data:eta`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [`md-fuel-cell`, `md-engine-warmup`, `md-cooling-tower`],
@@ -8290,7 +8294,7 @@ pm.head = 20
     category: `Component (fluid)`,
     summary: `Effectiveness-rated regenerator/recuperator: Q = ε·Cmin·(Th − Tc) with ε given directly (rate it from the ε-NTU functions for a geometry design).`,
     related: [],
-    examples: [],
+    examples: [`regenerative-gas-turbine`],
     tags: [`regenerator`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8381,7 +8385,7 @@ c1.p = 300000
     category: `Component (fluid)`,
     summary: `A fluid boundary that absorbs a stream at a set pressure.`,
     related: [],
-    examples: [],
+    examples: [`steam-turbine-efficiency`, `gravity-pipe-flow`, `shower-heat-exchanger`, `converging-diverging-nozzle`],
     tags: [`sink`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [`md-peltier`],
@@ -8452,7 +8456,7 @@ b.in.p = 8000000
     category: `Component (fluid)`,
     summary: `A fluid boundary that supplies a stream at set conditions.`,
     related: [],
-    examples: [],
+    examples: [`steam-turbine-efficiency`, `gravity-pipe-flow`, `shower-heat-exchanger`, `converging-diverging-nozzle`],
     tags: [`source`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8532,7 +8536,7 @@ b.in.p = 8000000
     category: `Component (fluid)`,
     summary: `Divides a fluid stream into two branches.`,
     related: [],
-    examples: [],
+    examples: [`rankine-open-feedwater-heater`, `parallel-pipe-branches`],
     tags: [`splitter`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8601,7 +8605,7 @@ s1.p = 300000
     category: `Component (fluid)`,
     summary: `An isenthalpic pressure-reducing restriction.`,
     related: [],
-    examples: [],
+    examples: [`ideal-vapor-compression-cycle`],
     tags: [`throttle`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8684,7 +8688,7 @@ k1.h_s = 426479.6927
     category: `Component (fluid)`,
     summary: `Extracts work from an expanding fluid stream, computing it from an isentropic efficiency.`,
     related: [],
-    examples: [],
+    examples: [`rankine-ideal-cycle`, `rankine-open-feedwater-heater`, `regenerative-gas-turbine`, `steam-turbine-efficiency`],
     tags: [`turbine`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8858,7 +8862,7 @@ c2.t = 429.3585437
     category: `Component (fluid)`,
     summary: `A two-zone heat exchanger resolving distinct thermal regions.`,
     related: [],
-    examples: [],
+    examples: [`shower-heat-exchanger`],
     tags: [`twozonehx`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8946,7 +8950,7 @@ c1.p = 200000
     category: `Component (fluid)`,
     summary: `A flow restriction characterized by a flow/pressure-drop coefficient.`,
     related: [],
-    examples: [],
+    examples: [`gravity-pipe-flow`],
     tags: [`valve`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [`comp-domains`],
@@ -31270,7 +31274,7 @@ hi.out.h = 249779.7946
     category: `Compressible Flow`,
     summary: `Isentropic area ratio A/A*`,
     related: [],
-    examples: [],
+    examples: [`converging-diverging-nozzle`],
     tags: [`astar`, `compressible`, `flow`],
     references: [],
     guides: [],
@@ -32183,7 +32187,7 @@ beta_weak = 0.7264279973
     category: `Compressible Flow`,
     summary: `Isentropic stagnation-to-static pressure ratio P0/P(M, k).`,
     related: [`T0_T`, `mach_A_Astar`, `stagnationpres`],
-    examples: [`cd-nozzle-shock`],
+    examples: [`cd-nozzle-shock`, `converging-diverging-nozzle`],
     tags: [`compressible`, `isentropic`, `stagnation`, `pressure`, `mach`, `nozzle`],
     references: [],
     guides: [],
@@ -33274,7 +33278,7 @@ cp = 1005 [J/kg-K]
     category: `Compressible Flow`,
     summary: `Isentropic stagnation-to-static temperature ratio T0/T(M, k).`,
     related: [`P0_P`, `mach_A_Astar`, `stagnationtemp`],
-    examples: [`cd-nozzle-shock`],
+    examples: [`cd-nozzle-shock`, `converging-diverging-nozzle`],
     tags: [`compressible`, `isentropic`, `stagnation`, `temperature`, `mach`, `nozzle`],
     references: [],
     guides: [],
@@ -55809,7 +55813,7 @@ $$ x^2 y'' + x y' - (x^2 + n^2)y = 0, \\qquad I_n(x) = \\sum_{k=0}^{\\infty}\\fr
 
 with \`I_n(x) = i^{-n}J_n(ix)\`.
 
-> **Method:** series for small \`x\`, asymptotic \`I_n(x) ~ e^x/\\sqrt{2\\pi x}\` for large \`x\`.
+> **Method:** the ascending series $\\sum_k (x/2)^{2k+\\nu} / (k!\\,\\Gamma(k+\\nu+1))$ at every \`x\`. Its terms are all positive, so nothing cancels; agreement with SciPy is about 1e-14.
 
 ## Examples
 
@@ -55899,13 +55903,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 result = besseli0(1)
 
-{ CHECK result 1.266065848 0.0000012660658480342602 }
+{ CHECK result 1.266065878 1.2660658777520082e-06 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-result = 1.266065848
+result = 1.266065878
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -55962,13 +55966,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 result = besseli1(1)
 
-{ CHECK result 0.5651590976 5.651590975819435e-7 }
+{ CHECK result 0.565159104 5.65159103992485e-07 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-result = 0.5651590976
+result = 0.565159104
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -56115,13 +56119,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 result = besselj0(1)
 
-{ CHECK result 0.7651976838 7.651976837548592e-7 }
+{ CHECK result 0.7651976866 7.651976865579666e-07 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-result = 0.7651976838
+result = 0.7651976866
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -56240,7 +56244,7 @@ $$ x^2 y'' + x y' - (x^2 + n^2)y = 0, \\qquad K_n(x) = \\frac{\\pi}{2}\\frac{I_{
 
 (a limit for integer \`n\`), with asymptotic \`K_n(x) ~ \\sqrt{\\pi/2x}\\,e^{-x}\`.
 
-> **Method:** standard library evaluation via the \`I\`/\`K\` relations.
+> **Method:** $K_0$ and $K_1$ by the trapezoid rule on $K_n(x) = \\int_0^\\infty e^{-x\\cosh t}\\cosh(nt)\\,dt$, which converges geometrically for this integrand; higher orders by upward recurrence, which is stable for \`K\`. Agreement with SciPy is about 1e-15.
 
 ## Examples
 
@@ -56253,13 +56257,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 result = besselk(1, 2)
 
-{ CHECK result 1.624838884 0.0000016248388844172295 }
+{ CHECK result 1.624838899 1.6248388986351777e-06 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-result = 1.624838884
+result = 1.624838899
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -56333,13 +56337,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 result = besselk0(1)
 
-{ CHECK result 0.4210244211 4.2102442108341797e-7 }
+{ CHECK result 0.4210244382 4.210244382407084e-07 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-result = 0.4210244211
+result = 0.4210244382
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -56409,13 +56413,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 result = besselk1(1)
 
-{ CHECK result 0.6019072317 6.019072316669058e-7 }
+{ CHECK result 0.6019072302 6.019072301972347e-07 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-result = 0.6019072317
+result = 0.6019072302
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -56476,7 +56480,7 @@ $$ x^2 y'' + x y' + (x^2 - n^2)y = 0, \\qquad Y_n(x) = \\frac{J_n(x)\\cos(n\\pi)
 
 (taken as a limit for integer \`n\`), with the same recurrence as \`J_n\`.
 
-> **Method:** standard library evaluation via the \`J\`/\`Y\` relations and recurrence.
+> **Method:** \`libm\`'s full-precision $Y_n$ (the FreeBSD msun algorithm). Agreement with SciPy is about 1e-14, looser in relative terms next to a zero of $Y_n$.
 
 ## Examples
 
@@ -56489,13 +56493,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 result = bessely(1, 2)
 
-{ CHECK result -1.650682613 0.0000016506826133039475 }
+{ CHECK result -1.650682607 1.6506826068162542e-06 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-result = -1.650682613
+result = -1.650682607
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -56564,13 +56568,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 result = bessely0(1)
 
-{ CHECK result 0.0882569714 8.825697139770806e-8 }
+{ CHECK result 0.08825696422 8.825696421567696e-08 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-result = 0.0882569714
+result = 0.08825696422
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -56636,13 +56640,13 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 result = bessely1(1)
 
-{ CHECK result -0.781212821 7.812128209531196e-7 }
+{ CHECK result -0.7812128213 7.812128213002887e-07 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-result = -0.781212821
+result = -0.7812128213
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -59137,7 +59141,7 @@ Two consequences worth stating plainly:
 * **The magnitude response is squared.** A design that is −3 dB at some frequency is −6 dB there after \`FiltFilt\`. Design for half the attenuation you want.
 * **It is not causal.** Every output sample depends on the whole record, so this is a post-processing tool, never something to put inside a control loop.
 
-Before filtering, the signal is odd-extended by \`3·max(len(a), len(b))\` samples (clipped to \`n − 1\`) at both ends and the extension discarded afterwards. That is what stops the ends from ringing.
+Before filtering, the signal is odd-extended by \`3·max(len(a), len(b))\` samples (clipped to \`n − 1\`) at both ends and the extension discarded afterwards. Each pass also starts as if the filter had already settled on the record's edge value. Together these stop the ends from ringing, and the output matches \`scipy.signal.filtfilt\`.
 
 ## Mathematical Formulation
 
@@ -59147,7 +59151,7 @@ $$ y = R\\,H\\,R\\,H\\,x \\quad\\Longrightarrow\\quad Y(\\omega) = |H(\\omega)|^
 
 — real and non-negative, hence zero phase.
 
-> **Method:** two \`lfilter\` passes over an odd-extended record. The SciPy steady-state \`lfilter_zi\` warm start is not applied; the padding carries the edge behaviour.
+> **Method:** \`scipy.signal.filtfilt\`'s defaults. Two \`lfilter\` passes run over an odd-extended record, each starting from the filter's settled step state (\`lfilter_zi\`) scaled by its first sample. Agreement with SciPy is about 1e-15. A filter whose \`a\` coefficients sum to zero (a pole at z = 1) has no settled state and is refused.
 
 ## Examples
 

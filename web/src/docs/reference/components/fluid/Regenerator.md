@@ -3,7 +3,7 @@ name: Regenerator
 category: Component (fluid)
 summary: "Effectiveness-rated regenerator/recuperator: Q = ε·Cmin·(Th − Tc) with ε given directly (rate it from the ε-NTU functions for a geometry design)."
 related: []
-examples: []
+examples: [regenerative-gas-turbine]
 tags: [regenerator, component, fluid, acausal]
 references: []
 ---

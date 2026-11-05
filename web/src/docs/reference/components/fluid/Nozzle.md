@@ -3,7 +3,7 @@ name: Nozzle
 category: Component (fluid)
 summary: Accelerates a flow, converting enthalpy into kinetic energy.
 related: []
-examples: [cd-nozzle-shock]
+examples: [cd-nozzle-shock, converging-diverging-nozzle]
 tags: [nozzle, component, fluid, acausal]
 ---
 

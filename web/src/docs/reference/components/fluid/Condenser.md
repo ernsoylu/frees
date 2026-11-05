@@ -3,7 +3,7 @@ name: Condenser
 category: Component (fluid)
 summary: Rejects heat from a fluid stream to a coolant/ambient, condensing it.
 related: []
-examples: []
+examples: [rankine-ideal-cycle, rankine-open-feedwater-heater, ideal-vapor-compression-cycle]
 tags: [condenser, component, fluid, acausal]
 ---
 

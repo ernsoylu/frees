@@ -3,7 +3,7 @@ name: Accumulator
 category: Component (fluid)
 summary: A fluid accumulator — a compliance volume that stores fluid under pressure and buffers flow transients.
 related: []
-examples: []
+examples: [draining-tank-time-constant]
 tags: [accumulator, component, fluid, acausal]
 ---
 

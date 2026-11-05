@@ -3,7 +3,7 @@ name: Turbine
 category: Component (fluid)
 summary: Extracts work from an expanding fluid stream, computing it from an isentropic efficiency.
 related: []
-examples: []
+examples: [rankine-ideal-cycle, rankine-open-feedwater-heater, regenerative-gas-turbine, steam-turbine-efficiency]
 tags: [turbine, component, fluid, acausal]
 ---
 
