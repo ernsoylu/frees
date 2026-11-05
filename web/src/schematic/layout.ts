@@ -331,6 +331,16 @@ export function scopeOf(id: string): string {
 /** The scope a connection endpoint (`sub1.r1.b`, `sub1$a`, `vs.p`) belongs to. */
 export const endpointScope = (raw: string) => scopeOf(splitEndpoint(raw).instance)
 
+/**
+ * A junction's id. A port joins one connection set, so the set's first
+ * endpoint in sorted order names the junction, within its scope
+ * (`sub1$node$sub1.r1.b`), whatever the statements' order.
+ */
+export function junctionIdOf(endpoints: readonly string[]): string {
+  const first = endpoints.map((raw) => raw.toLowerCase()).reduce<string | undefined>((a, b) => (a === undefined || b < a ? b : a), undefined) ?? ''
+  return `${endpointScope(first)}$node$${first}`
+}
+
 /** The block a connection endpoint is drawn on: `sub1.r1` for `sub1.r1.b`. */
 export const endpointBlock = (raw: string) => splitEndpoint(raw).instance
 
@@ -467,11 +477,8 @@ function buildGraph(
     }
     // A junction (3+ endpoints, or a degenerate 1-endpoint node) becomes its
     // own small node so the star reads as one shared node rather than a clique
-    // of edges that would imply pairwise connections. A port joins one set, so
-    // the set's first endpoint in sorted order names the junction, within its
-    // scope (`sub1$node$sub1.r1.b`), whatever the statements' order.
-    const first = conn.endpoints.map((raw) => raw.toLowerCase()).reduce<string | undefined>((a, b) => (a === undefined || b < a ? b : a), undefined) ?? ''
-    const junctionId = `${endpointScope(first)}$node$${first}`
+    // of edges that would imply pairwise connections.
+    const junctionId = junctionIdOf(conn.endpoints)
     touch(junctionId, 'junction')
     ends.forEach((e, k) => {
       // Direction still comes from the port: feeders point into the junction.

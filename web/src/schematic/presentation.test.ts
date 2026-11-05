@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EV_TOPOLOGY } from './evTopology.fixture'
 import { layoutSchematic, pathOf, routeAll, type SchematicGroup, type SchematicNode } from './layout'
 import { applyPreset, arrangeBase, arrangeBlocks, EMPTY_PRESENTATION, renamePresentation, transformSymbols, framesFor, guideSnap, resolveLegacy, sanitizePresentation, snapToGrid, styleFor } from './presentation'
+import type { ConnectionDto } from '../api'
 import { boxesEntered } from '../test/schematicPaths'
 
 const ev = layoutSchematic(EV_TOPOLOGY)
@@ -208,6 +209,18 @@ describe('annotations (VIEW-09) and rename', () => {
     expect(Object.keys(moved.formats)).toEqual(['sub1.ra.a.i'])
     expect(moved.views[0]).toMatchObject({ scope: 'sub1', badges: { 'sub1.ra': 'sub1.ra.a.i' }, focus: { id: 'sub1.ra' } })
     expect(moved.annotations.map((a) => a.target)).toEqual(['', 'sub1.ra', 'sub1.ra.a.i'])
+  })
+
+  it('keeps a junction place when the rename changes which endpoint sorts first', () => {
+    const set = { domain: 'electrical', endpoints: ['a.p', 'b.p', 'c.p'] } as ConnectionDto
+    const p = { ...EMPTY_PRESENTATION, positions: { '$node$a.p': { x: 1, y: 2 } }, locked: ['$node$a.p'] }
+    // `a` renamed past `b`: the junction is now named by `b.p`, as buildGraph names it.
+    const later = renamePresentation(p, new Map([['a', 'z']]), [set])
+    expect(later.positions).toEqual({ '$node$b.p': { x: 1, y: 2 } })
+    expect(later.locked).toEqual(['$node$b.p'])
+    expect(layoutSchematic([{ ...set, endpoints: ['z.p', 'b.p', 'c.p'] }]).nodes.some((n) => n.id === '$node$b.p')).toBe(true)
+    // `c` renamed ahead of `a`: it now names the junction.
+    expect(renamePresentation(p, new Map([['c', '0c']]), [set]).positions).toEqual({ '$node$0c.p': { x: 1, y: 2 } })
   })
 })
 
