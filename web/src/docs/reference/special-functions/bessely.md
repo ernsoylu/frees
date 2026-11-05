@@ -34,7 +34,7 @@ $$ x^2 y'' + x y' + (x^2 - n^2)y = 0, \qquad Y_n(x) = \frac{J_n(x)\cos(n\pi) - J
 
 (taken as a limit for integer `n`), with the same recurrence as `J_n`.
 
-> **Method:** standard library evaluation via the `J`/`Y` relations and recurrence.
+> **Method:** `libm`'s full-precision $Y_n$ (the FreeBSD msun algorithm). Agreement with SciPy is about 1e-14, looser in relative terms next to a zero of $Y_n$.
 
 ## Examples
 
@@ -47,13 +47,13 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 result = bessely(1, 2)
 
-{ CHECK result -1.650682613 0.0000016506826133039475 }
+{ CHECK result -1.650682607 1.6506826068162542e-06 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-result = -1.650682613
+result = -1.650682607
 ```
 
 <!-- verified-reference-example:end -->

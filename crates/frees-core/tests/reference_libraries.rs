@@ -6,19 +6,17 @@
 //! groups replay frees' *own* designs, which the generator rebuilds, so SALib
 //! grades the estimators rather than a second random draw.
 //!
-//! # Measured, 2026-10-31 (NumPy 2.5.4, SciPy 1.18.1, statsmodels 0.15.0, SALib 1.6.0)
+//! # Measured, 2026-10-31, Bessel and `filtfilt` re-measured 2026-11-05 (NumPy 2.5.4, SciPy 1.18.1, statsmodels 0.15.0, SALib 1.6.0)
 //!
 //! | group | worst | limit | what sets it |
 //! |---|---:|---:|---|
-//! | distributions, descriptive, tests, regression intrinsics | 3.1e-14 | 1e-12 | round-off |
-//! | Bessel intrinsics | 5.6e-8 (`K0`) | 1e-7 | the Numerical Recipes polynomial fits ported from Java |
+//! | distributions, special functions (Bessel across each kernel's regimes), descriptive, tests, regression intrinsics | 3.1e-14 | 1e-12 | round-off |
 //! | `poly_fit` | 1.1e-15 | 1e-12 | round-off |
 //! | curve-fit parameters, incl. bounded and robust | 9.4e-9 | 2e-8 | the LM and IRLS stopping tolerances (1e-10) |
 //! | curve-fit covariance | 3.5e-8 | 1e-7 | the central-difference Jacobian (`h = 1e-8·|p|`) |
 //! | curve-fit confidence and prediction bands | 6.6e-10 | 1e-8 | as the parameters |
 //! | DFT, convolve, xcorr, windows, detrend, smoothing, `lfilter`, Welch | 1.7e-15 | 1e-12 | round-off |
-//! | `filtfilt` against the same zero-state algorithm in SciPy primitives | 1.0e-15 | 1e-12 | round-off |
-//! | `filtfilt` against `scipy.signal.filtfilt` | 8.6e-3 | 1e-2 | frees starts both passes from rest; SciPy starts them from `lfilter_zi` |
+//! | `filtfilt` against `scipy.signal.filtfilt` | 7.8e-16 | 1e-12 | round-off |
 //! | Sobol' points, all 32 dimensions × 256 rows | bitwise | exact | — |
 //! | Sobol' `S1`/`ST` against SALib on the same design | 2.5e-15 | 1e-12 | round-off |
 //! | Morris `μ`, `μ*`, `σ` against SALib on the same trajectories | 0 | 1e-12 | — |
@@ -29,7 +27,10 @@
 //! stalled 3.5e-3 short of the constrained optimum because the projected LM
 //! solved its step as if a pinned parameter could still move. A Cauchy fit
 //! also showed the IRLS pass cap returning an unsettled point; the cap rose
-//! and now fails loudly instead.
+//! and now fails loudly instead. The two gaps first accepted here are closed:
+//! the Numerical Recipes Bessel fits (5.6e-8) gave way to `libm`, the `I`
+//! series and a trapezoid-rule `K`, and `filtfilt` (8.6e-3) now starts each
+//! pass from `lfilter_zi` as SciPy does.
 //!
 //! SALib standardises `Y` by its global mean before the Saltelli estimator and
 //! frees does not, so the Sobol' group subtracts the generator's `centre` in
@@ -88,12 +89,9 @@ fn rel_err(got: f64, want: f64) -> f64 {
 }
 
 const ROUND_OFF: f64 = 1e-12;
-const NR_BESSEL: f64 = 1e-7;
 const FIT_PARAMETERS: f64 = 2e-8;
 const FD_COVARIANCE: f64 = 1e-7;
 const FIT_BANDS: f64 = 1e-8;
-/// See the table: the two filtfilts differ in their start-up state, by design.
-const FILTFILT_START_STATE: f64 = 1e-2;
 
 fn report(group: &str, worst: f64, limit: f64) {
     eprintln!("{group:<34} worst {worst:.3e} (limit {limit:.0e})");
@@ -116,19 +114,13 @@ fn scalar_intrinsics_match_scipy_and_statsmodels() {
         solve_legacy_with_parametric_tables(&document, &SolverSettings::default(), &[], None, &[])
             .unwrap_or_else(|e| panic!("solve failed: {e}"));
     let values: BTreeMap<String, f64> = outcome.values.into_iter().collect();
-    let (mut exact, mut bessel) = (0.0_f64, 0.0_f64);
+    let mut worst = 0.0_f64;
     for (i, c) in cases.iter().enumerate() {
         let e = rel_err(values[&format!("c{i}")], c["value"].as_f64().unwrap());
         assert!(e.is_finite(), "{}", c["reference"]);
-        let slot = if c["expr"].as_str().unwrap().starts_with("bessel") {
-            &mut bessel
-        } else {
-            &mut exact
-        };
-        *slot = slot.max(e);
+        worst = worst.max(e);
     }
-    report("scalar intrinsics", exact, ROUND_OFF);
-    report("Bessel intrinsics", bessel, NR_BESSEL);
+    report("scalar intrinsics", worst, ROUND_OFF);
 }
 
 #[test]
@@ -287,16 +279,13 @@ fn signal_kernels_match_numpy_and_scipy() {
         ),
         ROUND_OFF,
     );
-    let ff = signal::filtfilt(&fb, &fa, &fx).unwrap();
     report(
-        "filtfilt (zero-state algorithm)",
-        norm_err(&ff, &floats(&f["filtfilt_zero_state"])),
+        "filtfilt",
+        norm_err(
+            &signal::filtfilt(&fb, &fa, &fx).unwrap(),
+            &floats(&f["filtfilt"]),
+        ),
         ROUND_OFF,
-    );
-    report(
-        "filtfilt vs scipy.signal.filtfilt",
-        norm_err(&ff, &floats(&f["filtfilt_scipy"])),
-        FILTFILT_START_STATE,
     );
 
     let w = &s["welch"];

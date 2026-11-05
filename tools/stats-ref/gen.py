@@ -102,6 +102,20 @@ scalar = [
     ("bessely(5.5, 3)", "scipy.special.yv(3, 5.5)", special.yv(3, 5.5)),
     ("besseli(1.2, 2)", "scipy.special.iv(2, 1.2)", special.iv(2, 1.2)),
     ("besselk(1.2, 2)", "scipy.special.kv(2, 1.2)", special.kv(2, 1.2)),
+    # each Bessel kernel across its small-x, crossover and asymptotic regimes;
+    # K stops at 40, where it is 1e-19 — the engine reports |v| < ~1e-30 as 0
+    *[(f"{f}({x!r})", f"scipy.special.{g}({x!r})", getattr(special, g)(x))
+      for f, g, xs in (("besselj0", "j0", (1e-4, 1.0, 7.9, 8.1, 60.0, 400.0)),
+                       ("besselj1", "j1", (1e-4, 1.0, 7.9, 8.1, 60.0, 400.0)),
+                       ("bessely0", "y0", (1e-4, 1.0, 7.9, 8.1, 60.0, 400.0)),
+                       ("bessely1", "y1", (1e-4, 1.0, 7.9, 8.1, 60.0, 400.0)),
+                       ("besseli0", "i0", (1e-4, 1.0, 3.7, 3.8, 60.0, 400.0)),
+                       ("besseli1", "i1", (1e-4, 1.0, 3.7, 3.8, 60.0, 400.0)),
+                       ("besselk0", "k0", (1e-6, 0.01, 1.9, 2.1, 9.0, 40.0)),
+                       ("besselk1", "k1", (1e-6, 0.01, 1.9, 2.1, 9.0, 40.0)))
+      for x in xs],
+    *[(f"bessel{k}({x!r}, {n})", f"scipy.special.{g}({n}, {x!r})", getattr(special, g)(n, x))
+      for k, g in (("y", "yn"), ("k", "kn")) for n in (2, 7) for x in (0.3, 5.0, 30.0)],
     # descriptive statistics
     (f"mean({args(x)})", "numpy.mean(x)", np.mean(x)),
     (f"median({args(x)})", "numpy.median(x)", np.median(x)),
@@ -264,16 +278,11 @@ sig["moving_average"] = {"x": ma, "k": k,
                          "reference": "numpy.convolve(x, ones(k), 'same') / numpy.convolve(ones(n), ones(k), 'same')"}
 fb, fa = signal.butter(2, 0.2)
 fx = [round(math.sin(0.15 * i) + e, 4) for i, e in enumerate(sample(60, 0.0, 0.3))]
-padlen = 3 * max(len(fa), len(fb))
-ext = signal.lfilter(fb, fa, np.concatenate([2 * fx[0] - np.array(fx[padlen:0:-1]), fx,
-                                             2 * fx[-1] - np.array(fx[-2:-padlen - 2:-1])]))
-ext = signal.lfilter(fb, fa, ext[::-1])[::-1]
 sig["filter"] = {"b": list(fb), "a": list(fa), "x": fx,
                  "lfilter": list(signal.lfilter(fb, fa, fx)),
-                 "filtfilt_zero_state": list(ext[padlen:-padlen]),
-                 "filtfilt_scipy": list(signal.filtfilt(fb, fa, fx)),
-                 "reference": "scipy.signal.butter(2, 0.2); lfilter; the odd-extended zero-state forward-backward "
-                              "pass built from scipy.signal.lfilter; and scipy.signal.filtfilt with its lfilter_zi start"}
+                 "filtfilt": list(signal.filtfilt(fb, fa, fx)),
+                 "reference": "scipy.signal.butter(2, 0.2); lfilter; "
+                              "and scipy.signal.filtfilt with its default odd padding and lfilter_zi start"}
 wx = [round(math.sin(2 * math.pi * 12.5 * i / 100) + e, 4) for i, e in enumerate(sample(256, 0.0, 0.5))]
 wf, wp = signal.welch(np.array(wx), fs=100.0, nperseg=64)
 sig["welch"] = {"x": wx, "fs": 100.0, "nperseg": 64, "f": list(wf), "pxx": list(wp),

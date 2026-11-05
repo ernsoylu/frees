@@ -35,7 +35,7 @@ $$ x^2 y'' + x y' - (x^2 + n^2)y = 0, \qquad K_n(x) = \frac{\pi}{2}\frac{I_{-n}(
 
 (a limit for integer `n`), with asymptotic `K_n(x) ~ \sqrt{\pi/2x}\,e^{-x}`.
 
-> **Method:** standard library evaluation via the `I`/`K` relations.
+> **Method:** $K_0$ and $K_1$ by the trapezoid rule on $K_n(x) = \int_0^\infty e^{-x\cosh t}\cosh(nt)\,dt$, which converges geometrically for this integrand; higher orders by upward recurrence, which is stable for `K`. Agreement with SciPy is about 1e-15.
 
 ## Examples
 
@@ -48,13 +48,13 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 result = besselk(1, 2)
 
-{ CHECK result 1.624838884 0.0000016248388844172295 }
+{ CHECK result 1.624838899 1.6248388986351777e-06 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-result = 1.624838884
+result = 1.624838899
 ```
 
 <!-- verified-reference-example:end -->

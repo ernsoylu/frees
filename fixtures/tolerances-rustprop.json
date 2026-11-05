@@ -631,6 +631,17 @@
       "it to 3.0665e-12. Same component, same equation, same 1e-12: where the",
       "physics is there they agree to 3e-12; where the physics is a structural",
       "zero they part at 5.5e-6. That contrast is the mechanism."
+    ],
+    "oracle-nr-bessel": [
+      "THE GOLDEN IS A NUMERICAL RECIPES APPROXIMATION, NOT A BESSEL FUNCTION.",
+      "Evaluator.java computed J0, J1, Y0, Y1, I0, I1, K0 and K1 (and Yn, Kn by",
+      "recurrence from them) with the Numerical Recipes polynomial fits, good to",
+      "only ~1e-8 relative; at x = 2 its K0 is literally the sum of the fit's",
+      "coefficients, 0.11389388. frees replaced those fits on 2026-11-05 (programme",
+      "phase A): libm for J and Y, the ascending series for I, and a trapezoid-rule",
+      "integral for K. They agree with SciPy 1.18.1 to round-off, graded in",
+      "crates/frees-core/tests/reference_libraries.rs. A gap here is the Java fit's",
+      "own error; the frees side is the accurate one."
     ]
   },
   "fixtures": {
@@ -969,6 +980,12 @@
       "measured": 4.380011e-09,
       "mechanism": "oracle-ph-table",
       "reason": "Promoted 2026-08-24 (Wave P1) with the absolute entry on sen.sh below; this entry grades the rest. One sensor, one intercepted leaf: sen.t = Temperature(R134a, P = 492714.5132274257 Pa, h = 277292.575410867) at quality 0.3028. The wheel answers 288.425817485316998 -- bit-identical to its own Tsat(P) and to the golden's sen.tsat -- this engine answers 288.425817485317509 at its own solved pressure (5.1e-13, 1.8e-15 relative), and the golden's tabulated 288.4258187486257 is 1.2633e-6 K high, 4.3800e-9 relative. Every other variable (quality, void fraction, hf/hg, the frictional glide) is at or under 2.5e-14."
+    },
+    "bitwise-and-special-math-test-new-bessel-and-chi-square": {
+      "relative": 8e-08,
+      "measured": 6.365984e-08,
+      "mechanism": "oracle-nr-bessel",
+      "reason": "Worst variable k0_val: the golden's 0.11389388 is the NR fit's coefficient sum at x = 2; frees and scipy.special.k0(2) give 0.11389387274953344. The other eight Bessel values sit 1.0e-9..2.1e-8 from the golden and equal SciPy to round-off; chi2_val is untouched and still exact."
     }
   },
   "absolute": {

@@ -34,13 +34,13 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 ```frees
 result = besseli0(1)
 
-{ CHECK result 1.266065848 0.0000012660658480342602 }
+{ CHECK result 1.266065878 1.2660658777520082e-06 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-result = 1.266065848
+result = 1.266065878
 ```
 
 <!-- verified-reference-example:end -->

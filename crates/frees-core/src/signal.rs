@@ -241,8 +241,8 @@ pub fn convolve(a: &[f64], b: &[f64]) -> Result<Vec<f64>> {
 //   time column, and none of them will notice if one was uneven.
 // * **Edges.** Causal filtering ([`lfilter`]) starts from rest, so the first
 //   samples carry the filter's start-up transient. Zero-phase filtering
-//   ([`filtfilt`]) odd-extends the signal before filtering, which suppresses
-//   that transient but does not abolish it.
+//   ([`filtfilt`]) odd-extends the signal and starts each pass settled, as
+//   SciPy does, so a constant passes with no edge transient at all.
 // * **Spectral scaling.** [`welch`] returns a one-sided **power spectral
 //   density** in units of `x²/Hz`: window-power normalized, and doubled on
 //   every bin except DC and (for an even segment) Nyquist, so that summing
@@ -406,6 +406,13 @@ pub fn moving_average(x: &[f64], k: usize) -> Result<Vec<f64>> {
 /// [`FreesError::Evaluation`] when either coefficient vector is empty, when
 /// `a[0]` is zero, or when a coefficient is not finite.
 pub fn lfilter(b: &[f64], a: &[f64], x: &[f64]) -> Result<Vec<f64>> {
+    let (bn, an) = normalized(b, a)?;
+    let state = vec![0.0; bn.len() - 1];
+    Ok(run_df2t(&bn, &an, x, state))
+}
+
+/// `b` and `a` divided by `a[0]` and zero-padded to one length.
+fn normalized(b: &[f64], a: &[f64]) -> Result<(Vec<f64>, Vec<f64>)> {
     if b.is_empty() || a.is_empty() {
         return Err(FreesError::evaluation(
             "Filter requires non-empty numerator and denominator coefficients.",
@@ -421,23 +428,50 @@ pub fn lfilter(b: &[f64], a: &[f64], x: &[f64]) -> Result<Vec<f64>> {
             "Filter denominator a[1] must be non-zero.",
         ));
     }
-    let scale = 1.0 / a[0];
-    let bn: Vec<f64> = b.iter().map(|v| v * scale).collect();
-    let an: Vec<f64> = a.iter().map(|v| v * scale).collect();
-    let order = bn.len().max(an.len()) - 1;
-    let mut state = vec![0.0; order];
+    let n = b.len().max(a.len());
+    let scaled = |c: &[f64]| -> Vec<f64> {
+        let mut v: Vec<f64> = c.iter().map(|v| v / a[0]).collect();
+        v.resize(n, 0.0);
+        v
+    };
+    Ok((scaled(b), scaled(a)))
+}
+
+/// Transposed direct-form II over normalized, equal-length `bn`/`an`, from the
+/// given state (`len − 1` values).
+fn run_df2t(bn: &[f64], an: &[f64], x: &[f64], mut state: Vec<f64>) -> Vec<f64> {
+    let order = state.len();
     let mut out = Vec::with_capacity(x.len());
     for &xj in x {
         let yj = bn[0] * xj + state.first().copied().unwrap_or(0.0);
         for i in 0..order {
             let next = state.get(i + 1).copied().unwrap_or(0.0);
-            let bi = bn.get(i + 1).copied().unwrap_or(0.0);
-            let ai = an.get(i + 1).copied().unwrap_or(0.0);
-            state[i] = next + bi * xj - ai * yj;
+            state[i] = next + bn[i + 1] * xj - an[i + 1] * yj;
         }
         out.push(yj);
     }
-    Ok(out)
+    out
+}
+
+/// SciPy's `lfilter_zi`: the state a unit step leaves the filter in once it
+/// has settled, by the explicit solution of `zi = Aᵀ·zi + B` SciPy documents
+/// beside its `linalg.solve`. `None` when `Σa = 0`: a pole at z = 1 has no
+/// settled step response.
+fn lfilter_zi(bn: &[f64], an: &[f64]) -> Option<Vec<f64>> {
+    let n = bn.len();
+    let sum_a: f64 = an.iter().sum();
+    if sum_a == 0.0 {
+        return None;
+    }
+    let z0 = (bn[1..].iter().sum::<f64>() - bn[0] * an[1..].iter().sum::<f64>()) / sum_a;
+    let mut zi = vec![z0; n - 1];
+    let (mut asum, mut csum) = (1.0, 0.0);
+    for k in 1..n - 1 {
+        asum += an[k];
+        csum += bn[k] - an[k] * bn[0];
+        zi[k] = asum * z0 - csum;
+    }
+    Some(zi)
 }
 
 /// Zero-phase filtering: [`lfilter`] forward, then backward over the reversed
@@ -447,12 +481,14 @@ pub fn lfilter(b: &[f64], a: &[f64], x: &[f64]) -> Result<Vec<f64>> {
 ///
 /// The signal is odd-extended by `3·max(len(a), len(b))` samples (clipped to
 /// `n − 1`) at both ends before filtering and the extension is discarded after,
-/// which is what keeps the ends from ringing.
+/// and each pass starts from the filter's settled step state ([`lfilter_zi`])
+/// scaled by its first sample: `scipy.signal.filtfilt`'s defaults.
 ///
 /// # Errors
 ///
 /// As [`lfilter`], plus [`FreesError::Evaluation`] on a series shorter than two
-/// samples (there is nothing to reflect about).
+/// samples (there is nothing to reflect about) or a filter whose `a`
+/// coefficients sum to zero.
 pub fn filtfilt(b: &[f64], a: &[f64], x: &[f64]) -> Result<Vec<f64>> {
     let n = x.len();
     if n < 2 {
@@ -460,10 +496,13 @@ pub fn filtfilt(b: &[f64], a: &[f64], x: &[f64]) -> Result<Vec<f64>> {
             "FiltFilt requires at least two samples.",
         ));
     }
-    // ponytail: odd extension without SciPy's steady-state `lfilter_zi` warm
-    // start. The padding is what kills the bulk of the edge transient; the zi
-    // refinement matters only for very short records against a long filter.
-    let pad = (3 * a.len().max(b.len())).min(n - 1);
+    let (bn, an) = normalized(b, a)?;
+    let zi = lfilter_zi(&bn, &an).ok_or_else(|| {
+        FreesError::evaluation(
+            "FiltFilt: the filter has a pole at z = 1 (its a coefficients sum to zero), so it has no settled step response to start from.",
+        )
+    })?;
+    let pad = (3 * bn.len()).min(n - 1);
     let mut ext = Vec::with_capacity(n + 2 * pad);
     for j in (1..=pad).rev() {
         ext.push(2.0 * x[0] - x[j]);
@@ -473,9 +512,12 @@ pub fn filtfilt(b: &[f64], a: &[f64], x: &[f64]) -> Result<Vec<f64>> {
         ext.push(2.0 * x[n - 1] - x[n - 1 - j]);
     }
 
-    let forward = lfilter(b, a, &ext)?;
+    // Each pass starts settled on its first sample, as SciPy's does, so a
+    // step already in progress at the record's edge leaves no transient.
+    let settled = |at: f64| zi.iter().map(|z| z * at).collect::<Vec<f64>>();
+    let forward = run_df2t(&bn, &an, &ext, settled(ext[0]));
     let mut reversed: Vec<f64> = forward.into_iter().rev().collect();
-    reversed = lfilter(b, a, &reversed)?;
+    reversed = run_df2t(&bn, &an, &reversed, settled(reversed[0]));
     reversed.reverse();
     Ok(reversed[pad..pad + n].to_vec())
 }
@@ -902,6 +944,24 @@ mod tests {
             );
         }
         assert!(filtfilt(&b, &[1.0], &[1.0]).is_err(), "needs two samples");
+    }
+
+    #[test]
+    fn filtfilt_starts_an_iir_pass_settled() {
+        // A unit-DC-gain one-pole IIR. From rest its first output would be 0.1·5;
+        // started settled (lfilter_zi), a constant comes through untouched at
+        // the very first sample, with only three samples of odd padding.
+        let (b, a) = ([0.1], [1.0, -0.9]);
+        for v in filtfilt(&b, &a, &[5.0; 8]).unwrap() {
+            assert!((v - 5.0).abs() < 1e-12, "constant became {v}");
+        }
+        // lfilter_zi for this filter is the settled state 0.9 (SciPy's value).
+        let (bn, an) = normalized(&b, &a).unwrap();
+        let zi = lfilter_zi(&bn, &an).unwrap();
+        assert!(zi.len() == 1 && (zi[0] - 0.9).abs() < 1e-15, "{zi:?}");
+        // An integrator (pole at z = 1) has no settled state: refused, not NaN.
+        let e = filtfilt(&[1.0], &[1.0, -1.0], &[1.0, 2.0, 3.0]).unwrap_err();
+        assert!(e.to_string().contains("pole at z = 1"), "{e}");
     }
 
     #[test]

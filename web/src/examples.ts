@@ -2205,9 +2205,9 @@ eta_o = (A_base + eta_f * A_fin) / (A_base + A_fin)
 Q_per_m = h * (A_base + eta_f * A_fin) * (T_b - T_inf)
 Q_bare = h * 2 * pi# * r_1 * (T_b - T_inf)
 { CHECK mL 0.5 1e-12 }
-{ CHECK eta_f 0.900515768104082 1e-09 }
-{ CHECK eta_o 0.924714635322008 1e-09 }
-{ CHECK Q_per_m 7524.14866593597 1e-06 }`,
+{ CHECK eta_f 0.900515730969610 1e-09 }
+{ CHECK eta_o 0.924714607220245 1e-09 }
+{ CHECK Q_per_m 7524.14843727966 1e-06 }`,
   },
   {
     id: 'shell-tube-lmtd-sizing',

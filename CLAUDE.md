@@ -27,9 +27,9 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Worker Pool**: Up to 4 Web Workers executing independent parametric sweep chunks in parallel with weighted progress, preserving deterministic row ordering.
 - **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-10-29: 4,474.2 KiB raw / 1,998.0 KiB gzipped, 645.8 KiB headroom). Raised from 4,096 on 2026-09-10, owner-authorized, to link every fluid the alias table names; the `ci.yml` header carries the full ledger and records the 2026-10-30 measurement of the lazy-chunk pay-down and why it waits for the 200 KiB headroom trigger.
 - **Test Suite Health**:
-  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,428 tests pass across all workspace crates.
+  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,429 tests pass across all workspace crates.
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 73 test files, 833 tests passing (needs the built `web/src/wasm/pkg`).
+  - `vitest run` (Node 22): 73 test files, 834 tests passing (needs the built `web/src/wasm/pkg`).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
   - `npm run check-examples`: 809/809 documentation blocks (2,898 assertions), including the 20 multi-domain examples and their 19 optimization requests. Every graded block must also check with zero unit warnings.

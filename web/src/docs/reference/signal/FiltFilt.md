@@ -26,7 +26,7 @@ Two consequences worth stating plainly:
 * **The magnitude response is squared.** A design that is −3 dB at some frequency is −6 dB there after `FiltFilt`. Design for half the attenuation you want.
 * **It is not causal.** Every output sample depends on the whole record, so this is a post-processing tool, never something to put inside a control loop.
 
-Before filtering, the signal is odd-extended by `3·max(len(a), len(b))` samples (clipped to `n − 1`) at both ends and the extension discarded afterwards. That is what stops the ends from ringing.
+Before filtering, the signal is odd-extended by `3·max(len(a), len(b))` samples (clipped to `n − 1`) at both ends and the extension discarded afterwards. Each pass also starts as if the filter had already settled on the record's edge value. Together these stop the ends from ringing, and the output matches `scipy.signal.filtfilt`.
 
 ## Mathematical Formulation
 
@@ -36,7 +36,7 @@ $$ y = R\,H\,R\,H\,x \quad\Longrightarrow\quad Y(\omega) = |H(\omega)|^2 X(\omeg
 
 — real and non-negative, hence zero phase.
 
-> **Method:** two `lfilter` passes over an odd-extended record. The SciPy steady-state `lfilter_zi` warm start is not applied; the padding carries the edge behaviour.
+> **Method:** `scipy.signal.filtfilt`'s defaults. Two `lfilter` passes run over an odd-extended record, each starting from the filter's settled step state (`lfilter_zi`) scaled by its first sample. Agreement with SciPy is about 1e-15. A filter whose `a` coefficients sum to zero (a pole at z = 1) has no settled state and is refused.
 
 ## Examples
 
