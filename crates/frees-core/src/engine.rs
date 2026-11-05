@@ -4826,6 +4826,64 @@ fn retry_with_transformed_guesses(
     None
 }
 
+/// **Ladder rung 4** (no Java counterpart; reached only after every other rung
+/// has failed, so no model that solved before can change): restart the block
+/// from a *consistent* point. Inside a coupled component block the explicit
+/// intermediates — `rho = Density(…)`, `Cmin = min(C_h, C_c)`, `V = ṁ/(ρA)` —
+/// otherwise start at [`DEFAULT_GUESS`], i.e. a density of 1 kg/m³ or a
+/// capacity rate of 1 W/K, and Newton's first step throws a node enthalpy or
+/// pressure outside the property range. A few Gauss–Seidel sweeps over the
+/// block's `x = f(…)` equations from the initial guesses replace those ones
+/// with values implied by the seeded states, then Newton runs once more.
+#[allow(clippy::too_many_arguments)]
+fn retry_from_consistent_start(
+    index: usize,
+    block: &Block,
+    equations: &[Equation],
+    values: &mut Scope,
+    settings: &SolverSettings,
+    specs: &BTreeMap<String, VarSpec>,
+    ctx: EvalContext<'_>,
+    cache: Option<&PinnedBlockStruct>,
+) -> Option<usize> {
+    if block.is_scalar() {
+        return None;
+    }
+    for name in &block.variables {
+        values.insert(name.clone(), initial_guess(name, specs));
+    }
+    let unknowns: BTreeSet<&str> = block.variables.iter().map(String::as_str).collect();
+    for _ in 0..block.equations.len().min(20) {
+        for &e in &block.equations {
+            let Expr::Var(name) = &equations[e].lhs else {
+                continue;
+            };
+            let name = name.to_ascii_lowercase();
+            if !unknowns.contains(name.as_str()) {
+                continue;
+            }
+            if let Ok(value) = eval_with(&equations[e].rhs, values, ctx) {
+                if value.is_finite() {
+                    let value = specs
+                        .get(&name)
+                        .map_or(value, |s| value.clamp(s.lower, s.upper));
+                    values.insert(name, value);
+                }
+            }
+        }
+    }
+    let relaxed = retry_settings(settings);
+    let solved = solve_block(
+        index, block, equations, values, &relaxed, specs, ctx, cache, None,
+    );
+    if solved.is_err() {
+        for name in &block.variables {
+            values.insert(name.clone(), initial_guess(name, specs));
+        }
+    }
+    solved.ok()
+}
+
 /// True if either side of the equation contains a CoolProp `prop$` call —
 /// `EquationSystemSolver.usesPropertyCall`. The recursion mirrors the Java
 /// `exprUsesPropertyCall` exactly: `Call` (name prefix, then arguments),
@@ -5214,32 +5272,63 @@ fn solve_block_with_fallback(
             } else {
                 let merged = try_merge_bidirectional(blocks, index, equations, skip)
                     .filter(|(merged, _)| merged.variables.len() > block.variables.len());
-                match merged {
-                    Some((merged, merged_indices)) => {
-                        // Reset ALL variables in the merged block to initial
-                        // guesses: previously solved blocks may have incorrect
-                        // values from the rank-deficient fallback.
-                        for name in &merged.variables {
-                            values.insert(name.clone(), initial_guess(name, specs));
-                        }
-                        // A merge that fails too reports the ORIGINAL block's
-                        // failure: the merged rescue swallows many solved blocks,
-                        // so its error names dozens of unrelated equations
-                        // instead of the block that actually stalled.
-                        iterations += solve_block(
-                            index, &merged, equations, values, settings, specs, ctx, None, None,
-                        )
-                        .map_err(|_| first_error)?;
-                        // Only blocks BEFORE this one are done: a later block
-                        // the merge pulled in may also read a block between the
-                        // two that has not run yet (it solved against that
-                        // variable's guess). Let the loop re-solve it in order —
-                        // from the merged values, so a consistent one converges
-                        // at once.
-                        skip.extend(merged_indices.into_iter().filter(|&i| i < index));
-                        actual_solved = Some(merged);
+                let mut rescued = false;
+                // What a failed merge left behind is what the failure report
+                // shows when the last rung fails too, as it did before that rung.
+                let mut after_failed_merge = None;
+                if let Some((merged, merged_indices)) = merged {
+                    // The merge overwrites blocks that already solved; the
+                    // consistent-start rung needs them back if the merge fails.
+                    let before_merge = values.clone();
+                    // Reset ALL variables in the merged block to initial
+                    // guesses: previously solved blocks may have incorrect
+                    // values from the rank-deficient fallback.
+                    for name in &merged.variables {
+                        values.insert(name.clone(), initial_guess(name, specs));
                     }
-                    None => return Err(first_error),
+                    match solve_block(
+                        index, &merged, equations, values, settings, specs, ctx, None, None,
+                    ) {
+                        Ok(count) => {
+                            iterations += count;
+                            // Only blocks BEFORE this one are done: a later block
+                            // the merge pulled in may also read a block between the
+                            // two that has not run yet (it solved against that
+                            // variable's guess). Let the loop re-solve it in order —
+                            // from the merged values, so a consistent one converges
+                            // at once.
+                            skip.extend(merged_indices.into_iter().filter(|&i| i < index));
+                            actual_solved = Some(merged);
+                            rescued = true;
+                        }
+                        Err(_) => {
+                            after_failed_merge = Some(std::mem::replace(values, before_merge));
+                        }
+                    }
+                }
+                if !rescued {
+                    // A failure here too reports the ORIGINAL block's error: a
+                    // merged rescue swallows many solved blocks, so its error
+                    // would name dozens of unrelated equations instead of the
+                    // block that actually stalled.
+                    match retry_from_consistent_start(
+                        index,
+                        block,
+                        equations,
+                        values,
+                        settings,
+                        specs,
+                        ctx,
+                        block_cache,
+                    ) {
+                        Some(count) => iterations += count,
+                        None => {
+                            if let Some(left) = after_failed_merge {
+                                *values = left;
+                            }
+                            return Err(first_error);
+                        }
+                    }
                 }
             }
         }

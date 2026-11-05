@@ -627,7 +627,12 @@ fn declared_tolerances() -> BTreeMap<String, f64> {
             (name.clone(), rel)
         })
         .collect();
-    for entry in doc["absolute"].as_object().into_iter().flatten() {
+    for entry in doc["absolute"]
+        .as_object()
+        .into_iter()
+        .flatten()
+        .chain(doc["rescued"].as_object().into_iter().flatten())
+    {
         if let Some(mechanism) = entry.1["mechanism"].as_str() {
             cited.insert(mechanism.to_string());
         }
@@ -698,6 +703,73 @@ fn declared_solver_floors() -> BTreeMap<String, f64> {
                 path.display()
             );
             (name.clone(), rel)
+        })
+        .collect()
+}
+
+/// Fixtures whose golden records a **Java failure** that this engine now
+/// solves, from the same file's optional `rescued` object: fixture stem →
+/// variable key (lowercased) → the value it must solve to.
+///
+/// A failure golden asserts nothing about the answer, so "Rust solved" alone
+/// would be unfalsifiable. An entry therefore carries `values` checked
+/// independently of either engine (by hand from the fixture's own equations,
+/// stated in `reason`), and the replay grades the solution against them at
+/// the default tolerance. The guards mirror the other sections: a `mechanism`
+/// the catalogue defines, a real `reason`, a non-empty `values`, and — in
+/// [`replay`] and [`golden_corpus_parity`] — an entry whose golden is not a
+/// failure, or that this engine no longer solves, is dead and fails.
+fn declared_rescues() -> BTreeMap<String, BTreeMap<String, f64>> {
+    let path = tolerance_path();
+    let Ok(raw) = fs::read_to_string(&path) else {
+        return BTreeMap::new();
+    };
+    let doc: serde_json::Value = serde_json::from_str(&raw)
+        .unwrap_or_else(|e| panic!("{} is not valid JSON: {e}", path.display()));
+    let catalogue: BTreeSet<String> = doc["mechanisms"]
+        .as_object()
+        .map(|m| m.keys().cloned().collect())
+        .unwrap_or_default();
+    let Some(entries) = doc["rescued"].as_object() else {
+        return BTreeMap::new();
+    };
+    entries
+        .iter()
+        .map(|(name, entry)| {
+            assert!(
+                entry["reason"].as_str().is_some_and(|r| r.len() > 40),
+                "{}: rescued `{name}` needs a `reason` saying why the oracle failed and how \
+                 the `values` were checked, not a placeholder",
+                path.display()
+            );
+            let mechanism = entry["mechanism"].as_str().unwrap_or_default();
+            assert!(
+                catalogue.contains(mechanism),
+                "{}: rescued `{name}` names mechanism `{mechanism}`, which the file's \
+                 `mechanisms` catalogue does not define (it has {catalogue:?})",
+                path.display()
+            );
+            let values: BTreeMap<String, f64> = entry["values"]
+                .as_object()
+                .into_iter()
+                .flatten()
+                .map(|(k, v)| {
+                    let v = v.as_f64().unwrap_or_else(|| {
+                        panic!(
+                            "{}: rescued `{name}` value `{k}` is not a number",
+                            path.display()
+                        )
+                    });
+                    (k.to_ascii_lowercase(), v)
+                })
+                .collect();
+            assert!(
+                !values.is_empty(),
+                "{}: rescued `{name}` needs `values` to grade the solution against; a \
+                 failure golden asserts nothing on its own",
+                path.display()
+            );
+            (name.clone(), values)
         })
         .collect()
 }
@@ -1270,9 +1342,11 @@ fn replay(
     tolerances: &BTreeMap<String, f64>,
     floors: &BTreeMap<String, f64>,
     absolutes: &BTreeMap<String, BTreeMap<String, f64>>,
+    rescues: &BTreeMap<String, BTreeMap<String, f64>>,
     used: &mut BTreeSet<String>,
     used_floors: &mut BTreeSet<String>,
     used_absolutes: &mut BTreeSet<(String, String)>,
+    used_rescues: &mut BTreeSet<String>,
     failures: &mut Vec<Failure>,
 ) {
     let name = path
@@ -1345,6 +1419,24 @@ fn replay(
 
     match run(&settings) {
         Ok(solution) => {
+            if let (false, Some(values)) = (expected_error.is_null(), rescues.get(&name)) {
+                used_rescues.insert(name.clone());
+                let actual: BTreeMap<String, f64> = solution
+                    .values
+                    .iter()
+                    .map(|(k, v)| (k.to_ascii_lowercase(), *v))
+                    .collect();
+                for (var, &want) in values {
+                    match actual.get(var) {
+                        Some(&got) if close(got, want, REL_TOL) => {}
+                        got => fail(format!(
+                            "rescued in fixtures/{TOLERANCE_FILE}: `{var}` = {got:?}, but the \
+                             entry's checked value is {want}"
+                        )),
+                    }
+                }
+                return;
+            }
             if !expected_error.is_null() {
                 fail(format!(
                     "Java failed with {} but Rust solved: {:?}",
@@ -1599,9 +1691,11 @@ fn golden_corpus_parity() {
     let tolerances = declared_tolerances();
     let floors = declared_solver_floors();
     let absolutes = declared_absolutes();
+    let rescues = declared_rescues();
     let mut used = BTreeSet::new();
     let mut used_floors = BTreeSet::new();
     let mut used_absolutes = BTreeSet::new();
+    let mut used_rescues = BTreeSet::new();
     let mut failures = Vec::new();
     for path in &mine {
         replay(
@@ -1609,11 +1703,27 @@ fn golden_corpus_parity() {
             &tolerances,
             &floors,
             &absolutes,
+            &rescues,
             &mut used,
             &mut used_floors,
             &mut used_absolutes,
+            &mut used_rescues,
             &mut failures,
         );
+    }
+
+    // A rescue the replay never graded is dead: its golden is not a failure, or
+    // this engine no longer solves the fixture (which `replay` reports itself).
+    for fixture in rescues.keys().filter(|f| mine_stems.contains(*f)) {
+        if !used_rescues.contains(fixture) {
+            failures.push(Failure {
+                fixture: fixture.clone(),
+                detail: format!(
+                    "is declared rescued in fixtures/{TOLERANCE_FILE}, but the replay never \
+                     graded it: the golden is not a Java failure, or this engine failed too"
+                ),
+            });
+        }
     }
 
     // An absolute declaration the replay never reached grades nothing — the
@@ -1652,6 +1762,7 @@ fn golden_corpus_parity() {
         .map(|n| ("fixtures", n))
         .chain(floors.keys().map(|n| ("solver_floor", n)))
         .chain(absolutes.keys().map(|n| ("absolute", n)))
+        .chain(rescues.keys().map(|n| ("rescued", n)))
     {
         if !paths
             .iter()
