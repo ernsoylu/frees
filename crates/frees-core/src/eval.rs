@@ -1008,14 +1008,14 @@ pub const INTRINSICS: &[Intrinsic] = &[
     // The two-argument forms take (x, order) — the Java arms read the order
     // from args[1] — and the fixed-order forms are the Numerical-Recipes
     // rational approximations transcribed in `Evaluator.java`.
-    strict!("besselj0", Arity::Exact(1), |_, a| Ok(bessj0(a[0]))),
-    strict!("bessel_j0", Arity::Exact(1), |_, a| Ok(bessj0(a[0]))),
-    strict!("besselj1", Arity::Exact(1), |_, a| Ok(bessj1(a[0]))),
-    strict!("bessel_j1", Arity::Exact(1), |_, a| Ok(bessj1(a[0]))),
-    strict!("besseli0", Arity::Exact(1), |_, a| Ok(bessi0(a[0]))),
-    strict!("bessel_i0", Arity::Exact(1), |_, a| Ok(bessi0(a[0]))),
-    strict!("besseli1", Arity::Exact(1), |_, a| Ok(bessi1(a[0]))),
-    strict!("bessel_i1", Arity::Exact(1), |_, a| Ok(bessi1(a[0]))),
+    strict!("besselj0", Arity::Exact(1), |_, a| Ok(libm::j0(a[0]))),
+    strict!("bessel_j0", Arity::Exact(1), |_, a| Ok(libm::j0(a[0]))),
+    strict!("besselj1", Arity::Exact(1), |_, a| Ok(libm::j1(a[0]))),
+    strict!("bessel_j1", Arity::Exact(1), |_, a| Ok(libm::j1(a[0]))),
+    strict!("besseli0", Arity::Exact(1), |n, a| bessel_i(n, 0.0, a[0])),
+    strict!("bessel_i0", Arity::Exact(1), |n, a| bessel_i(n, 0.0, a[0])),
+    strict!("besseli1", Arity::Exact(1), |n, a| bessel_i(n, 1.0, a[0])),
+    strict!("bessel_i1", Arity::Exact(1), |n, a| bessel_i(n, 1.0, a[0])),
     strict!("bessely0", Arity::Exact(1), |n, a| bessy0(n, a[0])),
     strict!("bessel_y0", Arity::Exact(1), |n, a| bessy0(n, a[0])),
     strict!("bessely1", Arity::Exact(1), |n, a| bessy1(n, a[0])),
@@ -3914,64 +3914,12 @@ pub fn f_dist_inv(p: f64, d1: f64, d2: f64) -> Result<f64> {
     Ok(x)
 }
 
-// --- Bessel functions (Numerical-Recipes transcriptions from Evaluator.java) —
-
-fn bessj0(x: f64) -> f64 {
-    let ax = libm::fabs(x);
-    if ax < 8.0 {
-        let y = x * x;
-        let ans1 = 57568490574.0
-            + y * (-13362590354.0
-                + y * (651619640.7 + y * (-11214424.18 + y * (77392.33017 + y * (-184.9052456)))));
-        let ans2 = 57568490411.0
-            + y * (1029532985.0
-                + y * (9494680.718 + y * (59272.64853 + y * (267.8532712 + y * 1.0))));
-        ans1 / ans2
-    } else {
-        let z = 8.0 / ax;
-        let y = z * z;
-        let xx = ax - 0.785398164;
-        let ans1 = 1.0
-            + y * (-0.1098628627e-2
-                + y * (0.2734510407e-4 + y * (-0.2073370639e-5 + y * 0.2093887211e-6)));
-        let ans2 = -0.1562499995e-1
-            + y * (0.1430488765e-3
-                + y * (-0.6911147651e-5 + y * (0.7621095161e-6 - y * 0.934935152e-7)));
-        libm::sqrt(0.636619772 / ax) * (libm::cos(xx) * ans1 - z * libm::sin(xx) * ans2)
-    }
-}
-
-fn bessj1(x: f64) -> f64 {
-    let ax = libm::fabs(x);
-    if ax < 8.0 {
-        let y = x * x;
-        let ans1 = x
-            * (72362614232.0
-                + y * (-7895059235.0
-                    + y * (242396853.1
-                        + y * (-2972611.439 + y * (15704.48260 + y * (-30.16036606))))));
-        let ans2 = 144725228442.0
-            + y * (2300535178.0
-                + y * (18583304.74 + y * (99447.43394 + y * (376.9991397 + y * 1.0))));
-        ans1 / ans2
-    } else {
-        let z = 8.0 / ax;
-        let y = z * z;
-        let xx = ax - 2.356194491;
-        let ans1 = 1.0
-            + y * (0.183105e-2
-                + y * (-0.3516396496e-4 + y * (0.2457520174e-5 + y * (-0.240337019e-6))));
-        let ans2 = 0.04687499995
-            + y * (-0.2002690873e-3
-                + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
-        let mut ans =
-            libm::sqrt(0.636619772 / ax) * (libm::cos(xx) * ans1 - z * libm::sin(xx) * ans2);
-        if x < 0.0 {
-            ans = -ans;
-        }
-        ans
-    }
-}
+// --- Bessel functions ------------------------------------------------------
+//
+// J₀, J₁, Y₀, Y₁ and Yₙ are `libm`'s full-precision ports; I₀ and I₁ are
+// [`bessel_i`]; K₀ and K₁ are [`bessel_k_integral`]. All are graded against
+// SciPy in `tests/reference_libraries.rs`. They replace the Numerical Recipes
+// polynomial fits Evaluator.java used, which were good to only ~5e-8.
 
 fn bessy0(name: &str, x: f64) -> Result<f64> {
     if x <= 0.0 {
@@ -3980,27 +3928,7 @@ fn bessy0(name: &str, x: f64) -> Result<f64> {
             format_args!("BesselY0 requires x > 0, got {x}"),
         ));
     }
-    Ok(if x < 8.0 {
-        let y = x * x;
-        let ans1 = -2957821389.0
-            + y * (7062834065.0
-                + y * (-512359803.6 + y * (10879881.29 + y * (-86327.92757 + y * 228.4622733))));
-        let ans2 = 40076544269.0
-            + y * (745249964.8
-                + y * (7189466.438 + y * (47447.26470 + y * (226.1030244 + y * 1.0))));
-        (ans1 / ans2) + 0.636619772 * bessj0(x) * libm::log(x)
-    } else {
-        let z = 8.0 / x;
-        let y = z * z;
-        let xx = x - 0.785398164;
-        let ans1 = 1.0
-            + y * (-0.1098628627e-2
-                + y * (0.2734510407e-4 + y * (-0.2073370639e-5 + y * 0.2093887211e-6)));
-        let ans2 = -0.1562499995e-1
-            + y * (0.1430488765e-3
-                + y * (-0.6911147651e-5 + y * (0.7621095161e-6 + y * (-0.934945152e-7))));
-        libm::sqrt(0.636619772 / x) * (libm::sin(xx) * ans1 + z * libm::cos(xx) * ans2)
-    })
+    Ok(libm::y0(x))
 }
 
 fn bessy1(name: &str, x: f64) -> Result<f64> {
@@ -4010,77 +3938,36 @@ fn bessy1(name: &str, x: f64) -> Result<f64> {
             format_args!("BesselY1 requires x > 0, got {x}"),
         ));
     }
-    Ok(if x < 8.0 {
-        let y = x * x;
-        let ans1 = x
-            * (-0.4900604943e13
-                + y * (0.1275274390e13
-                    + y * (-0.5153438139e11
-                        + y * (0.7349264551e9 + y * (-0.4237922726e7 + y * 0.8511937935e4)))));
-        let ans2 = 0.2499580570e14
-            + y * (0.4244419664e12
-                + y * (0.3733650367e10
-                    + y * (0.2245904002e8 + y * (0.1020426050e6 + y * (0.3549632885e3 + y)))));
-        (ans1 / ans2) + 0.636619772 * (bessj1(x) * libm::log(x) - 1.0 / x)
-    } else {
-        let z = 8.0 / x;
-        let y = z * z;
-        let xx = x - 2.356194491;
-        let ans1 = 1.0
-            + y * (0.183105e-2
-                + y * (-0.3516396496e-4 + y * (0.2457520174e-5 + y * (-0.240337019e-6))));
-        let ans2 = 0.04687499995
-            + y * (-0.2002690873e-3
-                + y * (0.8449199096e-5 + y * (-0.88228987e-6 + y * 0.105787412e-6)));
-        libm::sqrt(0.636619772 / x) * (libm::sin(xx) * ans1 + z * libm::cos(xx) * ans2)
-    })
+    Ok(libm::y1(x))
 }
 
-fn bessi0(x: f64) -> f64 {
-    let ax = libm::fabs(x);
-    if ax < 3.75 {
-        let mut y = x / 3.75;
-        y *= y;
-        1.0 + y
-            * (3.5156229
-                + y * (3.0899424
-                    + y * (1.2067492 + y * (0.2659732 + y * (0.360768e-1 + y * 0.45813e-2)))))
-    } else {
-        let y = 3.75 / ax;
-        (libm::exp(ax) / libm::sqrt(ax))
-            * (0.39894228
-                + y * (0.1328592e-1
-                    + y * (0.225319e-2
-                        + y * (-0.157565e-2
-                            + y * (0.916281e-2
-                                + y * (-0.2057706e-1
-                                    + y * (0.2635537e-1
-                                        + y * (-0.1647633e-1 + y * 0.392377e-2))))))))
+/// Kₙ(x) for n = 0 or 1 from DLMF 10.32.9, `Kₙ(x) = ∫₀^∞ e^{−x cosh t} cosh(nt) dt`.
+///
+/// The integrand is analytic and decays double-exponentially, so the trapezoid
+/// rule converges geometrically in the step: 0.1, narrowed to 0.5/√x once the
+/// integrand is a Gaussian of width 1/√x. It is summed scaled by eˣ, with
+/// `x(cosh t − 1) = 2x·sinh²(t/2)` and `cosh(nt) = e^{nt}(1 + e^{−2nt})/2` in
+/// one exponent, so there is no cancellation near t = 0 and no overflow at
+/// large t. About 20 nodes at large x, 70 at x = 1e-2.
+fn bessel_k_integral(n: f64, x: f64) -> f64 {
+    if x == f64::INFINITY {
+        return 0.0;
     }
-}
-
-fn bessi1(x: f64) -> f64 {
-    let ax = libm::fabs(x);
-    let ans = if ax < 3.75 {
-        let mut y = x / 3.75;
-        y *= y;
-        ax * (0.5
-            + y * (0.87890594
-                + y * (0.51498869
-                    + y * (0.15084934 + y * (0.2658733e-1 + y * (0.301532e-2 + y * 0.32411e-3))))))
-    } else {
-        let y = 3.75 / ax;
-        let mut ans = 0.2282967e-1 + y * (-0.2895312e-1 + y * (0.1787654e-1 - y * 0.420059e-2));
-        ans = 0.39894228
-            + y * (-0.3988024e-1
-                + y * (-0.362018e-2 + y * (0.163801e-2 + y * (-0.1031555e-1 + y * ans))));
-        ans * (libm::exp(ax) / libm::sqrt(ax))
-    };
-    if x < 0.0 {
-        -ans
-    } else {
-        ans
+    let h = (0.5 / libm::sqrt(x)).min(0.1);
+    let mut sum = 0.5; // the t = 0 node, half-weighted
+    let mut k = 1.0;
+    loop {
+        let t = k * h;
+        let s = libm::sinh(0.5 * t);
+        let f = libm::exp(n * t - 2.0 * x * s * s) * 0.5 * (1.0 + libm::exp(-2.0 * n * t));
+        sum += f;
+        // `!(>=)` also ends the loop on a NaN x.
+        if !(f >= sum * 1e-18) {
+            break;
+        }
+        k += 1.0;
     }
+    sum * h * libm::exp(-x)
 }
 
 fn bessk0(name: &str, x: f64) -> Result<f64> {
@@ -4090,22 +3977,7 @@ fn bessk0(name: &str, x: f64) -> Result<f64> {
             format_args!("BesselK0 requires x > 0, got {x}"),
         ));
     }
-    Ok(if x <= 2.0 {
-        let y = x * x / 4.0;
-        (-libm::log(x / 2.0) * bessi0(x))
-            + (-0.57721566
-                + y * (0.42278420
-                    + y * (0.23069756
-                        + y * (0.3488590e-1 + y * (0.262698e-2 + y * (0.10750e-3 + y * 0.74e-5))))))
-    } else {
-        let y = 2.0 / x;
-        (libm::exp(-x) / libm::sqrt(x))
-            * (1.25331414
-                + y * (-0.7832358e-1
-                    + y * (0.2189568e-1
-                        + y * (-0.1062446e-1
-                            + y * (0.587872e-2 + y * (-0.251540e-2 + y * 0.53208e-3))))))
-    })
+    Ok(bessel_k_integral(0.0, x))
 }
 
 fn bessk1(name: &str, x: f64) -> Result<f64> {
@@ -4115,27 +3987,10 @@ fn bessk1(name: &str, x: f64) -> Result<f64> {
             format_args!("BesselK1 requires x > 0, got {x}"),
         ));
     }
-    Ok(if x <= 2.0 {
-        let y = x * x / 4.0;
-        (libm::log(x / 2.0) * bessi1(x))
-            + (1.0 / x)
-                * (1.0
-                    + y * (0.15443144
-                        + y * (-0.67278579
-                            + y * (-0.18156897
-                                + y * (-0.1919402e-1 + y * (-0.110404e-2 + y * (-0.4686e-4)))))))
-    } else {
-        let y = 2.0 / x;
-        (libm::exp(-x) / libm::sqrt(x))
-            * (1.25331414
-                + y * (0.23498619
-                    + y * (-0.3655620e-1
-                        + y * (0.1504268e-1
-                            + y * (-0.780353e-2 + y * (0.325614e-2 + y * (-0.68245e-3)))))))
-    })
+    Ok(bessel_k_integral(1.0, x))
 }
 
-/// Yₙ(x) by upward recurrence from Y₀/Y₁.
+/// Yₙ(x), integer n (`libm::yn`; `Y₋ₙ = (−1)ⁿ Yₙ`).
 fn bessy_n(name: &str, n: i64, x: f64) -> Result<f64> {
     if x <= 0.0 {
         return Err(domain(
@@ -4143,25 +3998,10 @@ fn bessy_n(name: &str, n: i64, x: f64) -> Result<f64> {
             format_args!("BesselY requires x > 0, got {x}"),
         ));
     }
-    if n < 0 {
-        let sign = if n % 2 == 0 { 1.0 } else { -1.0 };
-        return Ok(sign * bessy_n(name, -n, x)?);
-    }
-    if n == 0 {
-        return bessy0(name, x);
-    }
-    if n == 1 {
-        return bessy1(name, x);
-    }
-    let tox = 2.0 / x;
-    let mut by = bessy1(name, x)?;
-    let mut bym = bessy0(name, x)?;
-    for j in 1..n {
-        let byp = j as f64 * tox * by - bym;
-        bym = by;
-        by = byp;
-    }
-    Ok(by)
+    Ok(libm::yn(
+        n.clamp(i32::MIN.into(), i32::MAX.into()) as i32,
+        x,
+    ))
 }
 
 /// Kₙ(x) by upward recurrence from K₀/K₁ (`K₋ₙ = Kₙ`).
@@ -4214,8 +4054,7 @@ fn bessel_k(name: &str, order: f64, x: f64) -> Result<f64> {
     bessk_n(name, java_int(order), x)
 }
 
-/// Modified Bessel I of the first kind, real order — `Evaluator.besselI`'s
-/// overflow-safe log-space ascending series.
+/// Modified Bessel I of the first kind, real order, by its ascending series.
 fn bessel_i(name: &str, order: f64, x: f64) -> Result<f64> {
     if x < 0.0 {
         if order != libm::rint(order) {
@@ -4244,16 +4083,20 @@ fn bessel_i(name: &str, order: f64, x: f64) -> Result<f64> {
     if x == 0.0 {
         return Ok(if order == 0.0 { 1.0 } else { 0.0 });
     }
-    let ln_half_x = libm::log(x / 2.0);
-    let mut sum = 0.0;
-    for k in 0..2000 {
-        let kf = k as f64;
-        let ln_term = (2.0 * kf + order) * ln_half_x
-            - libm::lgamma(kf + 1.0)
-            - libm::lgamma(kf + order + 1.0);
-        let term = libm::exp(ln_term);
+    // Ascending series Σ (x/2)^{2k+ν} / (k! Γ(k+ν+1)). Only the first term
+    // goes through logs; each next one is the previous times
+    // (x/2)² / (k(k+ν)), so rounding grows with the term count, not with
+    // lgamma's magnitude. Every term is positive and bounded by the sum, so a
+    // term overflows only where Iᵥ(x) itself does.
+    let half = 0.5 * x;
+    let q = half * half;
+    let mut term = libm::exp(order * libm::log(half) - libm::lgamma(order + 1.0));
+    let mut sum = term;
+    for k in 1..2000 {
+        let kf = f64::from(k);
+        term *= q / (kf * (kf + order));
         sum += term;
-        if term < sum * 1e-17 && kf > x / 2.0 {
+        if term < sum * 1e-17 && kf > half {
             break;
         }
     }

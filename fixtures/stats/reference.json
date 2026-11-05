@@ -170,6 +170,306 @@
    "value": 1.042828872054452
   },
   {
+   "expr": "besselj0(0.0001)",
+   "reference": "scipy.special.j0(0.0001)",
+   "value": 0.9999999975
+  },
+  {
+   "expr": "besselj0(1.0)",
+   "reference": "scipy.special.j0(1.0)",
+   "value": 0.7651976865579665
+  },
+  {
+   "expr": "besselj0(7.9)",
+   "reference": "scipy.special.j0(7.9)",
+   "value": 0.1943618448412782
+  },
+  {
+   "expr": "besselj0(8.1)",
+   "reference": "scipy.special.j0(8.1)",
+   "value": 0.14751745404437763
+  },
+  {
+   "expr": "besselj0(60.0)",
+   "reference": "scipy.special.j0(60.0)",
+   "value": -0.09147180408906189
+  },
+  {
+   "expr": "besselj0(400.0)",
+   "reference": "scipy.special.j0(400.0)",
+   "value": -0.03882518153078396
+  },
+  {
+   "expr": "besselj1(0.0001)",
+   "reference": "scipy.special.j1(0.0001)",
+   "value": 4.99999999375e-05
+  },
+  {
+   "expr": "besselj1(1.0)",
+   "reference": "scipy.special.j1(1.0)",
+   "value": 0.44005058574493355
+  },
+  {
+   "expr": "besselj1(7.9)",
+   "reference": "scipy.special.j1(7.9)",
+   "value": 0.21917939992175126
+  },
+  {
+   "expr": "besselj1(8.1)",
+   "reference": "scipy.special.j1(8.1)",
+   "value": 0.24760776698159287
+  },
+  {
+   "expr": "besselj1(60.0)",
+   "reference": "scipy.special.j1(60.0)",
+   "value": 0.046598383758166315
+  },
+  {
+   "expr": "besselj1(400.0)",
+   "reference": "scipy.special.j1(400.0)",
+   "value": -0.009222058428586357
+  },
+  {
+   "expr": "bessely0(0.0001)",
+   "reference": "scipy.special.y0(0.0001)",
+   "value": -5.937289069709337
+  },
+  {
+   "expr": "bessely0(1.0)",
+   "reference": "scipy.special.y0(1.0)",
+   "value": 0.08825696421567697
+  },
+  {
+   "expr": "bessely0(7.9)",
+   "reference": "scipy.special.y0(7.9)",
+   "value": 0.20652094814437574
+  },
+  {
+   "expr": "bessely0(8.1)",
+   "reference": "scipy.special.y0(8.1)",
+   "value": 0.23809132870223482
+  },
+  {
+   "expr": "bessely0(60.0)",
+   "reference": "scipy.special.y0(60.0)",
+   "value": 0.047358952209449405
+  },
+  {
+   "expr": "bessely0(400.0)",
+   "reference": "scipy.special.y0(400.0)",
+   "value": -0.00917351986075936
+  },
+  {
+   "expr": "bessely1(0.0001)",
+   "reference": "scipy.special.y1(0.0001)",
+   "value": -6366.198036455762
+  },
+  {
+   "expr": "bessely1(1.0)",
+   "reference": "scipy.special.y1(1.0)",
+   "value": -0.7812128213002888
+  },
+  {
+   "expr": "bessely1(7.9)",
+   "reference": "scipy.special.y1(7.9)",
+   "value": -0.1817210772805731
+  },
+  {
+   "expr": "bessely1(8.1)",
+   "reference": "scipy.special.y1(8.1)",
+   "value": -0.13314879595249587
+  },
+  {
+   "expr": "bessely1(60.0)",
+   "reference": "scipy.special.y1(60.0)",
+   "value": 0.09186960936986693
+  },
+  {
+   "expr": "bessely1(400.0)",
+   "reference": "scipy.special.y1(400.0)",
+   "value": 0.038813744980751734
+  },
+  {
+   "expr": "besseli0(0.0001)",
+   "reference": "scipy.special.i0(0.0001)",
+   "value": 1.0000000024999998
+  },
+  {
+   "expr": "besseli0(1.0)",
+   "reference": "scipy.special.i0(1.0)",
+   "value": 1.2660658777520082
+  },
+  {
+   "expr": "besseli0(3.7)",
+   "reference": "scipy.special.i0(3.7)",
+   "value": 8.738617524169396
+  },
+  {
+   "expr": "besseli0(3.8)",
+   "reference": "scipy.special.i0(3.8)",
+   "value": 9.516888026098956
+  },
+  {
+   "expr": "besseli0(60.0)",
+   "reference": "scipy.special.i0(60.0)",
+   "value": 5.8940770556098e+24
+  },
+  {
+   "expr": "besseli0(400.0)",
+   "reference": "scipy.special.i0(400.0)",
+   "value": 1.0418584503521463e+172
+  },
+  {
+   "expr": "besseli1(0.0001)",
+   "reference": "scipy.special.i1(0.0001)",
+   "value": 5.0000000062499995e-05
+  },
+  {
+   "expr": "besseli1(1.0)",
+   "reference": "scipy.special.i1(1.0)",
+   "value": 0.5651591039924851
+  },
+  {
+   "expr": "besseli1(3.7)",
+   "reference": "scipy.special.i1(3.7)",
+   "value": 7.435745796535337
+  },
+  {
+   "expr": "besseli1(3.8)",
+   "reference": "scipy.special.i1(3.8)",
+   "value": 8.140424578907952
+  },
+  {
+   "expr": "besseli1(60.0)",
+   "reference": "scipy.special.i1(60.0)",
+   "value": 5.844751588390468e+24
+  },
+  {
+   "expr": "besseli1(400.0)",
+   "reference": "scipy.special.i1(400.0)",
+   "value": 1.0405553112944217e+172
+  },
+  {
+   "expr": "besselk0(1e-06)",
+   "reference": "scipy.special.k0(1e-06)",
+   "value": 13.93144207362641
+  },
+  {
+   "expr": "besselk0(0.01)",
+   "reference": "scipy.special.k0(0.01)",
+   "value": 4.721244730161095
+  },
+  {
+   "expr": "besselk0(1.9)",
+   "reference": "scipy.special.k0(1.9)",
+   "value": 0.12884597927604755
+  },
+  {
+   "expr": "besselk0(2.1)",
+   "reference": "scipy.special.k0(2.1)",
+   "value": 0.10078374088996692
+  },
+  {
+   "expr": "besselk0(9.0)",
+   "reference": "scipy.special.k0(9.0)",
+   "value": 5.0881312956459246e-05
+  },
+  {
+   "expr": "besselk0(40.0)",
+   "reference": "scipy.special.k0(40.0)",
+   "value": 8.392861100099567e-19
+  },
+  {
+   "expr": "besselk1(1e-06)",
+   "reference": "scipy.special.k1(1e-06)",
+   "value": 999999.9999927843
+  },
+  {
+   "expr": "besselk1(0.01)",
+   "reference": "scipy.special.k1(0.01)",
+   "value": 99.97389411829623
+  },
+  {
+   "expr": "besselk1(1.9)",
+   "reference": "scipy.special.k1(1.9)",
+   "value": 0.15966015303266756
+  },
+  {
+   "expr": "besselk1(2.1)",
+   "reference": "scipy.special.k1(2.1)",
+   "value": 0.1227464115335079
+  },
+  {
+   "expr": "besselk1(9.0)",
+   "reference": "scipy.special.k1(9.0)",
+   "value": 5.363701637945195e-05
+  },
+  {
+   "expr": "besselk1(40.0)",
+   "reference": "scipy.special.k1(40.0)",
+   "value": 8.497131954861038e-19
+  },
+  {
+   "expr": "bessely(0.3, 2)",
+   "reference": "scipy.special.yn(2, 0.3)",
+   "value": -14.480094011452342
+  },
+  {
+   "expr": "bessely(5.0, 2)",
+   "reference": "scipy.special.yn(2, 5.0)",
+   "value": 0.3676628826055238
+  },
+  {
+   "expr": "bessely(30.0, 2)",
+   "reference": "scipy.special.yn(2, 30.0)",
+   "value": 0.12292410306411386
+  },
+  {
+   "expr": "bessely(0.3, 7)",
+   "reference": "scipy.special.yn(7, 0.3)",
+   "value": -134639666.164146
+  },
+  {
+   "expr": "bessely(5.0, 7)",
+   "reference": "scipy.special.yn(7, 5.0)",
+   "value": -1.2628988357693212
+  },
+  {
+   "expr": "bessely(30.0, 7)",
+   "reference": "scipy.special.yn(7, 30.0)",
+   "value": 0.027202118395205678
+  },
+  {
+   "expr": "besselk(0.3, 2)",
+   "reference": "scipy.special.kn(2, 0.3)",
+   "value": 21.745740283593133
+  },
+  {
+   "expr": "besselk(5.0, 2)",
+   "reference": "scipy.special.kn(2, 5.0)",
+   "value": 0.00530894371222346
+  },
+  {
+   "expr": "besselk(30.0, 2)",
+   "reference": "scipy.special.kn(2, 30.0)",
+   "value": 2.2769929632558262e-14
+  },
+  {
+   "expr": "besselk(0.3, 7)",
+   "reference": "scipy.special.kn(7, 0.3)",
+   "value": 209911239.47125658
+  },
+  {
+   "expr": "besselk(5.0, 7)",
+   "reference": "scipy.special.kn(7, 5.0)",
+   "value": 0.22631814547498613
+  },
+  {
+   "expr": "besselk(30.0, 7)",
+   "reference": "scipy.special.kn(7, 30.0)",
+   "value": 4.7468816490626124e-14
+  },
+  {
    "expr": "mean(14.0695, 8.0501, 10.0321, 11.7436, 9.7164, 11.4581, 9.5396, 12.3078, 8.6932, 10.3864, 12.4557, 7.9547, 11.8469, 9.7181, 10.3413, 8.4347, 6.5284, 12.7523, 10.9283, 10.3305, 11.1271, 6.7709, 11.2146, 9.4311, 9.6287)",
    "reference": "numpy.mean(x)",
    "value": 10.218404
@@ -3410,69 +3710,7 @@
     0.8108183824142494,
     0.7159807064642109
    ],
-   "filtfilt_zero_state": [
-    0.16467499579135475,
-    0.2753299789485156,
-    0.3852832641259047,
-    0.4968733230990152,
-    0.600635162376816,
-    0.6830149232455567,
-    0.7523994899335773,
-    0.8313722136082642,
-    0.919978234976172,
-    0.9857794756442345,
-    0.9941871672937959,
-    0.9361619468767735,
-    0.8313861176952891,
-    0.7192684700547939,
-    0.6333157295418183,
-    0.577749183439549,
-    0.5410756143651675,
-    0.5139795638420724,
-    0.4768687214717158,
-    0.39874381942206033,
-    0.2640508272432838,
-    0.08263925364890645,
-    -0.12277743843411053,
-    -0.325781995800603,
-    -0.5028722236627214,
-    -0.6427580756034174,
-    -0.7479277315788811,
-    -0.8252597417959568,
-    -0.8792027707070373,
-    -0.9146007147351395,
-    -0.9362965482244093,
-    -0.9410337796920214,
-    -0.9225657072266154,
-    -0.8885431494417184,
-    -0.85760203994333,
-    -0.8363398907046946,
-    -0.8095350486094902,
-    -0.754710714546147,
-    -0.6597547396095891,
-    -0.5268171255135736,
-    -0.36500519121945063,
-    -0.18337467525971027,
-    0.007051499978120591,
-    0.18911436572415702,
-    0.3459821360950103,
-    0.46875314127900336,
-    0.554140265153924,
-    0.606225337492161,
-    0.6429091186470517,
-    0.688702773980929,
-    0.7565785666948567,
-    0.8387628023447414,
-    0.913765891830837,
-    0.9577696249959812,
-    0.9533240888970296,
-    0.8947668940525845,
-    0.7866527360448891,
-    0.6377600721189893,
-    0.45440580327253477,
-    0.24621841761949279
-   ],
-   "filtfilt_scipy": [
+   "filtfilt": [
     0.1670980446282613,
     0.2740018202647856,
     0.3827649662139584,
@@ -3534,7 +3772,7 @@
     0.45780512405756024,
     0.2547192220891791
    ],
-   "reference": "scipy.signal.butter(2, 0.2); lfilter; the odd-extended zero-state forward-backward pass built from scipy.signal.lfilter; and scipy.signal.filtfilt with its lfilter_zi start"
+   "reference": "scipy.signal.butter(2, 0.2); lfilter; and scipy.signal.filtfilt with its default odd padding and lfilter_zi start"
   },
   "welch": {
    "x": [

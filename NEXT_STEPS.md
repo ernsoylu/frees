@@ -71,6 +71,45 @@ history keeps the detailed narrative of every closed item.
 
 ## 2. Open Work
 
+### Programme of 2026-11-05: D.4 gaps, D.2, D.3, schematic backlog, lazy fluids
+
+Owner-approved order: A → B → C → D → E. Each phase lands as its own PR(s); its
+entry here is checked off with evidence when it closes.
+
+- **A. D.4 precision gaps — done 2026-11-05 (`d4-precision`).**
+  1. **Done.** The Numerical Recipes fits are gone. `besselj0/j1`, `bessely0/y1` and `bessely(x, n)` call `libm`'s `j0/j1/y0/y1/yn`; Cody's fractional-order J was already full precision and stays.
+  2. **Done, differently from planned.** No Cephes port was needed:
+     - `besseli0/i1` route through `bessel_i`. Its series now takes each term from the previous one by the ratio (x/2)²/(k(k+ν)) instead of calling `lgamma` and `exp` on every term.
+     - K₀ and K₁ use the trapezoid rule on DLMF 10.32.9, which converges geometrically. Higher orders still come by upward recurrence.
+     - A scratch sweep of 628 points over 1e-6…700 against SciPy 1.18.1 measured J, K and I at 1e-14 or better, and Y at 1e-13 next to its zeros.
+  3. **Done.** `filtfilt` starts each pass from `lfilter_zi` scaled by its first sample, as SciPy does. A filter whose `a` coefficients sum to zero (a pole at z = 1) is refused with a message instead of producing NaN.
+  4. **Done.**
+     - `gen.py` dropped the zero-state `filtfilt` reference. It grades `filtfilt` against SciPy directly and adds 60 Bessel cases across each kernel's regimes, raising the scalar cases from 70 to 130. Regenerating the old file in the pinned environment was byte-identical before the change.
+     - The `NR_BESSEL` (1e-7) and `FILTFILT_START_STATE` (1e-2) grade classes are deleted. All 130 scalar cases pass the 1e-12 round-off grade (worst 3.1e-14), and `filtfilt` measures 7.8e-16 (was 8.6e-3).
+     - Nine Bessel reference pages had expected values recorded from the old fits. They now carry the engine's values, which equal SciPy's.
+     - The `annular-fin-efficiency` gallery CHECKs had also been recorded from the old fits: η_f was 3.7e-8 off. They now carry values that agree with SciPy to 1e-15 (η_f = 0.90051573096961). The model's prose figures are unchanged.
+     - Gates: workspace 3,429 tests, clippy clean on native and wasm32, vitest 834/834, `check-docs` 754/754, and `check-examples` 809/809 blocks with 2,898 assertions on a rebuilt module (4,478.2 KiB raw / 1,996.1 KiB gzipped, +4.0 KiB). The parity corpus passes once item 5's entry is in.
+  5. **Done; owner chose a tolerance entry.** `bitwise-and-special-math-test-new-bessel-and-chi-square` is a Java-oracle golden. Nine of its values (J0, I0, I1, K0, K1, K2, Y0, Y1, Y2 at x = 2) now differ from it by 1.0e-9 to 6.4e-8. In each case frees matches SciPy and Java does not: Java's `k0_val = 0.11389388` is the NR coefficient sum, while K₀(2) = 0.11389387274953344. The other two Bessel goldens pass. Per the owner's choice the golden file is untouched: `fixtures/tolerances-rustprop.json` adds an `oracle-nr-bessel` mechanism and a fixture entry at 8e-8 relative (measured 6.37e-8, worst at `k0_val`). The parity corpus passes with it.
+- **B. D.2 Wave C examples.** 25–30 problems from the Wave B bank, chosen so every fluid (0/31 used today), two-phase (10/47) and liquid (13/21) component appears in a graded example. Fluid: pipe networks with fittings, pump curves, pumps in series/parallel, and a known Colebrook pressure drop proving `rough` is absolute [m]. Two-phase: refrigeration and Rankine states, expansion devices, evaporator/condenser pairs, reheat and regeneration. Liquid: loops with accumulators and thermal loops. Converted as D.1 was (gallery entry, graded CHECKs with units, reference-page links, bank answer as cross-check, stated reasons for misses). Record the conversion rate and engine findings; fix engine bugs in separate commits. One PR per domain.
+- **C. D.3 frees Book and public gallery.** Generated from `web/src/docs/` (never a copy) and kept out of Git as a build output.
+  1. Renderer spike: mdBook against a static export of the in-app Help. `DocDiagrams.tsx` is React and the pages use KaTeX. Decide on measurement and record the choice as D14.
+  2. A generator builds the table of contents from guide order and the reference families.
+  3. Gallery: 30–50 models from `examples.ts`, each with problem, source, results, a plot and an "Open in frees" link. If the app cannot open a model from a URL, add that.
+  4. CI builds the book on every PR (failing on broken links or ungraded examples) and deploys it to Pages from `main`.
+- **D. Schematic backlog as 01e.** Scheduling these overrides the triggers in the change request's backlog table; the owner approved that on 2026-11-05. CFG-11 stays out until a shared-storage architecture is decided.
+  1. VIEW-10 and WIRE-11 together: sheets, one identity for repeated occurrences, off-page connectors keeping net identity, and deleting an occurrence kept apart from deleting the component. Project format v5, migrating from v4.
+  2. COMP-08: project symbol overrides, port anchors, and SVG import through an allowlist sanitizer (no scripts, `foreignObject` or external references), security-reviewed before merge. Closes the rest of AC-15.
+  3. RUN-07: run identity (revision, scenario, sample) through the solve pipeline, then named scenarios and baseline/current comparison.
+  4. RUN-05: recorded playback (play/pause, scrub, speed, event discontinuities, reduced motion). With slice 3 it closes AC-12.
+
+  Each slice gets unit tests, a Playwright journey, and RUN-10's zero-engine-call check.
+- **E. Lazy fluid chunks (bundle debt 2).** CI's 200 KiB headroom trigger has not fired (645.8 KiB). The owner approved going ahead, gated on a measurement.
+  1. Measure time to first solve on a throttled profile. If a split cannot show a real gain (the PWA precaches every chunk), record that and stop.
+  2. RustProp (separate repository): a runtime fluid registry beside `rustprop_data::fluids::all()`, plus a compact format written by `rustprop-datagen` and decoded in `rustprop-core`. Decoded fluids must equal the static ones bit for bit. Release v0.3.0.
+  3. frees: keep the four core fluids linked and chunk the rest plus `mixture-data`. `install_from_bytes` reads the new format. D12 holds.
+  4. Check reports the fluids a model uses, and `engineClient` installs missing ones in every pool worker (respawns included) before a solve or sweep. A missing fluid while offline is a clear error.
+  5. Record the new size in the `ci.yml` ledger, and add an end-to-end test that a model uses a fluid that is not linked.
+
 ### R15 usability pilot (Phase 4.4)
 
 Cards, answer key, thresholds and the pinned build are in [`R15_PILOT.md`](R15_PILOT.md) (signed 2026-09-12). Still to do: run five engineering participants through scalar solve (≤ 5 min), component chain (≤ 10 min) and missing-boundary recovery (≤ 3 min); record times, assistance and feedback. Never fabricate participant outcomes.
@@ -483,9 +522,7 @@ Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` 
     - `digamma` inherited Apache's sign slip in the asymptotic series (3e-9 everywhere). Its unit test had pinned the slip as "rounding".
     - A bounded curve fit stalled 3.5e-3 short of the constrained optimum: projected LM solved each step as if a pinned parameter could still move. It now freezes a parameter held on a bound by an outward gradient (the unbounded path is untouched), and reaches SciPy's `trf` optimum in 6 iterations instead of 53.
     - IRLS converges linearly. A Cauchy fit needed ~40 passes, and the 20-pass cap returned its unsettled point silently. The cap is now 100, and a fit that still has not settled is an error.
-  - **Accepted, measured gaps:**
-    - The Bessel intrinsics are the Numerical Recipes polynomial fits ported from Java. They sit at ≤ 5.6e-8 (`K0`), so they are graded at 1e-7. `libm` has full-precision `j0/j1/jn/y0/y1/yn`; `I`/`K` would need a Cephes port. Not done here.
-    - `filtfilt` starts both passes from rest, while SciPy starts from `lfilter_zi`: 8.6e-3 apart, graded as a ceiling. Against the same zero-state algorithm built from SciPy primitives it agrees to 1e-15.
+  - **Gaps accepted then, closed 2026-11-05 (programme phase A):** the Numerical Recipes Bessel fits (≤ 5.6e-8) and `filtfilt`'s zero start state (8.6e-3). Both now meet the 1e-12 round-off grade.
 
 **Research & infrastructure.**
 
