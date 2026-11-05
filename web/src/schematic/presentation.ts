@@ -1,11 +1,13 @@
 import {
   framedGroups,
+  junctionIdOf,
   type PortSide,
   type SchematicGroup,
   type SchematicLayout,
   type SchematicNode,
   type SchematicOffsets,
 } from './layout'
+import type { ConnectionDto } from '../api'
 import { renameId } from './sourceEdit'
 import { LINE_KINDS } from './palette'
 
@@ -230,9 +232,18 @@ export interface Annotation {
   target: string
 }
 
-/** SYNC-04: every presentation key and link under a rename, matching whole dotted segments. */
-export function renamePresentation(p: SchematicPresentation, renames: ReadonlyMap<string, string>): SchematicPresentation {
-  const id = (k: string) => renameId(k, renames)
+/**
+ * SYNC-04: every presentation key and link under a rename, matching whole
+ * dotted segments. A junction is renamed through its whole set in
+ * `connections`, since the rename can change which endpoint sorts first.
+ */
+export function renamePresentation(p: SchematicPresentation, renames: ReadonlyMap<string, string>, connections: readonly ConnectionDto[] = []): SchematicPresentation {
+  const junctions = new Map(
+    connections
+      .filter((c) => c.endpoints.length !== 2)
+      .map((c) => [junctionIdOf(c.endpoints), junctionIdOf(c.endpoints.map((e) => renameId(e.toLowerCase(), renames)))]),
+  )
+  const id = (k: string) => junctions.get(k) ?? renameId(k, renames)
   const move = <V,>(r: Record<string, V>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [id(k), v]))
   const badges = (b: Record<string, string>) => Object.fromEntries(Object.entries(b).map(([k, v]) => [id(k), id(v)]))
   return {

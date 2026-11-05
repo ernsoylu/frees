@@ -3,7 +3,7 @@ name: GUESS
 category: Language Keywords
 summary: Seeds a variable's starting value and bounds for the nonlinear solver.
 related: [DYNAMIC]
-examples: []
+examples: [cooling-coil-dehumidification]
 tags: [keyword, guess, bounds, initial value, newton, convergence]
 references: []
 ---

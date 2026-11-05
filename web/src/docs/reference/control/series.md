@@ -3,7 +3,7 @@ name: series
 category: Control Systems
 summary: Cascade (series) connection of two transfer functions, G = G1·G2.
 related: [feedback, ss2tf]
-examples: [cruise-control]
+examples: [cruise-control, pi-zero-overshoot]
 tags: [control, series, cascade, block diagram, transfer function]
 ---
 

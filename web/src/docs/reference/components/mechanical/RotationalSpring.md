@@ -3,7 +3,7 @@ name: RotationalSpring
 category: Component (mechanical)
 summary: A torsional spring, τ = k·θ.
 related: []
-examples: []
+examples: [gear-impedance-reflection]
 tags: [rotationalspring, component, mechanical, acausal]
 ---
 

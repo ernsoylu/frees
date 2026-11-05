@@ -3,7 +3,7 @@ name: HeatingCoil
 category: Component (moistair)
 summary: Heats a humid-air stream at constant humidity ratio.
 related: []
-examples: []
+examples: [preheat-steam-humidifier-ip]
 tags: [heatingcoil, component, moistair, acausal]
 ---
 

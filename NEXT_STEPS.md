@@ -398,7 +398,7 @@ Carried forward:
      - `sourceEdit.test.ts`: a rename reaches a junction key;
      - the full vitest suite (805 tests);
      - the schematic e2e (WIRE-09 now opens the junction branch by its port).
-   - **Ceiling:** a rename can still drop a junction's saved place, when the renamed endpoint stops being the set's first in sorted order.
+   - **Ceiling, closed 2026-10-30:** a rename dropped a junction's saved place when it changed which endpoint sorts first (the renamed one sorting past another member, or another member's new name sorting ahead). `renamePresentation` now takes the drawn Check's connections and renames each junction through its whole set, with the same `junctionIdOf` that `buildGraph` names it by. Evidence: a `presentation.test.ts` case covering both directions, which fails without the fix; vitest 809/809.
 8. **Done 2026-10-30.** Terminal faces and junction places, from an auto-arrange review of the 20 multi-domain examples. Screenshots and metrics were taken with temporary harnesses kept outside the repository.
    - **Defects:**
      - Both terminals of an electrical block (and the heat port of a thermal block) were fixed to the bottom face, so a source and its load were joined by wires that left downward and doubled back.
@@ -450,8 +450,30 @@ Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` 
 
 **Documentation programmes.**
 
-- **D.1** Wave B example tranches: pneumatic, hydraulic, powertrain, control, moist air, heat transfer, uncertainty (electrical is done).
-- **D.2** Wave C large-domain examples: two-phase, fluid, liquid.
+- **D.1** Wave B examples: **done 2026-10-31.** The 30-problem table is in Git at `ba2add6` (Phase 4.7b-4). Electrical B16–B18 and B30 landed in #28, and B22 was already the `uncertain-tank-inventory` gallery entry. The other 25 are now gallery entries in `examples.ts`, with CHECKs graded by `examples.test.ts` (units and values) and bound to 84 reference pages. The bank's answer was a cross-check, not the golden value.
+  - **Reproduced:**
+    - B1, B2, B3, B5, B7, B9, B10, B11, B12 and B29.
+    - B25 and B26, from Chapra & Canale's published data.
+    - B20 to 0.3 %, against the bank's rounded chart value.
+    - B4 to 0.1 % (a rounded g).
+    - B21 once read as two shell passes: its F = 0.975 is the two-shell value; one shell gives 0.891.
+    - B23 once read as the worst-case linear sum: 7.0 %; the root-sum-square is 4.4 %.
+  - **Not reproduced, stated in each model's header:**
+    - B6: Torricelli gives 13,616 s against the bank's 12,306 s.
+    - B8: the bank's answer depends on an unstated speed or drivetrain inertia.
+    - B13: about 2 % from chart reads.
+    - B14: the bank's latent load contradicts its own condensate rate.
+    - B15: the bank's heat and steam figures do not close one energy balance.
+    - B19: the bank's ε exceeds the counterflow bound at its own NTU and Cr.
+    - B24: the bank's data was not kept; Chapra's Example 17.1 is used instead.
+    - B27 and B28: the bank's inputs are incomplete, so each model states its own.
+  - **Conversion rate**, the input D.2 was waiting for: 25 of 25 converted to runnable models; 16 reproduce the bank's answer and 9 do not, each for a stated reason.
+  - **Not done:** the plan's corpus mirrors (`fixtures/corpus/example-*.frees`) were skipped, because no harness grades a corpus file without a golden.
+  - **Engine findings, not changed here:**
+    - user `function` arguments take no unit annotations;
+    - `step`/`stepinfo` over a few hundred samples take seconds;
+    - `PneumaticOrifice` passes forward flow only, so an overshooting volume traps pressure.
+- **D.2** Wave C large-domain examples: two-phase, fluid, liquid. Gallery use on 2026-10-30: fluid 0/31, two-phase 10/47, liquid 13/21. Its start condition, a measured Wave B conversion rate, is now met (D.1). One original motive is gone: `Pipe.md` already documents `rough` as absolute roughness [m], matching the `rough / D` in the code.
 - **D.3** The *frees Book* (mdBook) and a 30–50-model public gallery.
 - **D.4 — done 2026-10-31.** Offline reference fixtures from NumPy/SciPy/statsmodels/SALib. `tools/stats-ref/gen.py` writes `fixtures/stats/reference.json` (NumPy 2.5.4, SciPy 1.18.1, statsmodels 0.15.0, SALib 1.6.0, seed 20261031; regeneration is byte-identical). `crates/frees-core/tests/reference_libraries.rs` replays it in the default `cargo test`; its header carries the measured table.
   - **Graded:** 70 scalar intrinsics through a solved document (distributions, special functions, descriptive statistics, correlation and regression, t-tests, ANOVA, χ² goodness of fit, mean CI); `poly_fit`; seven curve fits (OLS, absolute σ, a statsmodels OLS for covariance and bands, an active bound, soft-L1/Huber/Cauchy); every `signal` kernel; all 32 Sobol' dimensions bitwise; Sobol' indices and Morris effects.
@@ -470,6 +492,7 @@ Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` 
 - `frees-lsp` language server
 - Python/C++ model export
 - crates.io publishing
+- Lazy fluid chunks (bundle debt 2). Measured 2026-10-30 and left unbuilt until CI's 200 KiB headroom trigger fires (645.8 KiB now). At most ~700 KiB raw could move (24 fluids plus `mixture-data`). It needs a RustProp release with a runtime fluid registry and a compact fluid format first, then Check reporting the fluids a model uses so each worker installs them before solving. The PWA precaches every chunk, so the gain is time to first solve, not total download. The `ci.yml` header has the numbers.
 - `SharedArrayBuffer` sweeps (needs COOP/COEP)
 - Bounded surrogate property models
 - FMI/FMU 2.0/3.0

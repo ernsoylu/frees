@@ -3,7 +3,7 @@ name: Inertia
 category: Component (mechanical)
 summary: A rotational inertia, τ = J dω/dt.
 related: []
-examples: []
+examples: [gear-impedance-reflection, vehicle-launch-equivalent-mass]
 tags: [inertia, component, mechanical, acausal]
 ---
 

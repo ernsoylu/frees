@@ -3,7 +3,7 @@ name: Transmission
 category: Component (powertrain)
 summary: A gearbox/transmission imposing a ratio between engine and wheels.
 related: []
-examples: []
+examples: [vehicle-launch-equivalent-mass]
 tags: [transmission, component, powertrain, acausal]
 ---
 

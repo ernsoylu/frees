@@ -3,7 +3,7 @@ name: besselk0
 category: Special Functions
 summary: Modified Bessel function of the second kind, order 0 — K_0(x).
 related: [besselk, besselk1, besseli0]
-examples: []
+examples: [annular-fin-efficiency]
 tags: [special function, modified bessel, k0, second kind, macdonald]
 ---
 

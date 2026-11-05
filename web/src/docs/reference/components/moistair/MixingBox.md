@@ -3,7 +3,7 @@ name: MixingBox
 category: Component (moistair)
 summary: Mixes two humid-air streams with flow-weighted enthalpy and humidity ratio.
 related: []
-examples: []
+examples: [moist-air-adiabatic-mixing]
 tags: [mixingbox, component, moistair, acausal]
 ---
 

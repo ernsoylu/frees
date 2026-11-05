@@ -3,7 +3,7 @@ name: HydraulicOrifice
 category: Component (hydraulic)
 summary: A hydraulic orifice metering flow by ṁ ∝ √Δp.
 related: []
-examples: [hydraulic-metering-restriction]
+examples: [hydraulic-metering-restriction, hydraulic-orifice-lpm]
 tags: [hydraulicorifice, component, hydraulic, acausal]
 ---
 

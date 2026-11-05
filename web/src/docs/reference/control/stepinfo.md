@@ -3,7 +3,7 @@ name: stepinfo
 category: Control Systems
 summary: Step-response performance metrics (rise time, peak time, settling time, overshoot).
 related: [step, pole, margin]
-examples: []
+examples: [second-order-step-metrics, pi-zero-overshoot]
 tags: [control, step response, rise time, settling time, overshoot, transient]
 ---
 

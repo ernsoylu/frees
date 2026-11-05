@@ -3,7 +3,7 @@ name: MechGround
 category: Component (mechanical)
 summary: The rotational reference (ω = 0).
 related: []
-examples: [reduction-gear-viscous-load]
+examples: [reduction-gear-viscous-load, gear-impedance-reflection]
 tags: [mechground, component, mechanical, acausal]
 ---
 

@@ -3,7 +3,7 @@ name: exp
 category: Math
 summary: Exponential function e raised to the power x.
 related: [ln, log10, sqrt]
-examples: [damped-oscillator, sounding-rocket-trajectory]
+examples: [damped-oscillator, sounding-rocket-trajectory, capstan-belt-friction]
 tags: [math, exponential, elementary]
 references: []
 ---
