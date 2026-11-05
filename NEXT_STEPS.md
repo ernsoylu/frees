@@ -475,7 +475,17 @@ Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` 
     - `PneumaticOrifice` passes forward flow only, so an overshooting volume traps pressure.
 - **D.2** Wave C large-domain examples: two-phase, fluid, liquid. Gallery use on 2026-10-30: fluid 0/31, two-phase 10/47, liquid 13/21. Its start condition, a measured Wave B conversion rate, is now met (D.1). One original motive is gone: `Pipe.md` already documents `rough` as absolute roughness [m], matching the `rough / D` in the code.
 - **D.3** The *frees Book* (mdBook) and a 30–50-model public gallery.
-- **D.4** Offline reference fixtures from NumPy/SciPy/statsmodels/SALib, with seeds and versions recorded. Passing examples do not establish estimator parity; D.4 and the R15 pilot stay separate from example execution.
+- **D.4 — done 2026-10-31.** Offline reference fixtures from NumPy/SciPy/statsmodels/SALib. `tools/stats-ref/gen.py` writes `fixtures/stats/reference.json` (NumPy 2.5.4, SciPy 1.18.1, statsmodels 0.15.0, SALib 1.6.0, seed 20261031; regeneration is byte-identical). `crates/frees-core/tests/reference_libraries.rs` replays it in the default `cargo test`; its header carries the measured table.
+  - **Graded:** 70 scalar intrinsics through a solved document (distributions, special functions, descriptive statistics, correlation and regression, t-tests, ANOVA, χ² goodness of fit, mean CI); `poly_fit`; seven curve fits (OLS, absolute σ, a statsmodels OLS for covariance and bands, an active bound, soft-L1/Huber/Cauchy); every `signal` kernel; all 32 Sobol' dimensions bitwise; Sobol' indices and Morris effects.
+  - **Same inputs:** the generator rebuilds frees' own Sobol' and Morris designs (its JavaRandom shift and trajectories), so SALib grades the estimators, not a second draw. They match to 2.5e-15 and exactly. SALib centres `Y` before Saltelli's `S1`; frees does not, and on the graded design that moves `S1` by ≤ 2.1e-4.
+  - **Fixed at the source:**
+    - Sobol' dimensions 27–32 carried non-Joe–Kuo direction numbers. The balanced-net unit test cannot see that, since any odd `m_k` passes it.
+    - `digamma` inherited Apache's sign slip in the asymptotic series (3e-9 everywhere). Its unit test had pinned the slip as "rounding".
+    - A bounded curve fit stalled 3.5e-3 short of the constrained optimum: projected LM solved each step as if a pinned parameter could still move. It now freezes a parameter held on a bound by an outward gradient (the unbounded path is untouched), and reaches SciPy's `trf` optimum in 6 iterations instead of 53.
+    - IRLS converges linearly. A Cauchy fit needed ~40 passes, and the 20-pass cap returned its unsettled point silently. The cap is now 100, and a fit that still has not settled is an error.
+  - **Accepted, measured gaps:**
+    - The Bessel intrinsics are the Numerical Recipes polynomial fits ported from Java. They sit at ≤ 5.6e-8 (`K0`), so they are graded at 1e-7. `libm` has full-precision `j0/j1/jn/y0/y1/yn`; `I`/`K` would need a Cephes port. Not done here.
+    - `filtfilt` starts both passes from rest, while SciPy starts from `lfilter_zi`: 8.6e-3 apart, graded as a ceiling. Against the same zero-state algorithm built from SciPy primitives it agrees to 1e-15.
 
 **Research & infrastructure.**
 

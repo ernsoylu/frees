@@ -49,14 +49,17 @@
 //! [`crate::analysis::paramfit::FitRequest`] convention: parallel finite
 //! `lower`/`upper` slices with the initial guess already inside.
 //!
-//! The mechanism is **projected Levenberg–Marquardt** — each trial point is
-//! clamped back into the box and the trust-region bookkeeping then measures the
-//! clamped step, not the unconstrained one it came from. That is not the same
-//! algorithm as an active-set or interior-point LM: a parameter pinned to a
-//! bound can slow convergence, and the local-linear covariance computed at such
-//! a point ignores the constraint entirely. [`FitResult::at_bound`] says which
-//! parameters that applies to, so the standard error can be read with the right
-//! amount of suspicion rather than none.
+//! The mechanism is **projected Levenberg–Marquardt with an active set** —
+//! each trial point is clamped back into the box and the trust-region
+//! bookkeeping then measures the clamped step, not the unconstrained one it
+//! came from; and a parameter already on a bound, with the cost's descent
+//! direction pointing out of the box, is frozen for the iteration so the step
+//! for the others is solved without it. Clamping alone stalled short of the
+//! constrained optimum (graded against SciPy's `trf` in
+//! `tests/reference_libraries.rs`). The local-linear covariance computed at a
+//! bound still ignores the constraint entirely. [`FitResult::at_bound`] says
+//! which parameters that applies to, so the standard error can be read with the
+//! right amount of suspicion rather than none.
 //!
 //! # Robust losses
 //!
@@ -159,9 +162,12 @@ impl Loss {
     }
 }
 
-/// Outer IRLS passes before a robust fit gives up refining its weights. Twenty
-/// is far past where the parameter change test below normally stops it.
-const MAX_IRLS_PASSES: usize = 20;
+/// Outer IRLS passes before a robust fit gives up refining its weights. IRLS
+/// converges only linearly: a Cauchy fit through three gross outliers in
+/// `tests/reference_libraries.rs` shrinks its parameter change by ~0.58 a pass
+/// and needs about forty, so the twenty this once was returned an unsettled
+/// point 1e-6 from SciPy's optimum without saying so.
+const MAX_IRLS_PASSES: usize = 100;
 
 /// The IRLS outer loop stops when no parameter moves by more than this,
 /// relative to its own magnitude.
@@ -390,8 +396,14 @@ pub fn fit(request: &CurveFitRequest<'_>) -> Result<FitResult> {
         point = optimum.point;
         passes += 1;
 
-        if request.loss == Loss::Linear || passes >= MAX_IRLS_PASSES || settled {
+        if request.loss == Loss::Linear || settled {
             break;
+        }
+        if passes >= MAX_IRLS_PASSES {
+            return Err(FreesError::solver(format!(
+                "Curve fit gave up: the robust reweighting did not settle in {MAX_IRLS_PASSES} \
+                 passes. Pin `f_scale`, or try a milder loss (soft_l1 or huber)."
+            )));
         }
 
         // Reweight against the residuals this pass actually left behind.
@@ -1010,7 +1022,27 @@ where
         }
         let previous = current.clone();
 
-        let mut data = qr_decomposition(&current.jacobian, solved_cols, n_r, n_c)?;
+        // Active set. Clamping the full step is not enough on its own: the free
+        // components of an LM step solved with every parameter movable assume
+        // the pinned one moves too, and the fit stalls short of the constrained
+        // optimum (3.5e-3 off SciPy's `trf` in `tests/reference_libraries.rs`).
+        // A parameter on a bound whose descent direction points out of the box
+        // is frozen for this iteration instead — its column zeroed, so the step
+        // and the orthogonality test both see only the free parameters.
+        let frozen;
+        let jacobian = match bounds {
+            None => &current.jacobian,
+            Some(box_) => {
+                frozen = freeze_pinned_columns(
+                    &current.jacobian,
+                    &current.residuals,
+                    &current.point,
+                    box_,
+                );
+                &frozen
+            }
+        };
+        let mut data = qr_decomposition(jacobian, solved_cols, n_r, n_c)?;
 
         scratch.qtf[..n_r].copy_from_slice(&weighted_residual[..n_r]);
         q_t_y(&mut scratch.qtf, &data, n_r, n_c);
@@ -1222,6 +1254,31 @@ where
             }
         }
     }
+}
+
+/// `jacobian` with the column of every parameter held on a bound zeroed, when
+/// the cost's descent direction there, `Jᵀr` with `r = target − model`, points
+/// out of the box.
+fn freeze_pinned_columns(
+    jacobian: &Mat,
+    residuals: &[f64],
+    point: &[f64],
+    bounds: &[(f64, f64)],
+) -> Mat {
+    let mut out = jacobian.clone();
+    for (j, (&x, &(lo, hi))) in point.iter().zip(bounds).enumerate() {
+        let descent: f64 = jacobian
+            .iter()
+            .zip(residuals)
+            .map(|(row, r)| row[j] * r)
+            .sum();
+        if (x <= lo && descent < 0.0) || (x >= hi && descent > 0.0) {
+            for row in &mut out {
+                row[j] = 0.0;
+            }
+        }
+    }
+    out
 }
 
 /// QR decomposition with column pivoting of the **negated** Jacobian. Port of

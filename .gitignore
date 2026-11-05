@@ -29,3 +29,6 @@ web/public/build-info.js
 # Local scratch files and helper scripts
 /scratch/
 .playwright-mcp/
+
+# CodeGraph local index
+.codegraph/
