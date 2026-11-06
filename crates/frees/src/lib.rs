@@ -1249,15 +1249,17 @@ fn ode_tables(solution: &Solution, zero_copy: bool) -> (Vec<Value>, Vec<Vec<f64>
         .ode_tables
         .iter()
         .map(|table| {
+            // The first column is the time variable, which the solver keeps in
+            // seconds (a span in [min] is converted); the checker leaves it a
+            // wildcard, so it has no inferred unit of its own.
             let units: Vec<&str> = table
                 .columns
                 .iter()
-                .map(|column| {
-                    solution
-                        .inferred_units
-                        .get(column.as_str())
-                        .map(String::as_str)
-                        .unwrap_or("")
+                .enumerate()
+                .map(|(i, column)| match solution.inferred_units.get(column.as_str()) {
+                    Some(unit) => unit.as_str(),
+                    None if i == 0 => "s",
+                    None => "",
                 })
                 .collect();
             let rows_val = if zero_copy {

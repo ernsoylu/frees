@@ -288,6 +288,8 @@ fn a_solved_dynamic_block_reaches_the_frontend_as_an_ode_table() {
     assert_eq!(table["stopped"], false);
     assert_eq!(table["endTime"], 60.0);
     assert_eq!(table["vars"], serde_json::json!(["time", "temp"]));
+    // The solver keeps time in seconds; the checker leaves it a wildcard.
+    assert_eq!(table["units"][0], "s", "{table}");
     assert!(table["events"].as_array().unwrap().is_empty());
 
     let rows = table["rows"].as_array().unwrap();

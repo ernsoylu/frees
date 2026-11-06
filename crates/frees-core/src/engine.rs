@@ -1979,17 +1979,12 @@ pub fn check_with_tables_complex(
     // response composes `deriveUnits` + `inferUnits`.
     //
     // Component stream members are the exception the Java makes explicitly:
-    // `CheckController.addComponentMemberUnits` puts them back into the
-    // *reported* map too (`putIfAbsent`), because a port member's unit comes
-    // from its physical domain and nothing else can derive it.
+    // `unit_check` puts them back into the *reported* map too (`putIfAbsent`),
+    // because a port member's unit comes from its physical domain and nothing
+    // else can derive it.
     let (_, unit_report) = unit_check(&equations, &dynamics, overrides, &member_units, &doc.defs);
     let mut inferred_units = unit_report.inferred;
     inferred_units.extend(literal_units(&equations));
-    for (name, unit) in &member_units {
-        inferred_units
-            .entry(name.to_ascii_lowercase())
-            .or_insert_with(|| unit.clone());
-    }
 
     let base = CheckReport {
         registered_calls: doc.registered_calls.clone(),
@@ -3038,12 +3033,22 @@ pub(crate) fn unit_check(
     };
     let declared = declared_units(equations, overrides, member_units);
     let (function_units, function_input_units) = declared_function_units(defs);
-    let report = crate::units::checker::check_units_full(
+    let mut report = crate::units::checker::check_units_full(
         equations,
         &declared,
         &function_units,
         &function_input_units,
     );
+    // A port member's unit comes from its physical domain and nothing else can
+    // derive it, so the report carries it too (Java
+    // `CheckController.addComponentMemberUnits`, `putIfAbsent`). Done here so
+    // the ODE-only shortcuts, whose reports go out as they are, carry it.
+    for (name, unit) in member_units {
+        report
+            .inferred
+            .entry(name.to_ascii_lowercase())
+            .or_insert_with(|| unit.clone());
+    }
     (declared, report)
 }
 
@@ -6451,6 +6456,28 @@ C X(s1, s2, r=2, q=3)
         // The datasheet payload rides out on the solution.
         assert_eq!(solution.component_instances.len(), 2);
         assert_eq!(solution.component_instances[0].type_name, "resistor");
+    }
+
+    /// A network whose only content is a DYNAMIC run takes the ODE-only
+    /// shortcut in both check and solve. Its port members still carry their
+    /// domain's units, so a trajectory column such as `m$port$t` is in K.
+    #[test]
+    fn a_dynamic_component_network_reports_its_port_member_units() {
+        let source = "ThermalMass   M(C=5000 [J/K], T0=400 [K])\n\
+                      ThermalSource amb(T=300 [K])\n\
+                      Conduction    wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])\n\
+                      connect(M.port, wall.a)\n\
+                      connect(wall.b, amb.port)\n\
+                      DYNAMIC cool (method = ida, time = 0 .. 1000, points = 11)\n\
+                      END\n";
+        let report = check(source).expect("checks");
+        assert_eq!(report.inferred_units["m$port$t"], "K", "{:?}", report.inferred_units);
+        assert_eq!(report.inferred_units["m$port$qdot"], "W");
+        let solution = solve(source, &SolverSettings::default()).expect("solves");
+        assert_eq!(solution.inferred_units["m$port$t"], "K", "{:?}", solution.inferred_units);
+        assert_eq!(solution.inferred_units["wall$a$qdot"], "W");
+        let table = &solution.ode_tables[0];
+        assert!(table.columns.iter().any(|c| c == "m$port$t"), "{:?}", table.columns);
     }
 
     /// A storage network with no `DYNAMIC` block solves its steady operating
