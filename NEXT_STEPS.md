@@ -191,7 +191,29 @@ entry here is checked off with evidence when it closes.
        - The journey caught F2 on a connector also solving the model, so naming moved to the context menu.
        - A search hit opened in a subsystem drifted 20 px off centre in VIEW-07. Root and scope toolbars wrap to different heights, and the canvas resized after the hit was framed. The frame is now held until the camera next moves. Earlier this was hidden only because the two toolbars had happened to wrap the same way.
      - **Gates.** vitest 870/870, `tsc -b` clean, lint 0 errors (90 warnings, unchanged), schematic e2e 51/51 and the other e2e specs 10/10 on Chromium.
-  2. COMP-08: project symbol overrides, port anchors, and SVG import through an allowlist sanitizer (no scripts, `foreignObject` or external references), security-reviewed before merge. Closes the rest of AC-15.
+  2. **Done 2026-11-06: COMP-08.** Project symbol overrides, port anchors, and SVG import through an allowlist sanitizer (no scripts, `foreignObject` or external references), security-reviewed before merge. Closes the rest of AC-15.
+     - **Symbols.** A block, its type or the project can draw a built-in symbol (any of the 39, which are reusable templates) or an imported project symbol in place of the type's own. The choice is taken whole from the most specific scope that makes it. Type and domain labels stay on the card.
+     - **Port anchors.** Each named port can be put on a side. Ports on a side are spread evenly in their original order, before any COMP-07 turn or mirror.
+     - **Sanitizer (`symbolSvg.ts`).** An inert `DOMParser` parse, then an allowlist of ten shape and text elements and presentation attributes. A value may hold no quote, colon, slash, semicolon, backslash, angle bracket or `url(`.
+       - Refused before parsing: DOCTYPE, entities and `xml-stylesheet`.
+       - Dropped and named in the import note: scripts, handlers, `foreignObject`, `<use>`/`<image>`/`<a>`, `style` elements and attributes, filters, animation and namespaced attributes.
+       - Caps: 100 k characters, 2,000 elements, depth 24, and 50 symbols per project.
+       - The stored markup is re-serialised from the clean tree, sanitised again on load and again before drawing, and drawn as React elements (never `innerHTML`).
+     - **Missing symbol.** A symbol the project lacks draws a labelled block, its title says so, and the style editor offers to change it.
+     - **v6.** Adds `symbols`; v5 files open unchanged.
+     - **Security review (2026-11-06).** A `/security-review` of the branch found no vulnerabilities. It confirmed:
+       - element names are matched by namespace and case-preserved `localName`;
+       - namespaced attributes are dropped;
+       - entity-decoded values are checked after decoding;
+       - camelCasing cannot produce `dangerouslySetInnerHTML`, `on*`, `href` or `style`;
+       - every project load path (file, `?url=`, share link, localStorage, IndexedDB) goes through `sanitizePresentation`;
+       - the print iframe and PNG export only see `XMLSerializer` output of the clean tree.
+     - **Evidence.**
+       - Unit tests: `symbolSvg.test.ts` (15: twelve attack vectors, refusals, idempotence, text escaping) and `presentation.test.ts` (anchors, precedence, load-time sanitising).
+       - Playwright *COMP-08* on PAIR: it imports an SVG carrying a script, `onload`/`onclick`, CSS `@import`, `url()` paint, `<image>`, `<use>`, a `foreignObject` iframe and a `style` attribute. It checks that the note names each one and that both resistors draw the clean shape. It also records that no script ran (`window.pwned` unset), nothing was requested from the hostile host and the stored markup is clean.
+       - The same journey shows R1's built-in template beating its type's symbol, port a moved to the top face, zero engine calls, an unchanged document and solve, and the labelled-block fallback after the symbol is removed from the saved project.
+     - **Found on the way.** The style cascade merged `shape` and `symbol` field by field, so a block's own built-in symbol lost to its type's imported one. `styleFor` now treats them as one choice.
+     - **Gates.** vitest 888/888 in 75 files, `tsc -b` clean, lint 0 errors (90 warnings, unchanged), schematic e2e 52/52 on Chromium, and the visual baseline unchanged in the CI image.
   3. RUN-07: run identity (revision, scenario, sample) through the solve pipeline, then named scenarios and baseline/current comparison.
   4. RUN-05: recorded playback (play/pause, scrub, speed, event discontinuities, reduced motion). With slice 3 it closes AC-12.
 
