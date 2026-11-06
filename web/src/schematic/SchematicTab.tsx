@@ -2335,10 +2335,11 @@ export default function SchematicTab({
           // Sheets apply at the top level; inside a subsystem the button stays, disabled, so the toolbar keeps its rows.
           <Menu position="bottom-start" withinPortal disabled={!!scope}>
             <Menu.Target>
-              <Button size="compact-xs" variant={sheet === MAIN ? 'subtle' : 'light'} color={sheet === MAIN ? 'gray' : 'teal'} data-testid="sheet-menu"
-                disabled={!!scope} title={scope ? 'Sheets apply to the top level of the model' : undefined}>
+              {/* A badge-height button, so the toolbar row and the canvas keep their size. */}
+              <Badge component="button" size="xs" variant={sheet === MAIN ? 'default' : 'light'} color={sheet === MAIN ? 'gray' : 'teal'} data-testid="sheet-menu"
+                disabled={!!scope} title={scope ? 'Sheets apply to the top level of the model' : undefined} style={{ cursor: scope ? 'default' : 'pointer' }}>
                 Sheet: {sheetName(sheetState, sheet)}
-              </Button>
+              </Badge>
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Label>Sheets</Menu.Label>
