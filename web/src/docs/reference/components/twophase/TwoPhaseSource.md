@@ -3,7 +3,7 @@ name: TwoPhaseSource
 category: Component (twophase)
 summary: A boundary supplying a two-phase stream.
 related: []
-examples: []
+examples: [refrigerant-throttling-quality, steam-throttling-calorimeter]
 tags: [twophasesource, component, twophase, acausal]
 ---
 

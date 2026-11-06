@@ -3015,6 +3015,455 @@ Re_0 = rho * Q_0 / (pi# / 4 * D^2) * D / mu
 { CHECK level_ratio 0.367802774276053 4e-07 }
 { CHECK Re_0 2.41109845289068 2e-06 }`,
   },
+  {
+    id: 'actual-vapor-compression-cycle',
+    title: 'Actual vapor-compression refrigeration cycle',
+    description: 'Solve. Two-phase compressor, condenser, valve and evaporator with superheat, subcooling and line pressure drops; the measured discharge fixes the compressor efficiency. Cengel Example 11-2.',
+    category: 'Thermodynamics',
+    text: `{ Actual vapor-compression refrigeration cycle (Cengel, Thermodynamics 9th
+  ed., Example 11-2). R-134a enters the compressor at 0.14 MPa and -10 C at
+  0.05 kg/s and leaves at 0.8 MPa and 50 C; it is cooled in the condenser to
+  26 C and 0.72 MPa and throttled to 0.15 MPa. The superheat, subcooling and
+  heat-exchanger pressure drops come from the stated states, and the measured
+  compressor exit fixes the unknown isentropic efficiency eta_c; the valve Cv
+  follows from the pinned pressures. Book: Q_L = 7.93 kW, W_in = 2.02 kW,
+  eta_c = 0.938, COP_R = 3.93. The book takes the condenser exit as h_f at
+  26 C; the model evaluates the compressed liquid at 0.72 MPa. }
+P_1 = 0.14 [MPa]
+T_1 = -10 [C]
+P_2 = 0.8 [MPa]
+T_2 = 50 [C]
+P_3 = 0.72 [MPa]
+T_3 = 26 [C]
+P_4 = 0.15 [MPa]
+SH_1 = T_1 - T_sat(R134a, P=P_1)
+SC_3 = T_sat(R134a, P=P_3) - T_3
+TwoPhaseCompressor comp(fluid$=R134a, eta=eta_c)
+TwoPhaseCondenser cond(fluid$=R134a, SC_set=SC_3, dP=P_2 - P_3)
+TwoPhaseExpansionValve valve(fluid$=R134a, Cv=Cv)
+TwoPhaseEvaporator evap(fluid$=R134a, SH_set=SH_1, dP=P_4 - P_1)
+connect(comp.out, cond.in)
+connect(cond.out, valve.in)
+connect(valve.out, evap.in)
+connect(evap.out, comp.in)
+comp.in.mdot = 0.05 [kg/s]
+comp.out.P = P_2
+comp.out.h = Enthalpy(R134a, P=P_2, T=T_2)
+valve.out.P = P_4
+Q_L = evap.Q
+W_in = comp.W
+COP_R = Q_L / W_in
+{ CHECK Q_L 7926.42315285554 0.008 }
+{ CHECK W_in 2016.89059230794 0.002 }
+{ CHECK eta_c 0.937366633284896 9e-07 }
+{ CHECK COP_R 3.93002138196564 4e-06 }`,
+  },
+  {
+    id: 'refrigeration-exergy-destruction',
+    title: 'Exergy destruction in a refrigeration cycle',
+    description: 'Solve. Entropy at each port of a two-phase refrigeration loop gives the exergy destroyed in every component and the second-law efficiency. Cengel Example 11-3.',
+    category: 'Thermodynamics',
+    text: `{ Exergy analysis of a vapor-compression refrigeration cycle (Cengel,
+  Thermodynamics 9th ed., Example 11-3). R-134a enters the compressor at
+  100 kPa superheated by 6.4 C at 0.05 kg/s; the compressor is 85 percent
+  isentropic and the condenser exit is saturated liquid at 39.4 C (1 MPa).
+  The space is at -13 C and the ambient at 27 C; the book rounds these to
+  260 K and 300 K, and the model uses the same values. Book: Q_L = 6.609 kW,
+  W_in = 2.919 kW, COP_R = 2.264; destruction 0.3945 (compressor), 0.4314
+  (condenser), 0.6726 (valve), 0.4037 kW (evaporator); W_min = 1.016 kW,
+  eta_II = 0.348, total 1.903 kW. Absolute entropies follow CoolProp's
+  reference state, but every result uses differences only. }
+T_L = 260 [K]
+T_0 = 300 [K]
+P_L = 100 [kPa]
+P_H = 1 [MPa]
+TwoPhaseCompressor comp(fluid$=R134a, eta=0.85)
+TwoPhaseCondenser cond(fluid$=R134a, SC_set=0 [K], dP=0 [Pa])
+TwoPhaseExpansionValve valve(fluid$=R134a, Cv=Cv)
+TwoPhaseEvaporator evap(fluid$=R134a, SH_set=6.4 [K], dP=0 [Pa])
+connect(comp.out, cond.in)
+connect(cond.out, valve.in)
+connect(valve.out, evap.in)
+connect(evap.out, comp.in)
+comp.in.mdot = 0.05 [kg/s]
+comp.out.P = P_H
+valve.out.P = P_L
+m = comp.in.mdot
+s_1 = Entropy(R134a, P=comp.in.P, h=comp.in.h)
+s_2 = Entropy(R134a, P=comp.out.P, h=comp.out.h)
+s_3 = Entropy(R134a, P=cond.out.P, h=cond.out.h)
+s_4 = Entropy(R134a, P=evap.in.P, h=evap.in.h)
+Q_L = evap.Q
+Q_H = cond.Q
+W_in = comp.W
+COP_R = Q_L / W_in
+X_comp = m * T_0 * (s_2 - s_1)
+X_cond = T_0 * (m * (s_3 - s_2) + Q_H / T_0)
+X_valve = m * T_0 * (s_4 - s_3)
+X_evap = T_0 * (m * (s_1 - s_4) - Q_L / T_L)
+W_min = Q_L * (T_0 - T_L) / T_L
+eta_II = W_min / W_in
+X_total = W_in - W_min
+{ CHECK Q_L 6609.18671900606 0.007 }
+{ CHECK W_in 2918.51407947422 0.003 }
+{ CHECK Q_H 9527.70079848028 0.01 }
+{ CHECK COP_R 2.26457249786396 2e-06 }
+{ CHECK X_comp 394.071431552685 0.0004 }
+{ CHECK X_cond 430.43271842116 0.0004 }
+{ CHECK X_valve 672.912578025936 0.0007 }
+{ CHECK X_evap 404.299394704275 0.0004 }
+{ CHECK W_min 1016.79795677016 0.001 }
+{ CHECK eta_II 0.348395768902148 3e-07 }
+{ CHECK X_total 1901.71612270405 0.002 }`,
+  },
+  {
+    id: 'cascade-refrigeration',
+    title: 'Two-stage cascade refrigeration',
+    description: 'Solve. Two R-134a loops share an adiabatic cascade exchanger; equating its duties fixes the lower-loop flow. Cengel Example 11-4.',
+    category: 'Thermodynamics',
+    text: `{ Two-stage cascade refrigeration cycle (Cengel, Thermodynamics 9th ed.,
+  Example 11-4). Both stages run ideal R-134a cycles: the upper loop A between
+  0.8 and 0.32 MPa at 0.05 kg/s, the lower loop B between 0.32 and 0.14 MPa.
+  The adiabatic cascade heat exchanger is the lower condenser and the upper
+  evaporator; equating their duties fixes the lower-loop flow m_B. Book:
+  m_B = 0.039 kg/s, Q_L = 7.18 kW, W_in = 1.61 kW, COP_R = 4.46. }
+P_H = 0.8 [MPa]
+P_i = 0.32 [MPa]
+P_L = 0.14 [MPa]
+TwoPhaseCompressor compA(fluid$=R134a, eta=1)
+TwoPhaseCondenser condA(fluid$=R134a, SC_set=0 [K], dP=0 [Pa])
+TwoPhaseExpansionValve valveA(fluid$=R134a, Cv=Cv_A)
+TwoPhaseEvaporator evapA(fluid$=R134a, SH_set=0 [K], dP=0 [Pa])
+connect(compA.out, condA.in)
+connect(condA.out, valveA.in)
+connect(valveA.out, evapA.in)
+connect(evapA.out, compA.in)
+TwoPhaseCompressor compB(fluid$=R134a, eta=1)
+TwoPhaseCondenser condB(fluid$=R134a, SC_set=0 [K], dP=0 [Pa])
+TwoPhaseExpansionValve valveB(fluid$=R134a, Cv=Cv_B)
+TwoPhaseEvaporator evapB(fluid$=R134a, SH_set=0 [K], dP=0 [Pa])
+connect(compB.out, condB.in)
+connect(condB.out, valveB.in)
+connect(valveB.out, evapB.in)
+connect(evapB.out, compB.in)
+compA.in.mdot = 0.05 [kg/s]
+compA.out.P = P_H
+valveA.out.P = P_i
+compB.out.P = P_i
+valveB.out.P = P_L
+condB.Q = evapA.Q
+m_B = compB.in.mdot
+Q_L = evapB.Q
+W_in = compA.W + compB.W
+COP_R = Q_L / W_in
+{ CHECK m_B 0.0389572723226361 4e-08 }
+{ CHECK Q_L 7167.51626172292 0.007 }
+{ CHECK W_in 1602.43913422338 0.002 }
+{ CHECK COP_R 4.47287894350923 4e-06 }`,
+  },
+  {
+    id: 'flash-chamber-refrigeration',
+    title: 'Two-stage refrigeration with a flash chamber',
+    description: 'Solve. A FlashTank and a TwoPhaseMixer split and rejoin the flow between two compressors. Cengel Example 11-5.',
+    category: 'Thermodynamics',
+    text: `{ Two-stage compression refrigeration with a flash chamber (Cengel,
+  Thermodynamics 9th ed., Example 11-5). R-134a cycle between 0.8 and
+  0.14 MPa; the condenser liquid is throttled into a FlashTank at 0.32 MPa,
+  the flash vapor joins the low-stage discharge in a TwoPhaseMixer, and the
+  tank liquid is throttled to the evaporator. Both compressors are
+  isentropic. Results are per kilogram through the condenser (1 kg/s). Book:
+  x_6 = 0.2050, q_L = 146.3 kJ/kg, w_in = 32.68 kJ/kg, COP_R = 4.48. }
+P_H = 0.8 [MPa]
+P_i = 0.32 [MPa]
+P_L = 0.14 [MPa]
+TwoPhaseCompressor lp(fluid$=R134a, eta=1)
+TwoPhaseCompressor hp(fluid$=R134a, eta=1)
+TwoPhaseCondenser cond(fluid$=R134a, SC_set=0 [K], dP=0 [Pa])
+TwoPhaseExpansionValve v1(fluid$=R134a, Cv=Cv_1)
+TwoPhaseSensor s6(fluid$=R134a)
+FlashTank tank(fluid$=R134a)
+TwoPhaseExpansionValve v2(fluid$=R134a, Cv=Cv_2)
+TwoPhaseEvaporator evap(fluid$=R134a, SH_set=0 [K], dP=0 [Pa])
+TwoPhaseMixer mix()
+connect(hp.out, cond.in)
+connect(cond.out, v1.in)
+connect(v1.out, s6.in)
+connect(s6.out, tank.in)
+connect(tank.liq, v2.in)
+connect(v2.out, evap.in)
+connect(evap.out, lp.in)
+connect(lp.out, mix.in1)
+connect(tank.vap, mix.in2)
+connect(mix.out, hp.in)
+cond.in.mdot = 1 [kg/s]
+hp.out.P = P_H
+lp.out.P = P_i
+v1.out.P = P_i
+v2.out.P = P_L
+x_6 = s6.x
+q_L = evap.Q / cond.in.mdot
+w_in = (lp.W + hp.W) / cond.in.mdot
+COP_R = q_L / w_in
+{ CHECK x_6 0.204922496309883 2e-07 }
+{ CHECK q_L 146281.56945469 0.1 }
+{ CHECK w_in 32686.2042702323 0.03 }
+{ CHECK COP_R 4.47533057816414 4e-06 }`,
+  },
+  {
+    id: 'two-evaporator-refrigeration',
+    title: 'Two evaporators on one compressor',
+    description: 'Solve. A junction splits the condenser liquid to two evaporators at different pressures; a reducing valve and a mixer rejoin them. Cengel Problem 11-62.',
+    category: 'Thermodynamics',
+    text: `{ Two-evaporator refrigeration system with one compressor (Cengel,
+  Thermodynamics 9th ed., Problem 11-62). R-134a, condenser at 800 kPa,
+  evaporator 1 at 0 C and evaporator 2 at -26.4 C; 0.1 kg/s through the
+  isentropic compressor and an 8 kW load on the cold evaporator. The
+  condenser liquid splits at a connect() junction; a pressure-reducing valve
+  drops evaporator 1 to the suction pressure before the TwoPhaseMixer.
+  TwoPhaseMixer sets its outlet at in1's pressure and leaves in2's free, so
+  the reducing-valve outlet is pinned. Answers: 6.58 kW, 4.51 kW, 3.24. }
+P_H = 800 [kPa]
+T_E1 = 0 [C]
+T_E2 = -26.4 [C]
+P_E1 = P_sat(R134a, T=T_E1)
+P_E2 = P_sat(R134a, T=T_E2)
+TwoPhaseCompressor comp(fluid$=R134a, eta=1)
+TwoPhaseCondenser cond(fluid$=R134a, SC_set=0 [K], dP=0 [Pa])
+TwoPhaseExpansionValve v1(fluid$=R134a, Cv=Cv_1)
+TwoPhaseEvaporator evap1(fluid$=R134a, SH_set=0 [K], dP=0 [Pa])
+TwoPhaseExpansionValve prv(fluid$=R134a, Cv=Cv_prv)
+TwoPhaseExpansionValve v2(fluid$=R134a, Cv=Cv_2)
+TwoPhaseEvaporator evap2(fluid$=R134a, SH_set=0 [K], dP=0 [Pa])
+TwoPhaseMixer mix()
+connect(comp.out, cond.in)
+connect(cond.out, v1.in, v2.in)
+connect(v1.out, evap1.in)
+connect(evap1.out, prv.in)
+connect(v2.out, evap2.in)
+connect(evap2.out, mix.in1)
+connect(prv.out, mix.in2)
+connect(mix.out, comp.in)
+comp.in.mdot = 0.1 [kg/s]
+comp.out.P = P_H
+v1.out.P = P_E1
+v2.out.P = P_E2
+evap2.Q = 8 [kW]
+prv.out.P = P_E2
+Q_L1 = evap1.Q
+W_in = comp.W
+COP_R = (Q_L1 + evap2.Q) / W_in
+{ CHECK Q_L1 6572.83388573691 0.007 }
+{ CHECK W_in 4507.47096769874 0.005 }
+{ CHECK COP_R 3.23303998853641 3e-06 }`,
+  },
+  {
+    id: 'refrigerant-throttling-quality',
+    title: 'Refrigerant throttling: exit quality',
+    description: 'Solve. Saturated R-134a liquid throttled to evaporator pressure; a TwoPhaseSensor reads the exit quality and temperature. Cengel Example 5-8.',
+    category: 'Thermodynamics',
+    text: `{ Expansion of refrigerant-134a in a capillary tube (Cengel, Thermodynamics
+  9th ed., Example 5-8). Saturated liquid at 0.8 MPa is throttled to
+  0.12 MPa. A TwoPhaseExpansionValve stands in for the capillary: the library
+  CapillaryTube rides on the inlet's distance from saturation and passes no
+  flow for a saturated-liquid inlet. Book: x_2 = 0.340, dT = -53.63 C. }
+P_1 = 0.8 [MPa]
+P_2 = 0.12 [MPa]
+TwoPhaseSource inlet(fluid$=R134a, mdot=1 [kg/s], P=P_1, x=0)
+TwoPhaseExpansionValve tube(fluid$=R134a, Cv=Cv)
+TwoPhaseSensor exit(fluid$=R134a)
+TwoPhasePressureSink evap(P=P_2)
+connect(inlet.out, tube.in)
+connect(tube.out, exit.in)
+connect(exit.out, evap.in)
+x_2 = exit.x
+T_1 = T_sat(R134a, P=P_1)
+DELTAT = exit.T - T_1
+{ CHECK x_2 0.340343737221829 3e-07 }
+{ CHECK DELTAT -53.6369730476349 5e-05 }`,
+  },
+  {
+    id: 'steam-throttling-calorimeter',
+    title: 'Throttling calorimeter',
+    description: 'Solve. The measured temperature after a throttle fixes the unknown quality of the steam line. Cengel Problem 5-63.',
+    category: 'Thermodynamics',
+    text: `{ Throttling calorimeter (Cengel, Thermodynamics 9th ed., Problem 5-63).
+  Wet steam in a 1500 kPa line is throttled to 50 kPa and 100 C. The source
+  quality x_1 is the unknown: the sensor's measured temperature fixes it.
+  Answer: 0.944. }
+P_1 = 1500 [kPa]
+P_2 = 50 [kPa]
+T_2 = 100 [C]
+TwoPhaseSource line(fluid$=Water, mdot=0.01 [kg/s], P=P_1, x=x_1)
+TwoPhaseExpansionValve valve(fluid$=Water, Cv=Cv)
+TwoPhaseSensor cal(fluid$=Water)
+TwoPhasePressureSink vent(P=P_2)
+connect(line.out, valve.in)
+connect(valve.out, cal.in)
+connect(cal.out, vent.in)
+cal.T = T_2
+GUESS x_1 = 0.9
+{ CHECK x_1 0.944239280738636 9e-07 }`,
+  },
+  {
+    id: 'ammonia-flash-intercooler',
+    title: 'Ammonia two-stage compression with flash-gas removal',
+    description: 'Solve. A combined intercooler and flash tank between two compressors serving one evaporator. Stoecker Example 16-3.',
+    category: 'HVAC',
+    text: `{ Two compressors and one evaporator with flash-gas removal (Stoecker,
+  Refrigeration and Air Conditioning, Example 16-3). An ammonia system serves
+  a 250 kW evaporator at -25 C and condenses at 35 C; the intercooler/flash
+  tank sits at the optimum pressure sqrt(p_s p_d). The low-stage discharge
+  and the throttled condenser liquid meet in a TwoPhaseMixer feeding a
+  FlashTank: vapor to the high stage, liquid to the evaporator. Book:
+  w_1 = 0.204 kg/s, w_3 = 0.255 kg/s, 29.2 + 40.0 = 69.2 kW. The book reads
+  the isentropic discharge enthalpies from a pressure-enthalpy chart. }
+T_e = -25 [C]
+T_c = 35 [C]
+p_s = P_sat(Ammonia, T=T_e)
+p_d = P_sat(Ammonia, T=T_c)
+p_i = sqrt(p_s * p_d)
+TwoPhaseEvaporator evap(fluid$=Ammonia, SH_set=0 [K], dP=0 [Pa])
+TwoPhaseCompressor low(fluid$=Ammonia, eta=1)
+TwoPhaseMixer vessel_in()
+FlashTank vessel(fluid$=Ammonia)
+TwoPhaseCompressor high(fluid$=Ammonia, eta=1)
+TwoPhaseCondenser cond(fluid$=Ammonia, SC_set=0 [K], dP=0 [Pa])
+TwoPhaseExpansionValve v56(fluid$=Ammonia, Cv=Cv_56)
+TwoPhaseExpansionValve v78(fluid$=Ammonia, Cv=Cv_78)
+connect(evap.out, low.in)
+connect(low.out, vessel_in.in1)
+connect(v56.out, vessel_in.in2)
+connect(vessel_in.out, vessel.in)
+connect(vessel.vap, high.in)
+connect(high.out, cond.in)
+connect(cond.out, v56.in)
+connect(vessel.liq, v78.in)
+connect(v78.out, evap.in)
+evap.Q = 250 [kW]
+low.out.P = p_i
+v56.out.P = p_i
+high.out.P = p_d
+v78.out.P = p_s
+w_1 = evap.in.mdot
+w_3 = high.in.mdot
+W_low = low.W
+W_high = high.W
+W_total = W_low + W_high
+{ CHECK p_i 452123.674272708 0.5 }
+{ CHECK w_1 0.204240136509844 2e-07 }
+{ CHECK w_3 0.254899217057876 3e-07 }
+{ CHECK W_low 29721.3726286602 0.03 }
+{ CHECK W_high 39299.9736813667 0.04 }
+{ CHECK W_total 69021.3463100269 0.07 }`,
+  },
+  {
+    id: 'ammonia-two-evaporator-intercooler',
+    title: 'Ammonia two-evaporator system with intercooling',
+    description: 'Solve. A high-temperature evaporator at the intercooler pressure and a low-temperature one on the low stage. Stoecker Example 16-4.',
+    category: 'HVAC',
+    text: `{ Two compressors and two evaporators with intercooling and flash-gas
+  removal (Stoecker, Refrigeration and Air Conditioning, Example 16-4).
+  Ammonia: 180 kW at -30 C, 200 kW at 5 C, condensing at 40 C. The 5 C
+  evaporator runs at the intercooler pressure, fed from the flash-tank
+  liquid; its vapor joins the tank vapor at the high-stage suction. Book:
+  w_1 = 0.150 kg/s, w_3 = 0.382 kg/s, 31.1 + 60.4 = 91.5 kW. The book reads
+  h_2 = 1630 kJ/kg from a chart; the isentropic value is 6 kJ/kg lower,
+  which accounts for the 1 kW gap in the low-stage power. }
+T_low = -30 [C]
+T_high = 5 [C]
+T_c = 40 [C]
+p_low = P_sat(Ammonia, T=T_low)
+p_i = P_sat(Ammonia, T=T_high)
+p_d = P_sat(Ammonia, T=T_c)
+TwoPhaseEvaporator evap_low(fluid$=Ammonia, SH_set=0 [K], dP=0 [Pa])
+TwoPhaseCompressor low(fluid$=Ammonia, eta=1)
+TwoPhaseMixer vessel_in()
+FlashTank vessel(fluid$=Ammonia)
+TwoPhaseSensor liquid(fluid$=Ammonia)
+TwoPhaseEvaporator evap_high(fluid$=Ammonia, SH_set=0 [K], dP=0 [Pa])
+TwoPhaseMixer suction()
+TwoPhaseCompressor high(fluid$=Ammonia, eta=1)
+TwoPhaseCondenser cond(fluid$=Ammonia, SC_set=0 [K], dP=0 [Pa])
+TwoPhaseExpansionValve v56(fluid$=Ammonia, Cv=Cv_56)
+TwoPhaseExpansionValve v78(fluid$=Ammonia, Cv=Cv_78)
+connect(evap_low.out, low.in)
+connect(low.out, vessel_in.in1)
+connect(v56.out, vessel_in.in2)
+connect(vessel_in.out, vessel.in)
+connect(vessel.liq, liquid.in)
+connect(liquid.out, v78.in, evap_high.in)
+connect(v78.out, evap_low.in)
+connect(vessel.vap, suction.in1)
+connect(evap_high.out, suction.in2)
+connect(suction.out, high.in)
+connect(high.out, cond.in)
+connect(cond.out, v56.in)
+evap_low.Q = 180 [kW]
+evap_high.Q = 200 [kW]
+low.out.P = p_i
+v56.out.P = p_i
+high.out.P = p_d
+v78.out.P = p_low
+w_1 = evap_low.in.mdot
+w_3 = high.in.mdot
+W_low = low.W
+W_high = high.W
+W_total = W_low + W_high
+{ CHECK w_1 0.149981725659663 1e-07 }
+{ CHECK w_3 0.380935428293322 4e-07 }
+{ CHECK W_low 30080.9289712386 0.03 }
+{ CHECK W_high 59652.3009132691 0.06 }
+{ CHECK W_total 89733.2298845077 0.09 }`,
+  },
+  {
+    id: 'liquid-suction-heat-exchanger',
+    title: 'Liquid-suction heat exchanger',
+    description: 'Solve. A TwoPhaseInternalHX subcools the liquid against the suction vapor; the vapor exit temperature fixes its effectiveness. Dossat Section 8-8.',
+    category: 'HVAC',
+    text: `{ Liquid-suction heat exchanger (Dossat, Principles of Refrigeration,
+  Section 8-8). An R-12 saturated cycle evaporates at 20 F and condenses at
+  100 F; a counterflow liquid-suction exchanger superheats the suction vapor
+  from 20 F to 60 F. The measured vapor exit fixes the effectiveness eps.
+  Book: 5.71 Btu/lb exchanged, liquid at 75 F, refrigerating effect
+  55.04 Btu/lb, heat of compression 11.40 Btu/lb, COP 4.91. CoolProp's R-12
+  and the book's table differ by up to 3 percent in each enthalpy difference
+  (5.90, 54.43 and 11.08 Btu/lb here); their ratio, the COP, agrees. }
+T_evap = 20 [F]
+T_cond = 100 [F]
+T_suction = 60 [F]
+P_L = P_sat(R12, T=T_evap)
+P_H = P_sat(R12, T=T_cond)
+TwoPhaseCompressor comp(fluid$=R12, eta=1)
+TwoPhaseCondenser cond(fluid$=R12, SC_set=0 [K], dP=0 [Pa])
+TwoPhaseInternalHX lshx(fluid$=R12, eps=eps)
+TwoPhaseExpansionValve valve(fluid$=R12, Cv=Cv)
+TwoPhaseEvaporator evap(fluid$=R12, SH_set=0 [K], dP=0 [Pa])
+connect(comp.out, cond.in)
+connect(cond.out, lshx.liq_in)
+connect(lshx.liq_out, valve.in)
+connect(valve.out, evap.in)
+connect(evap.out, lshx.vap_in)
+connect(lshx.vap_out, comp.in)
+comp.in.mdot = 1 [kg/s]
+comp.out.P = P_H
+valve.out.P = P_L
+Temperature(R12, P=P_L, h=lshx.vap_out.h) = T_suction
+GUESS eps = 0.5
+q_hx = lshx.Q / comp.in.mdot
+T_liquid = Temperature(R12, P=P_H, h=lshx.liq_out.h)
+RE = evap.Q / comp.in.mdot
+COP = evap.Q / comp.W
+q_hx_ip = q_hx / (1 [Btu/lbm])
+RE_ip = RE / (1 [Btu/lbm])
+w_ip = comp.W / comp.in.mdot / (1 [Btu/lbm])
+T_liquid_F = (T_liquid - 459.67 [R]) / (1 [R])
+{ CHECK eps 0.502691577551595 5e-07 }
+{ CHECK q_hx_ip 5.89962943061483 6e-06 }
+{ CHECK T_liquid_F 75.3947322779111 8e-05 }
+{ CHECK RE_ip 54.4262962954564 5e-05 }
+{ CHECK w_ip 11.0823068947073 1e-05 }
+{ CHECK COP 4.91109809650275 5e-06 }`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

@@ -3,7 +3,7 @@ name: TwoPhaseCondenser
 category: Component (twophase)
 summary: A two-phase condenser rejecting heat from the refrigerant.
 related: []
-examples: []
+examples: [actual-vapor-compression-cycle, refrigeration-exergy-destruction, cascade-refrigeration, flash-chamber-refrigeration]
 tags: [twophasecondenser, component, twophase, acausal]
 ---
 

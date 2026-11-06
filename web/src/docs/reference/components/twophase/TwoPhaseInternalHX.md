@@ -3,7 +3,7 @@ name: TwoPhaseInternalHX
 category: Component (twophase)
 summary: "Internal (suction-line) heat exchanger: subcools the liquid line against the suction vapor at an effectiveness on the vapor side (the usual Cmin side)."
 related: []
-examples: []
+examples: [liquid-suction-heat-exchanger]
 tags: [twophaseinternalhx, component, twophase, acausal]
 references: []
 ---

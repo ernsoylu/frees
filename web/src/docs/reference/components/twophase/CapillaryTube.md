@@ -10,7 +10,7 @@ references: []
 
 # CapillaryTube
 
-Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure).
+Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure). A saturated-liquid inlet therefore has ΔP_eff = 0 and passes no flow; rate a saturated inlet with `TwoPhaseExpansionValve`.
 
 Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 

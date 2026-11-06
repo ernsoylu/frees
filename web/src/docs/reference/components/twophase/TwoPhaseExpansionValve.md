@@ -3,7 +3,7 @@ name: TwoPhaseExpansionValve
 category: Component (twophase)
 summary: A refrigerant expansion valve (isenthalpic throttle).
 related: []
-examples: []
+examples: [actual-vapor-compression-cycle, refrigeration-exergy-destruction, cascade-refrigeration, flash-chamber-refrigeration]
 tags: [twophaseexpansionvalve, component, twophase, acausal]
 ---
 

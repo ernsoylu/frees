@@ -3,7 +3,7 @@ name: TwoPhaseMixer
 category: Component (twophase)
 summary: Mixes two two-phase streams with flow-weighted enthalpy.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, flash-chamber-refrigeration, two-evaporator-refrigeration, ammonia-flash-intercooler]
 tags: [twophasemixer, component, twophase, acausal]
 ---
 

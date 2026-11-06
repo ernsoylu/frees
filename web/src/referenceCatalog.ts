@@ -27343,7 +27343,7 @@ Instantiated in the verified example below:
     tags: [`capillarytube`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure).
+    body: `Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure). A saturated-liquid inlet therefore has ΔP_eff = 0 and passes no flow; rate a saturated inlet with \`TwoPhaseExpansionValve\`.
 
 Reusable acausal **twophase-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
@@ -27767,7 +27767,7 @@ ev.h3 = 364323.7355
     category: `Component (twophase)`,
     summary: `Flash tank / economizer separator: splits a two-phase inlet into saturated liquid and saturated vapor streams at the tank pressure, conserving mass and energy (the split ratio IS the inlet quality).`,
     related: [],
-    examples: [],
+    examples: [`flash-chamber-refrigeration`, `ammonia-flash-intercooler`, `ammonia-two-evaporator-intercooler`],
     tags: [`flashtank`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -28993,7 +28993,7 @@ ch.in.mdot = 0.02
     category: `Component (twophase)`,
     summary: `A refrigerant compressor with selectable isentropic/volumetric variants.`,
     related: [`Compressor`, `CompressorMap`],
-    examples: [`ev-thermal-management`],
+    examples: [`ev-thermal-management`, `actual-vapor-compression-cycle`, `refrigeration-exergy-destruction`, `cascade-refrigeration`],
     tags: [`compressor`, `compressor-family`, `twophasecompressor`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `twophase`, `component`, `acausal`],
     references: [],
     guides: [],
@@ -29095,11 +29095,11 @@ Instantiated in the verified example below:
     category: `Component (twophase)`,
     summary: `A two-phase condenser rejecting heat from the refrigerant.`,
     related: [],
-    examples: [],
+    examples: [`actual-vapor-compression-cycle`, `refrigeration-exergy-destruction`, `cascade-refrigeration`, `flash-chamber-refrigeration`],
     tags: [`twophasecondenser`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `A two-phase condenser rejecting heat from the refrigerant.
+    body: `A two-phase condenser rejecting heat from the refrigerant. \`SC_set = 0\` leaves saturated liquid ($h_f$ at the outlet pressure).
 
 ## Domain
 
@@ -29133,7 +29133,7 @@ $$
 out.mdot &= in.mdot \\\\
 out.p &= in.p - dp \\\\
 tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=out.p\\right) \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=tsat - sc_{set}\\right) \\\\
+out.h &= \\text{if}\\left(sc_{set}, \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=tsat - sc_{set}\\right), \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, x=0\\right)\\right) \\\\
 q &= in.mdot\\cdot \\left(in.h - out.h\\right)
 \\end{aligned}
 $$
@@ -29562,11 +29562,11 @@ cond.in.p = 1040885.197
     category: `Component (twophase)`,
     summary: `A two-phase evaporator absorbing heat into the refrigerant.`,
     related: [],
-    examples: [],
+    examples: [`actual-vapor-compression-cycle`, `refrigeration-exergy-destruction`, `cascade-refrigeration`, `flash-chamber-refrigeration`],
     tags: [`twophaseevaporator`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `A two-phase evaporator absorbing heat into the refrigerant.
+    body: `A two-phase evaporator absorbing heat into the refrigerant. \`SH_set = 0\` leaves saturated vapor ($h_g$ at the outlet pressure); a pressure and a temperature cannot fix a state on the saturation line, so that case reads $h_g$ directly.
 
 ## Domain
 
@@ -29600,7 +29600,7 @@ $$
 out.mdot &= in.mdot \\\\
 out.p &= in.p - dp \\\\
 tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=out.p\\right) \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=tsat + sh_{set}\\right) \\\\
+out.h &= \\text{if}\\left(sh_{set}, \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=tsat + sh_{set}\\right), \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, x=1\\right)\\right) \\\\
 q &= in.mdot\\cdot \\left(out.h - in.h\\right)
 \\end{aligned}
 $$
@@ -29650,7 +29650,7 @@ ev.in.p = 360000
     tags: [`twophaseevaporatorua`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
-    body: `A two-phase evaporator sized by an overall conductance \`UA\`.
+    body: `A two-phase evaporator sized by an overall conductance \`UA\`. \`SH = 0\` leaves saturated vapor ($h_g$ at the outlet pressure).
 
 ## Domain
 
@@ -29685,7 +29685,7 @@ $$
 out.p &= in.p - dp \\\\
 tevap &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
 q &= frac\\cdot ua\\cdot \\left(wall.t - tevap\\right) \\\\
-out.h &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=tevap + sh\\right) \\\\
+out.h &= \\text{if}\\left(sh, \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, t=tevap + sh\\right), \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=out.p, x=1\\right)\\right) \\\\
 in.mdot &= \\frac{q}{out.h - in.h} \\\\
 out.mdot &= in.mdot \\\\
 wall.qdot &= q
@@ -29772,7 +29772,7 @@ Instantiated in the verified example below:
     category: `Component (twophase)`,
     summary: `A refrigerant expansion valve (isenthalpic throttle).`,
     related: [],
-    examples: [],
+    examples: [`actual-vapor-compression-cycle`, `refrigeration-exergy-destruction`, `cascade-refrigeration`, `flash-chamber-refrigeration`],
     tags: [`twophaseexpansionvalve`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -29952,7 +29952,7 @@ line.f_lo = 0.02801750717
     category: `Component (twophase)`,
     summary: `Internal (suction-line) heat exchanger: subcools the liquid line against the suction vapor at an effectiveness on the vapor side (the usual Cmin side).`,
     related: [],
-    examples: [],
+    examples: [`liquid-suction-heat-exchanger`],
     tags: [`twophaseinternalhx`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -30132,7 +30132,7 @@ inv.hg = 407471.3462
     category: `Component (twophase)`,
     summary: `Mixes two two-phase streams with flow-weighted enthalpy.`,
     related: [],
-    examples: [`ev-thermal-management`],
+    examples: [`ev-thermal-management`, `flash-chamber-refrigeration`, `two-evaporator-refrigeration`, `ammonia-flash-intercooler`],
     tags: [`twophasemixer`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -30427,7 +30427,7 @@ snk.in.mdot = 0.05
     category: `Component (twophase)`,
     summary: `A two-phase boundary fixing the pressure (sink).`,
     related: [],
-    examples: [`pressure-cooker`],
+    examples: [`pressure-cooker`, `refrigerant-throttling-quality`, `steam-throttling-calorimeter`],
     tags: [`twophasepressuresink`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -30667,7 +30667,7 @@ rcv.in.p = 900000
     category: `Component (twophase)`,
     summary: `A sensor reading the two-phase stream state.`,
     related: [],
-    examples: [],
+    examples: [`flash-chamber-refrigeration`, `refrigerant-throttling-quality`, `steam-throttling-calorimeter`, `ammonia-two-evaporator-intercooler`],
     tags: [`twophasesensor`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -30939,7 +30939,7 @@ Instantiated in the verified example below:
     category: `Component (twophase)`,
     summary: `A boundary supplying a two-phase stream.`,
     related: [],
-    examples: [],
+    examples: [`refrigerant-throttling-quality`, `steam-throttling-calorimeter`],
     tags: [`twophasesource`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],

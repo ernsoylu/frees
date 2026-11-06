@@ -3,7 +3,7 @@ name: TwoPhaseEvaporator
 category: Component (twophase)
 summary: A two-phase evaporator absorbing heat into the refrigerant.
 related: []
-examples: []
+examples: [actual-vapor-compression-cycle, refrigeration-exergy-destruction, cascade-refrigeration, flash-chamber-refrigeration]
 tags: [twophaseevaporator, component, twophase, acausal]
 ---
 
