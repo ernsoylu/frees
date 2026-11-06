@@ -3976,6 +3976,9 @@ function NodeBlock({
   // COMP-08: a missing project symbol falls back to a labelled block.
   const shape = custom === null ? 'block' : (look?.shape ?? node.shape)
   const glyph = glyphPath(shape)
+  let symbolLabel: string = SHAPE_LABELS[shape]
+  if (custom) symbolLabel = 'project symbol'
+  else if (custom === null) symbolLabel = 'project symbol missing, drawn as a block'
   const GLYPH = 20
   // Level of detail: once the full card's name would draw below MIN_LABEL_PX,
   // show only the name, held at MIN_LABEL_PX on screen whatever the zoom.
@@ -4016,7 +4019,7 @@ function NodeBlock({
       data-locked={locked || undefined}
       style={{ cursor: locked ? 'default' : 'move' }}
     >
-      <title>{`${node.type ?? ''} ${node.label} — ${custom ? 'project symbol' : custom === null ? 'project symbol missing, drawn as a block' : SHAPE_LABELS[shape]}`}</title>
+      <title>{`${node.type ?? ''} ${node.label} — ${symbolLabel}`}</title>
       <rect
         width={node.w}
         height={node.h}
@@ -4280,6 +4283,12 @@ function ParamInspector({
 }
 
 type StyleScope = 'instance' | 'type' | 'project'
+
+/** The symbol Select's value for a style: a project symbol it can find, else its built-in shape. */
+function symbolChoice(own: BlockStyle | undefined, symbols: Record<string, ProjectSymbol>): string | null {
+  if (own?.symbol && symbols[own.symbol]) return `svg:${own.symbol}`
+  return own?.shape ? `shape:${own.shape}` : null
+}
 type ImportSymbol = (scope: StyleScope, key: string, name: string, svg: string, style: BlockStyle) => void
 
 /**
@@ -4385,7 +4394,7 @@ function StyleEditor({
             { group: 'Project symbols', items: Object.entries(symbols).map(([id, sym]) => ({ value: `svg:${id}`, label: sym.name })) },
             { group: 'Built-in', items: Object.entries(SHAPE_LABELS).map(([k, label]) => ({ value: `shape:${k}`, label })) },
           ].filter((g) => g.items.length > 0)}
-          value={own?.symbol && symbols[own.symbol] ? `svg:${own.symbol}` : own?.shape ? `shape:${own.shape}` : null}
+          value={symbolChoice(own, symbols)}
           onChange={(v) => set({ symbol: v?.startsWith('svg:') ? v.slice(4) : undefined, shape: v?.startsWith('shape:') ? (v.slice(6) as Shape) : undefined })}
         />
         {onImport && (
