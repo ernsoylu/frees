@@ -3,7 +3,7 @@ name: FlashTank
 category: Component (twophase)
 summary: "Flash tank / economizer separator: splits a two-phase inlet into saturated liquid and saturated vapor streams at the tank pressure, conserving mass and energy (the split ratio IS the inlet quality)."
 related: []
-examples: []
+examples: [flash-chamber-refrigeration, ammonia-flash-intercooler, ammonia-two-evaporator-intercooler]
 tags: [flashtank, component, twophase, acausal]
 references: []
 ---

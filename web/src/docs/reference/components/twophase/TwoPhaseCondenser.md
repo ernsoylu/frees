@@ -3,13 +3,13 @@ name: TwoPhaseCondenser
 category: Component (twophase)
 summary: A two-phase condenser rejecting heat from the refrigerant.
 related: []
-examples: []
+examples: [actual-vapor-compression-cycle, refrigeration-exergy-destruction, cascade-refrigeration, flash-chamber-refrigeration]
 tags: [twophasecondenser, component, twophase, acausal]
 ---
 
 # TwoPhaseCondenser
 
-A two-phase condenser rejecting heat from the refrigerant.
+A two-phase condenser rejecting heat from the refrigerant. `SC_set = 0` leaves saturated liquid ($h_f$ at the outlet pressure).
 
 ## Domain
 
@@ -43,7 +43,7 @@ $$
 out.mdot &= in.mdot \\
 out.p &= in.p - dp \\
 tsat &= \text{T\_sat}\left(\mathrm{fluid\$}, p=out.p\right) \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=tsat - sc_{set}\right) \\
+out.h &= \text{if}\left(sc_{set}, \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=tsat - sc_{set}\right), \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, x=0\right)\right) \\
 q &= in.mdot\cdot \left(in.h - out.h\right)
 \end{aligned}
 $$

@@ -67,6 +67,16 @@ it.each<[string, Record<string, string>]>([
   ['shower-heat-exchanger', { Q: 'W', A_lmtd: 'm^2', T_two_zone: 'K' }],
   ['converging-diverging-nozzle', { A_e: 'm^2', T_star: 'K', P_star: 'Pa', V_star: 'm/s', m_dot: 'kg/s', Ma_exit: '-', P_e: 'Pa', T_e: 'K', V_e: 'm/s' }],
   ['draining-tank-time-constant', { tau: 's', level_ratio: '-', Re_0: '-' }],
+  ['actual-vapor-compression-cycle', { Q_L: 'W', W_in: 'W', COP_R: '-' }],
+  ['refrigeration-exergy-destruction', { Q_L: 'W', W_in: 'W', Q_H: 'W', X_comp: 'W', X_cond: 'W', X_valve: 'W', X_evap: 'W', W_min: 'W', eta_II: '-', X_total: 'W' }],
+  ['cascade-refrigeration', { m_B: 'kg/s', Q_L: 'W', W_in: 'W', COP_R: '-' }],
+  ['flash-chamber-refrigeration', { x_6: '-', q_L: 'J/kg', w_in: 'J/kg', COP_R: '-' }],
+  ['two-evaporator-refrigeration', { Q_L1: 'W', W_in: 'W', COP_R: '-' }],
+  ['refrigerant-throttling-quality', { x_2: '-', DELTAT: 'K' }],
+  ['steam-throttling-calorimeter', {}],
+  ['ammonia-flash-intercooler', { p_i: 'Pa', w_1: 'kg/s', w_3: 'kg/s', W_low: 'W', W_high: 'W', W_total: 'W' }],
+  ['ammonia-two-evaporator-intercooler', { w_1: 'kg/s', w_3: 'kg/s', W_low: 'W', W_high: 'W', W_total: 'W' }],
+  ['liquid-suction-heat-exchanger', { T_liquid_F: '-', RE_ip: '-', w_ip: '-', COP: '-' }],
 ])('%s solves with physical units and preserves its checked results', (id, units) => {
   const example = EXAMPLES.find(example => example.id === id)!
   const result = JSON.parse(solve(example.text, '{}'))

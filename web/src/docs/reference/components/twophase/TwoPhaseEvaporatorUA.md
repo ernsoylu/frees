@@ -9,7 +9,7 @@ tags: [twophaseevaporatorua, component, twophase, acausal]
 
 # TwoPhaseEvaporatorUA
 
-A two-phase evaporator sized by an overall conductance `UA`.
+A two-phase evaporator sized by an overall conductance `UA`. `SH = 0` leaves saturated vapor ($h_g$ at the outlet pressure).
 
 ## Domain
 
@@ -44,7 +44,7 @@ $$
 out.p &= in.p - dp \\
 tevap &= \text{T\_sat}\left(\mathrm{fluid\$}, p=in.p\right) \\
 q &= frac\cdot ua\cdot \left(wall.t - tevap\right) \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=tevap + sh\right) \\
+out.h &= \text{if}\left(sh, \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=tevap + sh\right), \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, x=1\right)\right) \\
 in.mdot &= \frac{q}{out.h - in.h} \\
 out.mdot &= in.mdot \\
 wall.qdot &= q

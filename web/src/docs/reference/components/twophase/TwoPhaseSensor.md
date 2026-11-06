@@ -3,7 +3,7 @@ name: TwoPhaseSensor
 category: Component (twophase)
 summary: A sensor reading the two-phase stream state.
 related: []
-examples: []
+examples: [flash-chamber-refrigeration, refrigerant-throttling-quality, steam-throttling-calorimeter, ammonia-two-evaporator-intercooler]
 tags: [twophasesensor, component, twophase, acausal]
 ---
 

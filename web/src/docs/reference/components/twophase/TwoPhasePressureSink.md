@@ -3,7 +3,7 @@ name: TwoPhasePressureSink
 category: Component (twophase)
 summary: A two-phase boundary fixing the pressure (sink).
 related: []
-examples: [pressure-cooker]
+examples: [pressure-cooker, refrigerant-throttling-quality, steam-throttling-calorimeter]
 tags: [twophasepressuresink, component, twophase, acausal]
 ---
 
