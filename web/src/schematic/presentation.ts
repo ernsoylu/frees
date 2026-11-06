@@ -10,6 +10,7 @@ import {
 import type { ConnectionDto } from '../api'
 import { renameId } from './sourceEdit'
 import { LINE_KINDS } from './palette'
+import { EMPTY_SHEETS, netKeyOf, sanitizeSheets, type SheetState } from './sheets'
 
 /**
  * How the canvas is presented (VIEW-03, VIEW-05). None of this changes the
@@ -195,7 +196,8 @@ export interface SchematicArea {
  * those wait in `legacyOffsets` until the first Check draws the network they
  * were measured against, then become positions (`resolveLegacy`).
  */
-export interface SchematicPresentation {
+export interface SchematicPresentation extends SheetState {
+  /** Main-sheet positions; another sheet keeps its own (`sheets`, VIEW-10, project v5). */
   positions: Record<string, { x: number; y: number }>
   legacyOffsets: SchematicOffsets
   /** Blocks that drags, nudges and Arrange leave where they are. */
@@ -244,6 +246,7 @@ export function renamePresentation(p: SchematicPresentation, renames: ReadonlyMa
       .map((c) => [junctionIdOf(c.endpoints), junctionIdOf(c.endpoints.map((e) => renameId(e.toLowerCase(), renames)))]),
   )
   const id = (k: string) => junctions.get(k) ?? renameId(k, renames)
+  const nets = new Map(connections.map((c) => [netKeyOf(c.endpoints), netKeyOf(c.endpoints.map((e) => renameId(e.toLowerCase(), renames)))]))
   const move = <V,>(r: Record<string, V>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [id(k), v]))
   const badges = (b: Record<string, string>) => Object.fromEntries(Object.entries(b).map(([k, v]) => [id(k), id(v)]))
   return {
@@ -258,6 +261,10 @@ export function renamePresentation(p: SchematicPresentation, renames: ReadonlyMa
     formats: move(p.formats ?? {}),
     views: (p.views ?? []).map((v) => ({ ...v, scope: id(v.scope), badges: badges(v.badges), focus: v.focus && { ...v.focus, id: id(v.focus.id) } })),
     annotations: (p.annotations ?? []).map((a) => ({ ...a, scope: id(a.scope), target: id(a.target) })),
+    sheets: (p.sheets ?? []).map((sh) => ({ ...sh, members: sh.members.map(id), positions: move(sh.positions) })),
+    offMain: (p.offMain ?? []).map(id),
+    // A net is keyed by its first endpoint in sorted order, which a rename can change.
+    netNames: Object.fromEntries(Object.entries(p.netNames ?? {}).map(([k, v]) => [nets.get(k) ?? k, v])),
   }
 }
 
@@ -369,6 +376,7 @@ export const EMPTY_PRESENTATION: SchematicPresentation = {
   views: [],
   annotations: [],
   lineColors: {},
+  ...EMPTY_SHEETS,
 }
 
 /** Coordinates past this, or more entries than this, are a malformed or
@@ -630,7 +638,9 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
     if (LINE_KINDS.includes(kind) && typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color)) lineColors[kind] = color.toLowerCase()
     else repaired++
   }
-  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes, badges, watch, formats, overlay: parsedOverlay.overlay, views, annotations, lineColors }, repaired }
+  const sheets = sanitizeSheets(raw)
+  repaired += sheets.repaired
+  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes, badges, watch, formats, overlay: parsedOverlay.overlay, views, annotations, lineColors, ...sheets.state }, repaired }
 }
 
 /**

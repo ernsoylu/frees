@@ -929,6 +929,100 @@ test('RUN-10: arranging, selecting and viewing never check, solve or stale a res
   await record(testInfo, 'evidence', { engineCallsToSolve: before, canvasActions: done, engineCallsFromCanvas: canvasCalls, engineCallsAfterOneEdit: editCalls })
 })
 
+test('VIEW-10 / WIRE-11: sheets and off-page connectors, without an engine call, survive reload', async ({ page }, testInfo) => {
+  await page.addInitScript(() => {
+    const calls: string[] = []
+    ;(window as unknown as { engineCalls: string[] }).engineCalls = calls
+    const post = Worker.prototype.postMessage
+    Worker.prototype.postMessage = function (this: Worker, message: unknown, ...rest: unknown[]) {
+      const method = (message as { method?: string } | null)?.method
+      if (method) calls.push(method)
+      return (post as (...a: unknown[]) => void).call(this, message, ...rest)
+    } as typeof Worker.prototype.postMessage
+  })
+  const svg = await openSolved(page, EV_THERMAL_EXAMPLE_TEXT)
+  const calls = () => page.evaluate(() => [...(window as unknown as { engineCalls: string[] }).engineCalls])
+  await page.waitForTimeout(1500)
+  const before = (await calls()).length
+  const sheetMenu = page.getByTestId('sheet-menu')
+  const sheetItem = async (item: string) => {
+    await sheetMenu.click()
+    await page.getByRole('menuitem', { name: item, exact: true }).click()
+  }
+  const chlr = svg.locator('[data-node="chlr"]')
+  const connectors = svg.locator('[data-offpage]')
+
+  // A new sheet made from a selection takes it; its nets end in off-page connectors.
+  await svg.getByRole('button', { name: /\bCHLR$/ }).click()
+  await sheetItem('New sheet from selection…')
+  await page.getByLabel('Sheet name').fill('Chiller')
+  await page.keyboard.press('Enter')
+  await expect(sheetMenu).toHaveText('Sheet: Chiller')
+  await expect(chlr).toBeVisible()
+  await expect(connectors.first()).toBeVisible()
+  const onChiller = await connectors.evaluateAll((gs) => gs.map((g) => g.getAttribute('data-node')!))
+  await testInfo.attach('chiller.png', { body: await svg.screenshot(), contentType: 'image/png' })
+
+  // A connector leads to its partner sheet with the block the net reaches selected.
+  const first = connectors.first()
+  await first.click()
+  await expect(sheetMenu).toHaveText('Sheet: Main')
+  await expect(chlr).toHaveCount(0)
+  // The same nets end in connectors with the same ids on Main: keyed by net.
+  const onMain = await connectors.evaluateAll((gs) => gs.map((g) => g.getAttribute('data-node')!))
+  expect([...onMain].sort()).toEqual([...onChiller].sort())
+
+  // WIRE-11: a name given on one sheet shows on the partner's connector.
+  const named = onMain[0]
+  await svg.locator(`[data-node="${named}"]`).focus()
+  await page.keyboard.press('Shift+F10')
+  await page.getByLabel('Connector name').fill('Chiller loop')
+  await page.keyboard.press('Enter')
+  await expect(svg.locator(`[data-node="${named}"]`)).toHaveAttribute('aria-label', /Chiller loop/)
+  await sheetItem('Chiller')
+  await expect(svg.locator(`[data-node="${named}"]`)).toHaveAttribute('aria-label', /Off-page connector Chiller loop.*open Main/)
+
+  // One component drawn on two sheets: the card lists both.
+  await svg.getByRole('button', { name: /\bCHLR$/ }).click()
+  await sheetItem('Also show on Main')
+  await expect(page.getByTestId('occurrences')).toContainText('on 2 sheets')
+
+  // Remove from this sheet takes the drawing, never the component: the last occurrence stays.
+  await sheetItem('Remove from this sheet')
+  await expect(chlr).toHaveCount(0)
+  await sheetItem('Main')
+  await svg.getByRole('button', { name: /\bCHLR$/ }).click()
+  await sheetItem('Remove from this sheet')
+  await expect(page.getByRole('paragraph').filter({ hasText: /chlr is on no other sheet.*Use Delete to delete the component/ })).toBeVisible()
+  await expect(chlr).toBeVisible()
+  await sheetItem('Move to Chiller')
+  await expect(chlr).toHaveCount(0)
+
+  // None of it reached the engine (the model is untouched), and the solve is still current.
+  await page.waitForTimeout(1500)
+  const sheetCalls = (await calls()).slice(before)
+  expect(sheetCalls).toEqual([])
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible()
+
+  // Reload: the v5 project brings the sheets, members and the connector name back.
+  await page.reload()
+  await expect(svg).toBeVisible({ timeout: 60_000 })
+  const welcome = page.getByRole('dialog').filter({ hasText: 'Welcome to frees' })
+  if (await welcome.waitFor({ timeout: 15_000 }).then(() => true, () => false)) {
+    await page.keyboard.press('Escape')
+    await expect(welcome).toBeHidden()
+  }
+  await page.getByRole('button', { name: 'Check', exact: true }).click()
+  await expect(svg.locator('[data-node="pump"]')).toBeVisible({ timeout: 60_000 })
+  await expect(chlr).toHaveCount(0)
+  await sheetItem('Chiller')
+  await expect(chlr).toBeVisible()
+  await expect(svg.locator(`[data-node="${named}"]`)).toHaveAttribute('aria-label', /Chiller loop/)
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').version)
+  expect(saved).toBe(5)
+  await record(testInfo, 'evidence', { engineCallsToSolve: before, connectors: onChiller, engineCallsFromSheets: sheetCalls, savedVersion: saved })
+})
+
 test('AC-01: select FAN, move FAN and COIL beyond the layout, Fit, save and reopen', async ({ page }, testInfo) => {
   // The FS Access pickers cannot be driven headlessly; the download and file-input fallbacks run instead.
   await page.addInitScript(() => {

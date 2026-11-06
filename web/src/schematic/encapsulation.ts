@@ -167,6 +167,13 @@ export function movePresentation(p: SchematicPresentation, ids: ReadonlySet<stri
     areas: p.areas.map((a) => ({ ...a, members: [...new Set(a.members.map((m) => (ids.has(m) ? inst : m)))] })),
     styles: { ...p.styles, instances: under(p.styles.instances) },
     routes: Object.fromEntries(Object.entries(p.routes).filter(([key]) => !key.split('|').some((end) => ids.has(end.split('.')[0])))),
+    // VIEW-10: the subsystem takes its members' places on every sheet.
+    sheets: (p.sheets ?? []).map((sh) => ({
+      ...sh,
+      members: [...new Set(sh.members.map((m) => (ids.has(m) ? inst : m)))],
+      positions: Object.fromEntries(Object.entries(sh.positions).filter(([id]) => !ids.has(id))),
+    })),
+    offMain: [...new Set((p.offMain ?? []).map((m) => (ids.has(m) ? inst : m)))],
   }
 }
 
