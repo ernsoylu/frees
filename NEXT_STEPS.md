@@ -252,7 +252,29 @@ entry here is checked off with evidence when it closes.
 
   Each slice gets unit tests, a Playwright journey, and RUN-10's zero-engine-call check.
 - **E. Lazy fluid chunks (bundle debt 2).** CI's 200 KiB headroom trigger has not fired (645.8 KiB). The owner approved going ahead, gated on a measurement.
-  1. Measure time to first solve on a throttled profile. If a split cannot show a real gain (the PWA precaches every chunk), record that and stop.
+  1. **Done 2026-11-06: measured; the gate passes on slow links only.** Measure time to first solve on a throttled profile. If a split cannot show a real gain (the PWA precaches every chunk), record that and stop.
+     - **Builds.**
+       - A is the shipped module: 4,587,160 bytes raw, 2,044,788 gzip -9.
+       - B is the split's best case for a core-fluid model, built with only `water`, `r134a`, `r1234yf` and `air` and no `heos-mixtures`: 3,783,997 raw, 1,517,958 gzip. That is −803 KB raw and −527 KB on the wire.
+       - The public deployment (GitHub Pages) serves this module gzip-only at 2,058,316 bytes, so gzip is the representative encoding. Brotli would be 1,624,223 for A and 1,148,526 for B.
+     - **Method.**
+       - Cold first visit in Chromium (Playwright 1.62), served gzip with immutable hashed assets.
+       - The model is `h = Enthalpy(Water, T=T, P=P)`. The time is measured from navigation to "Solved", with Solve clicked as soon as the editor shows. 3–5 runs each; medians are given.
+       - Slow 4G is Lighthouse's mobile profile: 150 ms RTT, 1.6 Mbps and 4× CPU. It was applied twice: through CDP, and as one shared link paced by the server. CDP does not throttle the service worker's own fetches, so the service-worker-allowed case needs the server pacing.
+     - **Result.**
+
+       | Profile | A | B | Gain |
+       | --- | --- | --- | --- |
+       | Slow 4G, service worker blocked | 15.0 s | 12.5 s | −2.5 s (−17 %) |
+       | Slow 4G, real first visit (service worker installs) | 15.5 s | 12.9 s | −2.6 s |
+       | Cable (40 ms, 10 Mbps, 1× CPU) | 3.45 s | 3.46 s | none |
+       | Unthrottled | 1.29 s | 1.33 s | none |
+
+       A repeat visit gains nothing either, because the precache holds every chunk.
+     - **Why broadband gains nothing.** On cable, the solve lands about 1.85 s after the editor shows in both builds. The wasm code section streams ahead of the data section, so compiling the code, not downloading it, is the bottleneck. Fluid data only lengthens the tail of the download, and that tail is on the critical path only when the network is slow.
+     - **Why the precache does not erase it.** On a first visit it runs after the first solve, so it adds no time before the solve.
+     - **Decision.** The gain is real but confined to slow first visits. Steps 2–5 proceed under the owner's approval, and this measurement is the yardstick for step 5.
+     - **Cheaper lever, recorded and not taken.** Serving brotli (Vercel does; GitHub Pages cannot) would bring A to about B's gzip size with no code change.
   2. RustProp (separate repository): a runtime fluid registry beside `rustprop_data::fluids::all()`, plus a compact format written by `rustprop-datagen` and decoded in `rustprop-core`. Decoded fluids must equal the static ones bit for bit. Release v0.3.0.
   3. frees: keep the four core fluids linked and chunk the rest plus `mixture-data`. `install_from_bytes` reads the new format. D12 holds.
   4. Check reports the fluids a model uses, and `engineClient` installs missing ones in every pool worker (respawns included) before a solve or sweep. A missing fluid while offline is a clear error.
