@@ -1,3 +1,4 @@
+import { useHelpLink } from '../helpLinks';
 // Visual diagrams for documentation
 
 // Common visual styling tokens
@@ -588,6 +589,7 @@ const LEARNING_MAP: { title: string; fill: string; stroke: string; nodes: { id: 
 ];
 
 export function LearningMapDiagram({ onNavigate }: { onNavigate?: (id: string) => void }) {
+  const link = useHelpLink(onNavigate);
   const colW = 168;
   const colGap = 38;
   const nodeH = 40;
@@ -611,17 +613,14 @@ export function LearningMapDiagram({ onNavigate }: { onNavigate?: (id: string) =
             {col.title}
           </text>
           {col.nodes.map((n, j) => (
-            <g
-              key={n.id}
-              transform={`translate(0, ${topPad + j * (nodeH + nodeGap)})`}
-              onClick={() => onNavigate?.(n.id)}
-              style={{ cursor: onNavigate ? 'pointer' : 'default' }}
-            >
-              <rect width={colW} height={nodeH} rx="8" fill={col.fill} stroke={col.stroke} strokeWidth="1" />
-              <text x={colW / 2} y={nodeH / 2 + 4} fill="#FFF" fontWeight="600" fontSize="11.5" textAnchor="middle">
-                {n.label}
-              </text>
-            </g>
+            <a key={n.id} {...link(n.id)}>
+              <g transform={`translate(0, ${topPad + j * (nodeH + nodeGap)})`}>
+                <rect width={colW} height={nodeH} rx="8" fill={col.fill} stroke={col.stroke} strokeWidth="1" />
+                <text x={colW / 2} y={nodeH / 2 + 4} fill="#FFF" fontWeight="600" fontSize="11.5" textAnchor="middle">
+                  {n.label}
+                </text>
+              </g>
+            </a>
           ))}
         </g>
       ))}

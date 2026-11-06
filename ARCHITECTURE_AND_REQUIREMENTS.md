@@ -290,7 +290,7 @@ To maintain an MIT-compatible license and eliminate heavy third-party CAS depend
 
 ## 11. Retained Architectural Decisions
 
-These are the enduring constraints consolidated from decisions D1–D13. Old
+These are the enduring constraints consolidated from decisions D1–D14. Old
 measurements and superseded implementation plans are historical evidence, not
 instructions to restore removed features.
 
@@ -322,6 +322,11 @@ instructions to restore removed features.
 ### Schematic canvas and presentation
 
 - **D13 (2026-10-28):** the schematic stays a custom SVG/React canvas; React Flow was spiked against it on the humid-air, 26-component EV and 100-instance floor models and not adopted. Drag frame rates and per-move cost matched (≈18 ms per move on EV, ≈43 ms on the floor, dominated by the shared obstacle router either way), while React Flow added 63 KB gzipped, rendered blocks as HTML (losing native SVG export) and offered no keyboard connect; its adapter already needed 115 lines without label level-of-detail, frames, areas, guides, locks or export, against roughly 350 lines of pan/zoom/drag/minimap/marquee code it would replace. Reconsider when 01c's handle-drag connection and edge reconnection would cost more than that code, or when the 500-component budget fails in rendering rather than routing. ELK auto-layout was not evaluated.
+- **D14 (2026-11-06):** the frees Book is a static export of the in-app Help, not an mdBook. A Vite SSR build renders the app's own `MarkdownRenderer` and `ReferencePageView` with `react-dom/server`. Measured on the 844 pages (100 guide topics, 744 reference pages):
+  - **SSR:** every page rendered without error, in 2.8 s of build plus 2.4 s of render. KaTeX now renders during render rather than in an effect, so 634 pages carry their math and the 8 React diagrams render as SVG.
+  - **mdBook 0.5.4:** the build took 1.8 s, but 635 pages showed raw inline `$…$` math, because its MathJax 2.7 does not recognise `$`. Another 113 showed a literal `[Run:]`, 90 `[Related:]`, 8 `[Diagram:]` and 1 `[Component:]`, and 7 had emphasis inside math. Fixing that needs a KaTeX preprocessor, a second implementation of the Help dialect, and React SSR for the diagrams anyway.
+  - **Gaps the export must close:** the Help navigates through `onNavigate` callbacks, which leaves 1,614 links with no `href`. There is also no page shell, table of contents or search.
+  - **Reconsider** if the Help moves to CommonMark with standard extensions.
 - The schematic presentation (positions, locks, areas, view settings) is display state in the project file, never model text. Changing it must not bump the model revision, check, solve or stale a result.
 - Project v4 stores absolute positions. v3 `{dx,dy}` offsets are carried as `legacyOffsets` and resolved once against the legacy auto-layout when topology is available; unmatched entries are kept and reported, not discarded. Malformed entries are dropped and counted with a load notice; the model is unaffected.
 

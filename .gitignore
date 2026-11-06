@@ -32,3 +32,6 @@ web/public/build-info.js
 
 # CodeGraph local index
 .codegraph/
+
+# Static frees Book build output (npm run build-book)
+web/dist-book/

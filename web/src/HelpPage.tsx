@@ -31,9 +31,11 @@ import {
   Collapse
 } from '@mantine/core';
 import { useDisclosure, useHotkeys } from '@mantine/hooks';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useContext } from 'react';
 import { getReference, getFluids, check, solve, DEFAULT_STOP_CRITERIA, type UnitInfo, type ConstantInfo, type VariableResult } from './api';
 import { DOCS_CATALOG } from './docsCatalog';
+import { buildShareUrl } from './share';
+import { StaticHelp, useHelpLink } from './helpLinks';
 import Latex from './Latex';
 import { EXAMPLES } from './examples';
 import { REFERENCE_PAGES, type ReferencePage } from './referenceCatalog';
@@ -72,11 +74,14 @@ import {
 // block puts it in its toolbar instead.
 function CopyButton({ code, floating = true }: Readonly<{ code: string; floating?: boolean }>) {
   const [copied, setCopied] = useState(false);
+  // No clipboard without JS in the static book; text selection still works.
+  const book = useContext(StaticHelp);
   const handleCopy = () => {
     void navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+  if (book) return null;
   return (
     <Button
       size="xs"
@@ -151,6 +156,18 @@ function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title
     window.open(import.meta.env.BASE_URL, '_blank');
   };
 
+  const book = useContext(StaticHelp);
+  if (book) {
+    return (
+      <Paper withBorder p="md" bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))" mb="md">
+        <Group justify={title ? 'space-between' : 'flex-end'} gap="xs" mb="xs">
+          {title && <Badge color="teal" variant="light" leftSection={<IconBook size={12} />}>{title}</Badge>}
+          <Button size="xs" variant="filled" color="teal" component="a" href={buildShareUrl(code, book.appUrl) ?? book.appUrl}>Open in frees</Button>
+        </Group>
+        <Code block style={{ background: 'transparent' }}>{code}</Code>
+      </Paper>
+    );
+  }
   const shown = vars ? vars.slice(0, 60) : [];
   const hasUncertainty = shown.some((v) => (v.uncertainty ?? 0) !== 0);
   return (
@@ -779,7 +796,8 @@ const CATEGORIES: NavCategory[] = [
 ];
 
 // id → display label / blurb, for cross-links ([Related:] markers, landing cards).
-const NAV_LABELS: Record<string, string> = {};
+// eslint-disable-next-line react-refresh/only-export-components -- the static book (src/book) reads the nav data
+export const NAV_LABELS: Record<string, string> = {};
 const NAV_BLURBS: Record<string, string> = {};
 for (const cat of CATEGORIES) for (const it of cat.items) {
   NAV_LABELS[it.id] = it.label;
@@ -862,7 +880,8 @@ interface MarkdownRendererProps {
   onNavigate?: (id: string) => void;
 }
 
-function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
+  const link = useHelpLink(onNavigate);
   if (!content) return null;
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
@@ -1172,9 +1191,9 @@ function MarkdownRenderer({ content, onNavigate }: MarkdownRendererProps) {
                   variant="light"
                   color="teal"
                   size="lg"
-                  style={{ cursor: onNavigate ? 'pointer' : 'default', textTransform: 'none' }}
+                  style={{ cursor: 'pointer', textTransform: 'none' }}
                   rightSection={<IconArrowRight size={12} />}
-                  onClick={() => onNavigate?.(id)}
+                  {...link(id)}
                 >
                   {label}
                 </Badge>
@@ -1236,7 +1255,8 @@ const REFERENCE_NAV_CATEGORIES: NavCategory[] = [...REFERENCE_BY_CATEGORY].map((
     keywords: [p.name.toLowerCase(), cat.toLowerCase(), ...p.tags, ...p.related.map((r) => r.toLowerCase())],
   })),
 }));
-const ALL_CATEGORIES = [...CATEGORIES, ...REFERENCE_NAV_CATEGORIES];
+// eslint-disable-next-line react-refresh/only-export-components -- the static book (src/book) reads the nav data
+export const ALL_CATEGORIES = [...CATEGORIES, ...REFERENCE_NAV_CATEGORIES];
 
 const HOME = 'home';
 const REFPAGE = 'refpage:';
@@ -1366,6 +1386,15 @@ function foldSubsections(body: string): BodySegment[] {
 
 function FoldSection({ title, open, children }: Readonly<{ title: string; open: boolean; children: React.ReactNode }>) {
   const [expanded, { toggle }] = useDisclosure(open);
+  const book = useContext(StaticHelp);
+  if (book) {
+    return (
+      <Box mb="sm">
+        <Title order={4} fz="md" id={slugify(plainText(title))}>{renderInlineContent(title)}</Title>
+        {children}
+      </Box>
+    );
+  }
   return (
     <Box mb="sm" style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 6 }}>
       <UnstyledButton onClick={toggle} aria-expanded={expanded} w="100%" px="sm" py={8}>
@@ -1383,23 +1412,24 @@ function FoldSection({ title, open, children }: Readonly<{ title: string; open: 
   );
 }
 
-function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage; onNavigate: (id: string) => void }>) {
+export function ReferencePageView({ page, onNavigate }: Readonly<{ page: ReferencePage; onNavigate: (id: string) => void }>) {
   const verified = page.body.includes('verified-reference-example');
   const mono = pageFamily(page) === 'Guide' ? undefined : 'monospace';
   // Frontmatter lists can repeat an entry (or differ only in case, and lookup
   // is case-insensitive); show each link once.
+  const link = useHelpLink(onNavigate);
   const related = page.related.filter((r, i, all) => all.findIndex((o) => o.toLowerCase() === r.toLowerCase()) === i);
   const functions = related.map((r) => {
     const target = REFERENCE_BY_SLUG.get(r.toLowerCase());
     return target
-      ? <Anchor key={r} size="sm" ff="monospace" c="teal.4" onClick={() => onNavigate(REFPAGE + target.slug)}>{r}</Anchor>
+      ? <Anchor key={r} size="sm" ff="monospace" c="teal.4" {...link(REFPAGE + target.slug)}>{r}</Anchor>
       : <Text key={r} size="sm" ff="monospace">{r}</Text>;
   });
   const topics = [...new Set(page.guides)].filter((g) => NAV_LABELS[g]).map((g) => (
-    <Anchor key={g} size="sm" c="teal.4" onClick={() => onNavigate(g)}>{NAV_LABELS[g]}</Anchor>
+    <Anchor key={g} size="sm" c="teal.4" {...link(g)}>{NAV_LABELS[g]}</Anchor>
   ));
   const examples = [...new Set(page.examples)].map((id) => (
-    <Anchor key={id} size="sm" ff="monospace" c="teal.4" onClick={() => onNavigate('examples')}>{id}</Anchor>
+    <Anchor key={id} size="sm" ff="monospace" c="teal.4" {...link('example:' + id)}>{id}</Anchor>
   ));
   return (
     <Stack gap="sm">

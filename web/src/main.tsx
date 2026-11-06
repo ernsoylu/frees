@@ -10,7 +10,8 @@ import '@mantine/spotlight/styles.css'
 // static import of index.js, and through the chunk graph of every other chunk
 // in the app. KaTeX only ever renders inside <Latex>, which only the (lazy)
 // Help page mounts.
-import { Center, createTheme, Loader, MantineProvider } from '@mantine/core'
+import { Center, Loader, MantineProvider } from '@mantine/core'
+import { theme } from './theme'
 import { Notifications } from '@mantine/notifications'
 import ErrorBoundary from './ErrorBoundary'
 import { setupPwa } from './pwa'
@@ -37,12 +38,6 @@ globalThis.addEventListener('vite:preloadError', (event) => {
   }
 })
 
-const theme = createTheme({
-  primaryColor: 'teal',
-  fontFamilyMonospace:
-    "'Cascadia Code', 'Fira Code', ui-monospace, 'SF Mono', monospace",
-  defaultRadius: 'md',
-})
 
 // Route relative to the deploy base (Wave E, closing Phase 11's gap 4):
 // `pathname === '/help'` only worked for an origin-root deploy. BASE_URL is

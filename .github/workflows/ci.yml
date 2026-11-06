@@ -458,6 +458,13 @@ jobs:
         working-directory: web
         run: npm run build
 
+      # The frees Book (D14): every Help page and the gallery rendered to static
+      # HTML. Fails on a broken link, a gallery model without CHECKs or a
+      # failing CHECK. Deployed beside the app by deploy.yml.
+      - name: frees Book gate
+        working-directory: web
+        run: node scripts/build-book.mjs
+
       - name: Verify the wasm asset shipped in dist
         working-directory: web
         run: |

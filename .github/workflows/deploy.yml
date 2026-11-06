@@ -179,6 +179,18 @@ jobs:
         working-directory: web
         run: cp dist/index.html dist/404.html
 
+      # The frees Book (D14): the Help rendered to static pages, served beside
+      # the app under book/. Its "Open in frees" links point at this deploy.
+      # build-book fails on a broken link or a failing gallery CHECK.
+      - name: Build the frees Book
+        working-directory: web
+        env:
+          FREES_APP_URL: ${{ steps.pages.outputs.base_url }}/
+        run: |
+          set -euo pipefail
+          node scripts/build-book.mjs
+          cp -r dist-book dist/book
+
       # The same two structural checks the CI web job runs. They are cheap and
       # they fail before anything is published, which is the point: a dist that
       # is missing the engine or the service worker is a broken deploy, not a
