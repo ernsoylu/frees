@@ -71,6 +71,8 @@ import {
 } from './api'
 import { ModelRevisionTracker } from './modelRevision'
 import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, withSliderBounds, type PinnedSlider } from './sliders'
+import { compareRuns, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
+import { wasmUnitConversions } from './wasm/engineClient'
 const PreferencesModal = lazy(() => import('./PreferencesModal'))
 const AboutModal = lazy(() => import('./AboutModal'))
 import VariableInfoModal, {
@@ -134,6 +136,7 @@ const OpenUrlModal = lazy(() => import('./OpenUrlModal'))
 const PlotTab = lazy(() => import('./PlotTab'))
 const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const SliderStrip = lazy(() => import('./SliderStrip'))
+const RunsPanel = lazy(() => import('./RunsPanel'))
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
 const MonteCarloModal = lazy(() => import('./MonteCarloModal'))
 const SensitivityModal = lazy(() => import('./SensitivityModal'))
@@ -544,6 +547,14 @@ export default function App() {
   // the previous values until one does, which is worth saying out loud because
   // a blocked or failing solve leaves that gap open indefinitely.
   const [slidersStale, setSlidersStale] = useState(false)
+  // RUN-07: named input scenarios (a project slice), their own undo history,
+  // whether the result on screen predates the scenario now chosen, and the
+  // pinned baseline run (kept for the session, not saved).
+  const [scenarios, setScenarios] = useState<ScenarioState>(() => boot?.scenarios ?? EMPTY_SCENARIOS)
+  const [scenarioHistory, setScenarioHistory] = useState<{ done: ScenarioState[]; undone: ScenarioState[] }>({ done: [], undone: [] })
+  const [scenarioStale, setScenarioStale] = useState(false)
+  const [baseline, setBaseline] = useState<Baseline | null>(null)
+  const [conversions, setConversions] = useState<Record<string, { scale: number; shift: number } | null>>({})
   const sliderTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sliderSolveRef = useRef<() => void>(() => {})
   // A release that lands while a solve is in flight must not be dropped: the
@@ -863,12 +874,13 @@ export default function App() {
       spreadsheets: spreadsheetsRef.current,
       analyzers: analyzersRef.current,
       sliders: pinnedSliders,
+      scenarios,
       schematic,
     }),
     // `text` stays a dependency so the autosave effect keyed on this callback
     // still refreshes when the (deferred) editor document state lands.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, pinnedSliders, schematic],
+    [text, varDrafts, stopCriteria, unitSystem, fillMissing, stateUnitIds, tables, plots, pinnedSliders, scenarios, schematic],
   )
   useEffect(() => {
     currentSlicesRef.current = currentSlices
@@ -899,7 +911,10 @@ export default function App() {
   // A landed solve is what makes the strip's handles describe the results
   // again; until one does, the strip says so.
   useEffect(() => {
-    if (result) setSlidersStale(false)
+    if (result) {
+      setSlidersStale(false)
+      setScenarioStale(false)
+    }
   }, [result])
 
   // Drain a slider re-solve that the in-flight guard blocked. Without this a
@@ -959,6 +974,10 @@ export default function App() {
     spreadsheetsRef.current = p.spreadsheets ?? []
     analyzersRef.current = p.analyzers ?? []
     setPinnedSliders(p.sliders ?? [])
+    setScenarios(p.scenarios ?? EMPTY_SCENARIOS)
+    setScenarioHistory({ done: [], undone: [] })
+    setScenarioStale(false)
+    setBaseline(null)
     setSchematic(p.schematic ?? EMPTY_PRESENTATION)
     // D10/D11 compatibility notices: the spreadsheet and Data Analyzer
     // features are removed, but the data in the file is preserved (inert),
@@ -1851,7 +1870,9 @@ export default function App() {
     [pinnedSliders],
   )
 
+  // Last wins by name: the document < the active scenario < the REPL < a dragged slider.
   const solveOverrides = () => [
+    ...scenarioOverrides(scenarios, pinnableNames),
     ...Object.values(replVars).map(replOverrideEquation),
     // Only pins that are STILL literal parameters are applied. A document edit
     // can turn a pinned name into a computed variable, and an override on one
@@ -1875,6 +1896,30 @@ export default function App() {
   function scheduleSliderSolve(delayMs: number) {
     if (sliderTimer.current) clearTimeout(sliderTimer.current)
     sliderTimer.current = setTimeout(() => sliderSolveRef.current(), delayMs)
+  }
+
+  /**
+   * RUN-07: a scenario change is a model change: the revision moves (an
+   * in-flight solve is discarded) and the result on screen is kept but marked
+   * stale until the next solve. No solve runs by itself.
+   */
+  function applyScenarios(next: ScenarioState) {
+    modelRevisionRef.current.bump()
+    if (result) setScenarioStale(true)
+    setScenarios(next)
+  }
+  function changeScenarios(next: ScenarioState) {
+    setScenarioHistory((h) => ({ done: [...h.done.slice(-49), scenarios], undone: [] }))
+    applyScenarios(next)
+  }
+  function stepScenarios(direction: 'undo' | 'redo') {
+    const from = direction === 'undo' ? scenarioHistory.done : scenarioHistory.undone
+    const target = from.at(-1)
+    if (!target) return
+    setScenarioHistory((h) => direction === 'undo'
+      ? { done: h.done.slice(0, -1), undone: [...h.undone, scenarios] }
+      : { done: [...h.done, scenarios], undone: h.undone.slice(0, -1) })
+    applyScenarios(target)
   }
 
   function setSliderValue(name: string, value: number, commit: boolean) {
@@ -2112,6 +2157,7 @@ export default function App() {
     const canRun = checkOverride ? checkOverride.solvable === true : (isCurrentSolvable && solvable)
     if (solving || !canRun) return false
     const solveRevision = modelRevisionRef.current.current
+    const solveScenario = scenarios.active ?? DOCUMENT_INPUTS
     setSolving(true)
     setStopped(false)
     setSolveProgress(0)
@@ -2140,7 +2186,11 @@ export default function App() {
       if (!modelRevisionRef.current.isCurrent(solveRevision)) {
         return false
       }
-      setResult({ ...response, resultRevision: solveRevision })
+      setResult({
+        ...response,
+        resultRevision: solveRevision,
+        run: { revision: solveRevision, scenario: solveScenario, sample: sampleOf(response.solutions?.length ?? 0, 0), status: runStatus(response) },
+      })
       // REPL overrides persist across solves (the terminal keeps priority over the
       // editor); they're dropped only by the `clear` command, not by solving.
       // The Variable Explorer lives in the right edge group (expanded by default)
@@ -2444,6 +2494,32 @@ export default function App() {
   })
 
   const solutions = result?.solutions ?? []
+  // RUN-07: the run on screen, with the sample the explorer shows, and its comparison with the baseline.
+  const currentRun = result?.run ? { ...result.run, sample: sampleOf(solutions.length, selectedSolutionIndex) } : null
+  const comparedVariables = useMemo(
+    () => (result?.solutions?.length ? (result.solutions[selectedSolutionIndex]?.variables ?? result.variables) : (result?.variables ?? [])),
+    [result, selectedSolutionIndex],
+  )
+  const unitPairs = useMemo(() => {
+    if (!baseline) return []
+    const now = new Map(comparedVariables.map((v) => [v.name.toLowerCase(), v.units]))
+    return [...new Set(baseline.variables.flatMap((b) => {
+      const c = now.get(b.name.toLowerCase())
+      return c && b.units && c !== b.units && c !== '-' && b.units !== '-' ? [`${b.units}\u0000${c}`] : []
+    }))]
+  }, [baseline, comparedVariables])
+  useEffect(() => {
+    const missing = unitPairs.filter((k) => !(k in conversions))
+    if (missing.length === 0) return
+    void Promise.all(missing.map(async (k) => {
+      const [from, to] = k.split('\u0000')
+      const u = await wasmUnitConversions(from, [to]).then((r) => r.units[0], () => undefined)
+      return [k, u && !u.error && u.scale !== undefined ? { scale: u.scale, shift: u.shift ?? 0 } : null] as const
+    })).then((found) => setConversions((c) => ({ ...c, ...Object.fromEntries(found) })))
+  }, [unitPairs, conversions])
+  const comparison = baseline && currentRun
+    ? compareRuns(baseline, { run: currentRun, variables: comparedVariables }, (from, to) => conversions[`${from}\u0000${to}`] ?? null)
+    : null
   useEffect(() => {
     if (selectedSolutionIndex >= solutions.length && solutions.length > 0) {
       setSelectedSolutionIndex(0)
@@ -3008,19 +3084,38 @@ export default function App() {
             selectedSolutionIndex={selectedSolutionIndex}
             onSelectSolutionIndex={setSelectedSolutionIndex}
             sliderStrip={
-              pinnedSliders.length > 0 ? (
+              <>
+                {pinnedSliders.length > 0 && (
+                  <Suspense fallback={null}>
+                    <SliderStrip
+                      pins={pinnedSliders}
+                      inertNames={pinnedSliders.filter((p) => !pinnableNames.has(p.name.toLowerCase())).map((p) => p.name)}
+                      onChange={(name, v) => setSliderValue(name, v, false)}
+                      onCommit={(name, v) => setSliderValue(name, v, true)}
+                      onUnpin={unpinSlider}
+                      solving={solving}
+                      stale={slidersStale}
+                    />
+                  </Suspense>
+                )}
                 <Suspense fallback={null}>
-                  <SliderStrip
-                    pins={pinnedSliders}
-                    inertNames={pinnedSliders.filter((p) => !pinnableNames.has(p.name.toLowerCase())).map((p) => p.name)}
-                    onChange={(name, v) => setSliderValue(name, v, false)}
-                    onCommit={(name, v) => setSliderValue(name, v, true)}
-                    onUnpin={unpinSlider}
-                    solving={solving}
-                    stale={slidersStale}
+                  <RunsPanel
+                    scenarios={scenarios}
+                    onScenarios={changeScenarios}
+                    canUndo={scenarioHistory.done.length > 0}
+                    canRedo={scenarioHistory.undone.length > 0}
+                    onUndo={() => stepScenarios('undo')}
+                    onRedo={() => stepScenarios('redo')}
+                    inputs={(result?.variables ?? []).filter((v) => pinnableNames.has(v.name.toLowerCase()))}
+                    run={currentRun}
+                    stale={scenarioStale}
+                    baseline={baseline}
+                    onSetBaseline={() => currentRun && setBaseline({ run: currentRun, variables: comparedVariables })}
+                    onClearBaseline={() => setBaseline(null)}
+                    rows={comparison}
                   />
                 </Suspense>
-              ) : null
+              </>
             }
           />
         </Suspense>

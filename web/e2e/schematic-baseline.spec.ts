@@ -1019,7 +1019,7 @@ test('VIEW-10 / WIRE-11: sheets and off-page connectors, without an engine call,
   await expect(chlr).toBeVisible()
   await expect(svg.locator(`[data-node="${named}"]`)).toHaveAttribute('aria-label', /Chiller loop/)
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').version)
-  expect(saved).toBe(6)
+  expect(saved).toBeGreaterThanOrEqual(5) // v5 added sheets
   await record(testInfo, 'evidence', { engineCallsToSolve: before, connectors: onChiller, engineCallsFromSheets: sheetCalls, savedVersion: saved })
 })
 
@@ -2521,7 +2521,7 @@ test('COMP-08: a hostile SVG imports as a clean project symbol for a type; built
   await editorText(page).toBe(PAIR)
   expect(await pwned()).toBe(0)
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}'))
-  expect(saved.version).toBe(6)
+  expect(saved.version).toBeGreaterThanOrEqual(6) // v6 added symbols
   expect(Object.values(saved.schematic.symbols as Record<string, { svg: string }>)[0].svg).not.toMatch(/script|style|href|evil|foreignObject|on\w+=/i)
   await testInfo.attach('comp08.png', { body: await svg.screenshot(), contentType: 'image/png' })
 

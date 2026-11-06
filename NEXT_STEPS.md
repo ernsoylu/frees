@@ -214,7 +214,23 @@ entry here is checked off with evidence when it closes.
        - The same journey shows R1's built-in template beating its type's symbol, port a moved to the top face, zero engine calls, an unchanged document and solve, and the labelled-block fallback after the symbol is removed from the saved project.
      - **Found on the way.** The style cascade merged `shape` and `symbol` field by field, so a block's own built-in symbol lost to its type's imported one. `styleFor` now treats them as one choice.
      - **Gates.** vitest 888/888 in 75 files, `tsc -b` clean, lint 0 errors (90 warnings, unchanged), schematic e2e 52/52 on Chromium, and the visual baseline unchanged in the CI image.
-  3. RUN-07: run identity (revision, scenario, sample) through the solve pipeline, then named scenarios and baseline/current comparison.
+  3. **Done 2026-11-06: RUN-07.** Run identity (revision, scenario, sample) through the solve pipeline, then named scenarios and baseline/current comparison.
+     - **Identity.** `onSolve` stamps every landed result with `run: {revision, scenario, sample, status}`, next to `resultRevision`. The sample is the steady solution, or "solution k of n" in find-all mode. The status is derived as the toolbar pill derives it. The Variable Explorer's Runs panel shows it.
+     - **Scenarios (project v7).** Named input sets: new, rename, delete, add inputs from the parameters the document assigns a literal, and edit values (committed on blur or Enter).
+       - The active one is applied through the existing override channel, so the document is never edited. The order is document < scenario < REPL < slider.
+       - A scenario change bumps the revision, so an in-flight solve is discarded, and marks the result on screen stale; it does not solve by itself.
+       - Changes undo and redo on their own stack, at most 50 steps. Stored inputs are validated as engine source lines.
+     - **Comparison.** *Set as baseline* pins the current run for the session; it is enabled only for a solved, current run. Rows pair variables by name. A pair compares only when both runs solved, the samples match and the units are equal or convert, using the engine's `unitConversions`. Otherwise the row says why: units differ, different samples, a run did not solve, or the variable is not in one of the runs.
+     - **Evidence.**
+       - `runs.test.ts`: overrides only on literal inputs, sanitising of injected lines, comparison and unavailable reasons.
+       - Playwright `e2e/runs.spec.ts` on a two-input model:
+         - The baseline is the document run.
+         - The scenario *Wide room* (W = 5 m) is created, undone and redone with no solve or check call, and the result is marked stale.
+         - Solving shows `run N · Wide room · …`. A moves from 12 to 20 m², a change of +8 m² (+66.7 %), with the document text unchanged.
+         - Back on the document inputs, the result is stale until solved, then A reads "same". After a reload the scenario is still there.
+     - **Found on the way.** The scenario undo buttons were first labelled "Undo/Redo scenario change". The schematic's Undo button is matched by name, so there were two "Undo" buttons for assistive technology (and for 12 journeys). They are now *Revert/Reapply scenario change*. E2E journeys check a minimum project version instead of an exact one, so each format bump no longer edits them.
+     - **Not done.** The baseline is not saved with the project; saving results in the project is a larger decision. Time samples of dynamic runs belong to RUN-05.
+     - **Gates.** vitest 891/891 in 76 files, `tsc -b` clean, lint 0 errors (90 warnings, unchanged), schematic e2e 52/52 plus RUN-07, the other e2e specs 10/10, and the visual baseline unchanged in the CI image.
   4. RUN-05: recorded playback (play/pause, scrub, speed, event discontinuities, reduced motion). With slice 3 it closes AC-12.
 
   Each slice gets unit tests, a Playwright journey, and RUN-10's zero-engine-call check.
