@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EV_TOPOLOGY } from './evTopology.fixture'
-import { layoutSchematic, routeEdge, type SchematicNode } from './layout'
+import { anchorAt, layoutSchematic, routeAll, routeEdge, type SchematicNode } from './layout'
 import { boxesEntered } from '../test/schematicPaths'
 import { buildLineStyles, lineId } from './palette'
 
@@ -202,5 +202,28 @@ describe('EV thermal-management example', () => {
         expect(e.toStream, `${e.to}.${e.toPort} has no variable prefix`).toBeTruthy()
       }
     }
+  })
+
+  it('meets every wire at its port and every junction spoke at the dot', () => {
+    const routes = routeAll(layout.edges, new Map(layout.nodes.map((n) => [n.id, n])), layout.nodes)
+    for (const e of layout.edges) {
+      const pts = routes.get(e.id)!
+      for (const [id, port, end, next] of [[e.from, e.fromPort, pts[0], pts[1]], [e.to, e.toPort, pts[pts.length - 1], pts[pts.length - 2]]] as const) {
+        const n = node(id)
+        const at = anchorAt(n, port)
+        expect(end, `${e.id} at ${id}`).toEqual({ x: at.x, y: at.y })
+        // A junction has no port stub: the spoke leaves the dot itself, so
+        // the wires meet where the dot is drawn, not a stub length beside it.
+        if (n.kind === 'junction') {
+          expect(at).toMatchObject({ x: n.x + n.w / 2, y: n.y + n.h / 2 })
+          expect(next, `${e.id} leaves ${id} by a tail`).toEqual(end)
+        }
+      }
+    }
+    // The radiator-bank junction sits on AMB's port line, so that spoke is straight.
+    const amb = anchorAt(node('amb'), 'port')
+    const j = node('$node$amb.port')
+    expect(j.y + j.h / 2).toBe(amb.y)
+    expect(routes.get(layout.edges.find((e) => e.from === j.id && e.to === 'amb')!.id)!.every((p) => p.y === amb.y)).toBe(true)
   })
 })

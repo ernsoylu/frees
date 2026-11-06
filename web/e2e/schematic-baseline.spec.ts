@@ -201,11 +201,24 @@ function wireSemantics(svg: Locator) {
         throughDots += circles.filter((c) => c.dataset.net !== p.dataset.net && Math.hypot(q.x - c.cx.baseVal.value, q.y - c.cy.baseVal.value) <= c.r.baseVal.value + 1).length
       }
     }
+    // A dot marks where its wires meet, so they part at the dot. A port stub on
+    // a junction gave every wire a common tail and drew the dot at its end.
+    const dotsWhereWiresDoNotPart = circles.filter((c) => {
+      const at = { x: c.cx.baseVal.value, y: c.cy.baseVal.value }
+      const near = (q: DOMPoint) => Math.hypot(q.x - at.x, q.y - at.y) <= 1
+      const leaving = paths.filter((p) => p.dataset.net === c.dataset.net).flatMap((p) => {
+        const len = p.getTotalLength()
+        if (near(p.getPointAtLength(0))) return [p.getPointAtLength(Math.min(6, len))]
+        return near(p.getPointAtLength(len)) ? [p.getPointAtLength(Math.max(0, len - 6))] : []
+      })
+      return leaving.length < 2 || leaving.every((q) => Math.hypot(q.x - leaving[0].x, q.y - leaving[0].y) < 1)
+    }).length
     for (const p of paths) p.style.strokeDasharray = ''
     return {
       wires: paths.length,
       dots: dots.length,
       dotsWithFewerThanThreeWires: dots.filter((n) => n < 3).length,
+      dotsWhereWiresDoNotPart,
       wireSamplesThroughOtherDots: throughDots,
       crossingsOrTouches: contacts.filter((c) => c.length <= 8).length,
       overlaps: contacts.filter((c) => c.length > 8),
@@ -254,6 +267,7 @@ for (const model of MODELS) {
       })
       // A dot only where three or more wires of one set meet; no wire through another set's dot.
       expect(w.dotsWithFewerThanThreeWires).toBe(0)
+      expect(w.dotsWhereWiresDoNotPart).toBe(0)
       expect(w.wireSamplesThroughOtherDots).toBe(0)
       // Every crossing of unrelated wires hops, and unrelated wires never share a lane.
       // The dense floor's 16 three-way junctions feed bundles wider than the
