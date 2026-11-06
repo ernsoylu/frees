@@ -15,6 +15,7 @@ import { DEFAULT_DRAFT, type VariableDraft } from './VariableInfoModal'
 import type { TableSpec } from './tables'
 import type { PlotSpec } from './plots/types'
 import type { PinnedSlider } from './sliders'
+import { sanitizeScenarios, type ScenarioState } from './runs'
 import { fromV3, sanitizePresentation, type SchematicPresentation } from './schematic/presentation'
 
 // v2 (Data Analyzer Phase 2): + `analyzers` slice — layout, signal
@@ -35,7 +36,9 @@ import { fromV3, sanitizePresentation, type SchematicPresentation } from './sche
 // v6: + COMP-08 symbols: the project's sanitised SVG symbol templates, and a
 // block, type or project style's built-in shape, project symbol and port
 // anchors. Additive: a v5 file opens with the type's own symbols.
-const PROJECT_VERSION = 6
+// v7: + RUN-07 scenarios: named sets of input values and the active one.
+// Additive: a v6 file opens with no scenarios, solving the document's inputs.
+const PROJECT_VERSION = 7
 const PROJECT_KEY = 'frees.project'
 
 /**
@@ -106,6 +109,8 @@ export interface ProjectSlices {
   analyzers: AnalyzerSpec[]
   /** Parameters pinned to the workspace slider strip. */
   sliders?: PinnedSlider[]
+  /** RUN-07: named input scenarios and the active one. */
+  scenarios?: ScenarioState
   /** How the schematic is presented: where the user put blocks, locks,
    *  areas and view settings. The network itself is always derived from the
    *  document. */
@@ -210,6 +215,8 @@ function sanitizeProject(project: FreesProject): FreesProject | null {
     spreadsheets: Array.isArray(project.spreadsheets) ? plainJson(project.spreadsheets) : [],
     analyzers: Array.isArray(project.analyzers) ? plainJson(project.analyzers) : [],
     sliders: Array.isArray(project.sliders) ? plainJson(project.sliders) : [],
+    // Scenario inputs become engine source lines: validated, not just cloned.
+    scenarios: sanitizeScenarios(project.scenarios).state,
     schematic: sanitizePresentation(project.schematic).presentation,
     digitizer: plainJson(project.digitizer),
     dockLayout: plainJson(project.dockLayout),
@@ -269,6 +276,7 @@ function migrate(p: FreesProject): FreesProject {
     spreadsheets: p.spreadsheets ?? [],
     analyzers: p.analyzers ?? [],
     sliders: p.sliders ?? [],
+    scenarios: sanitizeScenarios(p.scenarios).state,
     schematic: schematic.presentation,
     ...(schematic.repaired > 0 ? { schematicRepaired: schematic.repaired } : {}),
     digitizer: p.digitizer ?? null,
@@ -308,6 +316,9 @@ export function projectOnlyNotes(slices: ProjectSlices & { digitizer?: unknown }
   }
   if ((slices.sliders ?? []).length) {
     notes.push(`${slices.sliders!.length} slider override(s)`)
+  }
+  if (slices.scenarios?.list.length) {
+    notes.push(`${slices.scenarios.list.length} scenario(s)`)
   }
   const s = slices.schematic
   const styled = s && (Object.keys(s.styles.project).length || Object.keys(s.styles.types).length || Object.keys(s.styles.instances).length)

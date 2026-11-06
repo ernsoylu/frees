@@ -110,6 +110,8 @@ export interface VariableUncertaintyResult {
 
 export interface SolveResponse {
   resultRevision?: number
+  /** RUN-07: which run this is (revision, scenario, sample, status); stamped by the app when the solve lands. */
+  run?: import('./runs').RunIdentity
   success: boolean
   variables: VariableResult[]
   blocks: BlockResult[]
