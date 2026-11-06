@@ -1004,7 +1004,7 @@ test('VIEW-10 / WIRE-11: sheets and off-page connectors, without an engine call,
   expect(sheetCalls).toEqual([])
   await expect(page.getByText(/^Solved/i).first()).toBeVisible()
 
-  // Reload: the v5 project brings the sheets, members and the connector name back.
+  // Reload: the project (v5 added sheets) brings the sheets, members and the connector name back.
   await page.reload()
   await expect(svg).toBeVisible({ timeout: 60_000 })
   const welcome = page.getByRole('dialog').filter({ hasText: 'Welcome to frees' })
@@ -1019,7 +1019,7 @@ test('VIEW-10 / WIRE-11: sheets and off-page connectors, without an engine call,
   await expect(chlr).toBeVisible()
   await expect(svg.locator(`[data-node="${named}"]`)).toHaveAttribute('aria-label', /Chiller loop/)
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}').version)
-  expect(saved).toBe(5)
+  expect(saved).toBe(6)
   await record(testInfo, 'evidence', { engineCallsToSolve: before, connectors: onChiller, engineCallsFromSheets: sheetCalls, savedVersion: saved })
 })
 
@@ -2440,6 +2440,111 @@ test('COMP-07: rotate, mirror, detail and name placement per block; ports keep t
   await expect(page.getByText('0.66667 A').first()).toBeVisible()
   await testInfo.attach('comp07.png', { body: await svg.screenshot(), contentType: 'image/png' })
   await record(testInfo, 'evidence', { before, turned })
+})
+
+test('COMP-08: a hostile SVG imports as a clean project symbol for a type; built-in templates, port anchors and a missing symbol fall back; nothing runs, fetches or re-solves', async ({ page }, testInfo) => {
+  const fetched: string[] = []
+  page.on('request', (r) => {
+    if (r.url().includes('evil.example')) fetched.push(r.url())
+  })
+  await page.addInitScript(() => {
+    const calls: string[] = []
+    ;(window as unknown as { engineCalls: string[] }).engineCalls = calls
+    const post = Worker.prototype.postMessage
+    Worker.prototype.postMessage = function (this: Worker, message: unknown, ...rest: unknown[]) {
+      const method = (message as { method?: string } | null)?.method
+      if (method) calls.push(method)
+      return (post as (...a: unknown[]) => void).call(this, message, ...rest)
+    } as typeof Worker.prototype.postMessage
+  })
+  const svg = await openSolved(page, PAIR)
+  const calls = () => page.evaluate(() => [...(window as unknown as { engineCalls: string[] }).engineCalls])
+  await page.waitForTimeout(1500)
+  const before = (await calls()).length
+  const pwned = () => page.evaluate(() => (window as unknown as { pwned?: number }).pwned ?? 0)
+
+  await svg.locator('[data-node="r1"]').click()
+  const editor = page.getByTestId('style-editor')
+  await editor.getByText('All Resistor', { exact: true }).click()
+  // A house symbol carrying every kind of active or fetching content.
+  const hostile = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 10" onload="window.pwned=1">
+    <script>window.pwned = 2</script>
+    <style>@import url(https://evil.example/style.css); rect { fill: url(https://evil.example/p.svg#p) }</style>
+    <image href="https://evil.example/img.png" width="5" height="5"/>
+    <use xlink:href="https://evil.example/sym.svg#a"/>
+    <foreignObject width="5" height="5"><iframe xmlns="http://www.w3.org/1999/xhtml" src="https://evil.example/frame"></iframe></foreignObject>
+    <rect x="1" y="2" width="18" height="6" fill="none" stroke="currentColor" stroke-width="1" onclick="window.pwned=3"/>
+    <path d="M0 5 H1 M19 5 H20" stroke="currentColor" style="stroke:url(https://evil.example/s)"/>
+  </svg>`
+  const chooser = page.waitForEvent('filechooser')
+  await editor.getByRole('button', { name: 'Import SVG…' }).click()
+  await (await chooser).setFiles({ name: 'house-resistor.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(hostile) })
+  const note = page.getByTestId('symbol-import-note')
+  await expect(note).toContainText('Imported house-resistor. Removed as unsafe or unsupported:')
+  for (const removed of ['<script>', '<style>', '<image>', '<use>', '<foreignObject>', 'onload', 'onclick', 'style']) await expect(note).toContainText(removed)
+
+  // Both resistors draw it; only the allowlisted shapes reach the page, and the type stays named.
+  for (const id of ['r1', 'r2']) {
+    await expect(svg.locator(`[data-node="${id}"] svg[data-symbol="custom"] rect`)).toHaveCount(1)
+    await expect(svg.locator(`[data-node="${id}"] svg[data-symbol="custom"] rect`)).toBeVisible()
+    await expect(svg.locator(`[data-node="${id}"]`)).toHaveAttribute('aria-label', new RegExp(`^Resistor ${id.toUpperCase()}$`))
+  }
+  await expect(svg.locator('script, foreignObject, image, use, style, iframe')).toHaveCount(0)
+  // Clicking the imported shape runs nothing (its onclick was removed); it selects R2, so pin R1 again.
+  await svg.locator('[data-node="r2"] svg[data-symbol="custom"] rect').dispatchEvent('click')
+  await svg.locator('[data-node="r1"]').click()
+  await expect(editor).toBeVisible()
+
+  // A built-in symbol is a template too: R1's own style beats its type's.
+  await editor.getByText('This block', { exact: true }).click()
+  await editor.getByRole('combobox', { name: 'Symbol' }).click()
+  await page.getByRole('option', { name: 'capacitor', exact: true }).click()
+  await expect(svg.locator('[data-node="r1"] [data-symbol="capacitor"]')).toHaveCount(1)
+  await expect(svg.locator('[data-node="r2"] svg[data-symbol="custom"]')).toHaveCount(1)
+
+  // Port anchors, per type: port a moves to the top face of each resistor.
+  const portA = async () => {
+    const [p, b] = [(await svg.locator('[data-port="r2.a"] circle').last().boundingBox())!, (await svg.locator('[data-node="r2"] rect').first().boundingBox())!]
+    return Math.round(p.y + p.height / 2 - b.y)
+  }
+  expect(await portA()).toBeGreaterThan(5)
+  await editor.getByText('All Resistor', { exact: true }).click()
+  await editor.getByRole('combobox', { name: 'Side of port a' }).click()
+  await page.getByRole('option', { name: 'a: top' }).click()
+  await expect.poll(portA).toBeLessThanOrEqual(2)
+
+  // Presentation only: no engine call, the solve is current, the document unchanged, nothing ran or fetched.
+  await page.waitForTimeout(1500)
+  const symbolCalls = (await calls()).slice(before)
+  expect(symbolCalls).toEqual([])
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible()
+  await editorText(page).toBe(PAIR)
+  expect(await pwned()).toBe(0)
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('frees.project') ?? '{}'))
+  expect(saved.version).toBe(6)
+  expect(Object.values(saved.schematic.symbols as Record<string, { svg: string }>)[0].svg).not.toMatch(/script|style|href|evil|foreignObject|on\w+=/i)
+  await testInfo.attach('comp08.png', { body: await svg.screenshot(), contentType: 'image/png' })
+
+  // A project that lost the symbol draws a labelled block, and says so.
+  await page.evaluate(() => {
+    const p = JSON.parse(localStorage.getItem('frees.project')!)
+    p.schematic.symbols = {}
+    localStorage.setItem('frees.project', JSON.stringify(p))
+  })
+  await page.reload()
+  const welcome = page.getByRole('dialog').filter({ hasText: 'Welcome to frees' })
+  if (await welcome.waitFor({ timeout: 15_000 }).then(() => true, () => false)) await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 120_000 })
+  await expect(svg.locator('[data-node="r2"] [data-symbol="missing"]')).toHaveCount(1, { timeout: 60_000 })
+  await expect(svg.locator('[data-node="r2"] > title')).toContainText('project symbol missing, drawn as a block')
+  await expect(svg.locator('[data-node="r2"]')).toContainText('R2')
+  await svg.locator('[data-node="r2"]').click()
+  await editor.getByText('All Resistor', { exact: true }).click()
+  await expect(page.getByTestId('symbol-missing')).toBeVisible()
+  expect(fetched).toEqual([])
+  expect(await pwned()).toBe(0)
+  await record(testInfo, 'evidence', { engineCallsFromSymbols: symbolCalls, fetched })
 })
 
 test('CFG-02: line width and a project colour per line kind, refused where it would not read, with the dash kept and the document unchanged', async ({ page }, testInfo) => {

@@ -32,7 +32,10 @@ import { fromV3, sanitizePresentation, type SchematicPresentation } from './sche
 // v5: + sheets (VIEW-10/WIRE-11): further sheets of the same model, blocks
 // moved off the main sheet, and off-page connector names. A v4 presentation
 // has none, so it opens with every block on the main sheet, as it was drawn.
-const PROJECT_VERSION = 5
+// v6: + COMP-08 symbols: the project's sanitised SVG symbol templates, and a
+// block, type or project style's built-in shape, project symbol and port
+// anchors. Additive: a v5 file opens with the type's own symbols.
+const PROJECT_VERSION = 6
 const PROJECT_KEY = 'frees.project'
 
 /**

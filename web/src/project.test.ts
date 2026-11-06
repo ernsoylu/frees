@@ -61,7 +61,7 @@ beforeEach(() => localStorage.clear())
 describe('project v2 analyzers slice (inert since D11)', () => {
   it('buildProject carries the analyzers slice at the current version', () => {
     const p = buildProject(slices)
-    expect(p.version).toBe(5)
+    expect(p.version).toBe(6)
     expect(p.analyzers).toEqual([analyzer])
   })
 
@@ -82,7 +82,7 @@ describe('project v2 analyzers slice (inert since D11)', () => {
     const v1 = { ...buildProject({ ...slices, analyzers: [] }), version: 1 } as Record<string, unknown>
     delete v1.analyzers
     const p = await readProjectFile(asFile(v1))
-    expect(p.version).toBe(5)
+    expect(p.version).toBe(6)
     expect(p.analyzers).toEqual([])
   })
 
@@ -115,7 +115,7 @@ describe('project v4 schematic presentation', () => {
   it('carries v3 offsets over for migration against the legacy layout', async () => {
     const v3 = { ...buildProject(slices), version: 3, schematic: { bcp: { dx: 60, dy: 240 } } }
     const p = await readProjectFile(asFile(v3))
-    expect(p.version).toBe(5)
+    expect(p.version).toBe(6)
     expect(p.schematic).toEqual({ ...EMPTY_PRESENTATION, legacyOffsets: { bcp: { dx: 60, dy: 240 } } })
   })
 

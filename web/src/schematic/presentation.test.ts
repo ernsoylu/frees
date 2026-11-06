@@ -243,6 +243,43 @@ describe('symbol transforms (COMP-07)', () => {
   })
 })
 
+describe('symbols and port anchors (COMP-08)', () => {
+  const node = { id: 'p', label: 'P', type: 'Pump', shape: 'pump', terminal: false, kind: 'instance', group: 'g', x: 0, y: 0, w: 100, h: 50, ports: [
+    { port: 'in', side: 'left', dx: 0, dy: 25 },
+    { port: 'out', side: 'right', dx: 100, dy: 25 },
+    { port: 'shaft', side: 'top', dx: 50, dy: 0 },
+  ] } as SchematicNode
+  const ports = (styles: Parameters<typeof transformSymbols>[1]) =>
+    transformSymbols({ nodes: [node] } as Parameters<typeof transformSymbols>[0], styles).nodes[0].ports.map((q) => `${q.port} ${q.side} ${q.dx},${q.dy}`)
+
+  it('moves anchored ports to their side, spread evenly, before any turn', () => {
+    expect(ports({ project: {}, types: { pump: { anchors: { out: 'left' } } }, instances: {} })).toEqual(['in left 0,16.666666666666664', 'out left 0,33.33333333333333', 'shaft top 50,0'])
+    // Anchors are drawn before the turn: `out` on the bottom, turned a quarter, ends on the left.
+    expect(ports({ project: {}, types: {}, instances: { p: { anchors: { out: 'bottom' }, rotate: 90 } } })).toEqual(['in top 50,0', 'out left 0,25', 'shaft right 100,25'])
+  })
+
+  it('takes the symbol choice whole from the most specific scope that makes it', () => {
+    const styles = { project: { shape: 'block' as const }, types: { pump: { symbol: 'sym1', rotate: 90 as const } }, instances: { p: { shape: 'turbine' as const }, q: { mirror: true } } }
+    expect(styleFor(styles, 'p', 'Pump')).toEqual({ rotate: 90, shape: 'turbine' })
+    expect(styleFor(styles, 'q', 'Pump')).toEqual({ rotate: 90, mirror: true, symbol: 'sym1' })
+    expect(styleFor(styles, 'r', 'Valve')).toEqual({ shape: 'block' })
+  })
+
+  it('keeps well-formed symbol styles and stored symbols, sanitised again on load', () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><rect width="4" height="4" onload="alert(1)"/><script>x</script></svg>'
+    const { presentation, repaired } = sanitizePresentation({
+      ...EMPTY_PRESENTATION,
+      styles: { project: {}, types: { pump: { shape: 'turbine', symbol: 'sym1', anchors: { out: 'top', shaft: 'diagonal', 'bad name': 'left' } } }, instances: { p: { shape: 'teapot', symbol: 'javascript:x' } } },
+      symbols: { sym1: { name: 'House pump', svg }, sym2: { name: 'Broken', svg: '<html/>' }, evil: { name: 'Bad id', svg }, sym3: { name: '', svg } },
+    })
+    expect(presentation.styles.types.pump).toEqual({ shape: 'turbine', symbol: 'sym1', anchors: { out: 'top' } })
+    expect(presentation.styles.instances.p).toEqual({})
+    expect(presentation.symbols).toEqual({ sym1: { name: 'House pump', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><rect width="4" height="4"></rect></svg>' } })
+    // 2 anchors, 2 instance fields, 3 symbols.
+    expect(repaired).toBe(7)
+  })
+})
+
 describe('arrangeBlocks (VIEW-04)', () => {
   it('returns unlocked targets to the layout with their unlocked routes; locks hold', () => {
     const p = {
