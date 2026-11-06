@@ -1,11 +1,12 @@
 import { flushSync } from 'react-dom'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { createElement, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import {
   ActionIcon,
   Badge,
   Button,
   Checkbox,
   ColorInput,
+  FileButton,
   Group,
   Kbd,
   Menu,
@@ -69,7 +70,8 @@ import {
   type SchematicEdge,
   type SchematicNode,
 } from './layout'
-import { glyphFillPath, glyphPath, SHAPE_LABELS } from './symbols'
+import { glyphFillPath, glyphPath, SHAPE_LABELS, type Shape } from './symbols'
+import { sanitizeSvg, type CleanSymbol, type SvgChild } from './symbolSvg'
 import {
   appendStatement,
   applyChanges,
@@ -116,6 +118,8 @@ import {
   type Annotation,
   type BlockStyle,
   type BlockStyles,
+  MAX_SYMBOLS,
+  type ProjectSymbol,
   type SavedView,
   type SchematicPresentation,
   type VariableFormat,
@@ -1034,15 +1038,33 @@ export default function SchematicTab({
       : null
   // CFG-01: a style at one scope; null resets that scope.
   const blockStyles = pres.styles ?? EMPTY_STYLES
+  const withStyle = (p: SchematicPresentation, scope: StyleScope, key: string, next: BlockStyle | null): SchematicPresentation => {
+    const s = p.styles ?? EMPTY_STYLES
+    const kept = next && Object.keys(next).length > 0 ? next : null
+    if (scope === 'project') return { ...p, styles: { ...s, project: kept ?? {} } }
+    const field = scope === 'type' ? 'types' : 'instances'
+    const { [key]: _old, ...rest } = s[field]
+    return { ...p, styles: { ...s, [field]: kept ? { ...rest, [key]: kept } : rest } }
+  }
   const setStyle = (scope: StyleScope, key: string, next: BlockStyle | null) =>
+    updatePres((p) => withStyle(p, scope, key, next), next && Object.keys(next).length > 0 ? 'Change style' : `Reset ${scope} style`)
+  // COMP-08: the project's symbols, parsed once per change; one that will not parse is missing.
+  const symbols = pres.symbols ?? {}
+  const symbolTrees = useMemo(
+    () => new Map(Object.entries(pres.symbols ?? {}).flatMap(([id, sym]) => {
+      const clean = sanitizeSvg(sym.svg)
+      return 'error' in clean ? [] : [[id, clean] as const]
+    })),
+    [pres.symbols],
+  )
+  /** Add a sanitised symbol to the project and use it at one style scope, as one undo step. */
+  const importSymbol = (scope: StyleScope, key: string, name: string, svg: string, style: BlockStyle) =>
     updatePres((p) => {
-      const s = p.styles ?? EMPTY_STYLES
-      const kept = next && Object.keys(next).length > 0 ? next : null
-      if (scope === 'project') return { ...p, styles: { ...s, project: kept ?? {} } }
-      const field = scope === 'type' ? 'types' : 'instances'
-      const { [key]: _old, ...rest } = s[field]
-      return { ...p, styles: { ...s, [field]: kept ? { ...rest, [key]: kept } : rest } }
-    }, next && Object.keys(next).length > 0 ? 'Change style' : `Reset ${scope} style`)
+      let n = Object.keys(p.symbols ?? {}).length + 1
+      while (p.symbols?.[`sym${n}`]) n++
+      const id = `sym${n}`
+      return withStyle({ ...p, symbols: { ...p.symbols, [id]: { name, svg } } }, scope, key, { ...style, shape: undefined, symbol: id })
+    }, `Import symbol ${name}`)
   // RUN-03: the variables chosen to read on the drawing, and how they read.
   const badges = pres.badges ?? {}
   const watch = pres.watch ?? []
@@ -3392,6 +3414,7 @@ export default function SchematicTab({
                   />
                 )
               }
+              const look = styleFor(blockStyles, n.id, n.type ?? '')
               return n.kind === 'junction' ? (
                 <circle
                   key={n.id}
@@ -3454,7 +3477,8 @@ export default function SchematicTab({
                   onLeave={() => setHovered(null)}
                   onPort={(port) => clickPort(n.id, port)}
                   unconnected={drawnCheck?.ports?.length ? (openPorts.get(n.id.toLowerCase()) ?? NO_PORTS) : undefined}
-                  look={styleFor(blockStyles, n.id, n.type ?? '')}
+                  look={look}
+                  custom={look.symbol ? (symbolTrees.get(look.symbol) ?? null) : undefined}
                   onPortDrag={(port, e) => startWireDrag(n.id, port, e)}
                   compat={wireSource ? (port) => compatOf(n.id, port) : undefined}
                 />
@@ -3794,6 +3818,8 @@ export default function SchematicTab({
           onRevealLine={onRevealLine}
           styles={blockStyles}
           onStyle={pinned === activeNode.id ? setStyle : undefined}
+          symbols={symbols}
+          onImportSymbol={importSymbol}
           spec={specOf(activeNode.type)}
           text={text}
           onSetParam={onSourceEdit ? setParam : undefined}
@@ -3906,10 +3932,18 @@ interface BlockProps {
   /** Ports Check reports unjoined, lower-case. */
   unconnected?: ReadonlySet<string>
   look?: BlockStyle
+  /** COMP-08: the project symbol the block draws; null when its style names one the project lacks. */
+  custom?: CleanSymbol | null
   onPortDrag?: (port: string, e: React.PointerEvent) => void
   /** While a wire is drawn: whether each port may take it. */
   compat?: (port: string) => 'allowed' | 'prohibited' | 'unknown' | undefined
 }
+
+const reactAttr = (name: string) => name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+
+/** COMP-08: a sanitised symbol tree as React elements; only allowlisted tags and attributes reach here. */
+const svgNode = (n: SvgChild): ReactNode =>
+  typeof n === 'string' ? n : createElement(n.tag, Object.fromEntries(Object.entries(n.attrs).map(([k, v]) => [reactAttr(k), v])), ...n.children.map(svgNode))
 
 /** One component, drawn as its circuit symbol with its identity and its most
  *  telling number. */
@@ -3935,10 +3969,13 @@ function NodeBlock({
   onPort,
   unconnected,
   look,
+  custom,
   onPortDrag,
   compat,
 }: Readonly<BlockProps>) {
-  const glyph = glyphPath(node.shape)
+  // COMP-08: a missing project symbol falls back to a labelled block.
+  const shape = custom === null ? 'block' : (look?.shape ?? node.shape)
+  const glyph = glyphPath(shape)
   const GLYPH = 20
   // Level of detail: once the full card's name would draw below MIN_LABEL_PX,
   // show only the name, held at MIN_LABEL_PX on screen whatever the zoom.
@@ -3979,7 +4016,7 @@ function NodeBlock({
       data-locked={locked || undefined}
       style={{ cursor: locked ? 'default' : 'move' }}
     >
-      <title>{`${node.type ?? ''} ${node.label} — ${SHAPE_LABELS[node.shape]}`}</title>
+      <title>{`${node.type ?? ''} ${node.label} — ${custom ? 'project symbol' : custom === null ? 'project symbol missing, drawn as a block' : SHAPE_LABELS[shape]}`}</title>
       <rect
         width={node.w}
         height={node.h}
@@ -4006,8 +4043,15 @@ function NodeBlock({
           {chipLabel}
         </text>
       )}
-      {!chip && glyph && (
+      {!chip && custom && (
         <g color={ink.glyph} transform={`translate(6, ${(node.h - GLYPH) / 2}) scale(${GLYPH})`}>
+          <g transform={turn || undefined}>
+            {createElement('svg', { width: 1, height: 1, viewBox: custom.viewBox.join(' '), 'data-symbol': 'custom' }, ...custom.children.map(svgNode))}
+          </g>
+        </g>
+      )}
+      {!chip && !custom && glyph && (
+        <g color={ink.glyph} transform={`translate(6, ${(node.h - GLYPH) / 2}) scale(${GLYPH})`} data-symbol={custom === null ? 'missing' : shape}>
           <g transform={turn || undefined}>
             <path
               d={glyph}
@@ -4016,7 +4060,7 @@ function NodeBlock({
               strokeWidth={1.2}
               vectorEffect="non-scaling-stroke"
             />
-            <path d={glyphFillPath(node.shape)} fill="currentColor" />
+            <path d={glyphFillPath(shape)} fill="currentColor" />
           </g>
         </g>
       )}
@@ -4236,6 +4280,7 @@ function ParamInspector({
 }
 
 type StyleScope = 'instance' | 'type' | 'project'
+type ImportSymbol = (scope: StyleScope, key: string, name: string, svg: string, style: BlockStyle) => void
 
 /**
  * CFG-01: edit the block's style at one scope. The block's own style beats its
@@ -4245,12 +4290,37 @@ function StyleEditor({
   node,
   styles,
   onStyle,
-}: Readonly<{ node: SchematicNode; styles: BlockStyles; onStyle: (scope: StyleScope, key: string, next: BlockStyle | null) => void }>) {
+  symbols,
+  onImport,
+}: Readonly<{
+  node: SchematicNode
+  styles: BlockStyles
+  onStyle: (scope: StyleScope, key: string, next: BlockStyle | null) => void
+  symbols: Record<string, ProjectSymbol>
+  onImport?: ImportSymbol
+}>) {
   const [scope, setScope] = useState<StyleScope>('instance')
+  const [importNote, setImportNote] = useState<{ text: string; error: boolean } | null>(null)
   const type = node.type ?? ''
   const key = scope === 'type' ? type.toLowerCase() : node.id
   const own = scope === 'project' ? styles.project : scope === 'type' ? styles.types[key] : styles.instances[key]
   const set = (change: BlockStyle) => onStyle(scope, key, Object.fromEntries(Object.entries({ ...own, ...change }).filter(([, v]) => v !== undefined)))
+  // COMP-08: an imported file is sanitised before anything is stored, and the note says what was removed.
+  const importFile = async (file: File | null) => {
+    if (!file || !onImport) return
+    if (Object.keys(symbols).length >= MAX_SYMBOLS) return setImportNote({ text: `A project holds at most ${MAX_SYMBOLS} symbols.`, error: true })
+    const clean = sanitizeSvg(await file.text())
+    if ('error' in clean) return setImportNote({ text: `${file.name}: ${clean.error}`, error: true })
+    const name = file.name.replace(/\.svg$/i, '').trim().slice(0, 60) || 'Symbol'
+    onImport(scope, key, name, clean.svg, own ?? {})
+    setImportNote({ text: clean.dropped.length ? `Imported ${name}. Removed as unsafe or unsupported: ${clean.dropped.join(', ')}.` : `Imported ${name}.`, error: false })
+  }
+  const anchors = own?.anchors ?? {}
+  const setAnchor = (port: string, side: PortSide | null) => {
+    const { [port]: _old, ...rest } = anchors
+    const next = side ? { ...rest, [port]: side } : rest
+    set({ anchors: Object.keys(next).length ? next : undefined })
+  }
   return (
     <Stack gap={4} mb={4} data-testid="style-editor">
       <SegmentedControl
@@ -4302,8 +4372,62 @@ function StyleEditor({
         <Select size="xs" aria-label="Name position" placeholder="Inside" w={90} data={[{ value: 'inside', label: 'Inside' }, { value: 'above', label: 'Above' }, { value: 'below', label: 'Below' }]} value={own?.label ?? null} onChange={(v) => set({ label: (v as BlockStyle['label']) ?? undefined })} clearable comboboxProps={{ withinPortal: false }} />
         <Select size="xs" aria-label="Name size" placeholder="Size" w={80} data={LABEL_SIZES.map(String)} value={own?.labelSize ? String(own.labelSize) : null} onChange={(v) => set({ labelSize: v ? Number(v) : undefined })} clearable comboboxProps={{ withinPortal: false }} />
       </Group>
+      <Group gap={4} wrap="nowrap">
+        <Select
+          size="xs"
+          aria-label="Symbol"
+          placeholder={`Type's own: ${SHAPE_LABELS[node.shape]}`}
+          w={200}
+          clearable
+          searchable
+          comboboxProps={{ withinPortal: false }}
+          data={[
+            { group: 'Project symbols', items: Object.entries(symbols).map(([id, sym]) => ({ value: `svg:${id}`, label: sym.name })) },
+            { group: 'Built-in', items: Object.entries(SHAPE_LABELS).map(([k, label]) => ({ value: `shape:${k}`, label })) },
+          ].filter((g) => g.items.length > 0)}
+          value={own?.symbol && symbols[own.symbol] ? `svg:${own.symbol}` : own?.shape ? `shape:${own.shape}` : null}
+          onChange={(v) => set({ symbol: v?.startsWith('svg:') ? v.slice(4) : undefined, shape: v?.startsWith('shape:') ? (v.slice(6) as Shape) : undefined })}
+        />
+        {onImport && (
+          <FileButton onChange={(f) => void importFile(f)} accept=".svg,image/svg+xml">
+            {(props) => (
+              <Button size="compact-xs" variant="light" {...props}>
+                Import SVG…
+              </Button>
+            )}
+          </FileButton>
+        )}
+      </Group>
+      {own?.symbol && !symbols[own.symbol] && (
+        <Text size="xs" c="orange" data-testid="symbol-missing">
+          Symbol {own.symbol} is not in this project; the block is drawn as a labelled block. Choose another or clear it.
+        </Text>
+      )}
+      {importNote && (
+        <Text size="xs" c={importNote.error ? 'red' : 'dimmed'} data-testid="symbol-import-note">
+          {importNote.text}
+        </Text>
+      )}
+      {node.ports.length > 0 && (
+        <Group gap={4} wrap="wrap" data-testid="port-anchors">
+          {node.ports.map((p) => (
+            <Select
+              key={p.port}
+              size="xs"
+              w={120}
+              aria-label={`Side of port ${p.port}`}
+              placeholder={`${p.port}: auto`}
+              data={['left', 'right', 'top', 'bottom'].map((v) => ({ value: v, label: `${p.port}: ${v}` }))}
+              value={anchors[p.port.toLowerCase()] ?? null}
+              onChange={(v) => setAnchor(p.port.toLowerCase(), (v as PortSide) ?? null)}
+              clearable
+              comboboxProps={{ withinPortal: false }}
+            />
+          ))}
+        </Group>
+      )}
       <Text size="xs" c="dimmed">
-        This block overrides its type, which overrides the project. Turning or mirroring moves the ports with the symbol; the equations do not change.
+        This block overrides its type, which overrides the project. A symbol, port sides, a turn or a mirror change the drawing only; the equations do not change.
       </Text>
     </Stack>
   )
@@ -4820,7 +4944,12 @@ function ReadoutCard({
   handoff,
   occurrences,
   onOpenSheet,
+  symbols,
+  onImportSymbol,
 }: Readonly<{
+  /** COMP-08: the project's symbols, and importing one. */
+  symbols?: Record<string, ProjectSymbol>
+  onImportSymbol?: ImportSymbol
   handoff?: Handoff
   /** VIEW-10: the sheets this one component is drawn on. */
   occurrences?: { id: string; name: string; current: boolean }[]
@@ -4958,7 +5087,7 @@ function ReadoutCard({
           )}
         </Group>
       )}
-      {styles && onStyle && <StyleEditor node={node} styles={styles} onStyle={onStyle} />}
+      {styles && onStyle && <StyleEditor node={node} styles={styles} onStyle={onStyle} symbols={symbols ?? {}} onImport={onImportSymbol} />}
       {onFocus && (
         <Group gap={4} mb={4}>
           <Button size="compact-xs" variant="default" onClick={() => onFocus('neighbours')}>

@@ -11,6 +11,8 @@ import type { ConnectionDto } from '../api'
 import { renameId } from './sourceEdit'
 import { LINE_KINDS } from './palette'
 import { EMPTY_SHEETS, netKeyOf, sanitizeSheets, type SheetState } from './sheets'
+import { SHAPE_LABELS, type Shape } from './symbols'
+import { sanitizeSvg } from './symbolSvg'
 
 /**
  * How the canvas is presented (VIEW-03, VIEW-05). None of this changes the
@@ -221,6 +223,14 @@ export interface SchematicPresentation extends SheetState {
   annotations: Annotation[]
   /** CFG-02: the project's colour per line kind (`LINE_KINDS`), `#rrggbb`; used where it holds contrast. */
   lineColors: Record<string, string>
+  /** COMP-08: the project's symbol templates, by id (`sym1`, …); any block, type or the project can use one. */
+  symbols: Record<string, ProjectSymbol>
+}
+
+/** COMP-08: an imported symbol; `svg` is the sanitiser's canonical markup (`symbolSvg.ts`), sanitised again on load. */
+export interface ProjectSymbol {
+  name: string
+  svg: string
 }
 
 /** VIEW-09: an annotation; callouts and cards link to a block or variable by its id, so a rename moves the link. */
@@ -321,6 +331,30 @@ export interface BlockStyle {
   /** COMP-07: where the name is drawn, and its size in px. */
   label?: 'inside' | 'above' | 'below'
   labelSize?: number
+  /** COMP-08: a built-in symbol in place of the type's own. */
+  shape?: Shape
+  /** COMP-08: a project symbol (`symbols`) in place of the type's own; a missing one draws a labelled block. */
+  symbol?: string
+  /** COMP-08: the side each named port sits on, before any turn or mirror. */
+  anchors?: Record<string, PortSide>
+}
+
+const SIDES: readonly PortSide[] = ['left', 'right', 'top', 'bottom']
+
+/** COMP-08: ports moved to their anchored sides, each side's ports spread evenly in their original order. */
+function anchorPorts(n: SchematicNode, anchors: Record<string, PortSide>): SchematicNode['ports'] {
+  const sideOf = (p: SchematicNode['ports'][number]) => anchors[p.port.toLowerCase()] ?? p.side
+  const bySide = new Map<PortSide, number>()
+  for (const p of n.ports) bySide.set(sideOf(p), (bySide.get(sideOf(p)) ?? 0) + 1)
+  const seen = new Map<PortSide, number>()
+  return n.ports.map((p) => {
+    const side = sideOf(p)
+    const k = (seen.get(side) ?? 0) + 1
+    seen.set(side, k)
+    const t = k / (bySide.get(side)! + 1)
+    const [dx, dy] = side === 'left' ? [0, t * n.h] : side === 'right' ? [n.w, t * n.h] : side === 'top' ? [t * n.w, 0] : [t * n.w, n.h]
+    return { ...p, side, dx, dy }
+  })
 }
 
 export const LABEL_SIZES = [11, 12, 13, 14, 16, 18]
@@ -331,10 +365,10 @@ const FLIP: Record<PortSide, PortSide> = { left: 'right', right: 'left', top: 't
 export function transformSymbols(layout: SchematicLayout, styles: BlockStyles): SchematicLayout {
   let changed = false
   const nodes = layout.nodes.map((n) => {
-    const { rotate = 0, mirror = false } = n.kind === 'instance' ? styleFor(styles, n.id, n.type ?? '') : {}
-    if (!rotate && !mirror) return n
+    const { rotate = 0, mirror = false, anchors } = n.kind === 'instance' ? styleFor(styles, n.id, n.type ?? '') : {}
+    if (!rotate && !mirror && !anchors) return n
     changed = true
-    const ports = n.ports.map((p) => {
+    const ports = (anchors ? anchorPorts(n, anchors) : n.ports).map((p) => {
       let [u, v, side] = [n.w ? p.dx / n.w : 0, n.h ? p.dy / n.h : 0, p.side]
       if (mirror) [u, side] = [1 - u, FLIP[side]]
       for (let k = 0; k < rotate / 90; k++) [u, v, side] = [1 - v, u, TURN_CW[side]]
@@ -358,7 +392,15 @@ export const EMPTY_STYLES: BlockStyles = { project: {}, types: {}, instances: {}
 
 /** The style a block draws with, after precedence. */
 export function styleFor(styles: BlockStyles, id: string, type: string): BlockStyle {
-  return { ...styles.project, ...styles.types[type.toLowerCase()], ...styles.instances[id] }
+  const scopes = [styles.project, styles.types[type.toLowerCase()], styles.instances[id]]
+  const out: BlockStyle = Object.assign({}, ...scopes)
+  // COMP-08: a built-in shape and a project symbol are one choice; the most specific scope making it wins.
+  const pick = [...scopes].reverse().find((s) => s?.shape || s?.symbol)
+  delete out.shape
+  delete out.symbol
+  if (pick?.shape) out.shape = pick.shape
+  if (pick?.symbol) out.symbol = pick.symbol
+  return out
 }
 
 export const EMPTY_PRESENTATION: SchematicPresentation = {
@@ -376,6 +418,7 @@ export const EMPTY_PRESENTATION: SchematicPresentation = {
   views: [],
   annotations: [],
   lineColors: {},
+  symbols: {},
   ...EMPTY_SHEETS,
 }
 
@@ -383,6 +426,7 @@ export const EMPTY_PRESENTATION: SchematicPresentation = {
  *  hostile file rather than a drawing. */
 const MAX_COORD = 100_000
 const MAX_ENTRIES = 5_000
+export const MAX_SYMBOLS = 50
 const MAX_AREAS = 500
 const MAX_TEXT = 200
 
@@ -506,6 +550,13 @@ function styleOf(v: unknown): { style: BlockStyle | null; bad: number } {
     else if (key === 'density' && (value === 'names' || value === 'full')) style.density = value
     else if (key === 'label' && ['inside', 'above', 'below'].includes(value as string)) style.label = value as BlockStyle['label']
     else if (key === 'labelSize' && LABEL_SIZES.includes(value as number)) style.labelSize = value as number
+    else if (key === 'shape' && typeof value === 'string' && Object.hasOwn(SHAPE_LABELS, value)) style.shape = value as Shape
+    else if (key === 'symbol' && typeof value === 'string' && /^sym\d{1,4}$/.test(value)) style.symbol = value
+    else if (key === 'anchors' && record(value)) {
+      const anchors = Object.fromEntries(Object.entries(record(value)!).filter(([port, side]) => /^[a-z_]\w{0,63}$/.test(port) && SIDES.includes(side as PortSide)))
+      bad += Object.keys(record(value)!).length - Object.keys(anchors).length
+      if (Object.keys(anchors).length) style.anchors = anchors as Record<string, PortSide>
+    }
     else bad++
   }
   return { style, bad }
@@ -640,7 +691,16 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
   }
   const sheets = sanitizeSheets(raw)
   repaired += sheets.repaired
-  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes, badges, watch, formats, overlay: parsedOverlay.overlay, views, annotations, lineColors, ...sheets.state }, repaired }
+  // COMP-08: a stored symbol is sanitised again, since the file may not be ours.
+  const symbols: Record<string, ProjectSymbol> = {}
+  for (const [id, v] of Object.entries(record(raw.symbols) ?? {})) {
+    const sym = record(v)
+    const clean = sym && sanitizeSvg(sym.svg)
+    if (sym && clean && !('error' in clean) && /^sym\d{1,4}$/.test(id) && typeof sym.name === 'string' && sym.name.trim() && sym.name.length <= 60
+      && Object.keys(symbols).length < MAX_SYMBOLS) symbols[id] = { name: sym.name, svg: clean.svg }
+    else repaired++
+  }
+  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes, badges, watch, formats, overlay: parsedOverlay.overlay, views, annotations, lineColors, symbols, ...sheets.state }, repaired }
 }
 
 /**
