@@ -3,7 +3,7 @@ name: LiquidPipe
 category: Component (liquid)
 summary: A single-phase liquid pipe with frictional pressure drop.
 related: []
-examples: []
+examples: [pipe-pressure-drop-brass, parallel-branches-three-way-valve]
 tags: [liquidpipe, component, liquid, acausal]
 ---
 

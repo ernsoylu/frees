@@ -3,7 +3,7 @@ name: LiquidThreeWayValve
 category: Component (liquid)
 summary: "Diverting three-way valve: routes fraction u of the inlet to outa, the rest to outb, both at the inlet pressure — the TMS loop-splitting staple."
 related: []
-examples: []
+examples: [parallel-branches-three-way-valve]
 tags: [liquidthreewayvalve, component, liquid, acausal]
 references: []
 ---

@@ -3,7 +3,7 @@ name: LiquidOrifice
 category: Component (liquid)
 summary: A liquid orifice metering flow vs. pressure drop.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, valve-loss-coefficients]
 tags: [liquidorifice, component, liquid, acausal]
 ---
 

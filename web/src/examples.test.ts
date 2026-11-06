@@ -77,6 +77,14 @@ it.each<[string, Record<string, string>]>([
   ['ammonia-flash-intercooler', { p_i: 'Pa', w_1: 'kg/s', w_3: 'kg/s', W_low: 'W', W_high: 'W', W_total: 'W' }],
   ['ammonia-two-evaporator-intercooler', { w_1: 'kg/s', w_3: 'kg/s', W_low: 'W', W_high: 'W', W_total: 'W' }],
   ['liquid-suction-heat-exchanger', { T_liquid_F: '-', RE_ip: '-', w_ip: '-', COP: '-' }],
+  ['pump-operating-cost', { W_shaft: 'W', W_elec: 'W', cost: '-' }],
+  ['pipe-pressure-drop-brass', { f: '-', dP_psi: '-' }],
+  ['chilled-water-coil-flow', { m: 'kg/s', gpm: '-' }],
+  ['run-around-coil-loop', { Q: 'W', T_2: 'K' }],
+  ['pump-npsh-available', { NPSH_a: 'm', NPSH_ft: '-' }],
+  ['shower-mixing-ratio', { y: '-' }],
+  ['parallel-branches-three-way-valve', { u: '-', q_A: '-', q_B: '-' }],
+  ['valve-loss-coefficients', { U: 'm/s', H_velocity: 'm', H_valve: 'm', dP_valve: 'Pa', H_exit: 'm' }],
 ])('%s solves with physical units and preserves its checked results', (id, units) => {
   const example = EXAMPLES.find(example => example.id === id)!
   const result = JSON.parse(solve(example.text, '{}'))

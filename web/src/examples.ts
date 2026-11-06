@@ -3464,6 +3464,249 @@ T_liquid_F = (T_liquid - 459.67 [R]) / (1 [R])
 { CHECK w_ip 11.0823068947073 1e-05 }
 { CHECK COP 4.91109809650275 5e-06 }`,
   },
+  {
+    id: 'pump-operating-cost',
+    title: 'Pump power and annual operating cost',
+    description: 'Solve. A LiquidPump lifts 200 gpm against 60 ft of head; motor efficiency and tariff give the yearly cost. NCEES sample question 125.',
+    category: 'HVAC',
+    text: `{ Pump operating cost (NCEES PE Mechanical HVAC and Refrigeration sample
+  question 125). A centrifugal pump delivers 200 gpm of 60 F water against
+  60 ft of head; pump efficiency 0.75, motor efficiency 0.83, electricity
+  at 0.06 dollars per kWh for 8,000 hr/yr. The LiquidPump's shaft power is
+  the flow times the pressure rise over its efficiency. Book: 3.63 kW input,
+  1,742 dollars a year (answer D, 1,750). }
+Q = 200 [gpm]
+T = 60 [F]
+P_in = 1 [atm]
+H = 60 [ft]
+eta_motor = 0.83
+rho = Density(Water, T=T, P=P_in)
+LiquidSource supply(fluid$=Water, mdot=rho*Q, P=P_in, T=T)
+LiquidPump pump(eta=0.75, fluid$=Water)
+LiquidSink discharge()
+connect(supply.out, pump.in)
+connect(pump.out, discharge.in)
+pump.out.P = pump.in.P + rho * g# * H
+W_shaft = pump.W
+W_elec = W_shaft / eta_motor
+cost = W_elec * 8000 [hr] * 0.06 / (1 [kW*hr])
+{ CHECK W_shaft 3014.32735409539 0.003 }
+{ CHECK W_elec 3631.71970372939 0.004 }
+{ CHECK cost 1743.22545779011 0.002 }`,
+  },
+  {
+    id: 'pipe-pressure-drop-brass',
+    title: 'Friction loss in a brass water pipe',
+    description: 'Solve. A LiquidPipe computes its own Colebrook friction factor for 5 ft/s of water in 1-in brass pipe. NCEES sample question 126.',
+    category: 'Fluids',
+    text: `{ Friction pressure drop in a brass pipe (NCEES PE Mechanical HVAC and
+  Refrigeration sample question 126). Water at 60 F flows at 5 ft/s through
+  100 ft of 1-in brass pipe (1.063 in ID). The book gives a Moody friction
+  factor of 0.025 and gets 4.75 psi (answer B, 4.8). LiquidPipe computes f
+  from Colebrook at Re = 4.0e4 for drawn brass (roughness 1.5 um) and gets
+  0.0226, so its drop is 4.29 psi; answer B is still the nearest choice. }
+D = 1.063 [in]
+L = 100 [ft]
+V = 5 [ft/s]
+T = 60 [F]
+P_in = 50 [psia]
+rho = Density(Water, T=T, P=P_in)
+LiquidSource supply(fluid$=Water, mdot=rho*V*pi#*D^2/4, P=P_in, T=T)
+LiquidPipe pipe(fluid$=Water, L=L, D=D, rough=1.5e-6 [m])
+LiquidSink drain()
+connect(supply.out, pipe.in)
+connect(pipe.out, drain.in)
+f = pipe.f
+dP = pipe.in.P - pipe.out.P
+dP_psi = dP / (1 [psi])
+{ CHECK f 0.022579009258861 2e-08 }
+{ CHECK dP_psi 4.28939468988375 4e-06 }`,
+  },
+  {
+    id: 'chilled-water-coil-flow',
+    title: 'Chilled-water flow for a coil load',
+    description: 'Solve. A LiquidColdPlate carries the coil load; the 12 F chilled-water rise fixes the flow. NCEES sample question 513.',
+    category: 'HVAC',
+    text: `{ Chilled-water flow for a cooling-coil load (NCEES PE Mechanical HVAC and
+  Refrigeration sample question 513). The coil carries 220,000 Btu/hr
+  (100,000 sensible, 40,000 latent and 80,000 outdoor air) with a 12 F
+  chilled-water rise. The supply temperature is not given; 44 F is assumed.
+  A LiquidColdPlate takes the load and the rise fixes the flow. Book, from
+  the 500 x gpm x dT rule: 36.67 gpm. The rule rounds the density and
+  specific heat of water; the property library gives 36.55 gpm at 44 F. }
+Q_load = 220000 [Btu/hr]
+T_supply = 44 [F]
+DELTAT = 12 [R]
+P = 50 [psia]
+LiquidSource supply(fluid$=Water, mdot=m, P=P, T=T_supply)
+LiquidColdPlate coil(Q=Q_load)
+LiquidSink ret()
+connect(supply.out, coil.in)
+connect(coil.out, ret.in)
+Temperature(Water, P=P, h=coil.out.h) = T_supply + DELTAT
+GUESS m = 2
+gpm = m / Density(Water, T=T_supply, P=P) / (1 [gpm])
+{ CHECK m 2.30573882104506 2e-06 }
+{ CHECK gpm 36.545344286763 4e-05 }`,
+  },
+  {
+    id: 'run-around-coil-loop',
+    title: 'Run-around heat-recovery loop',
+    description: 'Solve. Two LiquidColdPlates move exhaust-air heat to cold outdoor air on a 15 gpm water loop. NCEES sample question 511.',
+    category: 'HVAC',
+    text: `{ Run-around heat-recovery loop (NCEES PE Mechanical HVAC and Refrigeration
+  sample question 511). A 15 gpm water loop runs between 45 F and 55 F. It
+  picks up heat in the exhaust-air coil and gives it to 4,000 cfm of 35 F
+  outdoor air. Two LiquidColdPlates are the coils; the loop is opened at the
+  55 F point, and the exhaust coil returns it to 55 F. The outdoor-air rise
+  uses the book's sensible factor 1.1 Btu/hr per cfm F. Book:
+  Q = 75,000 Btu/hr, T_2 = 52 F (answer C). }
+P = 30 [psia]
+T_hot = 55 [F]
+T_cold = 45 [F]
+T_1 = 35 [F]
+cfm_oa = 4000 [cfm]
+k_air = 1.1 [Btu/hr] / (1 [cfm] * 1 [R])
+rho = Density(Water, T=T_hot, P=P)
+LiquidSource loop_in(fluid$=Water, mdot=rho*15 [gpm], P=P, T=T_hot)
+LiquidColdPlate oa_coil(Q=Q_oa)
+LiquidColdPlate ea_coil(Q=Q_ea)
+LiquidSink loop_out()
+connect(loop_in.out, oa_coil.in)
+connect(oa_coil.out, ea_coil.in)
+connect(ea_coil.out, loop_out.in)
+Temperature(Water, P=P, h=oa_coil.out.h) = T_cold
+Temperature(Water, P=P, h=ea_coil.out.h) = T_hot
+Q = -Q_oa
+T_2 = T_1 + Q / (k_air * cfm_oa)
+{ CHECK Q 22042.8973441781 0.02 }
+{ CHECK T_2 284.313319159449 0.0003 }`,
+  },
+  {
+    id: 'pump-npsh-available',
+    title: 'NPSH available for a hot-water pump',
+    description: 'Solve. The LiquidPump npsh model reports the suction head above vapor pressure for 200 F water. NCEES sample question 517.',
+    category: 'Fluids',
+    text: `{ NPSH available for a hot-water pump (NCEES PE Mechanical HVAC and
+  Refrigeration sample question 517). 200 F water is drawn from a vented tank
+  whose level is 6 in above the pump centerline; the suction loses 3 ft at
+  the entrance and 1.5 ft per 100 ft over 50 ft of pipe. The LiquidPump's
+  npsh model reports NPSH_a = (P_in - P_vap) v / g. The required NPSH is not
+  given, so NPSHr = 0 switches the derating off; the efficiency and
+  discharge pressure do not enter the answer. Book: 4.09 ft (answer C). The
+  book converts both pressure heads with 2.31 ft/psi, the cold-water figure;
+  at 200 F water is 4 percent lighter, which gives 4.32 ft. }
+T = 200 [F]
+P_atm = 14.7 [psia]
+h_z = 6 [in]
+h_f = 3.0 [ft] + 1.5 [ft] / 2
+rho = Density(Water, T=T, P=P_atm)
+P_suction = P_atm + rho * g# * (h_z - h_f)
+LiquidSource tank(fluid$=Water, mdot=rho*450 [gpm], P=P_suction, T=T)
+LiquidPump pump(fluid$=Water, model$=npsh, eta=0.7, Pvap=P_sat(Water, T=T), NPSHr=0 [m], eps_n=0.1 [m])
+LiquidSink chiller()
+connect(tank.out, pump.in)
+connect(pump.out, chiller.in)
+pump.out.P = P_suction + 30 [psi]
+NPSH_a = pump.NPSH_a
+NPSH_ft = NPSH_a / (1 [ft])
+{ CHECK NPSH_a 1.31815343970395 1e-06 }
+{ CHECK NPSH_ft 4.32465039272951 4e-06 }`,
+  },
+  {
+    id: 'shower-mixing-ratio',
+    title: 'Hot and cold water mixing in a shower',
+    description: 'Solve. A LiquidMixer joins hot and cold supplies; the mixed temperature fixes the flow ratio. Cengel Example 5-9.',
+    category: 'Thermodynamics',
+    text: `{ Mixing of hot and cold waters in a shower (Cengel, Thermodynamics 9th ed.,
+  Example 5-9). Hot water at 140 F mixes with cold water at 50 F at 20 psia
+  to supply 110 F. The LiquidMixer ties the cold inlet to the hot inlet
+  pressure, so the cold source pressure is left for it to set. The outlet
+  temperature fixes the hot-to-cold ratio y. Book: y = 2.0. }
+P = 20 [psia]
+LiquidSource hot(fluid$=Water, mdot=y * 1 [lbm/s], P=P, T=140 [F])
+LiquidSource cold(fluid$=Water, mdot=1 [lbm/s], P=P_cold, T=50 [F])
+LiquidMixer tee()
+LiquidSink head()
+connect(hot.out, tee.in1)
+connect(cold.out, tee.in2)
+connect(tee.out, head.in)
+Temperature(Water, P=P, h=head.h) = 110 [F]
+GUESS y = 1
+{ CHECK y 2.00040043865686 2e-06 }`,
+  },
+  {
+    id: 'parallel-branches-three-way-valve',
+    title: 'Parallel branches behind a three-way valve',
+    description: 'Solve. A LiquidThreeWayValve splits the flow and a LiquidMixer ties the branch pressures, which fixes the split. NCEES sample question 127.',
+    category: 'Fluids',
+    text: `{ Parallel pipe branches with a three-way valve (NCEES PE Mechanical HVAC and
+  Refrigeration sample question 127). 20 gpm of 60 F water splits between
+  branch A (80 ft equivalent) and branch B (149.8 ft equivalent, including
+  elbows and a globe valve) of 1-in Sch. 40 steel pipe. The liquid-domain
+  counterpart of parallel-pipe-branches: the LiquidThreeWayValve's split
+  fraction u is the unknown, and the LiquidMixer ties the branch outlet
+  pressures, which closes it. Each LiquidPipe computes its own Colebrook f;
+  the book assumes one f for both. Book: q_B = 8.4 gpm (answer B). }
+T = 60 [F]
+P_in = 50 [psia]
+D = 1.049 [in]
+rho = Density(Water, T=T, P=P_in)
+LiquidSource supply(fluid$=Water, mdot=rho*20 [gpm], P=P_in, T=T)
+LiquidThreeWayValve split(u=u)
+LiquidPipe branch_A(fluid$=Water, L=80 [ft], D=D, rough=4.6e-5 [m])
+LiquidPipe branch_B(fluid$=Water, L=149.8 [ft], D=D, rough=4.6e-5 [m])
+LiquidMixer join()
+LiquidSink drain()
+connect(supply.out, split.in)
+connect(split.outa, branch_A.in)
+connect(split.outb, branch_B.in)
+connect(branch_A.out, join.in1)
+connect(branch_B.out, join.in2)
+connect(join.out, drain.in)
+GUESS u = 0.5
+q_B = branch_B.in.mdot / rho / (1 [gpm])
+q_A = branch_A.in.mdot / rho / (1 [gpm])
+{ CHECK u 0.583859683361629 6e-07 }
+{ CHECK q_A 11.6771936672326 1e-05 }
+{ CHECK q_B 8.32280633276743 8e-06 }`,
+  },
+  {
+    id: 'valve-loss-coefficients',
+    title: 'Valve and exit loss coefficients',
+    description: 'Solve. A LiquidCheckValve and a LiquidOrifice reproduce K-factor losses in a pumping main. Miller, Internal Flow Systems, Section 3.3.',
+    category: 'Fluids',
+    text: `{ Loss coefficients in a pumping main (Miller, Internal Flow Systems 2nd ed.,
+  Section 3.3, Table 3.1). 2.75 m3/s of water flows through the 0.8 m
+  delivery line, past a reflux valve (K = 0.5) and out into the reservoir
+  (K = 1.0). Each loss K rho U^2/2 is a square-law element with
+  CdA = A/sqrt(K): a LiquidCheckValve for the reflux valve and a
+  LiquidOrifice for the exit. Book: U = 5.47 m/s, velocity head 1.53 m,
+  valve 0.76 m (7.456 kN/m2), exit 1.53 m. }
+Q = 2.75 [m^3/s]
+d = 0.8 [m]
+rho = 1000 [kg/m^3]
+K_valve = 0.5
+K_exit = 1.0
+A = pi# * d^2 / 4
+U = Q / A
+LiquidSource supply(fluid$=Water, mdot=rho*Q, P=3 [bar], T=15 [C])
+LiquidCheckValve reflux(CdA=A/sqrt(K_valve), rho=rho, eps=1 [Pa])
+LiquidOrifice outlet(CdA=A/sqrt(K_exit), rho=rho)
+LiquidSink reservoir()
+connect(supply.out, reflux.in)
+connect(reflux.out, outlet.in)
+connect(outlet.out, reservoir.in)
+dP_valve = reflux.in.P - reflux.out.P
+H_valve = dP_valve / (rho * g#)
+H_exit = (outlet.in.P - outlet.out.P) / (rho * g#)
+H_velocity = U^2 / (2 * g#)
+{ CHECK U 5.4709511687839 5e-06 }
+{ CHECK H_velocity 1.52607193543248 2e-06 }
+{ CHECK H_valve 0.763035967716242 8e-07 }
+{ CHECK dP_valve 7482.82667280448 0.007 }
+{ CHECK H_exit 1.52607193543248 2e-06 }`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

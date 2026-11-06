@@ -3,7 +3,7 @@ name: LiquidMixer
 category: Component (liquid)
 summary: Mixes two single-phase liquid streams.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, shower-mixing-ratio, parallel-branches-three-way-valve]
 tags: [liquidmixer, component, liquid, acausal]
 ---
 

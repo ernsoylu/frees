@@ -3,7 +3,7 @@ name: LiquidSource
 category: Component (liquid)
 summary: A liquid boundary supplying a stream of set state.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, pump-operating-cost, pipe-pressure-drop-brass, chilled-water-coil-flow]
 tags: [liquidsource, component, liquid, acausal]
 ---
 
