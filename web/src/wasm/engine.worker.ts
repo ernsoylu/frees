@@ -48,16 +48,17 @@ import init, {
   sensitivity,
   install_currency_rates,
   install_property_table,
+  fluids_used,
+  fluid_available,
+  mixture_tables_available,
   solve_zerocopy,
   solve_table_zerocopy,
   version,
 } from './pkg/frees.js'
 
 const resourceConfig = globalThis as unknown as {
-  __freesPropertyTableBaseUrl?: string
   __freesComponentLibraryBaseUrl?: string
 }
-const fetchedTables = new Map<string, Promise<void>>()
 const fetchedComponents = new Map<string, Promise<string | null>>()
 
 // Currency units ([USD], [EUR], [TRY], …) are only as good as their rates, so
@@ -104,22 +105,97 @@ function fetchCurrencyRates(): Promise<void> {
   return ratesReady
 }
 
+// Phase E: this module links four fluids (frees-core's ALWAYS_LINKED). The
+// others, and the mixture tables the predefined blends need, are packed by
+// `frees-fluid-pack` into ./fluids/ and installed here on first use. Vite
+// hashes the files; the service worker precaches them for offline use.
+interface FluidManifest {
+  keys: Record<string, string>
+  fluids: Record<string, { file: string; needs: string[] }>
+  mixtures: string
+  blends: Record<string, string[]>
+}
+const fluidManifest = Object.values(
+  import.meta.glob<FluidManifest>('./fluids/manifest.json', { eager: true, import: 'default' }),
+)[0]
+const fluidUrls = Object.fromEntries(
+  Object.entries(import.meta.glob<string>('./fluids/*.rpf', { eager: true, query: '?url', import: 'default' })).map(
+    ([path, url]) => [path.slice('./fluids/'.length), url],
+  ),
+)
+// One install per file per worker; a respawned worker starts empty and
+// installs again on its first request. A failed fetch is forgotten, so the
+// next request retries it.
+const installedFiles = new Map<string, Promise<void>>()
+
+/** Every string in a request argument: the argument itself, or each string inside its JSON. */
+function textsOf(arg: string): string[] {
+  try {
+    const out: string[] = []
+    const walk = (v: unknown) => {
+      if (typeof v === 'string') out.push(v)
+      else if (v && typeof v === 'object') Object.values(v).forEach(walk)
+    }
+    walk(JSON.parse(arg))
+    return out
+  } catch {
+    return [arg]
+  }
+}
+
+/** The packed files a canonical fluid name needs that the engine cannot serve yet. */
+function filesFor(name: string, files: Map<string, string>) {
+  const m = fluidManifest
+  if (!m) return
+  const blend = m.blends[name]
+  const components = blend ?? (/[&[]/.test(name) ? name.split('&').map(c => c.replace(/\[.*$/, '')) : null)
+  if (components) {
+    if (!mixture_tables_available()) files.set(m.mixtures, 'the mixture tables')
+    for (const c of components) filesFor(c, files)
+    return
+  }
+  const fluid = m.keys[name] ?? m.keys[name.toUpperCase()]
+  if (!fluid || files.has(m.fluids[fluid].file) || fluid_available(fluid)) return
+  files.set(m.fluids[fluid].file, fluid)
+  for (const n of m.fluids[fluid].needs) filesFor(n, files)
+}
+
+async function installFluids(args: string[]): Promise<void> {
+  const files = new Map<string, string>()
+  for (const text of args.flatMap(textsOf)) {
+    for (const name of JSON.parse(fluids_used(text)) as string[]) filesFor(name, files)
+  }
+  await Promise.all(
+    [...files].map(([file, what]) => {
+      let pending = installedFiles.get(file)
+      if (!pending) {
+        pending = (async () => {
+          let bytes: ArrayBuffer
+          try {
+            const response = await fetch(fluidUrls[file])
+            if (!response.ok) throw new Error(`HTTP ${response.status}`)
+            bytes = await response.arrayBuffer()
+          } catch (e) {
+            throw new Error(
+              `The property data for ${what} could not be downloaded (${e instanceof Error ? e.message : String(e)}). ` +
+                'It is fetched the first time a model uses it; reconnect and solve again.',
+              { cause: e },
+            )
+          }
+          const result = JSON.parse(install_property_table(new Uint8Array(bytes))) as { error?: string }
+          if (result.error) throw new Error(`The property data for ${what} is damaged: ${result.error}`)
+        })()
+        installedFiles.set(file, pending)
+        pending.catch(() => installedFiles.delete(file))
+      }
+      return pending
+    }),
+  )
+}
+
 async function prepareSource(source: string): Promise<string> {
   let prepared = source
   if (mentionsCurrency(source)) await fetchCurrencyRates()
-  const tableBase = resourceConfig.__freesPropertyTableBaseUrl
-  const fluid = source.match(/\b(?:Water|Steam|R\d{2,4}[A-Za-z]*|Ammonia|Nitrogen|Oxygen|CarbonDioxide|Methane|Propane)\b/i)?.[0]
-  if (tableBase && fluid) {
-    const key = fluid.toLowerCase()
-    if (!fetchedTables.has(key)) {
-      fetchedTables.set(key, fetch(new URL(`${key}.phtab`, tableBase).href).then(async response => {
-        if (!response.ok) throw new Error(`property table fetch failed for ${fluid}: HTTP ${response.status}`)
-        const result = JSON.parse(install_property_table(new Uint8Array(await response.arrayBuffer()))) as { error?: string }
-        if (result.error) throw new Error(result.error)
-      }))
-    }
-    await fetchedTables.get(key)
-  }
 
   const componentBase = resourceConfig.__freesComponentLibraryBaseUrl
   if (componentBase) {
@@ -219,6 +295,9 @@ const handle = async (event: MessageEvent<EngineRequest>) => {
     if (method === 'solve' || method === 'solveTable' || method === 'check') {
       args[0] = await prepareSource(args[0] ?? '')
     }
+    // Every request may name a fluid: a document, an analysis job's model, a
+    // diagram's fluid, a REPL expression.
+    await installFluids(args)
 
     switch (method) {
       case 'solve': {

@@ -24,6 +24,7 @@ const book = await import(join(BUNDLE, 'entry.js'))
 book.setAppUrl(APP_URL)
 const wasm = await import(join(WEB, 'src/wasm/pkg/frees.js'))
 wasm.initSync({ module: readFileSync(join(WEB, 'src/wasm/pkg/frees_bg.wasm')) })
+(await import('./packed-fluids.mjs')).installPackedFluids(wasm)
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 const fileOf = (s) => s.toLowerCase().replace(/[^a-z0-9_.-]+/g, '_')

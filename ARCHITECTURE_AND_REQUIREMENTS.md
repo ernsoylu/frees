@@ -195,6 +195,7 @@ Thermodynamic calculations are powered by `rustprop`, a pure-Rust implementation
    - Properties: dry-bulb temperature, wet-bulb temperature, dew-point temperature, relative humidity, humidity ratio, moist air enthalpy, entropy, specific volume.
 4. **Runtime Property Tables**:
    - No property grids are linked into the engine. `rustprop-backend` is the default on native and WASM targets; `FRPHTAB1` decoding and `install_from_bytes` remain as an optional runtime overlay. `FRAUX1` artifacts remain decoder test inputs, not the shipped property backend.
+   - **Runtime fluids (Phase E, 2026-11-06).** The WASM module links Water, R134a, R1234yf and Air. The other fluids and the mixture tables are rustprop's own data in its packed format (`RPFLUID1`, `RPMIXTB1`, bit-exact), written by `frees-fluid-pack` and installed through `install_from_bytes` into rustprop's runtime registry. The worker scans each request for the fluids it names and installs missing ones, with their transport reference fluids and blend components, before running it; each worker installs for itself. Native builds link every fluid (`linked-fluids`). This is D12's backend with its data delivered later, not a table path.
 
 ---
 
@@ -298,13 +299,13 @@ instructions to restore removed features.
 
 - **D2:** target `wasm32-unknown-unknown` with `wasm-bindgen`/`wasm-pack`, not Emscripten. Keep the native core independently testable and the WASM bridge thin.
 - **D3:** each worker owns an independent, single-threaded engine instance. Message-passing parallelism avoids requiring `SharedArrayBuffer`, COOP, or COEP headers and preserves ordinary static hosting. Reconsider shared memory only after representative measurements show a benefit that warrants those hosting constraints.
-- Fetch optional property/component resources before synchronous model preparation; do not attempt an asynchronous network request inside a Newton residual. The existing opt-in worker seams do not by themselves remove code or data from the default bundle.
+- Fetch optional property/component resources before synchronous model preparation; do not attempt an asynchronous network request inside a Newton residual. The worker does this for packed fluids: it installs what a request names before calling the engine.
 
 ### Property backend and numerical provenance
 
 - **D1/D7 → D8/D9 → D12:** phase-split interpolation and auxiliary grids were replaced by pure-Rust CoolProp algorithms for accuracy and coverage. Neither a C++/Emscripten module nor a Java/Symja service is required. Do not restore `linked-tables`, the byte packer, or duplicate linked artifacts.
 - The default backend is rustprop on every target. Without its feature, the library must compile but property calls must report the missing backend honestly. Single-phase quality is $Q=-1$, not an extrapolated vapour fraction.
-- `install_from_bytes` currently decodes `FRPHTAB1` and layers it over the installed backend. It does not install `FRAUX1` transport grids. Preserve this seam and the `fixtures/proptables` / `fixtures/auxtables` decoder inputs; removing documentation is not permission to remove numerical fixtures.
+- `install_from_bytes` installs packed rustprop fluids and mixture tables (`RPFLUID1`, `RPMIXTB1`) into rustprop's registry, and still decodes `FRPHTAB1` and layers it over the installed backend. It does not install `FRAUX1` transport grids. Preserve this seam and the `fixtures/proptables` / `fixtures/auxtables` decoder inputs; removing documentation is not permission to remove numerical fixtures.
 - Historical table error reached approximately $2.1\times10^{-4}$; an idealized humid-air shortcut did not meet the CoolProp oracle. Preserve the real-fluid/psychrometric reference equations and grade the shipped backend rather than loosening global tolerances to accommodate a shortcut.
 - Historical liquid tables needed normalized depth $\eta=(h_f(P)-h)/(h_f(P)-h_{cold}(P))$: a single absolute-depth bound excluded high-pressure states. Both artifact coordinate modes remain in the decoder for compatibility.
 - The adapter must reject non-finite inputs and outputs and survive invalid Newton trial states. Warm-start acceleration is a performance layer, not authority to change thermodynamic results; the Air warm shortcut was retired when its benefit became negligible.

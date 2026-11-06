@@ -5,7 +5,8 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { initSync, solve_legacy } from '../src/wasm/pkg/frees.js'
+import { initSync, install_property_table, solve_legacy } from '../src/wasm/pkg/frees.js'
+import { installPackedFluids } from './packed-fluids.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '../..')
@@ -130,6 +131,7 @@ async function main() {
   const { shardIndex, shardCount, filterName, verifyPerturbation } = parseArgs()
 
   initSync({ module: readFileSync(WASM_PATH) })
+  installPackedFluids({ install_property_table })
 
   const tolDoc = JSON.parse(readFileSync(resolve(FIXTURES_DIR, 'tolerances-rustprop.json'), 'utf8'))
   const declaredTols = new Map()

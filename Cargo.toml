@@ -4,6 +4,7 @@ members = [
     "crates/frees-core",
     "crates/frees-cli",
     "crates/frees",
+    "crates/frees-fluid-pack",
 ]
 
 [workspace.package]

@@ -6,6 +6,7 @@ vi.mock('./pkg/frees.js', () => ({
   default: async () => ({}),
   solve_zerocopy: () => ({ envelope: '{}', odeBuffers: [new Float64Array([0, 1])] }),
   solve_table_zerocopy: () => ({ envelope: '{}', matrix: new Float64Array([2, 4]) }),
+  fluids_used: () => '[]',
 }))
 
 afterEach(() => {

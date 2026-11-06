@@ -19,83 +19,36 @@ serde = { workspace = true, optional = true }
 # features, so this build links exactly the fluids frees serves — nothing
 # monolithic. rustprop's shipped crates carry zero external dependencies, which
 # is what keeps frees-core clear of wasm-bindgen (the CLAUDE.md hard rule).
-# Pinned to a release tag (v0.2.0) rather than a branch: a git dependency on a moving
+# Pinned to a release tag (v0.3.0) rather than a branch: a git dependency on a moving
 # ref would let the property backend change under a green parity corpus. Once
 # the crates.io names are claimed this becomes a plain version requirement and
 # the `git`/`tag` keys come out. Not a path dependency any more, so GitHub CI
 # can finally build the wasm/web jobs, which needed a sibling checkout before.
-rustprop = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.2.0", features = [
+rustprop = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.3.0", features = [
     "heos",
-    "heos-mixtures",
+    # The mixture engine; its tables (`mixture-data`) come with
+    # `linked-fluids` or are installed at run time (phase E).
+    "heos-mixture-engine",
     "humid-air",
     "incompressible",
 ], optional = true }
-rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.2.0", features = [
+# The fluids every build links: the four the documentation and examples lean
+# on most, and the two humid air needs (water, air). Every other fluid comes
+# with `linked-fluids` or is installed at run time from packed bytes
+# (`props::tables::install_from_bytes`, phase E). `ALWAYS_LINKED` in
+# `props/tables.rs` names these and must match.
+#
+# Per-fluid history, kept from when each was linked: CO2 came in Wave G2
+# (2026-08-23) for `MolarMass(CarbonDioxide)`; ammonia, nitrogen, methane and
+# n_propane on 2026-09-09; the remaining pure fluids the alias table names on
+# 2026-09-10, when the budget went 4096 -> 5120; r125 and r227ea with the
+# low-GWP blends on 2026-10-19. The ci.yml header carries the measured cost
+# of each.
+rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.3.0", features = [
     "water",
     "r134a",
     "r1234yf",
     "air",
-    # Wave G2 (2026-08-23): CO2, for `MolarMass(CarbonDioxide)` — the last
-    # property-linkage hold in the pending set (docs_fluids_materials_03).
-    # Measured cost on the wire: +25.5 KiB raw / +19.5 KiB gzipped (ci.yml
-    # header's dated entry has the full numbers).
-    #
-    # G2 added the data but deliberately NOT the picker entry, on the rule that
-    # linking a fluid's data and listing it in `served_fluids` are separate
-    # decisions. Wave C1 (2026-08-24) took the second one, by owner request and
-    # after verifying full states rather than assuming them: CO2 is on
-    # `served_fluids` now, at a measured +142 bytes raw / +39 gzipped — which is
-    # what "the data was already linked" looks like. See the Wave C1 amendment
-    # to ARCHITECTURE_AND_REQUIREMENTS.md#11-retained-architectural-decisions.
-    "carbondioxide",
-    # 2026-09-09: the four fluids Phase 3.3 was holding back for a budget that
-    # never came under pressure. CO2 cost +25.5 KiB raw, and the module sits
-    # 822 KiB under the 4,096 KiB ceiling, so linking these outright is cheaper
-    # in every sense than the lazy-chunk machinery that was meant to protect
-    # the budget from them. Measured cost of all four together is in the
-    # ci.yml header's dated entry.
-    #
-    # The alias table in `props/propfun.rs` already resolves every one of them,
-    # R717 and R290 included; only the data was missing. Picker entries
-    # (`served_fluids`) were the separate decision the G2/C1 rule asks for, and
-    # were taken the same day by owner request once the diagram coverage had
-    # been measured: +72 bytes raw, against CO2's +142 in Wave C1.
-    "ammonia",
-    "nitrogen",
-    "methane",
-    "n_propane",
-    # 2026-09-10, after the budget went 4096 -> 5120: every remaining pure
-    # fluid `props/propfun.rs`'s alias table already names. That table promised
-    # 37 canonical fluids and only nine had data, so `Enthalpy(Oxygen, ...)` —
-    # a spelling the parser accepts and resolves — failed at runtime. Linking
-    # these closes the gap between what the language accepts and what the
-    # engine can answer.
-    #
-    # Refrigerants the table names:
-    "r12",
-    "r22",
-    "r32",
-    "r123",
-    "r245fa",
-    "r404a",
-    "r407c",
-    "r410a",
-    "r1234ze_e_",
-    # Permanent gases and light hydrocarbons the table names:
-    "argon",
-    "carbonmonoxide",
-    "ethane",
-    "helium",
-    "hydrogen",
-    "isobutane",
-    "n_butane",
-    "oxygen",
-    # The low-GWP blends (2026-10-19). rustprop's `heos-mixtures` engine
-    # routes CoolProp's predefined `<name>.mix` blends; each blend needs its
-    # components linked. R32, R1234yf, R134a, R1234ze(E) and CO2 (R744) are
-    # above already; these two complete R448A–R455A, R513A and R515B.
-    "r125",
-    "r227ea",
 ], optional = true }
 # rustprop-core carries the shared parameter types. The warm adapter
 # (`props/rustprop_warm.rs`) drives rustprop's LOW-LEVEL `PtFlash` API, and
@@ -103,14 +56,14 @@ rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.2.0", 
 # does not re-export — using the low-level API means naming its types. Already
 # linked transitively by `rustprop`, so this adds nothing to the bundle, and it
 # has zero external dependencies like every other shipped rustprop crate.
-rustprop-core = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.2.0", optional = true }
+rustprop-core = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.3.0", optional = true }
 
 [features]
 # rustprop is the property backend everywhere — decision D12, which retires the
 # `linked-tables` artifacts D1/D7 introduced. It is on by default so that
 # `cargo build -p frees-core` has a backend at all; `frees` names it explicitly
 # because that crate also sets `default-features = false`.
-default = ["rustprop-backend"]
+default = ["rustprop-backend", "linked-fluids"]
 serde = ["dep:serde"]
 
 # Install rustprop as the process's RealFluid backend. With it OFF the engine
@@ -118,6 +71,40 @@ serde = ["dep:serde"]
 # diagnostic — that configuration exists only so the library is proven to
 # compile without the optional dependency.
 rustprop-backend = ["dep:rustprop", "dep:rustprop-data", "dep:rustprop-core"]
+
+# Link every other fluid the alias table names, and the mixture tables. On by
+# default, so native builds, the CLI and the test suites serve them all. The
+# browser module (`crates/frees`) leaves it off and installs them on first use
+# from the packed files `frees-fluid-pack` writes, which reads this list
+# (phase E: lazy fluid chunks).
+linked-fluids = [
+    "rustprop-backend",
+    "rustprop/mixture-data",
+    "rustprop-data/carbondioxide",
+    "rustprop-data/ammonia",
+    "rustprop-data/nitrogen",
+    "rustprop-data/methane",
+    "rustprop-data/n_propane",
+    "rustprop-data/r12",
+    "rustprop-data/r22",
+    "rustprop-data/r32",
+    "rustprop-data/r123",
+    "rustprop-data/r245fa",
+    "rustprop-data/r404a",
+    "rustprop-data/r407c",
+    "rustprop-data/r410a",
+    "rustprop-data/r1234ze_e_",
+    "rustprop-data/argon",
+    "rustprop-data/carbonmonoxide",
+    "rustprop-data/ethane",
+    "rustprop-data/helium",
+    "rustprop-data/hydrogen",
+    "rustprop-data/isobutane",
+    "rustprop-data/n_butane",
+    "rustprop-data/oxygen",
+    "rustprop-data/r125",
+    "rustprop-data/r227ea",
+]
 
 [dev-dependencies]
 serde_json = { workspace = true }

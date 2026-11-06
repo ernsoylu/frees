@@ -32,7 +32,7 @@
 
 use std::sync::Arc;
 
-use crate::diag::Result;
+use crate::diag::{FreesError, Result};
 use crate::props::propfun::{self, TableBackend};
 use crate::props::satsplit::SaturationSplitTable;
 
@@ -49,6 +49,21 @@ use crate::props::satsplit::SaturationSplitTable;
 /// newest first), and the `FRAUX1` transport grids have no runtime install
 /// path at all (`FRPHTAB1` is the only format this reads).
 pub fn install_from_bytes(bytes: &[u8]) -> Result<Vec<String>> {
+    #[cfg(feature = "rustprop-backend")]
+    match bytes.get(..8) {
+        Some(b"RPFLUID1") => {
+            let name = rustprop::props_api::install_fluid(bytes)
+                .map_err(|e| FreesError::property(e.to_string()))?;
+            return Ok(vec![name.to_string()]);
+        }
+        Some(b"RPMIXTB1") => {
+            rustprop::props_api::install_mixture_tables(bytes)
+                .map_err(|e| FreesError::property(e.to_string()))?;
+            MIXTURE_TABLES_INSTALLED.store(true, std::sync::atomic::Ordering::Relaxed);
+            return Ok(Vec::new());
+        }
+        _ => {}
+    }
     let incoming = SaturationSplitTable::decode_generated(bytes)?;
     let backend = TableBackend::new(vec![incoming]);
     let fallback = propfun::backend();
@@ -60,6 +75,37 @@ pub fn install_from_bytes(bytes: &[u8]) -> Result<Vec<String>> {
         None => propfun::install(Arc::new(backend)),
     };
     Ok(fluids)
+}
+
+/// The fluids every build links (`frees-core/Cargo.toml`'s `rustprop-data`
+/// features). The rest come with the `linked-fluids` feature or, in the
+/// browser, from the packed files `frees-fluid-pack` writes.
+pub const ALWAYS_LINKED: [&str; 4] = ["Water", "R134a", "R1234yf", "Air"];
+
+#[cfg(feature = "rustprop-backend")]
+static MIXTURE_TABLES_INSTALLED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Whether rustprop can serve `key` (a fluid name, CAS or alias) now: linked,
+/// or installed by [`install_from_bytes`].
+pub fn fluid_available(key: &str) -> bool {
+    #[cfg(feature = "rustprop-backend")]
+    return rustprop::props_api::resolve_fluid(key).is_ok();
+    #[cfg(not(feature = "rustprop-backend"))]
+    {
+        let _ = key;
+        false
+    }
+}
+
+/// Whether the mixture tables are there: linked (`linked-fluids`) or
+/// installed by [`install_from_bytes`].
+pub fn mixture_tables_available() -> bool {
+    #[cfg(feature = "rustprop-backend")]
+    return cfg!(feature = "linked-fluids")
+        || MIXTURE_TABLES_INSTALLED.load(std::sync::atomic::Ordering::Relaxed);
+    #[cfg(not(feature = "rustprop-backend"))]
+    false
 }
 
 /// Installs this build's property backend the first time it is called, and does

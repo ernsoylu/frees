@@ -10,7 +10,8 @@
 #      tarball — `cargo install` fallback only if no prebuilt exists for the host
 #   3. wasm-pack build crates/frees --release --target web
 #         --out-dir ../../web/src/wasm/pkg     (the generated engine package)
-#   4. cd web && npm run build                 (npm ci was the installCommand;
+#   4. cargo run -p frees-fluid-pack -- web/src/wasm/fluids
+#   5. cd web && npm run build                 (npm ci was the installCommand;
 #                                               re-run here only if it is missing)
 #
 # The script is idempotent — every step checks before it acts, so re-running it
@@ -118,6 +119,14 @@ wasm-pack build crates/frees --release --target web --out-dir ../../web/src/wasm
   || die "wasm-pack build failed"
 [ -f web/src/wasm/pkg/frees_bg.wasm ] && [ -f web/src/wasm/pkg/frees.js ] \
   || die "wasm-pack reported success but web/src/wasm/pkg is incomplete"
+
+# The module links four fluids; the worker installs the rest on first use from
+# web/src/wasm/fluids (generated, like pkg/). The Vite build refuses to run
+# without them.
+log "Packing the fluids the engine installs on first use (-> web/src/wasm/fluids)"
+cargo run -q --release -p frees-fluid-pack -- web/src/wasm/fluids \
+  || die "frees-fluid-pack failed"
+[ -f web/src/wasm/fluids/manifest.json ] || die "frees-fluid-pack reported success but web/src/wasm/fluids/manifest.json is missing"
 
 # ---------------------------------------------------------------------------
 # 4. The web app. npm ci normally ran as the vercel.json installCommand;

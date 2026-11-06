@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
@@ -78,7 +79,9 @@ function pwaPlugin() {
       // woff2 only: KaTeX's woff/ttf fallbacks are stripped from the bundle
       // (stripLegacyKatexFontsPlugin) and no other dependency ships pre-woff2
       // fonts worth caching.
-      globPatterns: ['**/*.{js,css,html,wasm,svg,png,woff2,json}'],
+      // rpf: the packed fluids the engine installs on first use (phase E),
+      // precached after the first visit so every fluid works offline too.
+      globPatterns: ['**/*.{js,css,html,wasm,svg,png,woff2,json,rpf}'],
       // The wasm engine and Plotly are above workbox's 2 MiB default; the
       // point of the PWA is that they work offline too. The cap tracks the
       // wasm size gate in ci.yml (5,120 KiB): the wasm module is the largest
@@ -98,9 +101,25 @@ function pwaPlugin() {
   })
 }
 
+// Phase E: the module links four fluids and the worker installs the rest from
+// src/wasm/fluids/. A build without them would ship an app that calls every
+// other fluid unknown, so refuse to build.
+function requirePackedFluidsPlugin() {
+  return {
+    name: 'require-packed-fluids',
+    apply: 'build' as const,
+    buildStart() {
+      if (!existsSync(new URL('./src/wasm/fluids/manifest.json', import.meta.url))) {
+        throw new Error('src/wasm/fluids is missing: run `cargo run -p frees-fluid-pack -- web/src/wasm/fluids` from the repository root after wasm-pack')
+      }
+    },
+  }
+}
+
 export default defineConfig({
   plugins: [
     react(),
+    requirePackedFluidsPlugin(),
     buildInfoPlugin(),
     stripLegacyKatexFontsPlugin(),
     pwaPlugin(),

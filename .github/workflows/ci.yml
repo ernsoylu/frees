@@ -181,6 +181,16 @@ env:
   #   needs, and every pool worker install them, before a solve.
   # "Overdue" in the 2026-09-10 entry records the raise that skipped this
   # pay-down; it is not budget pressure. The trigger below stays the gate.
+  #
+  # 2026-11-06, Phase E: debt (2) PAID on the owner's approval, ahead of the
+  # trigger, after E.1 measured -2.5 s to first solve on Slow 4G (none on
+  # broadband). rustprop v0.3.0 adds a runtime fluid registry and a packed
+  # format; the module links four fluids (Water, R134a, R1234yf, Air) and the
+  # worker installs the other 24 and `mixture-data` from web/src/wasm/fluids/
+  # (frees-fluid-pack) the first time a model names them. 3900.8 KiB raw /
+  # 1556.5 KiB gzip -9 (3,994,390 / 1,593,877 bytes), from 4479.6 / 1996.9:
+  # -578.9 KiB raw. 76.2% of the ceiling, 1219.2 KiB of headroom. The packed
+  # files are 616.1 KiB raw and precached by the PWA.
   WASM_BUDGET_KB: 5120
   WASM_LAZY_CHUNK_TRIGGER_KB: 200
 
@@ -409,6 +419,12 @@ jobs:
         # from it, so it must exist before the Vite build.
         run: wasm-pack build crates/frees --release --target web --out-dir ../../web/src/wasm/pkg
 
+      - name: Pack the fluids the engine installs on first use
+        # Phase E: the module links four fluids; frees-fluid-pack writes the
+        # others and the mixture tables into web/src/wasm/fluids (gitignored,
+        # like pkg/), which the worker, the doc checks and the Book read.
+        run: cargo run -q -p frees-fluid-pack -- web/src/wasm/fluids
+
       - name: Install frontend dependencies
         working-directory: web
         run: npm ci --ignore-scripts
@@ -492,7 +508,13 @@ jobs:
             echo "::error::dist/sw.js does not precache the wasm engine"
             exit 1
           fi
-          echo "sw.js precaches $(grep -o 'revision' dist/sw.js | wc -l) manifest (present), wasm referenced"
+          # Phase E: the fluids the module installs on first use must be
+          # precached too, or they work online only.
+          if ! grep -q '\.rpf' dist/sw.js; then
+            echo "::error::dist/sw.js does not precache the packed fluids (.rpf)"
+            exit 1
+          fi
+          echo "sw.js precaches $(grep -o 'revision' dist/sw.js | wc -l) manifest (present), wasm and $(grep -o '\.rpf' dist/sw.js | wc -l) packed fluids referenced"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
