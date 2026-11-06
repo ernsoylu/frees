@@ -863,6 +863,8 @@ test('RUN-10: arranging, selecting and viewing never check, solve or stale a res
   }
   const setting = async (label: string) => {
     await page.getByRole('button', { name: 'View settings' }).click()
+    // count() does not wait: let the popover open before choosing switch or text.
+    await expect(page.getByText('Alignment guides')).toBeVisible()
     const toggle = page.getByRole('switch', { name: label, exact: true })
     await ((await toggle.count()) ? toggle.click({ force: true }) : page.getByText(label, { exact: true }).click())
     await page.keyboard.press('Escape')
