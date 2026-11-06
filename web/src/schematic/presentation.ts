@@ -339,7 +339,14 @@ export interface BlockStyle {
   anchors?: Record<string, PortSide>
 }
 
-const SIDES: readonly PortSide[] = ['left', 'right', 'top', 'bottom']
+const SIDES: ReadonlySet<string> = new Set<PortSide>(['left', 'right', 'top', 'bottom'])
+/** Where a port at fraction `t` along `side` of a w × h block sits. */
+const PORT_AT: Record<PortSide, (t: number, w: number, h: number) => [number, number]> = {
+  left: (t, _w, h) => [0, t * h],
+  right: (t, w, h) => [w, t * h],
+  top: (t, w) => [t * w, 0],
+  bottom: (t, w, h) => [t * w, h],
+}
 
 /** COMP-08: ports moved to their anchored sides, each side's ports spread evenly in their original order. */
 function anchorPorts(n: SchematicNode, anchors: Record<string, PortSide>): SchematicNode['ports'] {
@@ -352,7 +359,7 @@ function anchorPorts(n: SchematicNode, anchors: Record<string, PortSide>): Schem
     const k = (seen.get(side) ?? 0) + 1
     seen.set(side, k)
     const t = k / (bySide.get(side)! + 1)
-    const [dx, dy] = side === 'left' ? [0, t * n.h] : side === 'right' ? [n.w, t * n.h] : side === 'top' ? [t * n.w, 0] : [t * n.w, n.h]
+    const [dx, dy] = PORT_AT[side](t, n.w, n.h)
     return { ...p, side, dx, dy }
   })
 }
@@ -553,7 +560,7 @@ function styleOf(v: unknown): { style: BlockStyle | null; bad: number } {
     else if (key === 'shape' && typeof value === 'string' && Object.hasOwn(SHAPE_LABELS, value)) style.shape = value as Shape
     else if (key === 'symbol' && typeof value === 'string' && /^sym\d{1,4}$/.test(value)) style.symbol = value
     else if (key === 'anchors' && record(value)) {
-      const anchors = Object.fromEntries(Object.entries(record(value)!).filter(([port, side]) => /^[a-z_]\w{0,63}$/.test(port) && SIDES.includes(side as PortSide)))
+      const anchors = Object.fromEntries(Object.entries(record(value)!).filter(([port, side]) => /^[a-z_]\w{0,63}$/.test(port) && SIDES.has(side as string)))
       bad += Object.keys(record(value)!).length - Object.keys(anchors).length
       if (Object.keys(anchors).length) style.anchors = anchors as Record<string, PortSide>
     }

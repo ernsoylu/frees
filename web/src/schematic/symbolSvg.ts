@@ -51,11 +51,7 @@ export function sanitizeSvg(markup: unknown): CleanSymbol | { error: string } {
   if (doc.getElementsByTagName('parsererror').length > 0 || root.namespaceURI !== SVG_NS || root.localName !== 'svg') {
     return { error: 'This is not a well-formed SVG document.' }
   }
-  const box = numbers(root.getAttribute('viewBox'))
-  const size = [root.getAttribute('width'), root.getAttribute('height')].map((v) => Number((v ?? '').replace(/px$/, '')))
-  const viewBox: CleanSymbol['viewBox'] | null =
-    box.length === 4 && box.every(Number.isFinite) && box[2] > 0 && box[3] > 0 ? [box[0], box[1], box[2], box[3]]
-    : size.every((n) => Number.isFinite(n) && n > 0) ? [0, 0, size[0], size[1]] : null
+  const viewBox = viewBoxOf(root)
   if (!viewBox) return { error: 'The SVG needs a viewBox, or a width and height.' }
 
   const dropped = new Set<string>()
@@ -75,13 +71,7 @@ export function sanitizeSvg(markup: unknown): CleanSymbol | { error: string } {
         continue
       }
       if (++count > MAX_ELEMENTS) throw new Error('size')
-      const attrs: Record<string, string> = {}
-      for (const a of c.attributes) {
-        const name = a.name.toLowerCase()
-        if (!a.namespaceURI && ATTRS.has(name) && a.value.length <= 20_000 && SAFE_VALUE.test(a.value) && !/url\s*\(/i.test(a.value)) attrs[name] = a.value
-        else dropped.add(a.name)
-      }
-      out.push({ tag: c.localName, attrs, children: walk(c, depth + 1) })
+      out.push({ tag: c.localName, attrs: safeAttrs(c, dropped), children: walk(c, depth + 1) })
     }
     return out
   }
@@ -93,14 +83,33 @@ export function sanitizeSvg(markup: unknown): CleanSymbol | { error: string } {
   }
   for (const a of root.attributes) if (!['viewBox', 'width', 'height', 'xmlns', 'version'].includes(a.name)) dropped.add(a.name)
   if (count === 0) return { error: 'Nothing drawable is left once unsafe content is removed.' }
-  return { svg: serialize(viewBox, children), viewBox, children, dropped: [...dropped].sort() }
+  return { svg: serialize(viewBox, children), viewBox, children, dropped: [...dropped].sort((a, b) => a.localeCompare(b)) }
+}
+
+/** The root's viewBox, else its width and height from the origin; null when neither is usable. */
+function viewBoxOf(root: Element): CleanSymbol['viewBox'] | null {
+  const box = numbers(root.getAttribute('viewBox'))
+  if (box.length === 4 && box.every(Number.isFinite) && box[2] > 0 && box[3] > 0) return [box[0], box[1], box[2], box[3]]
+  const [w, h] = [root.getAttribute('width'), root.getAttribute('height')].map((v) => Number((v ?? '').replace(/px$/, '')))
+  return [w, h].every((n) => Number.isFinite(n) && n > 0) ? [0, 0, w, h] : null
+}
+
+/** The allowlisted attributes of `el`; every other one is added to `dropped`. */
+function safeAttrs(el: Element, dropped: Set<string>): Record<string, string> {
+  const attrs: Record<string, string> = {}
+  for (const a of el.attributes) {
+    const name = a.name.toLowerCase()
+    if (!a.namespaceURI && ATTRS.has(name) && a.value.length <= 20_000 && SAFE_VALUE.test(a.value) && !/url\s*\(/i.test(a.value)) attrs[name] = a.value
+    else dropped.add(a.name)
+  }
+  return attrs
 }
 
 const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 function serialize(viewBox: CleanSymbol['viewBox'], children: SvgChild[]): string {
+  const attrs = (a: Record<string, string>) => Object.entries(a).map(([k, v]) => ` ${k}="${escape(v)}"`).join('')
   const body = (nodes: SvgChild[]): string =>
-    nodes.map((n) => (typeof n === 'string' ? escape(n)
-      : `<${n.tag}${Object.entries(n.attrs).map(([k, v]) => ` ${k}="${escape(v)}"`).join('')}>${body(n.children)}</${n.tag}>`)).join('')
+    nodes.map((n) => (typeof n === 'string' ? escape(n) : `<${n.tag}${attrs(n.attrs)}>${body(n.children)}</${n.tag}>`)).join('')
   return `<svg xmlns="${SVG_NS}" viewBox="${viewBox.join(' ')}">${body(children)}</svg>`
 }
