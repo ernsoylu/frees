@@ -5,7 +5,7 @@ import { ParamRow, TableSpec } from './tables'
 import { editablePlotCopy, PlotKind, PlotSpec } from './plots/types'
 import { detectStates } from './plots/stateTable'
 import { resolvePlotSource } from './plots/sources'
-import PlotCard from './plots/PlotCard'
+import PlotCard, { type Playhead } from './plots/PlotCard'
 import PlotConfigModal from './plots/PlotConfigModal'
 
 interface Props {
@@ -33,6 +33,8 @@ interface Props {
    *  (used when each plot is its own dock window). */
   singlePlotId?: string
   onSelectRow?: (tableId: string | undefined, rowId: string) => void
+  /** RUN-05: the playback sample, drawn on plots of its table. */
+  playhead?: Playhead | null
 }
 
 /**
@@ -58,6 +60,7 @@ export default function PlotTab({
   exportTrigger = null,
   singlePlotId,
   onSelectRow,
+  playhead,
 }: Readonly<Props>) {
   const visible = plots.filter((p) => kinds.includes(p.kind))
   const [fluids, setFluids] = useState<string[]>([])
@@ -197,6 +200,7 @@ export default function PlotTab({
           hideHeader={hideHeader}
           exportTrigger={exportTrigger}
           onSelectRow={onSelectRow}
+          playhead={playhead}
           leftSection={
             singlePlotId ? undefined : (
               <Tabs
