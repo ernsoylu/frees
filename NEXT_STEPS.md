@@ -76,6 +76,8 @@ history keeps the detailed narrative of every closed item.
 Owner-approved order: A → B → C → D → E. Each phase lands as its own PR(s); its
 entry here is checked off with evidence when it closes.
 
+**Closed 2026-11-06:** all five phases landed; E merged as #83.
+
 - **A. D.4 precision gaps — done 2026-11-05 (`d4-precision`).**
   1. **Done.** The Numerical Recipes fits are gone. `besselj0/j1`, `bessely0/y1` and `bessely(x, n)` call `libm`'s `j0/j1/y0/y1/yn`; Cody's fractional-order J was already full precision and stays.
   2. **Done, differently from planned.** No Cephes port was needed:
@@ -294,6 +296,213 @@ entry here is checked off with evidence when it closes.
      - **Pipelines.** CI's web job, `deploy.yml`, `release.yml` (its tarball now carries `fluids/`) and `tools/vercel-build.sh` run `frees-fluid-pack` after `wasm-pack`. The Vite production build refuses to run without `src/wasm/fluids/manifest.json`, so no pipeline can ship an app that calls 24 fluids unknown.
      - **Gates.** fmt, clippy native and wasm32 `-D warnings`, `cargo check -p frees-core --no-default-features`, `cargo test --workspace -- --skip golden_corpus_parity`, the four WASM parity shards, vitest 896/896 in 78 files, `check-examples` 809/809 (2,898 assertions), `tsc -b` clean, lint 0 errors (90 warnings, unchanged), every Chromium e2e spec 66/66 (one skipped).
      - **Yardstick:** E.1's build B (3,783,997 raw) is the floor this lands near; the shipped module is 210 KB above it. B also left out the mixture engine's code, which the shipped module keeps so a blend solves once its tables are installed.
+
+### Programme of 2026-11-06: interactive simulation and teaching (CircuitJS study) — proposed, not approved
+
+**Source.** On 2026-11-06, four independent studies of CircuitJS ([sharpie7/circuitjs1](https://github.com/sharpie7/circuitjs1) at `dd47cf4`) compared it with frees: three are in `CIRCUITJS1FREESANALYSIS.md` and one is this session's.
+- `CIRCUITJS1FREESANALYSIS.md` is research input. It is kept out of Git, like other audit evidence (see CLAUDE.md).
+- The studies agree on the main finding. frees is the stronger modelling platform. What it lacks is CircuitJS's **immediate experimental loop**: change an input, watch the physical response move, read a nearby scope, pause and explain.
+- Counted across the studies, CircuitJS has 118 user-facing element types, about 46–58 visual, interaction and teaching behaviours, and 21–30 adoption candidates. This plan merges the candidates.
+
+**Licence rule (binding on every phase).** CircuitJS is GPL-2.0-or-later (`COPYING.txt`, `README.md`, file headers).
+- No CircuitJS code, translated code, constants taken from its source, icons, help text or example circuits enter frees.
+- Each item below is a behaviour reimplemented from physics and frees' own architecture. Lessons, equations and test data cite their own sources.
+- One study proposed copying CircuitJS's speed-slider formula. That is rejected; frees chooses its own log mapping.
+
+**Reconciled facts** (checked against the repository on 2026-11-06, where the studies disagreed):
+- **Library size and electrical coverage.**
+  - The library has **312** components (`library-data/*.frees`).
+  - The electrical domain has 31, all energy-system oriented: batteries, PV, fuel cell, DC-DC, PMSM, `DCMotor`, `Diode`, `Capacitor`, `Inductor` and others.
+  - There is **no** switch, relay, transformer, op-amp, BJT/MOSFET, Zener, potentiometer, thermistor, lamp, or AC or controlled source. One study said frees has several of these, and another said it lacks a DC motor; both were wrong.
+- **`ThermalFuse`** is a smooth current-threshold resistance (`Iblow`, `kR`, `epsI`, a tanh law). It has no thermal state and no irreversible trip, so neither a thermal fuse nor an I²t fuse is modelled yet.
+- **`SigRelay` and `SigSwitch`** are smooth tanh blends, not hysteresis. Hysteresis needs a discrete-state contract (deferred, below).
+- **Steady sliders.** They already re-solve, debounced at 220 ms during a drag and 30 ms at commit (`App.tsx` `scheduleSliderSolve`). The bridge's `solve` keeps no `PreparedDocument` between requests: `crates/frees/src/lib.rs` has none, and reuse happens only inside one sweep or analysis job.
+- **Stepping seams.**
+  - `dae/solver.rs` `IdaDaeSolver` already has `init`, `reinit` and `step(tout)`, and events already use `reinit` + consistent initial conditions.
+  - The explicit driver (`ode/integrator.rs` `integrate`, `DynamicSolver::solve_with`) runs t0→tf in one call.
+  - The ODE-only path of `solve_with_pins_and_warm` runs the full dynamic solve. **Live must not be built by re-solving with growing end times**: that restarts trajectories, repeats work, drops multistep history and mishandles events.
+- **Already have** (not new work): metric wire colours with a legend, flow arrows (RUN-04), badges, watch and readouts, plots and property diagrams with STATE TABLE cycles, recorded playback (RUN-05), scenarios and baseline (RUN-07), `#share=` links (capped at `MAX_SHARE_URL_CHARS = 16000`), undo, clipboard, sheets, symbols, encapsulation, the Help, and the Book with its 42-model graded gallery. The Book has no search.
+- **Rejected proposals.**
+  - CircuitJS's step-halving convergence policy: frees keeps its error control.
+  - `SharedArrayBuffer`: D3 rules it out.
+  - Hot-reloading structural edits mid-run.
+  - Joining nets by label: WIRE-11 forbids it.
+  - Using display buffers as scientific data.
+  - Electronics completeness for its own sake (logic chips, RAM, tubes, RF).
+
+**Order.** F → G → H → I → J → K → L → M. H, I and J need no live engine and can run in parallel once F closes. K is the architectural investment; L and M build on it. Each phase lands as its own PR(s), and its entry here is checked off with evidence when it closes.
+
+- **F. Decisions and baseline (gate for G–M).**
+  1. The owner decides the open questions:
+     - **Live vs playback.** Is a separate, clearly labelled **Live** mode acceptable beside RUN-05's "playback never solves" rule?
+     - **First live eligibility.** Proposed: one DYNAMIC system on the IDA path, root events supported, no non-causal end-of-run accessors.
+     - **Runtime inputs.** Which declared inputs may change without re-preparation, and how are discontinuities and DAE consistency handled?
+     - **Recording.** The recording duration and memory cap, and whether live recordings or checkpoints are saved in projects.
+     - **Interpolation.** How live display interpolation, recorded samples and exact event records coexist with RUN-05's no-interpolation policy.
+     - **Losses.** A library convention for per-component loss outputs (Q̇ loss, Ṡ_gen, exergy destruction), which the loss view (M) needs.
+     - **Electrical scope.** Which electrical teaching primitives are in scope (J).
+  2. **Measurement.**
+     - Measure, on small, EV-size and 500-component models, the share of a slider re-solve spent in preparation (parse, expansion, blocking, differentiation) versus Newton. Record median and p95, cold and warm.
+     - Time one IDA step and one explicit step for a 50-state model. ARCHITECTURE §10's 1,000 steps for 50 states in < 500 ms is a target, not a measurement.
+     - These numbers gate G and size K's chunk budget.
+  - **Acceptance.** Decisions recorded here with dates; a measurement table with build, revision and device.
+- **G. Faster steady what-if: prepared reuse across requests (stage 0).**
+  1. The worker keeps a `PreparedDocument` per worker, keyed by a source hash plus the structural overrides. A slider move becomes a pin mutation plus `solve_with_pins_and_warm` from the previous solution.
+  2. Any change that alters lowering re-prepares and says nothing different: complex `_r`/`_i`, arrays, components, fluids, variants, or the set of pin names. `with_source_pins` already routes these.
+  3. The revision tracker and stale-job rejection are unchanged. Memory is bounded: one prepared document per worker, released on retire.
+  - **Acceptance.**
+    - Bitwise-equal values, units and diagnostics against a fresh solve over the parity corpus and every gallery model with sliders.
+    - A test counting preparations.
+    - A measured latency drop against F's baseline.
+    - No growth in the WASM budget beyond what the ledger records.
+- **H. Motion and state on recorded runs (no live engine needed).**
+  1. **Explicit port-flow metadata.** The engine reports each port's role and measured-flow sign per domain (fluid, liquid, two-phase, moist air, heat, electrical, mechanical, translational). This replaces `flowAlong`'s in/out naming. Where a direction is not known, it stays unknown; it is never inferred from drawing order or a pressure gradient.
+  2. **Flow particles.**
+    - Particles move along the routed wire paths. Speed follows the log of the flow magnitude, normalised per domain; direction comes from (1).
+    - They carry mass flow on fluid lines, Q̇ on heat lines (labelled as energy, not matter), current on electrical lines, and power (τ·ω) on shafts. Signal lines get none.
+    - They freeze on pause. Reduced motion shows colour and arrows only. A global animation-speed control is labelled as schematic speed, not a physical velocity.
+  3. **Domain colour scales.**
+    - Diverging scales about a declared reference: ambient T, atmospheric or reservoir P, zero for signed flows and powers.
+    - A quality-aware two-phase scale: subcooled, two-phase by x, superheated. rustprop's Q = −1 is single phase, never x < 0.
+    - Humid-air scales by dry-bulb, ω or h, one at a time.
+    - Fixed lesson ranges with a visible clipping mark. Contrast and dash rules from CFG-02 still apply.
+  4. **Playback drives everything.** Particles, colours, badges and symbol states follow the RUN-05 sample.
+  5. **Property-diagram cursor and bounded trail on P-h, T-s and psychrometric charts.**
+    - Each cursor point takes its coordinates from one sample. The background is cached by fluid, composition and range.
+    - Out-of-range states are gaps with a reason.
+  6. **Further views.**
+    - An X-Y trail with fading, for phase portraits and hysteresis loops.
+    - An event flash on the owning block.
+    - A hover summary for any block or port, such as a stream's full P, T, h, x, ṁ and s.
+  7. **Stateful symbols.** Typed bindings from solved outputs to approved SVG attributes, through the COMP-08 allowlist: valve opening, shaft angle, tank level, piston position, PCM melt fraction and moving-boundary zone lengths. A symbol animates only from a value the model actually outputs.
+  - **Acceptance.**
+    - Unit tests for the sign and metadata contracts on every domain.
+    - A Playwright journey on the EV and refrigeration gallery models: particles reverse with the solved sign, playback and the P-h cursor show one sample, and reduced motion is honoured.
+    - Zero engine calls during playback (the RUN-10 check).
+    - The visual baseline is unchanged with animation off.
+- **I. Teaching layer on existing models.**
+  1. **Insight cards.** τ = RC, thermal τ = mC/UA, ω_n and ζ, Carnot and actual COP, NTU-ε and glide, each computed from solved values and attached to blocks or areas (VIEW-09).
+  2. **A lesson manifest beside a gallery example.** It holds:
+     - the objective, prerequisites and the governing equation;
+     - the approved slider bindings, with ranges and units;
+     - the initial view, selected traces and expected trend;
+     - a predict → change one input → observe → explain → check sequence.
+     The numeric CHECKs stay the grade.
+  3. **Paired cross-domain lessons, authored independently with sources:**
+     - RC charging ↔ thermal mass;
+     - RLC ↔ mass-spring-damper;
+     - diode ↔ check valve;
+     - throttling on P-h;
+     - accumulator ↔ capacitor;
+     - mixing and coil on the psychrometric chart;
+     - sensor → controller.
+  4. **Embed and kiosk mode.** `?embed=1&view=schematic|plot&readonly&sliders=a,b&theme=light`, plus `?example=<gallery-id>`.
+     - Read-only keeps sliders working.
+     - Reset and "Open in full frees" are always visible.
+     - Import safety is unchanged: a shared model never runs without the existing check.
+  5. **Book discovery.** Search across the Book, with concept, domain and prerequisite filters drawn from the lessons.
+  6. **Share hardening.** Lesson settings travel in a versioned, bounded `#share=` schema. When the 16,000-character cap is exceeded, the fallback is explicit; there is no server and no shortener.
+  - **Acceptance.**
+    - Each lesson has graded CHECKs and an interaction test: reset reproduces the baseline, and the promised direction or time constant occurs.
+    - Keyboard and reduced-motion journeys pass.
+    - `check-docs`, `check-examples` and `build-book` are green.
+- **J. Library additions for teaching (independent laws, each with a reference page and a CHECKed example).**
+  1. **Electrical primitives** (scope as decided in F):
+     - an event- or signal-driven `Switch` (and an SPDT);
+     - sine and signal-controlled voltage and current sources;
+     - an `IdealTransformer`;
+     - an ideal `OpAmp` with rails;
+     - a `Zener` and a `Potentiometer`;
+     - an NTC `Thermistor` with a heat port;
+     - an electrothermal `Lamp` (`HeatingResistor` + `ThermalMass` + radiation);
+     - an I²t fuse with a thermal state and irreversible trip, through an event;
+     - meter symbols.
+     Model switching goes through events or signal inputs, never through re-stamping.
+  2. **Signal blocks:** `SigChirp`, a seeded `SigNoise` (deterministic per run identity), `SigQuantize` with sample-and-hold, and time-delay or one-shot timers.
+  - **Acceptance.**
+    - `check-docs` coverage stays 100%. Every new component has unit-typed parameters and CHECKs that grade at zero unit warnings.
+    - A correctness test against an analytic or textbook reference per component.
+    - The `ThermalFuse` page states what it models.
+- **K. Live mode MVP (stages 1–2; architectural).**
+  1. **Engine `LiveSession` (`frees-core`).**
+     - It owns the immutable prepared structure, apart from the mutable state: t, y, y′, step size, BDF history, event state and the pin vector.
+     - API: `open`, `advance(t_target, work_budget)`, `pause`, `step(kind)` and `reset`/`dispose`. `step(kind)` is one of: accepted step, output sample, next event.
+     - `advance` returns only accepted output samples and event hits.
+     - IDA comes first. The explicit ode45/radau5 driver is refactored into a resumable stepper with the same tolerances.
+     - Tolerances are never relaxed for frame rate.
+  2. **Bridge and worker.**
+     - Exports: `live_open`, `live_advance` (a `Float64Array` chunk plus a JSON header), `live_set`, `live_pause`, `live_reset` and `live_dispose`.
+     - A dedicated worker outside the sweep pool owns the session.
+     - **Pull model:** the main thread asks for `t + speed·Δt_wall` on each animation frame, with at most one request in flight. Each reply stays within a work budget of roughly 5–15 ms, so commands are serviced between chunks.
+     - Every message carries the session, revision, generation and chunk sequence. Buffers are recycled.
+  3. **Live bar.**
+     - It is labelled **Live**, never Playback.
+     - Controls: Run/Pause, the three kinds of step, Reset, and a log-scale speed in sim-seconds per wall-second.
+     - It shows sim time, the achieved speed ("×0.3 of requested") and the step size.
+     - Structural edits pause the session and close it through the revision tracker.
+  4. **Results store and failure.**
+     - **Results store.** One store per block (a ring buffer) feeds the diagram, readouts, H's particles and cursor, and plots, all from one accepted timestamp. On stop it becomes a normal ODE table whose run identity includes the input log, so RUN-05 playback, RUN-07 comparison and CSV export work on it unchanged.
+     - **Failure.** On a failure, the session pauses at the last accepted state with the existing diagnosis and owning block. It offers retry with a smaller maximum step. It never publishes a NaN state as success.
+  - **Acceptance.**
+    - Chunked and batch runs agree at common output times: bitwise for IDA, and within the integrator's own tolerance otherwise.
+    - Pause and resume preserve history.
+    - Memory stays bounded over a 30-minute run.
+    - Stale-generation messages are dropped.
+    - A worker trap respawns cleanly.
+    - Commands are serviced within one chunk on small, EV and large models.
+    - Measured against F's baseline, and within D3 and the WASM budget.
+- **L. Live inputs and instruments (stage 3).**
+  1. **Input classes, applied at accepted-time boundaries and logged as events:**
+     - **Presentation:** immediate, no revision.
+     - **Continuous external inputs** (heater power, boundary T, speed demand, valve command): states are kept, the algebraic variables are made consistent again, and the affected Jacobians are invalidated.
+     - **Storage and constitutive parameters** (C, mass, volume, inertia): refused live, or reset with a stated conservation policy.
+     - **Structure and initial conditions:** pause and rebuild, keeping the old segment inspectable.
+     Slider drags coalesce to the newest value per frame; committed values stay in the input log.
+  2. **Canvas inputs.** Click-toggle switches and valves, draggable valve handles and setpoint knobs, as pins of class 2. They have keyboard equivalents, and focus loss releases a momentary input.
+  3. **Rolling scopes.**
+     - Shared time axis.
+     - Min/max display buckets kept apart from raw recording.
+     - A measurement strip: peak, RMS, mean, frequency, duty, overshoot and settling, over a defined window and units.
+     - Detrend, and a spectrum toggle on uniformly resampled accepted output through the existing `signal.rs` kernels.
+     - An in-canvas mini-scope pinned to a block; its placement is presentation state.
+  4. **Pause on an engineering event,** through root events, not frame polling. Examples: a wall reaches 60 °C, relief opens, superheat crosses a threshold, a tank empties, a controller saturates.
+  5. **Recorder.**
+     - Finite duration or explicit export.
+     - Exact timestamps, units, solver settings, input timeline, property provenance and partial or failed status.
+  6. **Preferred-value wheel stepping** (E-series, DN sizes, insulation thicknesses) on sliders and the card editor.
+  - **Acceptance.**
+    - RC and thermal load steps, a pressure command and a PID gain change each match a reference batch run with piecewise inputs.
+    - A rejected edit rolls back and keeps a consistent DAE state.
+    - Duplicate or lost events: none.
+    - Rapid slider changes keep the input log ordered and reproducible: replaying the log reproduces the run bit for bit.
+- **M. Live labs and sharing (stage 4).**
+  1. **Graded live labs** built on I's lessons:
+     - a thermostat limit cycle with the hysteresis width on a slider (needs the deferred hysteresis contract, or a documented smooth stand-in);
+     - a refrigeration start-up traced live on P-h;
+     - a battery cooling load step with PID anti-windup;
+     - an accumulator pressure response;
+     - quarter-car resonance on an X-Y plot;
+     - outdoor-air mixing on the psychrometric chart.
+  2. **Shared experiments.** A shared experiment carries its settings and a finite input timeline. Embed mode may autorun an approved lesson.
+  3. **Loss and power block view** (if F agreed a loss convention): blocks filled by Q̇ loss, shaft power, Ṡ_gen or T₀·Ṡ_gen, plus an energy and exergy Sankey.
+  4. **Operating-point cards.** Pump, fan, compressor and valve curves with a live point, rebuilt only when their parameters change.
+  - **Acceptance.**
+    - Each lab has graded reference outputs and a reproducible reset and input timeline.
+    - Keyboard and reduced-motion journeys pass.
+    - Opening a shared lesson gives the same safe initial state.
+- **Deferred beyond M** (each needs its own semantics and numerical validation):
+  - scheduling several DYNAMIC blocks;
+  - structural state migration;
+  - true hysteresis and state machines (event ordering, memory, chatter and Zeno policy);
+  - ADC/DAC and sampled control;
+  - wave propagation and water hammer (a distributed model, not a delay icon);
+  - the integrator RNG seam for stochastic boundaries;
+  - persisted checkpoints and branched runs;
+  - transistor-level device fidelity;
+  - symbol-standard presets (ANSI/IEC, ISO 1219);
+  - equivalent R/UA analysis between two ports;
+  - audio and sonification;
+  - UI localisation.
 
 ### R15 usability pilot (Phase 4.4)
 
