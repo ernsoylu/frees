@@ -336,13 +336,15 @@ end
 
 // Unified Boiler ≡ Evaporator: two-phase/liquid inlet boils to a superheated
 // vapor outlet at a set exit superheat. Non-isobaric. Heat duty Q is an output.
+// SH_set = 0 is saturated vapor: (P, T) cannot fix a state on the saturation
+// line, so that case reads h_g directly (`if` evaluates only the taken branch).
 function [in, out] = TwoPhaseEvaporator(fluid$, SH_set [K], dP [Pa], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
   out.P    = in.P - dP
   Tsat     = T_sat(fluid$, P=out.P)
-  out.h    = Enthalpy(fluid$, P=out.P, T=Tsat + SH_set)
+  out.h    = if(SH_set, Enthalpy(fluid$, P=out.P, T=Tsat + SH_set), Enthalpy(fluid$, P=out.P, x=1))
   Q        = in.mdot * (out.h - in.h)
 end
 
@@ -357,7 +359,7 @@ port(wall)
   out.P     = in.P - dP
   Tevap     = T_sat(fluid$, P=in.P)
   Q         = frac * UA * (wall.T - Tevap)
-  out.h     = Enthalpy(fluid$, P=out.P, T=Tevap + SH)
+  out.h     = if(SH, Enthalpy(fluid$, P=out.P, T=Tevap + SH), Enthalpy(fluid$, P=out.P, x=1))
   in.mdot   = Q / (out.h - in.h)
   out.mdot  = in.mdot
   wall.Qdot = Q
@@ -379,13 +381,14 @@ end
 
 // Condenser: superheated vapor inlet rejects heat to a subcooled-liquid outlet
 // at a set exit subcooling. Non-isobaric. Heat duty Q is an output.
+// SC_set = 0 is saturated liquid, read as h_f (see TwoPhaseEvaporator).
 function [in, out] = TwoPhaseCondenser(fluid$, SC_set [K], dP [Pa], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot
   out.P    = in.P - dP
   Tsat     = T_sat(fluid$, P=out.P)
-  out.h    = Enthalpy(fluid$, P=out.P, T=Tsat - SC_set)
+  out.h    = if(SC_set, Enthalpy(fluid$, P=out.P, T=Tsat - SC_set), Enthalpy(fluid$, P=out.P, x=0))
   Q        = in.mdot * (in.h - out.h)
 end
 

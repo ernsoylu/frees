@@ -9,7 +9,7 @@ tags: [twophaseevaporator, component, twophase, acausal]
 
 # TwoPhaseEvaporator
 
-A two-phase evaporator absorbing heat into the refrigerant.
+A two-phase evaporator absorbing heat into the refrigerant. `SH_set = 0` leaves saturated vapor ($h_g$ at the outlet pressure); a pressure and a temperature cannot fix a state on the saturation line, so that case reads $h_g$ directly.
 
 ## Domain
 
@@ -43,7 +43,7 @@ $$
 out.mdot &= in.mdot \\
 out.p &= in.p - dp \\
 tsat &= \text{T\_sat}\left(\mathrm{fluid\$}, p=out.p\right) \\
-out.h &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=tsat + sh_{set}\right) \\
+out.h &= \text{if}\left(sh_{set}, \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=tsat + sh_{set}\right), \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, x=1\right)\right) \\
 q &= in.mdot\cdot \left(out.h - in.h\right)
 \end{aligned}
 $$
