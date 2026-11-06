@@ -231,7 +231,24 @@ entry here is checked off with evidence when it closes.
      - **Found on the way.** The scenario undo buttons were first labelled "Undo/Redo scenario change". The schematic's Undo button is matched by name, so there were two "Undo" buttons for assistive technology (and for 12 journeys). They are now *Revert/Reapply scenario change*. E2E journeys check a minimum project version instead of an exact one, so each format bump no longer edits them.
      - **Not done.** The baseline is not saved with the project; saving results in the project is a larger decision. Time samples of dynamic runs belong to RUN-05.
      - **Gates.** vitest 891/891 in 76 files, `tsc -b` clean, lint 0 errors (90 warnings, unchanged), schematic e2e 52/52 plus RUN-07, the other e2e specs 10/10, and the visual baseline unchanged in the CI image.
-  4. RUN-05: recorded playback (play/pause, scrub, speed, event discontinuities, reduced motion). With slice 3 it closes AC-12.
+  4. **Done 2026-11-06: RUN-05.** Recorded playback of a dynamic run. With slice 3 it closes AC-12.
+     - **Playback.** A bar in the Variable Explorer offers play/pause, step, a time slider with event marks, previous/next event, speed (0.25× to 4×; a run plays in 10 s at 1×), a time readout, *Export values at t* and *Exit playback*. A run with several DYNAMIC blocks chooses which one plays. It never solves.
+     - **Events.** Playback lands on recorded samples only. The engine records no row at an event, so interpolating across one would blend the values before and after it; an event reads at the first sample at or after its time, with its exact time beside it.
+     - **One sample everywhere.** The diagram reads the sample's values and labels the canvas `Playback: run N · time = …`. Plots of that ODE table against its time column draw a playhead. The run identity's sample becomes `time = 200 (sample 3 of 11)`, so a baseline set during playback compares only at the same sample and says *different samples* elsewhere. The CSV export is headed by the same identity. A recorded variable with no value at the sample is left out, not shown with its end value.
+     - **Unavailable.** Playback belongs to the result it started on, and a new result shows its end. Stale inputs (a scenario or a slider changed) stop play and say why; step and scrub still show the run on screen. Reduced motion disables play and leaves step and scrub.
+     - **Evidence.**
+       - `playback.test.ts`: event-to-sample mapping, rejection of unusable tables, missing values left out, advance by speed.
+       - Playwright `e2e/playback.spec.ts` on a thermal mass cooling through a wall (a `record` event at 173.3 s between 100 s samples):
+         - *Previous event* lands on time = 200 (sample 3 of 11) with `event warm · time = 173.288`. The plot playhead is at 200, the diagram label names the run and time, and M's port T badge reads 344.93.
+         - Step, slider Home and next event move the diagram and plot together. A baseline at 200 reads "same" there and "different samples" at 300.
+         - The export's header is the run identity at 200 and its `m.port.t` row is 344.93. Play at 4× runs to the end and stops.
+         - Exit clears the sample and the playhead. Under emulated reduced motion Play is disabled and stepping works.
+         - No solve or check call is made during playback.
+     - **Found on the way.**
+       - A solved model with no top-level variables, such as a dynamic component network, showed the explorer's "Your results will appear here", which hid the Runs panel too. A successful solve now counts as a result.
+       - Mantine's Slider names its thumb through `thumbLabel`, not `aria-label`.
+     - **Not done.** The engine infers units for top-level names only, so a component's trajectory column (`m$port$t`) has no unit. The diagram, plot and export agree on showing none, and none is invented. Inferring them belongs to the engine's ODE table units (`crates/frees/src/lib.rs` `ode_tables`).
+     - **Gates.** vitest 894/894 in 77 files, `tsc -b` clean, lint 0 errors (90 warnings, unchanged), every Chromium e2e spec 64/64 (one skipped) including RUN-05, and the visual baseline unchanged in the CI image.
 
   Each slice gets unit tests, a Playwright journey, and RUN-10's zero-engine-call check.
 - **E. Lazy fluid chunks (bundle debt 2).** CI's 200 KiB headroom trigger has not fired (645.8 KiB). The owner approved going ahead, gated on a measurement.

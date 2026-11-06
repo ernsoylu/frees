@@ -71,7 +71,8 @@ import {
 } from './api'
 import { ModelRevisionTracker } from './modelRevision'
 import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, withSliderBounds, type PinnedSlider } from './sliders'
-import { compareRuns, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
+import { compareRuns, describeRun, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
+import { playbackVariables, timeLabel, timelineOf, type Timeline } from './playback'
 import { wasmUnitConversions } from './wasm/engineClient'
 const PreferencesModal = lazy(() => import('./PreferencesModal'))
 const AboutModal = lazy(() => import('./AboutModal'))
@@ -110,6 +111,7 @@ import {
   TABLES_WORKBOOK_WINDOW_ID,
 } from './tablesGrid/tablesWorkbookBridge'
 import { applyColumnFill } from './tablesGrid/tableGridModel'
+import { downloadValuesAsCsv } from './tablesGrid/csv'
 
 // The Digitizer tab is a large, self-contained editor that most
 // sessions never open, so they are code-split and only fetched when their tab
@@ -137,6 +139,7 @@ const PlotTab = lazy(() => import('./PlotTab'))
 const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const SliderStrip = lazy(() => import('./SliderStrip'))
 const RunsPanel = lazy(() => import('./RunsPanel'))
+const PlaybackBar = lazy(() => import('./PlaybackBar'))
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
 const MonteCarloModal = lazy(() => import('./MonteCarloModal'))
 const SensitivityModal = lazy(() => import('./SensitivityModal'))
@@ -555,6 +558,9 @@ export default function App() {
   const [scenarioStale, setScenarioStale] = useState(false)
   const [baseline, setBaseline] = useState<Baseline | null>(null)
   const [conversions, setConversions] = useState<Record<string, { scale: number; shift: number } | null>>({})
+  // RUN-05: playback of the current dynamic run's recorded samples; reset by every new result.
+  const [playback, setPlayback] = useState<{ of: SolveResponse | null; table: string | null; index: number | null; playing: boolean }>({ of: null, table: null, index: null, playing: false })
+  const [playSpeed, setPlaySpeed] = useState(1)
   const sliderTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sliderSolveRef = useRef<() => void>(() => {})
   // A release that lands while a solve is in flight must not be dropped: the
@@ -2494,12 +2500,34 @@ export default function App() {
   })
 
   const solutions = result?.solutions ?? []
-  // RUN-07: the run on screen, with the sample the explorer shows, and its comparison with the baseline.
-  const currentRun = result?.run ? { ...result.run, sample: sampleOf(solutions.length, selectedSolutionIndex) } : null
-  const comparedVariables = useMemo(
-    () => (result?.solutions?.length ? (result.solutions[selectedSolutionIndex]?.variables ?? result.variables) : (result?.variables ?? [])),
-    [result, selectedSolutionIndex],
+  // RUN-05: the dynamic run's recorded timelines and the sample playback shows, if any.
+  const timelines = useMemo(() => (result?.odeTables ?? []).map(timelineOf).filter((t): t is Timeline => t !== null), [result])
+  const timeline = timelines.find((t) => t.table === playback.table) ?? timelines[0] ?? null
+  // Playback belongs to the result it started on: a new result shows its end until played.
+  const playIndex = timeline && playback.of === result && playback.index !== null && playback.index < timeline.times.length ? playback.index : null
+  const playTable = timeline && playIndex !== null ? result?.odeTables?.find((t) => t.name === timeline.table) : undefined
+  const playSample = timeline && playIndex !== null ? `${timeLabel(timeline, playIndex)} (sample ${playIndex + 1} of ${timeline.times.length})` : null
+  const changePlayIndex = useCallback((index: number) => setPlayback((p) => ({ ...p, of: result, index })), [result])
+  const changePlaying = useCallback(
+    (playing: boolean) => setPlayback((p) => (p.of === result ? { ...p, playing, index: p.index ?? 0 } : { ...p, of: result, playing, index: 0 })),
+    [result],
   )
+  // RUN-07: the run on screen, with the sample the explorer shows, and its comparison with the baseline.
+  const currentRun = result?.run ? { ...result.run, sample: playSample ?? sampleOf(solutions.length, selectedSolutionIndex) } : null
+  const comparedVariables = useMemo(() => {
+    const solved = result?.solutions?.length ? (result.solutions[selectedSolutionIndex]?.variables ?? result.variables) : (result?.variables ?? [])
+    return playTable && playIndex !== null ? playbackVariables(solved, playTable, playIndex) : solved
+  }, [result, selectedSolutionIndex, playTable, playIndex])
+  const exportPlayback = () => {
+    if (!timeline || !currentRun) return
+    const k = playIndex ?? timeline.times.length - 1
+    const values = playbackVariables(result?.variables ?? [], result!.odeTables!.find((t) => t.name === timeline.table)!, k)
+    downloadValuesAsCsv(
+      [['variable', 'value', 'unit'], ...values.map((v) => [v.name, v.value, v.units])],
+      `${timeline.table}-${timeline.timeVar}-${timeline.times[k]}.csv`,
+      [describeRun({ ...currentRun, sample: `${timeLabel(timeline, k)} (sample ${k + 1} of ${timeline.times.length})` })],
+    )
+  }
   const unitPairs = useMemo(() => {
     if (!baseline) return []
     const now = new Map(comparedVariables.map((v) => [v.name.toLowerCase(), v.units]))
@@ -2950,7 +2978,8 @@ export default function App() {
             key={`schematic-${workspaceEpoch}`}
             checkResult={checkResult}
             components={result?.components}
-            variables={result?.variables}
+            variables={playIndex === null ? result?.variables : comparedVariables}
+            sample={playSample && currentRun ? `run ${currentRun.revision} · ${playSample}` : undefined}
             blocks={result?.blocks}
             text={textRef.current}
             onRevealLine={goToLine}
@@ -3098,6 +3127,24 @@ export default function App() {
                     />
                   </Suspense>
                 )}
+                {timeline && (
+                  <Suspense fallback={null}>
+                    <PlaybackBar
+                      timelines={timelines}
+                      timeline={timeline}
+                      onTimeline={(table) => setPlayback({ of: result, table, index: null, playing: false })}
+                      index={playIndex}
+                      playing={playIndex !== null && playback.playing}
+                      speed={playSpeed}
+                      unavailable={scenarioStale || slidersStale ? 'The inputs changed since this run: Solve to play the new one. Stepping still shows this run.' : null}
+                      onIndex={changePlayIndex}
+                      onPlaying={changePlaying}
+                      onSpeed={setPlaySpeed}
+                      onExit={() => setPlayback((p) => ({ ...p, index: null, playing: false }))}
+                      onExport={exportPlayback}
+                    />
+                  </Suspense>
+                )}
                 <Suspense fallback={null}>
                   <RunsPanel
                     scenarios={scenarios}
@@ -3217,6 +3264,7 @@ export default function App() {
           activePlotId={pl.id}
           onActivePlotIdChange={setActivePlotId}
           onSelectRow={handleSelectTableRow}
+          playhead={timeline && playIndex !== null ? { tableId: `code-ode-${timeline.table.toLowerCase()}`, xVar: timeline.timeVar, x: timeline.times[playIndex] } : null}
         />
         </Suspense>
       </div>

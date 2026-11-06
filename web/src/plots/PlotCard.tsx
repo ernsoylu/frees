@@ -147,6 +147,14 @@ interface Props {
   hideHeader?: boolean
   exportTrigger?: { format: string; timestamp: number } | null
   onSelectRow?: (tableId: string | undefined, rowId: string) => void
+  /** RUN-05: the recorded sample playback shows, drawn on plots of that table against its time column. */
+  playhead?: Playhead | null
+}
+
+export interface Playhead {
+  tableId: string
+  xVar: string
+  x: number
 }
 
 function lookupVariableValue(
@@ -525,6 +533,7 @@ export default function PlotCard({
   hideHeader = false,
   exportTrigger = null,
   onSelectRow,
+  playhead,
 }: Readonly<Props>) {
   const { diagram, psychart, loading, error } = useDiagramData(spec)
   const [exporting, setExporting] = useState(false)
@@ -654,11 +663,17 @@ export default function PlotCard({
   const activeStats = useMemo(() => computeTraceStats(activeTrace), [activeTrace])
 
   // Overlay persistent cursors on the figure layout
+  const playheadX = playhead && spec.source?.kind === 'table' && spec.source.tableId === playhead.tableId && spec.xy.xVar?.toLowerCase() === playhead.xVar.toLowerCase()
+    ? playhead.x
+    : null
   const displayedFigure = useMemo(() => {
     if (!figure) return null
-    if (!cursor1 && !cursor2) return figure
+    if (!cursor1 && !cursor2 && playheadX === null) return figure
     const shapes = [...(figure.layout.shapes ?? [])]
     const annotations = [...(figure.layout.annotations ?? [])]
+    if (playheadX !== null) {
+      shapes.push({ type: 'line', x0: playheadX, x1: playheadX, y0: 0, y1: 1, yref: 'paper', line: { color: '#e03131', width: 2 } })
+    }
 
     if (cursor1 && Number.isFinite(cursor1.x) && Number.isFinite(cursor1.y)) {
       shapes.push({
@@ -716,7 +731,7 @@ export default function PlotCard({
         annotations,
       },
     }
-  }, [figure, cursor1, cursor2])
+  }, [figure, cursor1, cursor2, playheadX])
 
   async function onExport(format: (typeof EXPORT_FORMATS)[number]['value']) {
     const theme: PlotTheme = publicationStyle ? 'light' : 'dark'
@@ -842,7 +857,7 @@ export default function PlotCard({
       )}
       {displayedFigure !== null && (
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, minHeight: 220, position: 'relative' }}>
+          <div style={{ flex: 1, minHeight: 220, position: 'relative' }} data-playhead={playheadX ?? undefined}>
             {/* Fill the tile exactly and let the ResizeObserver in PlotlyChart keep it fitted. */}
             <PlotlyChart figure={displayedFigure} minHeight={0} onPointClick={handlePointClick} />
           </div>

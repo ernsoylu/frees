@@ -240,6 +240,8 @@ interface Props {
   handoff?: Handoff
   /** SYNC-10: the last solve's block decomposition, for an equation-only model's dependency view. */
   blocks?: readonly BlockResult[]
+  /** RUN-05: which recorded sample `variables` are, while a dynamic run plays back (`run 3 · t = 4 s`). */
+  sample?: string
 }
 
 export type SchematicHandoff = 'plot' | 'table' | 'state' | 'sensitivity'
@@ -364,6 +366,7 @@ export default function SchematicTab({
   checkResult,
   components,
   variables,
+  sample,
   text,
   onRevealLine,
   onSelectLine,
@@ -1962,6 +1965,7 @@ export default function SchematicTab({
   const [exportOpts, setExportOpts] = useState<ExportOptions | null>(null)
   const runContext = [
     variables?.length ? `Solved: ${variables.length} variables` : 'Not solved: no results shown',
+    sample ?? null,
     showingPrevious ? 'drawing from the last valid Check (the source has errors)' : null,
     scope ? `inside ${labels.get(scope)?.label ?? scope}` : null,
     `exported ${new Date().toLocaleString()}`,
@@ -3615,6 +3619,11 @@ export default function SchematicTab({
           <Text size="sm" c="dimmed" ta="center" data-testid="empty-sheet" style={{ position: 'absolute', top: '40%', left: 0, right: 0, pointerEvents: 'none' }}>
             {sheetName(sheetState, sheet)} is empty. Select components on another sheet and use Sheet › Move to {sheetName(sheetState, sheet)}.
           </Text>
+        )}
+        {sample && (
+          <Badge size="sm" variant="filled" color="dark" data-testid="schematic-sample" style={{ position: 'absolute', left: 8, bottom: 8, zIndex: 3, textTransform: 'none', pointerEvents: 'none' }}>
+            Playback: {sample}
+          </Badge>
         )}
         {/* An isolated circuit is the whole drawing for now; no overview of the hidden rest. */}
         {!isolating && (

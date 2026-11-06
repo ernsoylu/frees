@@ -468,7 +468,8 @@ export default function Workspace({
     return { plain, components, groups: grouped.groups }
   }, [variables, deferredQuery, instances])
 
-  const empty = variables.length === 0
+  // A solve that landed is a result even with no top-level variables (a dynamic network records only trajectories).
+  const empty = variables.length === 0 && !diagnostics?.success
 
   return (
     // Slightly darker than the editor canvas (same tint as the REPL terminal)
