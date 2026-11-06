@@ -247,7 +247,7 @@ entry here is checked off with evidence when it closes.
      - **Found on the way.**
        - A solved model with no top-level variables, such as a dynamic component network, showed the explorer's "Your results will appear here", which hid the Runs panel too. A successful solve now counts as a result.
        - Mantine's Slider names its thumb through `thumbLabel`, not `aria-label`.
-     - **Not done.** The engine infers units for top-level names only, so a component's trajectory column (`m$port$t`) has no unit. The diagram, plot and export agree on showing none, and none is invented. Inferring them belongs to the engine's ODE table units (`crates/frees/src/lib.rs` `ode_tables`).
+     - **Closed 2026-11-06 (`d4-ode-units`).** A component's trajectory column (`m$port$t`) had no unit. A network whose only content is a DYNAMIC run takes the ODE-only shortcut in check and solve, and that path dropped the port members' domain units. `engine::unit_check`, which all four paths share, now adds them to its report. The time column, which the solver keeps in seconds (a span in [min] converts), reads `s`. The badge reads `port T = 344.93 K`, the time label `time = 200 s`, and the export row carries `K`. Evidence: `a_dynamic_component_network_reports_its_port_member_units` (it fails without the fix), `dto_parity` pins the time unit, and `e2e/playback.spec.ts` expects the units.
      - **Gates.** vitest 894/894 in 77 files, `tsc -b` clean, lint 0 errors (90 warnings, unchanged), every Chromium e2e spec 64/64 (one skipped) including RUN-05, and the visual baseline unchanged in the CI image.
 
   Each slice gets unit tests, a Playwright journey, and RUN-10's zero-engine-call check.

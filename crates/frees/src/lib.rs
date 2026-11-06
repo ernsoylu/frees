@@ -1256,11 +1256,13 @@ fn ode_tables(solution: &Solution, zero_copy: bool) -> (Vec<Value>, Vec<Vec<f64>
                 .columns
                 .iter()
                 .enumerate()
-                .map(|(i, column)| match solution.inferred_units.get(column.as_str()) {
-                    Some(unit) => unit.as_str(),
-                    None if i == 0 => "s",
-                    None => "",
-                })
+                .map(
+                    |(i, column)| match solution.inferred_units.get(column.as_str()) {
+                        Some(unit) => unit.as_str(),
+                        None if i == 0 => "s",
+                        None => "",
+                    },
+                )
                 .collect();
             let rows_val = if zero_copy {
                 let num_rows = table.rows.len();

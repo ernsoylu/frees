@@ -48,7 +48,7 @@ test('RUN-05: play, step and scrub a recorded run; an event reads at the sample 
 
   const bar = page.getByTestId('playback-bar')
   const time = bar.getByTestId('playback-time')
-  await expect(time).toHaveText('time = 1000 · sample 11 of 11')
+  await expect(time).toHaveText('time = 1000 s · sample 11 of 11')
   await expect(bar).toContainText('end of run')
   const run = Number((await page.getByTestId('run-identity').textContent())!.match(/run (\d+)/)![1])
   await page.waitForTimeout(1000)
@@ -56,9 +56,9 @@ test('RUN-05: play, step and scrub a recorded run; an event reads at the sample 
 
   // The event: no sample is recorded at 173.3 s, so it reads at the next one, 200 s.
   await bar.getByRole('button', { name: 'Previous event' }).click()
-  await expect(time).toHaveText('time = 200 · sample 3 of 11')
-  await expect(bar.getByTestId('playback-event')).toHaveText('event warm · time = 173.288')
-  await expect(page.getByTestId('run-identity')).toHaveText(`run ${run} · Document inputs · time = 200 (sample 3 of 11) · solved`)
+  await expect(time).toHaveText('time = 200 s · sample 3 of 11')
+  await expect(bar.getByTestId('playback-event')).toHaveText('event warm · time = 173.288 s')
+  await expect(page.getByTestId('run-identity')).toHaveText(`run ${run} · Document inputs · time = 200 s (sample 3 of 11) · solved`)
 
   // The plot draws the same sample.
   await page.getByRole('button', { name: 'Plots windows' }).click()
@@ -73,23 +73,23 @@ test('RUN-05: play, step and scrub a recorded run; an event reads at the sample 
   await page.keyboard.press('Enter')
   const svg = page.getByRole('application', { name: /Component network schematic/ })
   await expect(svg.locator('[data-node="m"]')).toBeVisible({ timeout: 60_000 })
-  await expect(page.getByTestId('schematic-sample')).toHaveText(`Playback: run ${run} · time = 200 (sample 3 of 11)`)
+  await expect(page.getByTestId('schematic-sample')).toHaveText(`Playback: run ${run} · time = 200 s (sample 3 of 11)`)
   await svg.locator('[data-node="m"]').click()
   await page.getByRole('button', { name: /^Show m\.port\.t on the block$/i }).click()
-  await expect(svg.locator('[data-node="m"] [data-badge]')).toHaveText('port T = 344.93')
+  await expect(svg.locator('[data-node="m"] [data-badge]')).toHaveText('port T = 344.93 K')
 
   // Step and scrub move every view together.
   await bar.getByRole('button', { name: 'Step forward' }).click()
-  await expect(time).toHaveText('time = 300 · sample 4 of 11')
-  await expect(svg.locator('[data-node="m"] [data-badge]')).toHaveText('port T = 330.12')
+  await expect(time).toHaveText('time = 300 s · sample 4 of 11')
+  await expect(svg.locator('[data-node="m"] [data-badge]')).toHaveText('port T = 330.12 K')
   const slider = bar.getByRole('slider', { name: 'Recorded time' })
   await slider.focus()
   await page.keyboard.press('Home')
-  await expect(time).toHaveText('time = 0 · sample 1 of 11')
-  await expect(svg.locator('[data-node="m"] [data-badge]')).toHaveText('port T = 400')
+  await expect(time).toHaveText('time = 0 s · sample 1 of 11')
+  await expect(svg.locator('[data-node="m"] [data-badge]')).toHaveText('port T = 400 K')
   await bar.getByRole('button', { name: 'Next event' }).click()
-  await expect(time).toHaveText('time = 200 · sample 3 of 11')
-  await expect(svg.locator('[data-node="m"] [data-badge]')).toHaveText('port T = 344.93')
+  await expect(time).toHaveText('time = 200 s · sample 3 of 11')
+  await expect(svg.locator('[data-node="m"] [data-badge]')).toHaveText('port T = 344.93 K')
   // The plot shares the schematic's dock group: brought back, it is at the same sample.
   await page.getByRole('button', { name: 'Plots windows' }).click()
   await page.getByRole('menuitem', { name: /Cooling/ }).click()
@@ -101,24 +101,24 @@ test('RUN-05: play, step and scrub a recorded run; an event reads at the sample 
   const row = runs.getByTestId('run-comparison').locator('[data-variable="m.port.t"]')
   await expect(row.locator('[data-change]')).toHaveText('same')
   await bar.getByRole('button', { name: 'Step forward' }).click()
-  await expect(row.locator('[data-unavailable]')).toHaveText('unavailable: different samples (time = 200 (sample 3 of 11) vs time = 300 (sample 4 of 11))')
+  await expect(row.locator('[data-unavailable]')).toHaveText('unavailable: different samples (time = 200 s (sample 3 of 11) vs time = 300 s (sample 4 of 11))')
   await bar.getByRole('button', { name: 'Step back' }).click()
   await expect(row.locator('[data-change]')).toHaveText('same')
 
   // Export the values at the selected time: the file names the run and the time.
-  const [download] = await Promise.all([page.waitForEvent('download'), bar.getByRole('button', { name: 'Export values at time = 200' }).click()])
+  const [download] = await Promise.all([page.waitForEvent('download'), bar.getByRole('button', { name: 'Export values at time = 200 s' }).click()])
   const csvPath = testInfo.outputPath('values.csv')
   await download.saveAs(csvPath)
   const csv = readFileSync(csvPath, 'utf-8').split('\n')
-  expect(csv[0]).toBe(`# run ${run} · Document inputs · time = 200 (sample 3 of 11) · solved`)
+  expect(csv[0]).toBe(`# run ${run} · Document inputs · time = 200 s (sample 3 of 11) · solved`)
   expect(csv[1]).toBe('variable,value,unit')
-  expect(csv.find((l) => l.startsWith('m.port.t,'))).toMatch(/^m\.port\.t,344\.93\d*,$/)
+  expect(csv.find((l) => l.startsWith('m.port.t,'))).toMatch(/^m\.port\.t,344\.93\d*,K$/)
 
   // Play runs to the end and stops there.
   await bar.getByRole('combobox', { name: 'Speed' }).click()
   await page.getByRole('option', { name: '4×' }).click()
   await bar.getByRole('button', { name: 'Play', exact: true }).click()
-  await expect(time).toHaveText('time = 1000 · sample 11 of 11', { timeout: 10_000 })
+  await expect(time).toHaveText('time = 1000 s · sample 11 of 11', { timeout: 10_000 })
   await expect(bar.getByRole('button', { name: 'Play', exact: true })).toBeVisible()
 
   await expect(page.locator('[data-playhead]')).toHaveAttribute('data-playhead', '1000')
@@ -137,6 +137,6 @@ test('RUN-05: play, step and scrub a recorded run; an event reads at the sample 
   await expect(bar.getByRole('button', { name: 'Play', exact: true })).toBeDisabled()
   await expect(bar).toContainText('Reduced motion is on')
   await bar.getByRole('button', { name: 'Step back' }).click()
-  await expect(time).toHaveText('time = 900 · sample 10 of 11')
+  await expect(time).toHaveText('time = 900 s · sample 10 of 11')
   await test.info().attach('evidence.json', { body: JSON.stringify({ run, playbackCalls }, null, 2), contentType: 'application/json' })
 })

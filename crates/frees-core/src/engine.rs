@@ -6471,13 +6471,25 @@ C X(s1, s2, r=2, q=3)
                       DYNAMIC cool (method = ida, time = 0 .. 1000, points = 11)\n\
                       END\n";
         let report = check(source).expect("checks");
-        assert_eq!(report.inferred_units["m$port$t"], "K", "{:?}", report.inferred_units);
+        assert_eq!(
+            report.inferred_units["m$port$t"], "K",
+            "{:?}",
+            report.inferred_units
+        );
         assert_eq!(report.inferred_units["m$port$qdot"], "W");
         let solution = solve(source, &SolverSettings::default()).expect("solves");
-        assert_eq!(solution.inferred_units["m$port$t"], "K", "{:?}", solution.inferred_units);
+        assert_eq!(
+            solution.inferred_units["m$port$t"], "K",
+            "{:?}",
+            solution.inferred_units
+        );
         assert_eq!(solution.inferred_units["wall$a$qdot"], "W");
         let table = &solution.ode_tables[0];
-        assert!(table.columns.iter().any(|c| c == "m$port$t"), "{:?}", table.columns);
+        assert!(
+            table.columns.iter().any(|c| c == "m$port$t"),
+            "{:?}",
+            table.columns
+        );
     }
 
     /// A storage network with no `DYNAMIC` block solves its steady operating
