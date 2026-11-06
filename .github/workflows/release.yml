@@ -80,8 +80,14 @@ jobs:
           node-version-file: web/.nvmrc
       - name: Build WASM package
         run: wasm-pack build crates/frees --release --target web --out-dir ../../web/src/wasm/pkg
+
+      - name: Pack the fluids the engine installs on first use
+        # Phase E: the module links four fluids; frees-fluid-pack writes the
+        # others and the mixture tables into web/src/wasm/fluids (gitignored,
+        # like pkg/), which the worker, the doc checks and the Book read.
+        run: cargo run -q -p frees-fluid-pack -- web/src/wasm/fluids
       - name: Package WASM artifact
-        run: tar -czvf frees-wasm-pkg.tar.gz -C web/src/wasm pkg
+        run: tar -czvf frees-wasm-pkg.tar.gz -C web/src/wasm pkg fluids
       - name: Build web distribution
         working-directory: web
         run: |

@@ -974,6 +974,23 @@ fn contains_word(haystack: &str, needle: &str) -> bool {
     false
 }
 
+/// Every fluid the text names, as canonical names, each once, in alias-table
+/// order. A whole-word, case-insensitive scan, so it over-approximates (a
+/// comment naming a fluid counts) and never misses a spelling the alias table
+/// accepts: property calls, a component's `fluid$`, a string variable. The
+/// browser uses it to fetch the fluids its module does not link before the
+/// engine needs them (phase E).
+pub fn fluids_mentioned(text: &str) -> Vec<&'static str> {
+    let lower = text.to_lowercase();
+    let mut out: Vec<&'static str> = Vec::new();
+    for (key, canonical) in FLUIDS {
+        if !out.contains(canonical) && contains_word(&lower, key) {
+            out.push(canonical);
+        }
+    }
+    out
+}
+
 /// Scans equation text (case-insensitively) for any mention of a known fluid,
 /// returning the canonical CoolProp name or `"Water"`. Port of `detectFluid`.
 ///

@@ -73,14 +73,36 @@ pub fn version() -> String {
     frees_core::VERSION.to_string()
 }
 
-/// Install one fetched `FRPHTAB1` property table without replacing the
-/// built-in Rustprop backend.
+/// Install fetched property data: a packed rustprop fluid (`RPFLUID1`), the
+/// packed mixture tables (`RPMIXTB1`) or an `FRPHTAB1` table. This module
+/// links four fluids; the worker installs the others on first use (phase E).
 #[wasm_bindgen]
 pub fn install_property_table(bytes: &[u8]) -> String {
     match frees_core::props::tables::install_from_bytes(bytes) {
         Ok(fluids) => json!({"fluids": fluids}).to_string(),
         Err(error) => json!({"error": error.to_string_message()}).to_string(),
     }
+}
+
+/// The fluids `text` names, as canonical names (a JSON array). A whole-word
+/// scan that over-approximates; the worker installs any it lacks before the
+/// engine runs.
+#[wasm_bindgen]
+pub fn fluids_used(text: &str) -> String {
+    json!(frees_core::props::propfun::fluids_mentioned(text)).to_string()
+}
+
+/// Whether the engine can serve `key` (a rustprop fluid name, CAS or alias)
+/// without installing anything.
+#[wasm_bindgen]
+pub fn fluid_available(key: &str) -> bool {
+    frees_core::props::tables::fluid_available(key)
+}
+
+/// Whether the mixture tables the predefined blends need are installed.
+#[wasm_bindgen]
+pub fn mixture_tables_available() -> bool {
+    frees_core::props::tables::mixture_tables_available()
 }
 
 /// Install a USD-based exchange-rate feed so currency units (`[EUR]`, `[TRY]`,

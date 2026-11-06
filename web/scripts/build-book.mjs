@@ -7,6 +7,7 @@
 import { build } from 'vite'
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, posix } from 'node:path'
+import { installPackedFluids } from './packed-fluids.mjs'
 
 const WEB = process.cwd()
 const OUT = join(WEB, 'dist-book')
@@ -24,6 +25,7 @@ const book = await import(join(BUNDLE, 'entry.js'))
 book.setAppUrl(APP_URL)
 const wasm = await import(join(WEB, 'src/wasm/pkg/frees.js'))
 wasm.initSync({ module: readFileSync(join(WEB, 'src/wasm/pkg/frees_bg.wasm')) })
+installPackedFluids(wasm)
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 const fileOf = (s) => s.toLowerCase().replace(/[^a-z0-9_.-]+/g, '_')

@@ -1,0 +1,17 @@
+[package]
+name = "frees-fluid-pack"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Writes the packed fluids the browser module installs on first use (phase E)."
+publish = false
+
+# Native only. Through frees-core's default `linked-fluids` it links every
+# fluid frees serves, so the packed set is exactly that list minus
+# `ALWAYS_LINKED`; the rustprop crates take their features from frees-core.
+[dependencies]
+frees-core = { workspace = true }
+rustprop-core = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.3.0" }
+rustprop-data = { git = "https://github.com/ernsoylu/RustProp", tag = "v0.3.0" }
+serde_json = { workspace = true }

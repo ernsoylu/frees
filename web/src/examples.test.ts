@@ -4,9 +4,11 @@ import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import { EXAMPLES } from './examples'
 import { CYCLE_EXAMPLES } from './helpExamples'
-import { check, initSync, solve } from './wasm/pkg/frees.js'
+import { check, initSync, install_property_table, solve } from './wasm/pkg/frees.js'
+import { installPackedFluids } from '../scripts/packed-fluids.mjs'
 
 initSync({ module: readFileSync(new URL('./wasm/pkg/frees_bg.wasm', import.meta.url)) })
+installPackedFluids({ install_property_table })
 
 it.each<[string, Record<string, string>]>([
   ['series-rlc-resonance', { omega_n: 'Hz', zeta: '-' }],

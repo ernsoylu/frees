@@ -53,6 +53,7 @@ if (!fs.existsSync(WASM)) {
 
 const engine = await import(path.join(PKG, 'frees.js'))
 engine.initSync({ module: fs.readFileSync(WASM) })
+;(await import('./packed-fluids.mjs')).installPackedFluids(engine)
 
 // ── Collect ──────────────────────────────────────────────────────────────────
 

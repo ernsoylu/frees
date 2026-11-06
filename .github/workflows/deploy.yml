@@ -96,6 +96,12 @@ jobs:
         # worker imports, so it must exist before Vite resolves anything.
         run: wasm-pack build crates/frees --release --target web --out-dir ../../web/src/wasm/pkg
 
+      - name: Pack the fluids the engine installs on first use
+        # Phase E: the module links four fluids; frees-fluid-pack writes the
+        # others and the mixture tables into web/src/wasm/fluids (gitignored,
+        # like pkg/), which the worker, the doc checks and the Book read.
+        run: cargo run -q -p frees-fluid-pack -- web/src/wasm/fluids
+
       - name: Install frontend dependencies
         working-directory: web
         run: npm ci --ignore-scripts
