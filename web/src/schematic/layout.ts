@@ -934,9 +934,14 @@ function placeCouplingRow(
     // to right so two nodes never land on top of each other.
     const centred = wanted === Number.MAX_SAFE_INTEGER ? cursor : wanted - n.w / 2
     n.x = Math.max(cursor, centred)
-    n.y = originY
     cursor = n.x + n.w + ROW_GAP
     height = Math.max(height, n.h)
+  }
+  // Centred on the row, so a junction sits on the line of the side ports it
+  // joins instead of level with the blocks' top edge.
+  for (const id of ordered) {
+    const n = g.nodes.get(id)
+    if (n) n.y = originY + (height - n.h) / 2
   }
   return { w: Math.max(0, cursor - ROW_GAP - originX), h: height }
 }
@@ -1254,8 +1259,8 @@ export function routePoints(
 ): Pt[] {
   const p = anchorAt(a, fromPort)
   const q = anchorAt(b, toPort)
-  const p1 = stubOut(p, STUB)
-  const q1 = stubOut(q, STUB)
+  const p1 = stubOut(a, p)
+  const q1 = stubOut(b, q)
   // Another set's junction dot is an obstacle too: a wire through it would
   // read as joining that set.
   const boxes = obstacles.filter(
@@ -1296,7 +1301,7 @@ export function routeAll(
     if (a && b) {
       for (const [n, port] of [[a, e.fromPort], [b, e.toPort]] as const) {
         const p = anchorAt(n, port)
-        const [u, v] = [{ x: p.x, y: p.y }, stubOut(p, STUB)]
+        const [u, v] = [{ x: p.x, y: p.y }, stubOut(n, p)]
         occupy([u, v], netOf(e), occupied)
         // A stub is shorter than a bucket, so it spans at most two.
         const { vertical, at, lo, hi } = laneOf(u, v)
@@ -1359,9 +1364,9 @@ export function manualRoute(a: SchematicNode, b: SchematicNode, fromPort: string
   const p = anchorAt(a, fromPort)
   const q = anchorAt(b, toPort)
   const pts: Pt[] = []
-  let prev = stubOut(p, STUB)
+  let prev = stubOut(a, p)
   pts.push(prev)
-  for (const w of [...bends, stubOut(q, STUB)]) {
+  for (const w of [...bends, stubOut(b, q)]) {
     if (prev.x !== w.x && prev.y !== w.y) pts.push({ x: w.x, y: prev.y })
     pts.push({ x: w.x, y: w.y })
     prev = w
@@ -1759,7 +1764,11 @@ function segmentHits(u: Pt, v: Pt, n: SchematicNode): boolean {
   return Math.max(u.x, v.x) > left && Math.min(u.x, v.x) < right && Math.max(u.y, v.y) > top && Math.min(u.y, v.y) < bottom
 }
 
-function stubOut(p: { x: number; y: number; side: PortSide }, d: number): { x: number; y: number } {
+/** The end of the port stub a wire leaves `n` by. A junction has no face, so
+ *  its wires start at the dot itself: a stub there drew the dot at the end of
+ *  a short tail, with the wires meeting a stub length to its right. */
+function stubOut(n: SchematicNode, p: { x: number; y: number; side: PortSide }): { x: number; y: number } {
+  const d = n.kind === 'junction' ? 0 : STUB
   switch (p.side) {
     case 'left':
       return { x: p.x - d, y: p.y }
