@@ -90,7 +90,9 @@ function pwaPlugin() {
       navigateFallback: 'index.html',
       // /api/ is the (optional, unwired) remote-fallback adapter's namespace —
       // a navigation there must fail honestly, not serve the app shell.
-      navigateFallbackDenylist: [/^\/api\//],
+      // The static frees Book ships beside the app under book/ (deploy.yml);
+      // its pages are real files, so a navigation there must not get the shell.
+      navigateFallbackDenylist: [/^\/api\//, /\/book\//],
       cleanupOutdatedCaches: true,
     },
   })

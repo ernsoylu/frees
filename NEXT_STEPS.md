@@ -163,11 +163,23 @@ entry here is checked off with evidence when it closes.
        - `LiquidTank`, `ThermalStorageTank`, `IceStorageBrine`, `LiquidVolume`, `LiquidThermostat` and `LiquidExpansionTank` have no numeric bank problem.
      - **No engine or library finding.** Every problem was stated with existing components and parameters.
      - **Gates (2026-11-06).** vitest 865/865, `check-docs` 754/754, `check-examples` 809/809 (2,898 assertions), lint 0 errors. No Rust source changed, so the workspace tests, parity and the module size are those recorded for the two-phase item. Every example solves with no unit warnings.
-- **C. D.3 frees Book and public gallery.** Generated from `web/src/docs/` (never a copy) and kept out of Git as a build output.
-  1. Renderer spike: mdBook against a static export of the in-app Help. `DocDiagrams.tsx` is React and the pages use KaTeX. Decide on measurement and record the choice as D14.
-  2. A generator builds the table of contents from guide order and the reference families.
-  3. Gallery: 30–50 models from `examples.ts`, each with problem, source, results, a plot and an "Open in frees" link. If the app cannot open a model from a URL, add that.
-  4. CI builds the book on every PR (failing on broken links or ungraded examples) and deploys it to Pages from `main`.
+- **C. D.3 frees Book and public gallery — built 2026-11-06 (`d3-frees-book`).** Generated from `web/src/docs/` (never a copy) and kept out of Git as a build output (`web/dist-book/`).
+  1. **Done: renderer spike, recorded as D14.** The book is a static export of the in-app Help, not an mdBook. On the 844 Help pages, the app's own React renderers rendered every page through `react-dom/server`. mdBook 0.5.4 would have shown raw `$…$` math on 635 pages and literal `[Run:]`/`[Related:]`/`[Diagram:]` directives on 212. The figures are in ARCHITECTURE §11.
+     - `Latex` now renders KaTeX during render instead of in an effect, so math reaches server-rendered HTML.
+     - Help cross-links carry real `href`s through `helpLinks.ts`: `#id` in the app, file paths in the book. App links therefore also open in a new tab.
+     - `StaticHelp` makes the book render folds open, replaces Run/Copy with an "Open in frees" share link, and leaves the app's behaviour unchanged.
+  2. **Done: generator.** `npm run build-book` (`web/scripts/build-book.mjs`, entry `web/src/book/entry.tsx`) builds the table of contents from the Help's guide categories, in their nav order, and from the reference families.
+     - Output: 889 pages (100 guide topics, 744 reference pages, 42 gallery models, home and two indexes) in about 13 s.
+     - CSS: Mantine and KaTeX, with the fonts emitted by the SSR build. It follows the system light or dark scheme.
+  3. **Done: gallery.**
+     - **Selection:** graded examples (with CHECKs) that solve without extra requests, at most three per category, transient models first. That gives 42 models over 20 categories.
+     - **Each page:** the problem (the model's header comment, which names the source), the CHECKed results solved at build time with units and the expected value, the model text, and "Open in frees". That link uses the app's existing `#share=` URL, so no app change was needed.
+     - **Plots:** only the 13 transient models get one, an SVG trajectory from their ODE table. Steady models have no curve to draw without inventing a sweep, so they get no plot.
+  4. **Done: CI and deploy.** CI's web job runs the book gate on every PR. It fails on a broken relative link, an unknown Help id, a gallery model without CHECKs, a failing CHECK, or fewer than 30 gallery models. A negative test with an injected `[Related: no-such-topic]` failed as intended.
+     - `deploy.yml` builds the book with "Open in frees" pointed at the deployed app and ships it inside the existing Pages artifact under `book/`. A Pages site serves one artifact, and the app already owns it.
+     - The service worker's navigation fallback now skips `/book/`, so an installed app does not answer book URLs with its shell.
+  - **Gates (2026-11-06).** vitest 865/865, `tsc -b` clean, lint 0 errors (90 warnings, unchanged), book build 0 failures. A Playwright check confirmed the reference-page and gallery rendering, including the plot.
+  - **Not done.** There is no search in the book; browser find works page by page. The live Help pages (units list, fluids list) link to the app. Nothing has been deployed yet: the first push to `main` after merge publishes `book/`.
 - **D. Schematic backlog as 01e.** Scheduling these overrides the triggers in the change request's backlog table; the owner approved that on 2026-11-05. CFG-11 stays out until a shared-storage architecture is decided.
   1. VIEW-10 and WIRE-11 together: sheets, one identity for repeated occurrences, off-page connectors keeping net identity, and deleting an occurrence kept apart from deleting the component. Project format v5, migrating from v4.
   2. COMP-08: project symbol overrides, port anchors, and SVG import through an allowlist sanitizer (no scripts, `foreignObject` or external references), security-reviewed before merge. Closes the rest of AC-15.

@@ -153,7 +153,7 @@ npm run build
 Keep enduring engineering information in the three top-level documents linked
 by `README.md`, not in separate report/decision folders:
 
-- `ARCHITECTURE_AND_REQUIREMENTS.md`: architecture, language contract, compatibility constraints and the retained rationale of D1–D13.
+- `ARCHITECTURE_AND_REQUIREMENTS.md`: architecture, language contract, compatibility constraints and the retained rationale of D1–D14.
 - `CLAUDE.md`: development instructions, authoritative source locations and maintenance rules.
 - `NEXT_STEPS.md`: signed milestones, unresolved findings and acceptance criteria. Label historical findings that have not been reverified; do not turn an old review into a claim that a bug remains open.
 
@@ -199,6 +199,7 @@ nvm use                 # selects web/.nvmrc; verify the active shell, not only 
 npm run check-docs      # Rust registry coverage, references, and KaTeX display parsing
 npm run check-examples  # runs examples through src/wasm/pkg, including page-level coverage
 npm run compile-docs    # refreshes in-app Help
+npm run build-book      # static frees Book in dist-book/ (D14); fails on broken links or failing gallery CHECKs
 ```
 
 If engine code changes, rebuild the WASM module before treating the example
