@@ -3,7 +3,7 @@ name: LiquidCheckValve
 category: Component (liquid)
 summary: "Check valve: the square-law orifice gated smoothly to forward ΔP only (tanh gate of width eps [Pa]); reverse flow decays to zero, no branch switch."
 related: []
-examples: []
+examples: [valve-loss-coefficients]
 tags: [liquidcheckvalve, component, liquid, acausal]
 references: []
 ---

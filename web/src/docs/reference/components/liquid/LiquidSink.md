@@ -3,7 +3,7 @@ name: LiquidSink
 category: Component (liquid)
 summary: A liquid boundary absorbing a stream.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, pump-operating-cost, pipe-pressure-drop-brass, chilled-water-coil-flow]
 tags: [liquidsink, component, liquid, acausal]
 ---
 

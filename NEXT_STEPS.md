@@ -142,6 +142,27 @@ entry here is checked off with evidence when it closes.
      - **Library finding, fixed — saturated set points.** `TwoPhaseEvaporator` (`SH_set = 0`), `TwoPhaseCondenser` (`SC_set = 0`) and `TwoPhaseEvaporatorUA` (`SH = 0`) evaluated `Enthalpy(P, T = T_sat)`. That state is undefined on the saturation line, so the textbook saturated-vapor and saturated-liquid exits failed. Each now takes `h_g` or `h_f` through a lazy `if` when the set point is zero. No golden used a zero set point; parity is unchanged.
      - **Library limit, documented — `CapillaryTube` and a saturated inlet.** Its flashing choke drives the flow with `P_in − P_sat(T_in)`, which is zero for saturated liquid, so it passes no flow. `refrigerant-throttling-quality` uses `TwoPhaseExpansionValve`, and the reference page says so.
      - **Gates (2026-11-06).** Workspace 3,429 tests, parity 1,308/1,308, vitest 857/857, `check-docs` 754/754, `check-examples` 809/809 (2,898 assertions), lint 0 errors. Rebuilt module 4,479.6 KiB raw / 2,001.3 KiB gzipped (+0.3 / +0.1 KiB). `eta_c` and `eps`, solved as component parameters, carry no inferred unit, so they keep their CHECKs without a unit expectation.
+  3. **Liquid domain — converted 2026-11-06 (`d2-wave-c-liquid`).** 9 bank problems tried, 8 converted (89 %).
+
+     | Gallery id | Source | Book answer | Model | Components |
+     | --- | --- | --- | --- | --- |
+     | `pump-operating-cost` | NCEES 125 | 3.63 kW input, $1,742/yr (D, 1,750) | 3.632 kW, $1,743 | LiquidSource, LiquidPump, LiquidSink |
+     | `pipe-pressure-drop-brass` | NCEES 126 | f 0.025 (Moody), 4.75 psi (B, 4.8) | f 0.02258 (Colebrook, drawn brass), 4.29 psi; B is still the nearest choice | LiquidPipe |
+     | `chilled-water-coil-flow` | NCEES 513 | 36.67 gpm (500·gpm·ΔT rule) | 36.55 gpm at the assumed 44 °F supply | LiquidColdPlate |
+     | `run-around-coil-loop` | NCEES 511 | 75,000 Btu/hr, T₂ 52 °F (C) | 75,210 Btu/hr, 52.09 °F | two LiquidColdPlates |
+     | `pump-npsh-available` | NCEES 517 | 4.09 ft (C) | 4.32 ft; the book converts both heads with the cold-water 2.31 ft/psi, and 200 °F water is 4 % lighter | LiquidPump `npsh` |
+     | `shower-mixing-ratio` | Çengel 5-9 | y 2.0 | 2.0004 | LiquidMixer |
+     | `parallel-branches-three-way-valve` | NCEES 127 | q_B 8.4 gpm (B) | 8.32 gpm; each branch gets its own Colebrook f where the book assumes one | LiquidThreeWayValve, LiquidPipe, LiquidMixer |
+     | `valve-loss-coefficients` | Miller §3.3 | U 5.47 m/s, 1.53 / 0.76 m (7.456 kN/m²) / 1.53 m | 5.471, 1.526 / 0.763 m (7.483 kN/m²) / 1.526 m | LiquidCheckValve, LiquidOrifice |
+
+     - **Miss: Çengel 2-15 (hydraulic turbine efficiency).** The problem infers efficiency from measured shaft power. `HydroTurbine` computes power from an `eta$` flow map, so efficiency is an input rather than a result.
+     - **Coverage.** 12 of 21 liquid components are in a graded gallery example (5 before). Still uncovered:
+       - `CoolingTower` takes an effectiveness, but the bank problems give the exit air state.
+       - `LiquidPumpMap` needs pump curves, which the bank prints only as figures.
+       - `HydroTurbine`: see the miss above.
+       - `LiquidTank`, `ThermalStorageTank`, `IceStorageBrine`, `LiquidVolume`, `LiquidThermostat` and `LiquidExpansionTank` have no numeric bank problem.
+     - **No engine or library finding.** Every problem was stated with existing components and parameters.
+     - **Gates (2026-11-06).** vitest 865/865, `check-docs` 754/754, `check-examples` 809/809 (2,898 assertions), lint 0 errors. No Rust source changed, so the workspace tests, parity and the module size are those recorded for the two-phase item. Every example solves with no unit warnings.
 - **C. D.3 frees Book and public gallery.** Generated from `web/src/docs/` (never a copy) and kept out of Git as a build output.
   1. Renderer spike: mdBook against a static export of the in-app Help. `DocDiagrams.tsx` is React and the pages use KaTeX. Decide on measurement and record the choice as D14.
   2. A generator builds the table of contents from guide order and the reference families.
