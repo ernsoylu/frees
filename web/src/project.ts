@@ -29,7 +29,10 @@ import { fromV3, sanitizePresentation, type SchematicPresentation } from './sche
 // user areas and view settings. v3 offsets carry over as `legacyOffsets`, made
 // absolute against the layout they were measured from once the network is
 // checked (`resolveLegacy`).
-const PROJECT_VERSION = 4
+// v5: + sheets (VIEW-10/WIRE-11): further sheets of the same model, blocks
+// moved off the main sheet, and off-page connector names. A v4 presentation
+// has none, so it opens with every block on the main sheet, as it was drawn.
+const PROJECT_VERSION = 5
 const PROJECT_KEY = 'frees.project'
 
 /**

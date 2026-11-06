@@ -329,6 +329,7 @@ instructions to restore removed features.
   - **Reconsider** if the Help moves to CommonMark with standard extensions.
 - The schematic presentation (positions, locks, areas, view settings) is display state in the project file, never model text. Changing it must not bump the model revision, check, solve or stale a result.
 - Project v4 stores absolute positions. v3 `{dx,dy}` offsets are carried as `legacyOffsets` and resolved once against the legacy auto-layout when topology is available; unmatched entries are kept and reported, not discarded. Malformed entries are dropped and counted with a load notice; the model is unaffected.
+- Project v5 adds sheets (VIEW-10/WIRE-11): `sheets` (id, name, member block ids, their own positions), `offMain` (blocks removed from the implicit main sheet) and `netNames` (connector names keyed by net). A v4 file opens with every block on the main sheet. Sheets are presentation only: a block on two sheets is one component, an off-page connector is derived from the net and never joins nets by label, and removing an occurrence never removes the component's last one.
 
 ### Table and plot integrity
 

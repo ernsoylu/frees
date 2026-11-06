@@ -5,6 +5,7 @@
 import type { CheckResponse } from '../api'
 import { stripComments } from './declaration'
 import type { SchematicPresentation } from './presentation'
+import { forgetBlocks } from './sheets'
 import { removeStatement, stripUnits, trimDigits, writtenEndpoints, type SourceChange, type SourceEdit } from './sourceEdit'
 
 type Pos = Record<string, { x: number; y: number }>
@@ -229,11 +230,11 @@ export function loadFragment(): Fragment | null {
 /** The presentation without anything kept for `ids`. */
 export function withoutBlocks(p: SchematicPresentation, ids: ReadonlySet<string>): SchematicPresentation {
   const keep = <T,>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).filter(([id]) => !ids.has(id)))
-  return {
+  return forgetBlocks({
     ...p,
     positions: keep(p.positions),
     locked: p.locked.filter((id) => !ids.has(id)),
     areas: p.areas.map((a) => ({ ...a, members: a.members.filter((m) => !ids.has(m)) })).filter((a) => a.members.length > 0),
     styles: { ...p.styles, instances: keep(p.styles.instances) },
-  }
+  }, ids)
 }

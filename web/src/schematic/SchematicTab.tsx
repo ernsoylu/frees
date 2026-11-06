@@ -124,6 +124,10 @@ import {
   type WireRoute,
 } from './presentation'
 import {
+  addSheet, connectorLabel, deleteSheet, isOffPage, isOnSheet, MAIN, moveToSheet, occurrencesOf, placeOnSheet, positionsOn,
+  removeFromSheet, renameSheet, sheetName, sheetNets, withPositions, type OffPage,
+} from './sheets'
+import {
   alreadyConnected,
   canonRef,
   compatibility,
@@ -419,6 +423,8 @@ export default function SchematicTab({
   const [focus, setFocus] = useState<{ kind: FocusKind; id: string } | null>(null)
   // HIER-01: the subsystem being looked into ('' = the model), with back/forward.
   const [scopes, setScopes] = useState<{ list: string[]; at: number }>({ list: [''], at: 0 })
+  // VIEW-10: the sheet on screen. Not saved: a project opens on its main sheet.
+  const [sheetId, setSheetId] = useState(MAIN)
   // CFG-08: the structured list, and what a screen reader hears.
   const [listOpen, setListOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')
@@ -436,6 +442,10 @@ export default function SchematicTab({
   }
   // A user area being named (VIEW-05), and v3 positions that matched no block.
   const [areaName, setAreaName] = useState<string | null>(null)
+  // VIEW-10: a sheet being named — a new one, or the one on screen.
+  const [sheetDraft, setSheetDraft] = useState<{ mode: 'new' | 'rename'; name: string } | null>(null)
+  // WIRE-11: an off-page connector being named; the name belongs to its net, on every sheet.
+  const [netDraft, setNetDraft] = useState<{ net: string; name: string } | null>(null)
   const [unresolved, setUnresolved] = useState(0)
   // Alignment lines shown while a drag sits on one.
   const [guides, setGuides] = useState<{ xs: number[]; ys: number[] } | null>(null)
@@ -466,7 +476,14 @@ export default function SchematicTab({
   const scope = drawnCheck?.instances?.some((i) => i.name.toLowerCase() === scopes.list[scopes.at]) ? scopes.list[scopes.at] : ''
   // Inside a subsystem the drawing is browsed, not edited: its source is the definition.
   const onEmitStatement = sourceBroken || scope ? undefined : emitStatement
-  const connections = useMemo(() => (drawnCheck?.connections ?? []).filter((c) => endpointScope(c.endpoints[0] ?? '') === scope), [drawnCheck, scope])
+  // VIEW-10: sheets divide the model's top level; a subsystem is browsed whole.
+  const sheet = !scope && pres.sheets.some((sh) => sh.id === sheetId) ? sheetId : MAIN
+  const sheetState = useMemo(() => ({ sheets: pres.sheets, offMain: pres.offMain, netNames: pres.netNames }), [pres.sheets, pres.offMain, pres.netNames])
+  const scoped = useMemo(() => (drawnCheck?.connections ?? []).filter((c) => endpointScope(c.endpoints[0] ?? '') === scope), [drawnCheck, scope])
+  // WIRE-11: a net leaving the sheet ends in an off-page connector, joined to it like an endpoint.
+  const onSheetNets = useMemo(() => (scope ? { connections: scoped, offPage: [] as OffPage[] } : sheetNets(sheetState, sheet, scoped)), [scope, scoped, sheetState, sheet])
+  const connections = onSheetNets.connections
+  const offPage = useMemo(() => new Map(onSheetNets.offPage.map((o) => [o.id, o])), [onSheetNets])
   const ports = useMemo(() => portIndex(drawnCheck?.ports), [drawnCheck])
   // WIRE-03: ports the engine reports unjoined, by instance.
   const openPorts = useMemo(() => {
@@ -518,21 +535,24 @@ export default function SchematicTab({
     for (const c of drawnCheck?.connections ?? []) {
       for (const e of c.endpoints) if (e.includes('$')) map.set(e.toLowerCase(), { label: e.slice(e.indexOf('$') + 1) })
     }
+    for (const o of offPage.values()) map.set(o.id, { label: `${connectorLabel(sheetState, o.net)} → ${o.partners.map((id) => sheetName(sheetState, id)).join(', ')}` })
     return map
-  }, [drawnCheck, components, text])
+  }, [drawnCheck, components, text, offPage, sheetState])
 
-  const declaredIds = useMemo(
+  const modelIds = useMemo(
     () => (scope ? (drawnCheck?.instances ?? []).map((i) => i.name.toLowerCase()).filter((id) => scopeOf(id) === scope) : [...documentInstances(text).keys()]),
     [text, scope, drawnCheck],
   )
-  // The canvas element exists only while there is something to draw; effects
-  // that attach to it re-run when it appears.
-  const drawn = connections.length > 0 || declaredIds.length > 0
+  const declaredIds = useMemo(() => (scope ? modelIds : modelIds.filter((id) => isOnSheet(sheetState, sheet, id))), [modelIds, scope, sheetState, sheet])
+  // The canvas element exists only while the model has something to draw; an
+  // empty sheet still shows the canvas, its toolbar and the way back.
+  // Effects that attach to it re-run when it appears.
+  const drawn = scoped.length > 0 || modelIds.length > 0
 
   // The document wires components but the canvas has no topology. Either no
   // check has run since the last edit (checkResult is null), or one ran and
   // did not get far enough to expand the network. Only the second is an error.
-  const topologyMissing = connections.length === 0 && wired
+  const topologyMissing = scoped.length === 0 && wired
 
   /** Each instance's declared ports, by component type, so unwired ports show. */
   const portsByInstance = useMemo(() => {
@@ -599,12 +619,13 @@ export default function SchematicTab({
   // A block the user placed sits where they put it; the rest where the layout puts them.
   const positioned = useMemo(() => {
     const map = new Map<string, SchematicNode>()
+    const at = positionsOn(onScreen, sheet)
     for (const n of layout.nodes) {
-      const p = onScreen.positions[n.id]
+      const p = at[n.id]
       map.set(n.id, p ? { ...n, x: p.x, y: p.y } : n)
     }
     return map
-  }, [layout.nodes, onScreen.positions])
+  }, [layout.nodes, onScreen, sheet])
 
   // v3 files saved offsets from the plain layout of the checked network; once
   // a Check has drawn that network, they become absolute positions.
@@ -644,7 +665,8 @@ export default function SchematicTab({
   // WIRE-07: wires the user bent go through their bends; a drag in progress
   // overrides the saved bends of the wire it moves.
   const [liveRoute, setLiveRoute] = useState<{ key: string; points: Pt[] } | null>(null)
-  const savedRoutes = onScreen.routes ?? EMPTY_ROUTES
+  // Hand bends were drawn against the main sheet's geometry; other sheets route automatically.
+  const savedRoutes = sheet === MAIN ? (onScreen.routes ?? EMPTY_ROUTES) : EMPTY_ROUTES
   const manual = useMemo(() => {
     const out = new Map<string, Pt[]>()
     for (const e of layout.edges) {
@@ -789,11 +811,16 @@ export default function SchematicTab({
   // panel is still settling when the first measurement arrives, so the drawing
   // would be framed for a window that existed for one frame.
   const userAdjusted = useRef(false)
+  // VIEW-07: the box a search hit was framed on, kept until the camera next
+  // moves, so a canvas that resizes as the hit's scope draws keeps it centred.
+  const held = useRef<Box | null>(null)
   const fit = useCallback(() => {
+    held.current = null
     userAdjusted.current = false
     fitTo(viewport.w, viewport.h)
   }, [fitTo, viewport.w, viewport.h])
   const takeControl = useCallback(() => {
+    held.current = null
     userAdjusted.current = true
   }, [])
   // HIER-01: each scope keeps its own camera; one not yet adjusted is fitted.
@@ -807,11 +834,61 @@ export default function SchematicTab({
     setWireCard(null)
     setFocus(null)
     const camera = cameras.current.get(list[at])
+    held.current = null
     userAdjusted.current = Boolean(camera)
     if (camera) setView(camera)
   }
   const openScope = (next: string) => {
     if (next !== scope) showScope([...scopes.list.slice(0, scopes.at + 1), next], scopes.at + 1)
+  }
+  /** VIEW-10: show another sheet, framed afresh, optionally with a block selected (an off-page partner). */
+  const showSheet = (next: string, select?: string) => {
+    setSheetId(next)
+    setSelected(new Set(select ? [select] : []))
+    setPinned(select ?? null)
+    setWireCard(null)
+    setFocus(null)
+    held.current = null
+    userAdjusted.current = false
+    setAnnouncement(`Sheet ${sheetName(sheetState, next)}`)
+  }
+  const nameSheet = () => {
+    if (!sheetDraft?.name.trim()) return
+    if (sheetDraft.mode === 'rename') updatePres((p) => renameSheet(p, sheet, sheetDraft.name), 'Rename sheet')
+    else {
+      // A new sheet made with components selected takes them.
+      const { state, id } = addSheet(presRef.current, sheetDraft.name)
+      const ids = sheetBlocks()
+      updatePres(() => (ids.length ? moveToSheet(state, sheet, id, ids) : state), `New sheet ${sheetDraft.name.trim()}`)
+      showSheet(id)
+    }
+    setSheetDraft(null)
+  }
+  const nameNet = () => {
+    if (!netDraft) return
+    const name = netDraft.name.trim()
+    updatePres((p) => {
+      const netNames = { ...p.netNames }
+      if (name) netNames[netDraft.net] = name
+      else delete netNames[netDraft.net]
+      return { ...p, netNames }
+    }, name ? `Name connector ${name}` : 'Clear connector name')
+    setNetDraft(null)
+  }
+  const sheetBlocks = () => selection.filter((id) => !isOffPage(id) && positioned.get(id)?.kind === 'instance')
+  /** Move the selection to another sheet (`also`: draw it there too); one component either way. */
+  const sendToSheet = (to: string, also: boolean) => {
+    const ids = sheetBlocks()
+    updatePres((p) => (also ? placeOnSheet(p, to, ids) : moveToSheet(p, sheet, to, ids)), `${also ? 'Also show' : 'Move'} ${ids.join(', ')} on ${sheetName(sheetState, to)}`)
+    if (!also) setSelected(new Set())
+  }
+  /** Remove occurrences from this sheet; the model is untouched, and a last occurrence stays. */
+  const removeOccurrences = () => {
+    const ids = sheetBlocks()
+    const { state, kept } = removeFromSheet(presRef.current, sheet, ids)
+    if (kept.length < ids.length) updatePres(() => state, `Remove ${ids.filter((id) => !kept.includes(id)).join(', ')} from ${sheetName(sheetState, sheet)}`)
+    setSelected(new Set(kept))
+    if (kept.length) setWireNote(`${kept.join(', ')} ${kept.length === 1 ? 'is' : 'are'} on no other sheet: removing ${kept.length === 1 ? 'it' : 'them'} here would remove ${kept.length === 1 ? 'it' : 'them'} from the drawing. Use Delete to delete the component.`)
   }
   const [treeQuery, setTreeQuery] = useState('')
   const [treeOpen, setTreeOpen] = useState(false)
@@ -863,8 +940,12 @@ export default function SchematicTab({
     if (!box || viewport.w === 0) return
     seek.current = null
     takeControl()
+    held.current = box
     setView(frameBox(box, viewport.w, viewport.h, 1))
   }, [seekTick, positioned, viewport.w, viewport.h, takeControl])
+  useEffect(() => {
+    if (held.current && viewport.w > 0) setView(frameBox(held.current, viewport.w, viewport.h, 1))
+  }, [viewport.w, viewport.h])
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -901,6 +982,11 @@ export default function SchematicTab({
     setAnnouncement(`${edit.label}: done; Check runs next.`)
     return true
   }
+  /** VIEW-10: change the positions on the sheet on screen. */
+  const onSheet = (p: SchematicPresentation, change: (pos: SchematicPresentation['positions']) => SchematicPresentation['positions']) =>
+    withPositions(p, sheet, change(positionsOn(p, sheet)))
+  /** Blocks made on a sheet other than main are drawn there, not on main. */
+  const adopt = (p: SchematicPresentation, ids: readonly string[]) => (sheet === MAIN ? p : moveToSheet(p, MAIN, sheet, ids))
   const replay = (direction: 'undo' | 'redo') => {
     const from = direction === 'undo' ? history.done : history.undone
     const step = from.at(-1)
@@ -926,9 +1012,9 @@ export default function SchematicTab({
     }
     const alive = new Set(nodeKey.split(','))
     // Only this scope's blocks are drawn; the others' positions are kept.
-    const positions = Object.fromEntries(Object.entries(presRef.current.positions).filter(([id]) => alive.has(id) || scopeOf(id) !== scope))
-    onPresentationChange({ ...presRef.current, positions })
-  }, [nodeKey, onPresentationChange, scope])
+    const positions = Object.fromEntries(Object.entries(positionsOn(presRef.current, sheet)).filter(([id]) => alive.has(id) || scopeOf(id) !== scope))
+    onPresentationChange(withPositions(presRef.current, sheet, positions))
+  }, [nodeKey, onPresentationChange, scope, sheet])
 
   // Keep the whole network framed as the panel settles and the document
   // changes, so the user opens onto the drawing rather than its top-left
@@ -993,6 +1079,7 @@ export default function SchematicTab({
   const applyView = (v: SavedView) => {
     updatePres((p) => ({ ...p, view: v.view, overlay: v.overlay, badges: v.badges }), `Apply view ${v.name}`)
     openScope(v.scope)
+    held.current = null
     userAdjusted.current = true
     setView(v.camera)
     setFocus(v.focus)
@@ -1100,7 +1187,7 @@ export default function SchematicTab({
     const id = decl?.[2].toLowerCase()
     runEdit(
       { label: `Add ${decl?.[2] ?? 'component'}`, changes: [appendStatement(text, block)] },
-      id ? (p) => ({ ...p, positions: { ...p.positions, [id]: { x: at.x - PLACE_OFFSET.x, y: at.y - PLACE_OFFSET.y } } }) : undefined,
+      id ? (p) => adopt(onSheet(p, (pos) => ({ ...pos, [id]: { x: at.x - PLACE_OFFSET.x, y: at.y - PLACE_OFFSET.y } })), [id]) : undefined,
     )
   }
   const choose = (choice: QuickAddChoice, at: { x: number; y: number }) => {
@@ -1139,8 +1226,10 @@ export default function SchematicTab({
 
   // WIRE-07: route edits are presentation, one undo step each.
   const snapPt = (p: Pt): Pt => (settings.snap ? { x: snapToGrid(p.x, settings.grid), y: snapToGrid(p.y, settings.grid) } : p)
-  const setRoutes = (change: (r: Record<string, WireRoute>) => Record<string, WireRoute>, label: string) =>
+  const setRoutes = (change: (r: Record<string, WireRoute>) => Record<string, WireRoute>, label: string) => {
+    if (sheet !== MAIN) return setWireNote('Wire bends are kept on the main sheet; this sheet routes its wires automatically.')
     updatePres((p) => ({ ...p, routes: change(p.routes ?? EMPTY_ROUTES) }), label)
+  }
   const suppressClick = useRef(false)
   /** Drag the lane under the pointer square to itself; a still press is a click. */
   const startLaneDrag = (ev: ReactPointerEvent, e: SchematicEdge) => {
@@ -1271,7 +1360,7 @@ export default function SchematicTab({
       .filter((n): n is SchematicNode => Boolean(n))
       .map((n) => ({ x: n.x + n.w / 2, y: n.y + n.h / 2 }))
     const mid = centres.length === 2 ? { x: (centres[0].x + centres[1].x) / 2, y: (centres[0].y + centres[1].y) / 2 } : null
-    if (runEdit(insertEdit, id && mid ? (p) => ({ ...p, positions: { ...p.positions, [id]: { x: mid.x - PLACE_OFFSET.x, y: mid.y - PLACE_OFFSET.y } } }) : undefined)) {
+    if (runEdit(insertEdit, id && mid ? (p) => adopt(onSheet(p, (pos) => ({ ...pos, [id]: { x: mid.x - PLACE_OFFSET.x, y: mid.y - PLACE_OFFSET.y } })), [id]) : undefined)) {
       setInsertDraft(null)
       setWireCard(null)
     }
@@ -1353,7 +1442,7 @@ export default function SchematicTab({
     if (!checkResult || sourceBroken) return setWireNote('Check first: pasting needs the checked source.')
     const defs = (checkResult.definitions ?? []).flatMap((d) => (d.range ? [{ name: d.name, text: text.slice(d.range[0], d.range[1]) }] : []))
     const r = pasteFragment(text, f, takenNames, defs, { dx: 40, dy: 40 })
-    if (runEdit({ label: `${label} ${f.instances.map((i) => i.name).join(', ')}`, changes: [appendStatement(text, r.block)] }, (p) => ({ ...p, positions: { ...p.positions, ...r.positions } }))) {
+    if (runEdit({ label: `${label} ${f.instances.map((i) => i.name).join(', ')}`, changes: [appendStatement(text, r.block)] }, (p) => adopt(onSheet(p, (pos) => ({ ...pos, ...r.positions })), r.ids))) {
       setSelected(new Set(r.ids))
       setPinned(null)
       setPasteReport(r)
@@ -1361,7 +1450,7 @@ export default function SchematicTab({
   }
   const requestDelete = (ids: readonly string[] = selection) => {
     if (!checkResult || sourceBroken) return setWireNote('Check first: deleting works on the checked source.')
-    const impact = deleteImpact(text, checkResult, new Set(ids))
+    const impact = deleteImpact(text, checkResult, new Set(ids.filter((id) => !isOffPage(id))))
     if (impact.edit.changes.length === 0) return setWireNote('Select one or more components first.')
     setDeleting({ ...impact, ids: [...ids] })
   }
@@ -1489,7 +1578,8 @@ export default function SchematicTab({
     const ids = new Set(extracting.ids)
     const boxes = extracting.ids.flatMap((id) => positioned.get(id) ?? [])
     const at = { x: boxes.reduce((s, b) => s + b.x, 0) / Math.max(1, boxes.length), y: boxes.reduce((s, b) => s + b.y, 0) / Math.max(1, boxes.length) }
-    if (runEdit(extraction.edit, (p) => movePresentation(p, ids, extracting.name, at))) {
+    const inst = extracting.name.toLowerCase()
+    if (runEdit(extraction.edit, (p) => onSheet(movePresentation(p, ids, extracting.name, at), (pos) => ({ ...pos, [inst]: at })))) {
       setSelected(new Set([extracting.name.toLowerCase()]))
       setPinned(null)
     }
@@ -1785,7 +1875,7 @@ export default function SchematicTab({
 
   /** Move blocks by per-block drawing-unit deltas, as one workspace update; locked blocks stay. */
   const moveBlocks = (deltas: ReadonlyMap<string, { dx: number; dy: number }>, label = 'Move') => {
-    const positions = { ...presRef.current.positions }
+    const positions = { ...positionsOn(presRef.current, sheet) }
     for (const [id, d] of deltas) {
       const n = positioned.get(id)
       if (n && !lockedIds.has(id)) {
@@ -1793,13 +1883,12 @@ export default function SchematicTab({
       }
     }
     takeControl()
-    updatePres((p) => ({ ...p, positions }), label)
+    updatePres((p) => withPositions(p, sheet, positions), label)
   }
   /** Lock (or unlock) the selection where it is drawn now. */
   const lockSelection = (on: boolean) =>
     updatePres((p) => ({
-      ...p,
-      positions: on ? { ...p.positions, ...Object.fromEntries(selection.flatMap((id) => { const n = positioned.get(id); return n ? [[id, { x: n.x, y: n.y }]] : [] })) } : p.positions,
+      ...onSheet(p, (pos) => (on ? { ...pos, ...Object.fromEntries(selection.flatMap((id) => { const n = positioned.get(id); return n ? [[id, { x: n.x, y: n.y }]] : [] })) } : pos)),
       locked: on ? [...new Set([...p.locked, ...selection])] : p.locked.filter((id) => !selection.includes(id)),
     }), on ? 'Lock position' : 'Unlock position')
   const addArea = (label: string) => {
@@ -1816,7 +1905,10 @@ export default function SchematicTab({
       scope === 'all' ? layout.nodes.map((n) => n.id)
         : scope === 'circuit' ? layout.nodes.filter((n) => groups.has(n.group)).map((n) => n.id)
           : selection
-    const { presentation, moved } = arrangeBlocks(presRef.current, ids)
+    const base = presRef.current
+    const arranged = arrangeBlocks(sheet === MAIN ? base : { ...base, positions: positionsOn(base, sheet), routes: {} }, ids)
+    const moved = arranged.moved
+    const presentation = sheet === MAIN ? arranged.presentation : withPositions(base, sheet, arranged.presentation.positions)
     if (moved.length === 0) return setWireNote('Nothing to arrange: those blocks are locked.')
     setArranging({ label: `Arrange ${scope}`, moved, presentation: scope === 'all' ? { ...presentation, legacyOffsets: {} } : presentation })
   }
@@ -1983,13 +2075,13 @@ export default function SchematicTab({
       setGuides(g.xs.length + g.ys.length > 0 ? { xs: g.xs, ys: g.ys } : null)
     }
     dragBefore.current ??= presRef.current
-    const positions = { ...presRef.current.positions }
+    const positions = { ...positionsOn(presRef.current, sheet) }
     for (const id of ids) {
       if (start[id]) {
         positions[id] = { x: start[id].x + dx, y: start[id].y + dy }
       }
     }
-    applyPres({ ...presRef.current, positions })
+    applyPres(withPositions(presRef.current, sheet, positions))
   }
   // A drag is one undo step, from its first move to its release.
   const dragBefore = useRef<SchematicPresentation | null>(null)
@@ -2239,8 +2331,91 @@ export default function SchematicTab({
             </Group>
           )
         })}
+        {onPresentationChange && (
+          // Sheets apply at the top level; inside a subsystem the button stays, disabled, so the toolbar keeps its rows.
+          <Menu position="bottom-start" withinPortal disabled={!!scope}>
+            <Menu.Target>
+              {/* A badge-height button, so the toolbar row and the canvas keep their size. */}
+              <Badge component="button" size="xs" variant={sheet === MAIN ? 'default' : 'light'} color={sheet === MAIN ? 'gray' : 'teal'} data-testid="sheet-menu"
+                disabled={!!scope} title={scope ? 'Sheets apply to the top level of the model' : undefined} style={{ cursor: scope ? 'default' : 'pointer' }}>
+                Sheet: {sheetName(sheetState, sheet)}
+              </Badge>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Sheets</Menu.Label>
+              {[MAIN, ...pres.sheets.map((sh) => sh.id)].map((id) => (
+                <Menu.Item key={id} onClick={() => showSheet(id)} aria-current={id === sheet ? 'page' : undefined} fw={id === sheet ? 700 : undefined}>
+                  {sheetName(sheetState, id)}
+                </Menu.Item>
+              ))}
+              <Menu.Item onClick={() => setSheetDraft({ mode: 'new', name: `Sheet ${pres.sheets.length + 2}` })}>
+                {sheetBlocks().length ? 'New sheet from selection…' : 'New sheet…'}
+              </Menu.Item>
+              {sheet !== MAIN && <Menu.Item onClick={() => setSheetDraft({ mode: 'rename', name: sheetName(sheetState, sheet) })}>Rename sheet…</Menu.Item>}
+              {sheet !== MAIN && (
+                <Menu.Item color="red" onClick={() => { updatePres((p) => deleteSheet(p, sheet), `Delete sheet ${sheetName(sheetState, sheet)}`); showSheet(MAIN) }}>
+                  Delete sheet (components stay)
+                </Menu.Item>
+              )}
+              <Menu.Divider />
+              <Menu.Label>Selected components ({sheetBlocks().length})</Menu.Label>
+              {[MAIN, ...pres.sheets.map((sh) => sh.id)].filter((id) => id !== sheet).flatMap((id) => [
+                <Menu.Item key={`move-${id}`} disabled={sheetBlocks().length === 0} onClick={() => sendToSheet(id, false)}>Move to {sheetName(sheetState, id)}</Menu.Item>,
+                <Menu.Item key={`also-${id}`} disabled={sheetBlocks().length === 0} onClick={() => sendToSheet(id, true)}>Also show on {sheetName(sheetState, id)}</Menu.Item>,
+              ])}
+              <Menu.Item disabled={sheetBlocks().length === 0} onClick={removeOccurrences}>Remove from this sheet</Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        )}
+        {netDraft && (
+          <Group gap={4} wrap="nowrap">
+            <TextInput
+              size="xs"
+              value={netDraft.name}
+              onChange={(e) => setNetDraft({ ...netDraft, name: e.currentTarget.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') nameNet()
+                if (e.key === 'Escape') setNetDraft(null)
+              }}
+              maxLength={60}
+              w={150}
+              aria-label="Connector name"
+              placeholder="Net name"
+              autoFocus
+            />
+            <Button size="compact-xs" onClick={nameNet}>
+              Name
+            </Button>
+            <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setNetDraft(null)}>
+              Cancel
+            </Button>
+          </Group>
+        )}
+        {sheetDraft && (
+          <Group gap={4} wrap="nowrap">
+            <TextInput
+              size="xs"
+              value={sheetDraft.name}
+              onChange={(e) => setSheetDraft({ ...sheetDraft, name: e.currentTarget.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') nameSheet()
+                if (e.key === 'Escape') setSheetDraft(null)
+              }}
+              maxLength={60}
+              w={150}
+              aria-label="Sheet name"
+              autoFocus
+            />
+            <Button size="compact-xs" disabled={!sheetDraft.name.trim()} onClick={nameSheet}>
+              {sheetDraft.mode === 'new' ? 'Add sheet' : 'Rename'}
+            </Button>
+            <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setSheetDraft(null)}>
+              Cancel
+            </Button>
+          </Group>
+        )}
         <Badge size="xs" variant="light" color="gray">
-          {layout.nodes.filter((n) => n.kind === 'instance').length} components
+          {layout.nodes.filter((n) => n.kind === 'instance' && !isOffPage(n.id)).length} components
         </Badge>
         {(nested || scope) && (
           <Group gap={2} wrap="nowrap" data-testid="scope-bar">
@@ -3199,6 +3374,24 @@ export default function SchematicTab({
               if (out && isolating) {
                 return null
               }
+              const off = offPage.get(n.id)
+              if (off) {
+                // WIRE-11: the connector leads to its partner — the block the net reaches there.
+                const go = () => showSheet(off.partners[0] ?? MAIN, off.target || undefined)
+                return (
+                  <OffPageConnector
+                    key={n.id}
+                    node={n}
+                    ink={ink}
+                    faded={out}
+                    highlighted={selected.has(n.id)}
+                    color={styleOf(layout.edges.find((e) => e.from === n.id || e.to === n.id)?.lineId ?? '').color}
+                    onOpen={go}
+                    onName={onPresentationChange ? () => setNetDraft({ net: off.net, name: sheetState.netNames[off.net] ?? '' }) : undefined}
+                    to={off.partners.map((id) => sheetName(sheetState, id)).join(', ')}
+                  />
+                )
+              }
               return n.kind === 'junction' ? (
                 <circle
                   key={n.id}
@@ -3393,6 +3586,11 @@ export default function SchematicTab({
               <Kbd size="xs">Esc</Kbd>
             </Group>
           </Paper>
+        )}
+        {layout.nodes.length === 0 && sheet !== MAIN && (
+          <Text size="sm" c="dimmed" ta="center" data-testid="empty-sheet" style={{ position: 'absolute', top: '40%', left: 0, right: 0, pointerEvents: 'none' }}>
+            {sheetName(sheetState, sheet)} is empty. Select components on another sheet and use Sheet › Move to {sheetName(sheetState, sheet)}.
+          </Text>
         )}
         {/* An isolated circuit is the whole drawing for now; no overview of the hidden rest. */}
         {!isolating && (
@@ -3589,6 +3787,8 @@ export default function SchematicTab({
             false
           }
           identity={drawnCheck?.instances?.find((i) => i.name.toLowerCase() === activeNode.id)}
+          occurrences={scope ? undefined : occurrencesOf(sheetState, activeNode.id).map((id) => ({ id, name: sheetName(sheetState, id), current: id === sheet }))}
+          onOpenSheet={(id) => showSheet(id, activeNode.id)}
           onRename={onSourceEdit ? rename : undefined}
           definitionLine={(name) => drawnCheck?.definitions?.find((d) => d.name.toLowerCase() === name.toLowerCase())?.line ?? null}
           onRevealLine={onRevealLine}
@@ -4540,6 +4740,63 @@ function FormatButton({ reading: r, format, onChange }: Readonly<{ reading: Read
   )
 }
 
+/**
+ * WIRE-11: where a net leaves the sheet. Drawn as a flag naming the net and
+ * the sheets it continues on; a click or Enter opens the partner sheet with
+ * the block the net reaches there selected.
+ */
+function OffPageConnector({ node, ink, faded, highlighted, color, to, onOpen, onName }: Readonly<{
+  /**
+   * Name the net from the context menu (the Menu key or Shift+F10 opens it from
+   * the keyboard; F2 is Solve). The name shows on every sheet's connector.
+   */
+  onName?: () => void
+  node: SchematicNode
+  highlighted: boolean
+  ink: SchematicInk
+  faded: boolean
+  color: string
+  to: string
+  onOpen: () => void
+}>) {
+  const { x, y, w, h } = node
+  const tip = 12
+  return (
+    <g
+      data-node={node.id}
+      data-offpage
+      role="link"
+      tabIndex={0}
+      aria-label={`Off-page connector ${node.label}: open ${to}${onName ? '; its context menu names it' : ''}`}
+      opacity={faded ? 0.2 : undefined}
+      style={{ cursor: 'pointer' }}
+      onClick={onOpen}
+      onPointerDown={(e) => e.stopPropagation()}
+      onContextMenu={(e) => {
+        if (!onName) return
+        e.preventDefault()
+        onName()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen()
+        }
+      }}
+    >
+      <path
+        d={`M${x} ${y + h / 2 - 12} H${x + w - tip} L${x + w} ${y + h / 2} L${x + w - tip} ${y + h / 2 + 12} H${x} Z`}
+        fill={ink.block}
+        stroke={highlighted ? ink.highlight : color}
+        strokeWidth={highlighted ? 2.6 : 1.8}
+      />
+      <text x={x + 8} y={y + h / 2 + 4} fontSize={11} fill={ink.text}>
+        {node.label}
+      </text>
+    </g>
+  )
+}
+
 function ReadoutCard({
   node,
   readout,
@@ -4561,8 +4818,13 @@ function ReadoutCard({
   onShow,
   onFormat,
   handoff,
+  occurrences,
+  onOpenSheet,
 }: Readonly<{
   handoff?: Handoff
+  /** VIEW-10: the sheets this one component is drawn on. */
+  occurrences?: { id: string; name: string; current: boolean }[]
+  onOpenSheet?: (id: string) => void
   node: SchematicNode
   readout: NodeReadout
   /** RUN-03: the block's chosen badge variable, the watch list and the formats. */
@@ -4638,6 +4900,18 @@ function ReadoutCard({
           </Button>
         )}
       </Group>
+      {occurrences && occurrences.length > 1 && (
+        <Group gap={4} mb={4} wrap="wrap" data-testid="occurrences">
+          <Text size="xs" c="dimmed">
+            One component, on {occurrences.length} sheets:
+          </Text>
+          {occurrences.map((o) => (
+            <Button key={o.id} size="compact-xs" variant={o.current ? 'light' : 'subtle'} disabled={o.current || !pinned} onClick={() => onOpenSheet?.(o.id)}>
+              {o.name}
+            </Button>
+          ))}
+        </Group>
+      )}
       {owner && (
         <Group gap={4} mb={4} wrap="nowrap" data-testid="instance-owner">
           <Text size="xs" c="violet">
