@@ -642,6 +642,25 @@
       "integral for K. They agree with SciPy 1.18.1 to round-off, graded in",
       "crates/frees-core/tests/reference_libraries.rs. A gap here is the Java fit's",
       "own error; the frees side is the accurate one."
+    ],
+    "oracle-cold-start-stall": [
+      "THE ORACLE GAVE UP ON A WELL-POSED BLOCK. In a coupled component block the",
+      "explicit intermediates (a pipe's rho = Density(...), its V and f; an",
+      "exchanger's Cmin) started at the solver's default guess of 1, so Newton's",
+      "first step left the property range and every rung of the Java's failure",
+      "ladder failed. frees adds a last rung on 2026-11-05 (engine.rs,",
+      "retry_from_consistent_start): it runs only after every other rung has",
+      "failed, sweeps the block's x = f(...) equations from the guesses, and runs",
+      "Newton once more. A fixture the Java solved never reaches it."
+    ],
+    "oracle-colebrook-stop": [
+      "THE GOLDEN CARRIES THE JAVA COLEBROOK'S STOPPING RESIDUE. The Java iterated",
+      "Colebrook-White until successive iterates differed by 1e-13 absolute, about",
+      "1e-11 relative for a turbulent f; frees iterates to round-off since",
+      "2026-11-05 (props/flowresist.rs), because the coarser stop left an",
+      "f = friction_factor(Re, ...) row inside a coupled block unable to meet",
+      "Newton's 1e-12 criterion. A quantity that is the difference of two",
+      "friction evaluations, structurally zero, moves by that residue."
     ]
   },
   "fixtures": {
@@ -1102,7 +1121,40 @@
           "measured": 9.3673e-12
         }
       }
+    },
+    "components_wave5_hydraulic_valves": {
+      "unit": "Pa",
+      "mechanism": "oracle-colebrook-stop",
+      "variables": {
+        "d_pp": {
+          "absolute": 7e-10,
+          "measured": 4.656613e-10
+        }
+      },
+      "reason": "d_pp = (HP.in.P - 100000) - friction_factor(repp, 0) * (L/D) * rho * vpp^2 / 2 restates the HydraulicPipe's own drop, so its true value is 0 (the fixture's EXPECT is 0 within 1e-2 Pa). The golden's 1.5182280912995338e-4 Pa is the residue of Newton's stop on a ~1.3e6 Pa drop; this engine gives 1.5182234346866608e-4 Pa because its friction factor no longer carries the Java Colebrook's 1e-13 stopping error."
     }
   },
-  "solver_floor": {}
+  "solver_floor": {},
+  "rescued": {
+    "component-networks-fan-duct-real": {
+      "mechanism": "oracle-cold-start-stall",
+      "values": {
+        "f1$q": 0.4875912576886705,
+        "c$mdot": 0.5876418759938353,
+        "b$p": 101494.7982853133,
+        "b$h": 419488.8151663302
+      },
+      "reason": "The Java failed this fan-duct network with a SolverException; frees solves it through the consistent-start rung. Checked by hand (Python, independent Colebrook to convergence) from the fixture's own equations at the solved state: the Fan's rise 500*(1-(Q/0.6)^2) = 169.79828531330625 Pa at Q = 0.48759 m3/s equals the Pipe's f(L/D)rho V^2/2 = 169.79828531330256 Pa with f = 0.01778118727173084 at Re = 136961.03, and b.h = a.h + dP/(rho*eta) = 419488.8151663302 J/kg."
+    },
+    "component-port-units-fan-duct": {
+      "mechanism": "oracle-cold-start-stall",
+      "values": {
+        "f1$q": 0.4875912576886705,
+        "c$mdot": 0.5876418759938353,
+        "b$p": 101494.7982853133,
+        "b$h": 419488.8151663302
+      },
+      "reason": "The Java failed this fan-duct network with a SolverException; frees solves it through the consistent-start rung. Checked by hand (Python, independent Colebrook to convergence) from the fixture's own equations at the solved state: the Fan's rise 500*(1-(Q/0.6)^2) = 169.79828531330625 Pa at Q = 0.48759 m3/s equals the Pipe's f(L/D)rho V^2/2 = 169.79828531330256 Pa with f = 0.01778118727173084 at Re = 136961.03, and b.h = a.h + dP/(rho*eta) = 419488.8151663302 J/kg."
+    }
+  }
 }

@@ -3,7 +3,7 @@ name: TwoZoneHX
 category: Component (fluid)
 summary: A two-zone heat exchanger resolving distinct thermal regions.
 related: []
-examples: []
+examples: [shower-heat-exchanger]
 tags: [twozonehx, component, fluid, acausal]
 ---
 

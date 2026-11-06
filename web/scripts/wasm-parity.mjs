@@ -145,6 +145,9 @@ async function main() {
     absolutes.set(k, vars)
   }
   const solverFloors = new Map(Object.entries(tolDoc.solver_floor || {}))
+  // Java goldens that record a failure frees now solves: graded against the
+  // hand-checked values in `rescued` (tests/parity.rs `declared_rescues`).
+  const rescues = new Map(Object.entries(tolDoc.rescued || {}).map(([k, v]) => [k, v.values]))
 
   let browserDivergencesDoc = { fixtures: {} }
   try {
@@ -192,7 +195,15 @@ async function main() {
 
     const expectError = fixture.expect.error
     if (expectError != null) {
-      if (out.success) {
+      if (out.success && rescues.has(stem)) {
+        const got = new Map((out.variables || []).map(v => [v.name.toLowerCase(), v.value]))
+        const bad = Object.entries(rescues.get(stem)).find(([k, want]) => {
+          const act = got.get(k.toLowerCase().replaceAll("$", "."))
+          return act === undefined || !close(act, want, REL_TOL)
+        })
+        if (bad) failures.push({ fixture: stem, detail: `rescued \`${bad[0]}\` = ${got.get(bad[0].toLowerCase().replaceAll("$", "."))} but expected ${bad[1]}` })
+        else passed++
+      } else if (out.success) {
         failures.push({ fixture: stem, detail: `Java failed with ${expectError.type || 'error'} but WASM solved` })
       } else {
         passed++

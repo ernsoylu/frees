@@ -1083,10 +1083,10 @@ pub const INTRINSICS: &[Intrinsic] = &[
     )),
     // ----- flow networks (Darcy friction, Reynolds, minor losses) ------------
     strict!("friction_factor", Arity::Exact(2), |_, a| Ok(
-        friction_factor(a[0], a[1])
+        crate::props::flowresist::friction_factor(a[0], a[1])
     )),
     strict!("darcy_friction", Arity::Exact(2), |_, a| Ok(
-        friction_factor(a[0], a[1])
+        crate::props::flowresist::friction_factor(a[0], a[1])
     )),
     strict!("reynolds", Arity::Exact(4), |n, a| reynolds(
         n, a[0], a[1], a[2], a[3]
@@ -4970,36 +4970,6 @@ fn reynolds(name: &str, rho: f64, velocity: f64, diameter: f64, viscosity: f64) 
         return Err(domain(name, format_args!("dynamic viscosity must be > 0")));
     }
     Ok(rho * libm::fabs(velocity) * diameter / viscosity)
-}
-
-fn friction_factor(re: f64, relative_roughness: f64) -> f64 {
-    let re = if re <= 1.0e-6 { 1.0e-6 } else { re };
-    let laminar = 64.0 / re;
-    if re < 2300.0 {
-        return laminar;
-    }
-    let turbulent = colebrook(java_max(re, 4000.0), relative_roughness);
-    if re < 4000.0 {
-        let t = (re - 2300.0) / (4000.0 - 2300.0);
-        return laminar + t * (turbulent - laminar);
-    }
-    turbulent
-}
-
-fn colebrook(re: f64, relative_roughness: f64) -> f64 {
-    let eps = java_max(relative_roughness, 0.0);
-    // Haaland explicit initial guess, then fixed-point Colebrook–White.
-    let inv_sqrt = -1.8 * libm::log10(libm::pow(eps / 3.7, 1.11) + 6.9 / re);
-    let mut f = 1.0 / (inv_sqrt * inv_sqrt);
-    for _ in 0..60 {
-        let rhs = -2.0 * libm::log10(eps / 3.7 + 2.51 / (re * libm::sqrt(f)));
-        let f_new = 1.0 / (rhs * rhs);
-        if libm::fabs(f_new - f) <= 1e-13 {
-            return f_new;
-        }
-        f = f_new;
-    }
-    f
 }
 
 // --- Two-phase flow (props/TwoPhase.java) -----------------------------------

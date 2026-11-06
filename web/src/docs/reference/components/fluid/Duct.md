@@ -3,7 +3,7 @@ name: Duct
 category: Component (fluid)
 summary: A flow passage that imposes a pressure drop on the stream.
 related: []
-examples: []
+examples: [square-duct-friction-loss, draining-tank-time-constant]
 tags: [duct, component, fluid, acausal]
 ---
 
@@ -49,6 +49,8 @@ f &= \text{friction\_factor}\left(re_{d}, \frac{rough}{d}\right) \\
 out.p &= in.p - \frac{f\cdot \frac{l}{d}\cdot rho\cdot v\cdot \left|v\right|}{2}
 \end{aligned}
 $$
+
+Duct has no enthalpy equation: it fixes `out.P` and `out.mdot`, not `out.h`. In a chain that needs a downstream enthalpy, write `d.out.h = d.in.h`. At a free outlet, pin `d.out.P` instead of attaching a `Sink` (see `draining-tank-time-constant`).
 
 ## Examples
 

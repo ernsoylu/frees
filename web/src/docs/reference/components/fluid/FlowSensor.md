@@ -3,7 +3,7 @@ name: FlowSensor
 category: Component (fluid)
 summary: Measures the mass flow of a stream (a pass-through sensor).
 related: []
-examples: []
+examples: [parallel-pipe-branches]
 tags: [flowsensor, component, fluid, acausal]
 ---
 

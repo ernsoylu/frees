@@ -3,7 +3,7 @@ name: P0_P
 category: Compressible Flow
 summary: Isentropic stagnation-to-static pressure ratio P0/P(M, k).
 related: [T0_T, mach_A_Astar, stagnationpres]
-examples: [cd-nozzle-shock]
+examples: [cd-nozzle-shock, converging-diverging-nozzle]
 tags: [compressible, isentropic, stagnation, pressure, mach, nozzle]
 ---
 

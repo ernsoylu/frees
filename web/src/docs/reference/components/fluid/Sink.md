@@ -3,7 +3,7 @@ name: Sink
 category: Component (fluid)
 summary: A fluid boundary that absorbs a stream at a set pressure.
 related: []
-examples: []
+examples: [steam-turbine-efficiency, gravity-pipe-flow, shower-heat-exchanger, converging-diverging-nozzle]
 tags: [sink, component, fluid, acausal]
 ---
 

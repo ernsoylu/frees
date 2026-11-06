@@ -3,7 +3,7 @@ name: Mixer
 category: Component (fluid)
 summary: Combines two fluid streams into one, with flow-weighted enthalpy mixing.
 related: []
-examples: []
+examples: [rankine-open-feedwater-heater, parallel-pipe-branches]
 tags: [mixer, component, fluid, acausal]
 ---
 
@@ -36,6 +36,8 @@ out.mdot &= in1.mdot + in2.mdot \\
 out.mdot\cdot out.h &= in1.mdot\cdot in1.h + in2.mdot\cdot in2.h
 \end{aligned}
 $$
+
+Only `in1` sets the outlet pressure; nothing ties `in2.P` to it. That suits an open feedwater heater, where the pump and the bleed line each fix their own pressure. In a parallel network whose branch drops decide the split, add `mix.in2.P = mix.in1.P` (see `parallel-pipe-branches`).
 
 ## Examples
 

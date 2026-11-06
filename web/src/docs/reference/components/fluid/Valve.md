@@ -3,7 +3,7 @@ name: Valve
 category: Component (fluid)
 summary: A flow restriction characterized by a flow/pressure-drop coefficient.
 related: []
-examples: []
+examples: [gravity-pipe-flow]
 tags: [valve, component, fluid, acausal]
 ---
 

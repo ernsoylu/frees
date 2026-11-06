@@ -71,9 +71,13 @@ pub fn friction_factor(re: f64, relative_roughness: f64) -> f64 {
 
 /// Colebrook–White Darcy friction factor (turbulent), iterated to convergence.
 ///
-/// The scheme is transcribed exactly: a Haaland explicit seed, then **at most
-/// 60** fixed-point sweeps, returning as soon as successive iterates differ by
-/// `≤ 1e-13`. A different seed or tolerance moves the last digits.
+/// A Haaland explicit seed, then **at most 60** fixed-point sweeps, returning
+/// once successive iterates agree to round-off (`≤ ε·f`). The Java stopped at
+/// an absolute `1e-13`, about `1e-11` relative for a turbulent `f`: coarser
+/// than Newton's `1e-12` relative stop, so an `f = friction_factor(Re, …)` row
+/// inside a coupled block (a pipe whose inlet pressure is unknown) could never
+/// meet it and the block stalled at the true solution. The change moves `f` by
+/// at most that `1e-13`.
 fn colebrook(re: f64, relative_roughness: f64) -> f64 {
     let eps = java_max(relative_roughness, 0.0);
     // Haaland explicit initial guess.
@@ -82,7 +86,7 @@ fn colebrook(re: f64, relative_roughness: f64) -> f64 {
     for _ in 0..60 {
         let rhs = -2.0 * libm::log10(eps / 3.7 + 2.51 / (re * libm::sqrt(f)));
         let f_new = 1.0 / (rhs * rhs);
-        if libm::fabs(f_new - f) <= 1e-13 {
+        if libm::fabs(f_new - f) <= f64::EPSILON * f_new {
             return f_new;
         }
         f = f_new;
@@ -249,7 +253,8 @@ mod tests {
         ] {
             let f = friction_factor(re, eps);
             let residual = 1.0 / f.sqrt() + 2.0 * (eps / 3.7 + 2.51 / (re * f.sqrt())).log10();
-            assert!(residual.abs() < 1e-10, "Re={re} eps={eps}: {residual}");
+            // Iterated to round-off: the Java's 1e-13 absolute stop left ~1e-11 here.
+            assert!(residual.abs() < 1e-14, "Re={re} eps={eps}: {residual}");
         }
     }
 

@@ -3,7 +3,7 @@ name: Throttle
 category: Component (fluid)
 summary: An isenthalpic pressure-reducing restriction.
 related: []
-examples: []
+examples: [ideal-vapor-compression-cycle]
 tags: [throttle, component, fluid, acausal]
 ---
 

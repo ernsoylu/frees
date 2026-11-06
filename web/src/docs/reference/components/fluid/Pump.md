@@ -3,7 +3,7 @@ name: Pump
 category: Component (fluid)
 summary: Raises the pressure of a liquid stream, computing the work from a pump efficiency.
 related: [PumpMap, LiquidPump]
-examples: [pump-sizing, rankine-cycle]
+examples: [pump-sizing, rankine-cycle, rankine-ideal-cycle, rankine-open-feedwater-heater]
 tags: [pump, pump-family, data:eta, ports:in-out, flow-closed, energy-work, steady, component, fluid, acausal]
 ---
 

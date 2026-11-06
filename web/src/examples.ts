@@ -2481,6 +2481,540 @@ S_K = -K / (a * b + K)
 { CHECK S_a_numeric 0.0909090916603739 1e-08 }
 { CHECK S_K -0.0909090909090909 1e-12 }`,
   },
+  {
+    id: 'rankine-ideal-cycle',
+    title: 'Ideal Rankine cycle from components',
+    description: 'Solve. Pump, Boiler, Turbine and Condenser close a steam loop; Cengel Example 10-1.',
+    category: 'Thermodynamics',
+    text: `{ Simple ideal Rankine cycle (Cengel, Thermodynamics 9th ed., Example 10-1).
+  Steam enters the turbine at 3 MPa and 350 C and is condensed at 75 kPa;
+  the pump and turbine are isentropic. The four library components close the
+  loop; only the states the book fixes are pinned. Per kilogram of steam the
+  book gets w_pump = 3.03 kJ/kg, w_turb = 713.1 kJ/kg, q_in = 2728.6 kJ/kg,
+  x_4 = 0.8861 and eta = 26.0 %; at 1 kg/s the model reproduces each to the
+  book's rounding. }
+P_cond = 75 [kPa]
+P_boil = 3 [MPa]
+T_3 = 350 [C]
+Pump      pump(eta=1, fluid$=Water)
+Boiler    boiler()
+Turbine   turb(eta=1, fluid$=Water)
+Condenser cond()
+connect(pump.out, boiler.in)
+connect(boiler.out, turb.in)
+connect(turb.out, cond.in)
+connect(cond.out, pump.in)
+pump.in.mdot = 1 [kg/s]
+cond.out.P = P_cond
+cond.out.h = Enthalpy(Water, P=P_cond, x=0)
+pump.out.P = P_boil
+boiler.out.h = Enthalpy(Water, P=P_boil, T=T_3)
+W_pump = pump.W
+W_turb = turb.W
+Q_in = boiler.Q
+Q_out = cond.Q
+eta_th = (W_turb - W_pump) / Q_in
+x_4 = Quality(Water, P=P_cond, h=turb.out.h)
+{ CHECK W_pump 3033.89265439718 0.003 }
+{ CHECK W_turb 713042.434933793 0.7 }
+{ CHECK Q_in 2728592.04508707 3 }
+{ CHECK eta_th 0.260210588665239 3e-07 }
+{ CHECK x_4 0.886140864191067 9e-07 }`,
+  },
+  {
+    id: 'rankine-open-feedwater-heater',
+    title: 'Regenerative Rankine with an open feedwater heater',
+    description: 'Solve. A Splitter bleeds steam into a Mixer heater; the saturated-liquid exit fixes the bled fraction. Cengel Example 10-5.',
+    category: 'Thermodynamics',
+    text: `{ Ideal regenerative Rankine cycle with one open feedwater heater (Cengel,
+  Thermodynamics 9th ed., Example 10-5). Steam enters the turbine at 15 MPa and
+  600 C, part of it is bled at 1.2 MPa into an open heater, and the rest
+  condenses at 10 kPa. The Splitter is the bleed point and the Mixer is the
+  open heater; requiring saturated liquid at the heater exit fixes the bled
+  fraction y. Mixer sets its outlet pressure from in1 only, so the bleed line's
+  pressure is pinned at 1.2 MPa as the book's schematic does. Book: bled
+  fraction 0.2270, heat input 2769.1 kJ/kg, net work 1282.2 kJ/kg, thermal
+  efficiency 46.3 %. }
+P_cond = 10 [kPa]
+P_fwh = 1.2 [MPa]
+P_boil = 15 [MPa]
+T_5 = 600 [C]
+Pump      pump1(eta=1, fluid$=Water)
+Pump      pump2(eta=1, fluid$=Water)
+Boiler    boiler()
+Turbine   hp(eta=1, fluid$=Water)
+Splitter  bleed()
+Turbine   lp(eta=1, fluid$=Water)
+Condenser cond()
+Mixer     fwh()
+connect(cond.out, pump1.in)
+connect(pump1.out, fwh.in1)
+connect(fwh.out, pump2.in)
+connect(pump2.out, boiler.in)
+connect(boiler.out, hp.in)
+connect(hp.out, bleed.in)
+connect(bleed.out1, lp.in)
+connect(bleed.out2, fwh.in2)
+connect(lp.out, cond.in)
+pump2.in.mdot = 1 [kg/s]
+cond.out.P = P_cond
+cond.out.h = Enthalpy(Water, P=P_cond, x=0)
+pump1.out.P = P_fwh
+hp.out.P = P_fwh
+fwh.out.h = Enthalpy(Water, P=P_fwh, x=0)
+pump2.out.P = P_boil
+boiler.out.h = Enthalpy(Water, P=P_boil, T=T_5)
+y = bleed.out2.mdot / pump2.in.mdot
+Q_in = boiler.Q
+W_net = hp.W + lp.W - pump1.W - pump2.W
+eta_th = W_net / Q_in
+{ CHECK y 0.227071487246907 2e-07 }
+{ CHECK Q_in 2769091.74856688 3 }
+{ CHECK W_net 1282416.05947055 1 }
+{ CHECK eta_th 0.463117937545498 5e-07 }`,
+  },
+  {
+    id: 'regenerative-gas-turbine',
+    title: 'Gas turbine with a regenerator',
+    description: 'Solve. Compressor, Regenerator, heater and Turbine on real-fluid air; Cengel Examples 9-7 and 9-8.',
+    category: 'Thermodynamics',
+    text: `{ Actual gas-turbine cycle with regeneration (Cengel, Thermodynamics 9th ed.,
+  Examples 9-7 and 9-8). Air enters the compressor at 100 kPa and 300 K, the
+  pressure ratio is 8, the turbine inlet is 1300 K, eta_C = 0.80, eta_T = 0.85,
+  and the regenerator effectiveness is 0.80. The book uses air-table
+  enthalpies (ideal gas, variable cp); the model uses the real-fluid Air
+  surface, so works differ in the fourth digit. The book defines the
+  regenerator effectiveness on enthalpy, (h5 - h2)/(h4 - h2) = 0.80, while the
+  Regenerator component rates eps on inlet capacity rates; the model solves
+  for the component eps that gives the book's enthalpy effectiveness (0.82).
+  The heater is a Boiler: an air-standard heat addition with no fuel mass.
+  Book: w_C = 305.20 kJ/kg, w_T = 515.61 kJ/kg, r_bw = 0.592, T_2a = 598 K,
+  T_4a = 853 K, q_in = 570.60 kJ/kg, eta = 36.9 %. }
+P_1 = 100 [kPa]
+T_1 = 300 [K]
+r_p = 8
+T_3 = 1300 [K]
+Source       inlet(fluid$=Air, mdot=1 [kg/s], P=P_1, T=T_1)
+Compressor   comp(eta=0.80, fluid$=Air)
+Regenerator  regen(hot$=Air, cold$=Air, eps=eps_cp)
+Boiler       heater()
+Turbine      turb(eta=0.85, fluid$=Air)
+Sink         stack()
+connect(inlet.out, comp.in)
+connect(comp.out, regen.cold_in)
+connect(regen.cold_out, heater.in)
+connect(heater.out, turb.in)
+connect(turb.out, regen.hot_in)
+connect(regen.hot_out, stack.in)
+comp.out.P = r_p * P_1
+heater.out.h = Enthalpy(Air, P=r_p * P_1, T=T_3)
+turb.out.P = P_1
+(heater.in.h - comp.out.h) / (turb.out.h - comp.out.h) = 0.80
+W_C = comp.W
+W_T = turb.W
+r_bw = W_C / W_T
+Q_in = heater.Q
+eta_th = (W_T - W_C) / Q_in
+T_2a = Temperature(Air, P=comp.out.P, h=comp.out.h)
+T_4a = Temperature(Air, P=turb.out.P, h=turb.out.h)
+{ CHECK W_C 305436.634509068 0.3 }
+{ CHECK W_T 515980.430019411 0.5 }
+{ CHECK r_bw 0.59195391285979 6e-07 }
+{ CHECK T_2a 598.487346721287 0.0006 }
+{ CHECK T_4a 852.966348723098 0.0009 }
+{ CHECK Q_in 571017.002653695 0.6 }
+{ CHECK eta_th 0.368717209000574 4e-07 }
+{ CHECK eps_cp 0.821507251199574 8e-07 }`,
+  },
+  {
+    id: 'steam-turbine-efficiency',
+    title: 'Steam turbine isentropic efficiency',
+    description: 'Solve. The measured exit state and power fix the efficiency of the Turbine and the flow; Cengel Example 7-14.',
+    category: 'Thermodynamics',
+    text: `{ Isentropic efficiency of a steam turbine (Cengel, Thermodynamics 9th ed.,
+  Example 7-14). Steam enters an adiabatic turbine at 3 MPa and 400 C and
+  leaves at 50 kPa and 100 C; the power output is 2 MW. The turbine's eta and
+  the source's mass flow are unknowns of the system: the measured exit state
+  and the power fix them. Book: eta_T = 0.667 (66.7 %), m = 3.64 kg/s. }
+P_1 = 3 [MPa]
+T_1 = 400 [C]
+P_2 = 50 [kPa]
+T_2 = 100 [C]
+W_out = 2 [MW]
+Source  steam(fluid$=Water, mdot=m_dot, P=P_1, T=T_1)
+Turbine turb(eta=eta_T, fluid$=Water)
+Sink    exhaust()
+connect(steam.out, turb.in)
+connect(turb.out, exhaust.in)
+turb.out.P = P_2
+turb.out.h = Enthalpy(Water, P=P_2, T=T_2)
+turb.W = W_out
+h_2s = turb.h_s
+{ CHECK eta_T 0.666738862010099 7e-07 }
+{ CHECK m_dot 3.64124336961134 4e-06 }`,
+  },
+  {
+    id: 'air-compressor-efficiency',
+    title: 'Air compressor isentropic efficiency',
+    description: 'Solve. Exit temperature and power of an 80 % efficient Compressor; Cengel Example 7-15.',
+    category: 'Thermodynamics',
+    text: `{ Effect of efficiency on compressor power (Cengel, Thermodynamics 9th ed.,
+  Example 7-15). Air is compressed from 100 kPa and 12 C to 800 kPa at
+  0.2 kg/s by a compressor with an isentropic efficiency of 80 %. The book uses
+  air-table enthalpies; the real-fluid Air surface lands within 0.5 K and
+  0.2 %. Book: T_2a = 569.5 K, W_in = 58.0 kW. }
+P_1 = 100 [kPa]
+T_1 = 12 [C]
+P_2 = 800 [kPa]
+Source     intake(fluid$=Air, mdot=0.2 [kg/s], P=P_1, T=T_1)
+Compressor comp(eta=0.80, fluid$=Air)
+Sink       receiver()
+connect(intake.out, comp.in)
+connect(comp.out, receiver.in)
+comp.out.P = P_2
+T_2s = Temperature(Air, P=P_2, h=comp.h_s)
+T_2a = Temperature(Air, P=P_2, h=comp.out.h)
+W_in = comp.W
+{ CHECK T_2s 514.198906959286 0.0005 }
+{ CHECK T_2a 569.993756478625 0.0006 }
+{ CHECK W_in 58092.2122147274 0.06 }`,
+  },
+  {
+    id: 'ideal-vapor-compression-cycle',
+    title: 'Ideal vapor-compression refrigeration cycle',
+    description: 'Solve. R-134a through Compressor, Condenser, Throttle and evaporator; Cengel Example 11-1.',
+    category: 'HVAC',
+    text: `{ Ideal vapor-compression refrigeration cycle (Cengel, Thermodynamics 9th ed.,
+  Example 11-1). R-134a enters the compressor as saturated vapor at 0.14 MPa
+  and leaves the condenser as saturated liquid at 0.8 MPa; the flow is
+  0.05 kg/s. An isentropic Compressor, a Condenser, a Throttle and a Boiler
+  used as the evaporator close the loop. Book: Q_L = 7.18 kW, W_in = 1.81 kW,
+  Q_H = 8.99 kW, COP_R = 3.97. }
+P_L = 0.14 [MPa]
+P_H = 0.8 [MPa]
+Compressor comp(eta=1, fluid$=R134a)
+Condenser  cond()
+Throttle   valve()
+Boiler     evap()
+connect(comp.out, cond.in)
+connect(cond.out, valve.in)
+connect(valve.out, evap.in)
+connect(evap.out, comp.in)
+comp.in.mdot = 0.05 [kg/s]
+comp.in.P = P_L
+comp.in.h = Enthalpy(R134a, P=P_L, x=1)
+comp.out.P = P_H
+cond.out.h = Enthalpy(R134a, P=P_H, x=0)
+Q_L = evap.Q
+W_in = comp.W
+Q_H = cond.Q
+COP_R = Q_L / W_in
+{ CHECK Q_L 7183.72814157027 0.007 }
+{ CHECK W_in 1810.59993467223 0.002 }
+{ CHECK Q_H 8994.3280762425 0.009 }
+{ CHECK COP_R 3.96759549362887 4e-06 }`,
+  },
+  {
+    id: 'square-duct-friction-loss',
+    title: 'Friction loss in a rough air duct',
+    description: 'Solve. Duct takes absolute roughness k [m]; Miller, Internal Flow Systems, Chapter 8 Example 1.',
+    category: 'Fluids',
+    text: `{ Friction loss in a square air duct (Miller, Internal Flow Systems 2nd ed.,
+  Chapter 8, Example 1). Air (rho = 1.23 kg/m3, nu = 1.45e-5 m2/s) flows at
+  0.8 m3/s through a 0.2 m square duct 25 m long with an absolute roughness of
+  0.025 mm. Duct takes the absolute roughness k [m] and forms k/D itself.
+  Duct is a round passage, so it is given the square duct's hydraulic diameter
+  (0.2 m) and a mass flow that reproduces the square duct's 20 m/s: Re, f and
+  the loss depend only on D and U, so they are the square duct's. Book:
+  Re = 2.8e5, f = 0.0158, loss 40.3 m of air or 49.6 mm of water. }
+a = 0.2 [m]
+L = 25 [m]
+Q_duct = 0.8 [m^3/s]
+rho_air = 1.23 [kg/m^3]
+nu_air = 1.45e-5 [m^2/s]
+k_s = 0.025 [mm]
+g = 9.81 [m/s^2]
+rho_water = 1000 [kg/m^3]
+D_h = 4 * a^2 / (4 * a)
+U = Q_duct / a^2
+Duct duct(rho=rho_air, mu=rho_air * nu_air, L=L, D=D_h, rough=k_s)
+duct.in.P = 101.325 [kPa]
+duct.in.mdot = rho_air * U * pi# / 4 * D_h^2
+Re = duct.Re_d
+f = duct.f
+dP = duct.in.P - duct.out.P
+H_air = dP / (rho_air * g)
+H_water = dP / (rho_water * g)
+{ CHECK Re 275862.068965517 0.3 }
+{ CHECK f 0.0158280323641626 2e-08 }
+{ CHECK H_air 40.3364739147873 4e-05 }
+{ CHECK H_water 0.0496138629151884 5e-08 }`,
+  },
+  {
+    id: 'gravity-pipe-flow',
+    title: 'Gravity flow through a pipe and fittings',
+    description: 'Solve. Colebrook Pipe plus a Valve standing in for K = 6.5; Miller, Internal Flow Systems, Chapter 8 Example 2.',
+    category: 'Fluids',
+    text: `{ Gravity flow between two tanks (Miller, Internal Flow Systems 2nd ed.,
+  Chapter 8, Example 2). Water at 15 C runs through 40 m of smooth 50 mm pipe
+  under a 6 m level difference; the fittings add K = 6.5. Pipe solves Colebrook
+  with the property-library viscosity (1.14e-6 m2/s at 15 C, as the book
+  uses). The fittings are a fixed-Cv Valve: its law mdot^2 = Cv^2 rho dP is the
+  K loss dP = K rho U^2 / 2 when Cv = A sqrt(2/K). Book (two chart
+  iterations): U = 2.38 m/s, f = 0.0179, Q = 4.68e-3 m3/s. }
+T_w = 15 [C]
+P_atm = 101.325 [kPa]
+dH = 6 [m]
+D = 50 [mm]
+L = 40 [m]
+K_t = 6.5
+g = 9.81 [m/s^2]
+rho_w = Density(Water, P=P_atm, T=T_w)
+A = pi# / 4 * D^2
+Source supply(fluid$=Water, mdot=m_dot, P=P_atm + rho_w * g * dH, T=T_w)
+Pipe   line(fluid$=Water, L=L, D=D, rough=0 [m])
+Valve  fittings(Cv=A * sqrt(2 / K_t), rho=rho_w)
+Sink   tank()
+connect(supply.out, line.in)
+connect(line.out, fittings.in)
+connect(fittings.out, tank.in)
+tank.P = P_atm
+Q = m_dot / rho_w
+U = Q / A
+f = line.f
+Re = line.Re_d
+{ CHECK U 2.3814100603598 2e-06 }
+{ CHECK f 0.0178227733558207 2e-08 }
+{ CHECK Q 0.00467588771925697 5e-09 }`,
+  },
+  {
+    id: 'parallel-pipe-branches',
+    title: 'Flow split between parallel pipe branches',
+    description: 'Solve. Splitter, two Colebrook Pipes, a FlowSensor and a Mixer; NCEES HVAC&R Problem 127.',
+    category: 'Fluids',
+    text: `{ Flow split between two parallel branches (NCEES, HVAC and Refrigeration
+  sample questions, Problem 127). 20 gpm of 60 F water enters two 1-in.
+  Schedule 40 steel branches (1.049 in. bore): A has an equivalent length of
+  80 ft; B has 100 ft of pipe, four elbows at 5.2 ft and a globe valve at 29 ft
+  (149.8 ft). The book assumes one friction factor for both branches, so
+  q_A/q_B = sqrt(149.8/80) and q_B = 8.4 gpm (q_B_equal_f below). Each Pipe
+  here solves Colebrook at its own Reynolds number (commercial steel,
+  k = 0.046 mm); B is slower, so its f is higher and it carries 8.32 gpm,
+  1 % under the book. A FlowSensor on branch B reads the flow. The Mixer sets
+  its outlet pressure from in1 only, so the two branch outlets are joined
+  explicitly. }
+q_total = 20 [gpm]
+T_w = 60 [F]
+P_in = 300 [kPa]
+D_i = 1.049 [in]
+k_steel = 0.046 [mm]
+rho_w = Density(Water, P=P_in, T=T_w)
+Source     supply(fluid$=Water, mdot=rho_w * q_total, P=P_in, T=T_w)
+Splitter   tee()
+Pipe       branchA(fluid$=Water, L=80 [ft], D=D_i, rough=k_steel)
+FlowSensor meterB()
+Pipe       branchB(fluid$=Water, L=149.8 [ft], D=D_i, rough=k_steel)
+Mixer      join()
+Sink       drain()
+connect(supply.out, tee.in)
+connect(tee.out1, branchA.in)
+connect(tee.out2, meterB.in)
+connect(meterB.out, branchB.in)
+connect(branchA.out, join.in1)
+connect(branchB.out, join.in2)
+connect(join.out, drain.in)
+join.in2.P = join.in1.P
+q_B = meterB.mdot_meas / rho_w
+q_A = branchA.in.mdot / rho_w
+f_A = branchA.f
+f_B = branchB.f
+q_B_equal_f = q_total / (1 + sqrt(149.8 / 80))
+{ CHECK q_B 0.000525087329555773 1e-09 }
+{ CHECK q_A 0.000736716598444227 1e-09 }
+{ CHECK f_A 0.0273706365406121 3e-08 }
+{ CHECK f_B 0.0287740439831863 3e-08 }
+{ CHECK q_B_equal_f 0.000532767919714017 1e-09 }`,
+  },
+  {
+    id: 'pipeline-pump-head',
+    title: 'Pump head for a long cooling-water line',
+    description: 'Solve. Pump into a smooth Pipe against a 160 ft lift; NCEES HVAC&R Problem 515.',
+    category: 'Fluids',
+    text: `{ Operating head of a cooling-pond pump (NCEES, HVAC and Refrigeration
+  sample questions, Problem 515). 26,000 gpm of 90 F water flows through a
+  smooth 36 in. OD pipe with a 3/8 in. wall; the equivalent length from the
+  pump outlet to the pipe exit is 2,425 ft, the pond is 160 ft above the pump,
+  and the pump inlet is at 20 psig. The pipe exit discharges to atmosphere, so
+  the 160 ft lift appears as the back pressure the line must reach. The book
+  takes f = 0.01; Pipe solves Colebrook for a smooth bore and gets 0.0097, so
+  the friction head is 9.1 ft against the book's 9.3. Book: V = 8.54 ft/s,
+  pump head 123.1 ft (answer 124 ft). }
+q = 26000 [gpm]
+T_w = 90 [F]
+P_atm = 14.696 [psi]
+P_suction = 20 [psi]
+dz = 160 [ft]
+D_i = 36 [in] - 2 * 0.375 [in]
+g = 9.80665 [m/s^2]
+rho_w = Density(Water, P=P_atm + P_suction, T=T_w)
+Source supply(fluid$=Water, mdot=rho_w * q, P=P_atm + P_suction, T=T_w)
+Pump   pump(eta=1, fluid$=Water)
+Pipe   line(fluid$=Water, L=2425 [ft], D=D_i, rough=0 [m])
+Sink   pond()
+connect(supply.out, pump.in)
+connect(pump.out, line.in)
+connect(line.out, pond.in)
+pond.P = P_atm + rho_w * g * dz
+V = line.V
+f = line.f
+h_f = (line.in.P - line.out.P) / (rho_w * g)
+H_pump = (pump.out.P - pump.in.P) / (rho_w * g)
+{ CHECK V 2.60489509195721 3e-06 }
+{ CHECK f 0.00969503410666183 1e-08 }
+{ CHECK h_f 2.76937932231388 3e-06 }
+{ CHECK H_pump 37.4055856263781 4e-05 }`,
+  },
+  {
+    id: 'shower-heat-exchanger',
+    title: 'Counterflow water heater by effectiveness-NTU',
+    description: 'Solve. HeatExchanger sized for a 45 C outlet, checked against a TwoZoneHX; Cengel and Ghajar Problem 11-104.',
+    category: 'Heat Transfer',
+    text: `{ Counterflow heater for shower water by effectiveness-NTU (Cengel and
+  Ghajar, Heat and Mass Transfer, Problem 11-104). Cold water at 0.25 kg/s is
+  heated from 15 C to 45 C by hot water entering at 100 C at 3 kg/s; U is
+  950 W/m2-K. HeatExchanger rates Q = eps Cmin (Th - Tc) with eps from the
+  counterflow NTU relation; the required outlet temperature fixes UA and so
+  the area. The book's cp values are 4180 and 4190 J/kg-K; the property
+  library's are 0.2 % higher at these states, which moves the area by 0.9 %.
+  A TwoZoneHX (two counterflow cells of UA/2 in series) with the same UA
+  delivers the same outlet temperature to 0.01 K; the halves compose exactly
+  only for constant cp, and each cell takes cp at its own inlet. The LMTD
+  method on the solved temperatures gives the same area to 0.05 %. Book:
+  Q = 31.35 kW, A = 0.482 m2. }
+U = 950 [W/m^2-K]
+T_c_in = 15 [C]
+T_c_out = 45 [C]
+T_h_in = 100 [C]
+P_w = 200 [kPa]
+Source        cold(fluid$=Water, mdot=0.25 [kg/s], P=P_w, T=T_c_in)
+Source        hot(fluid$=Water, mdot=3 [kg/s], P=P_w, T=T_h_in)
+HeatExchanger hx(UA=UA, hot$=Water, cold$=Water, arr$=counterflow)
+Sink          shower()
+Sink          drain()
+connect(hot.out, hx.hot_in)
+connect(hx.hot_out, drain.in)
+connect(cold.out, hx.cold_in)
+connect(hx.cold_out, shower.in)
+Temperature(Water, P=P_w, h=shower.h) = T_c_out
+eps = hx.eps
+NTU = UA / hx.Cmin
+A_s = UA / U
+Q = 0.25 [kg/s] * (shower.h - cold.out.h)
+T_h_out = Temperature(Water, P=P_w, h=drain.h)
+dT_lm = ((T_h_in - T_c_out) - (T_h_out - T_c_in)) / ln((T_h_in - T_c_out) / (T_h_out - T_c_in))
+A_lmtd = Q / (U * dT_lm)
+Source        cold2(fluid$=Water, mdot=0.25 [kg/s], P=P_w, T=T_c_in)
+Source        hot2(fluid$=Water, mdot=3 [kg/s], P=P_w, T=T_h_in)
+TwoZoneHX     hx2(UA=UA, hot$=Water, cold$=Water, arr$=counterflow)
+Sink          shower2()
+Sink          drain2()
+connect(hot2.out, hx2.hot_in)
+connect(hx2.hot_out, drain2.in)
+connect(cold2.out, hx2.cold_in)
+connect(hx2.cold_out, shower2.in)
+T_two_zone = Temperature(Water, P=P_w, h=shower2.h)
+{ CHECK Q 31357.4790120779 0.03 }
+{ CHECK eps 0.352340635359073 4e-07 }
+{ CHECK NTU 0.441323634632449 4e-07 }
+{ CHECK A_s 0.486399435659162 5e-07 }
+{ CHECK A_lmtd 0.486612506968564 5e-07 }
+{ CHECK T_two_zone 318.142645523967 0.0003 }`,
+  },
+  {
+    id: 'converging-diverging-nozzle',
+    title: 'Converging-diverging nozzle at Mach 2',
+    description: 'Solve. Throat state, choked flow and the exit state of the Nozzle component; Cengel Example 17-7.',
+    category: 'Aerospace',
+    text: `{ Isentropic flow through a converging-diverging nozzle (Cengel,
+  Thermodynamics 9th ed., Example 17-7). Air enters at 1.0 MPa and 800 K with
+  negligible velocity; the throat area is 20 cm2 and the exit Mach number is
+  2 (k = 1.4). The exit area follows from A/A* at Mach 2 and the choked mass
+  flow from the throat state; the Nozzle component then recovers the exit
+  Mach number from the area ratio and the exit state from the isentropic
+  relations. Book: T* = 666.7 K, P* = 0.5283 MPa, V* = 517.5 m/s,
+  T_e = 444.5 K, P_e = 0.1278 MPa, V_e = 845.2 m/s, A_e = 33.75 cm2,
+  m = 2.86 kg/s. }
+k = 1.4
+R = 0.287 [kJ/kg-K]
+P0 = 1.0 [MPa]
+T0 = 800 [K]
+A_t = 20 [cm^2]
+Ma_e = 2
+A_e = A_t * a_astar(Ma_e, k)
+T_star = T0 / T0_T(1, k)
+P_star = P0 / P0_P(1, k)
+V_star = sqrt(k * R * T_star)
+m_dot = P_star / (R * T_star) * V_star * A_t
+Source supply(fluid$=Air, mdot=m_dot, P=P0, T=T0)
+Nozzle cd(k=k, R=R, A_throat=A_t, A_exit=A_e, P_amb=100 [kPa], T0=T0)
+Sink   jet()
+connect(supply.out, cd.in)
+connect(cd.out, jet.in)
+Ma_exit = cd.M_exit
+P_e = jet.P
+T_e = cd.T_exit
+V_e = cd.V_exit
+{ CHECK A_e 0.003375 3e-09 }
+{ CHECK T_star 666.666666666667 0.0007 }
+{ CHECK P_star 528281.787717174 0.5 }
+{ CHECK V_star 517.558370299106 0.0005 }
+{ CHECK m_dot 2.85801387919442 3e-06 }
+{ CHECK Ma_exit 1.99999999999977 2e-06 }
+{ CHECK P_e 127804.525462996 0.1 }
+{ CHECK T_e 444.444444444489 0.0004 }
+{ CHECK V_e 845.169279559439 0.0008 }`,
+  },
+  {
+    id: 'draining-tank-time-constant',
+    title: 'Time constant of a draining tank',
+    description: 'Solve (DYNAMIC). An Accumulator tank drains through a laminar Duct; the level reaches 1/e after one time constant.',
+    category: 'Fluids',
+    text: `{ Time constant of a draining fuel-oil tank (Chapter 5, Fluid Systems,
+  Example 4: a liquid-level system). A 2 ft diameter tank of fuel oil at 70 F
+  (rho = 1.82 slug/ft3, mu = 0.02 lbf-s/ft2) drains through a 1 in. pipe 2 ft
+  long in laminar flow; the inflow is zero here. The tank is an Accumulator
+  with capacitance C = A/g (mass stored per unit of bottom pressure); the pipe
+  is a Duct, whose friction factor is the laminar 64/Re, so its drop is the
+  Hagen-Poiseuille R Q with R = 128 mu L/(pi D^4). The head after one time
+  constant must be 1/e of the start. Duct carries no enthalpy, so its outlet
+  is a pinned pressure rather than a Sink. Book: tau = 1812 s (about 30 min). }
+rho = 1.82 [slug/ft^3]
+mu = 0.02 [lbf-s/ft^2]
+D_tank = 2 [ft]
+D = 1 [in]
+L = 2 [ft]
+g = 32.2 [ft/s^2]
+P_atm = 101.325 [kPa]
+h_0 = 1 [ft]
+A_tank = pi# / 4 * D_tank^2
+R = 128 * mu * L / (pi# * D^4)
+tau = R * A_tank / (rho * g)
+Accumulator tank(C=A_tank / g, P0=P_atm + rho * g * h_0)
+Duct        outlet(rho=rho, mu=mu, L=L, D=D, rough=0 [m])
+connect(tank.out, outlet.in)
+tank.in.mdot = 0 [kg/s]
+tank.in.h = 0 [J/kg]
+outlet.out.P = P_atm
+DYNAMIC drain_down(method=ode45, time=0..1812, points=50, rtol=1e-9)
+END
+h_end = (FinalValue('tank.in.p') * 1 [Pa] - P_atm) / (rho * g)
+level_ratio = h_end / h_0
+Q_0 = rho * g * h_0 / R
+Re_0 = rho * Q_0 / (pi# / 4 * D^2) * D / mu
+{ CHECK tau 1811.62241450544 0.002 }
+{ CHECK level_ratio 0.367802774276053 4e-07 }
+{ CHECK Re_0 2.41109845289068 2e-06 }`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

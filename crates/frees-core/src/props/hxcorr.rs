@@ -842,6 +842,19 @@ mod tests {
         );
     }
 
+    /// [`close`] for a value carrying a Darcy friction factor. The Java oracle
+    /// stopped Colebrook at `1e-13` absolute; this crate iterates it to
+    /// round-off (`flowresist::colebrook`), which moves these pressure drops by
+    /// up to 3.2e-13 relative (measured 2026-11-05). `1e-12` covers that and
+    /// nothing a real correlation change could hide in.
+    fn close_friction(actual: f64, expected: f64) {
+        let tol = 1e-12 * libm::fabs(expected).max(1.0);
+        assert!(
+            libm::fabs(actual - expected) <= tol,
+            "expected {expected:.17e}, got {actual:.17e}"
+        );
+    }
+
     // ---- the fluid state the Java's CoolProp handed these correlations -----
     //
     // Dumped from the same oracle run that produced the expectations below, so
@@ -956,7 +969,7 @@ mod tests {
 
     #[test]
     fn dp_1phase_matches_the_oracle() {
-        close(
+        close_friction(
             dp_1phase(
                 &OracleFluids,
                 "Water",
@@ -970,15 +983,15 @@ mod tests {
             .unwrap(),
             307.7399551248669,
         );
-        close(
+        close_friction(
             dp_1phase_from_state(W_RHO, W_MU, 0.05, 0.01, 0.0002, 2.5).unwrap(),
             307.7399551248669,
         );
-        close(
+        close_friction(
             dp_1phase(&OracleFluids, "Air", 101325.0, 300.0, 0.4, 0.012, 0.05, 1.2).unwrap(),
             100.64322564183759,
         );
-        close(
+        close_friction(
             dp_1phase_from_state(A_RHO, A_MU, 0.4, 0.012, 0.05, 1.2).unwrap(),
             100.64322564183759,
         );
@@ -1052,16 +1065,16 @@ mod tests {
     #[test]
     fn dp_2phase_matches_the_oracle() {
         let f = &OracleFluids;
-        close(
+        close_friction(
             dp_2phase(f, "R134a", 500000.0, 0.3, 0.02, 0.008, 0.0001, 1.5).unwrap(),
             5757.613174695314,
         );
-        close(
+        close_friction(
             dp_2phase_from_state(R_RHOL, R_MUL, R_RHOG, R_MUG, 0.3, 0.02, 0.008, 0.0001, 1.5)
                 .unwrap(),
             5757.613174695314,
         );
-        close(
+        close_friction(
             dp_2phase(f, "R134a", 500000.0, 0.95, 0.02, 0.008, 0.0001, 1.5).unwrap(),
             726901.6174244224,
         );
@@ -1070,11 +1083,11 @@ mod tests {
     #[test]
     fn dp_mueller_steinhagen_matches_the_oracle() {
         let f = &OracleFluids;
-        close(
+        close_friction(
             dp_mueller_steinhagen(f, "R134a", 500000.0, 0.3, 0.02, 0.008, 0.0001, 1.5).unwrap(),
             1482.3714015637033,
         );
-        close(
+        close_friction(
             dp_mueller_steinhagen_from_state(
                 R_RHOL, R_MUL, R_RHOG, R_MUG, 0.3, 0.02, 0.008, 0.0001, 1.5,
             )
@@ -1082,11 +1095,11 @@ mod tests {
             1482.3714015637033,
         );
         // x = 0 is the all-liquid Darcy drop, x = 1 the all-gas one.
-        close(
+        close_friction(
             dp_mueller_steinhagen(f, "R134a", 500000.0, 0.0, 0.02, 0.008, 0.0001, 1.5).unwrap(),
             101.54054467562034,
         );
-        close(
+        close_friction(
             dp_mueller_steinhagen(f, "R134a", 500000.0, 1.0, 0.02, 0.008, 0.0001, 1.5).unwrap(),
             2583.881614970487,
         );
@@ -1095,21 +1108,21 @@ mod tests {
     #[test]
     fn dp_2phase_avg_matches_the_oracle() {
         let f = &OracleFluids;
-        close(
+        close_friction(
             dp_2phase_avg(
                 f, "R134a", 500000.0, 0.1, 0.9, 0.02, 0.008, 0.0001, 1.5, 8.0,
             )
             .unwrap(),
             29560.89355719473,
         );
-        close(
+        close_friction(
             dp_2phase_avg_from_state(
                 R_RHOL, R_MUL, R_RHOG, R_MUG, 0.1, 0.9, 0.02, 0.008, 0.0001, 1.5, 8.0,
             )
             .unwrap(),
             29560.89355719473,
         );
-        close(
+        close_friction(
             dp_2phase_avg(
                 f, "R134a", 500000.0, 0.1, 0.9, 0.02, 0.008, 0.0001, 1.5, 1.0,
             )
@@ -1122,7 +1135,7 @@ mod tests {
     fn dp_2phase_avg_floors_the_cell_count_at_one() {
         let f = &OracleFluids;
         // (int) Math.max(1, Math.round(0)) == 1.
-        close(
+        close_friction(
             dp_2phase_avg(
                 f, "R134a", 500000.0, 0.1, 0.9, 0.02, 0.008, 0.0001, 1.5, 0.0,
             )
@@ -1347,8 +1360,8 @@ mod tests {
         let v = mdot / (W_RHO * a_flow);
         let re = W_RHO * libm::fabs(v) * dh / W_MU;
         let want = friction_factor(re, 0.0) * (l / dh) * W_RHO * v * libm::fabs(v) / 2.0;
-        close(want, 307.7399551248669);
-        close(
+        close_friction(want, 307.7399551248669);
+        close_friction(
             dp_1phase_from_state(W_RHO, W_MU, mdot, dh, a_flow, l).unwrap(),
             want,
         );
@@ -1364,7 +1377,7 @@ mod tests {
         let xtt = libm::pow((1.0 - x) / x, 0.9)
             * libm::sqrt(R_RHOG / R_RHOL)
             * libm::pow(R_MUL / R_MUG, 0.1);
-        close(dp_lo * lm_phi2(xtt, 20.0).unwrap(), 5757.613174695314);
+        close_friction(dp_lo * lm_phi2(xtt, 20.0).unwrap(), 5757.613174695314);
     }
 
     #[test]
