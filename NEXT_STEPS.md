@@ -388,7 +388,36 @@ entry here is checked off with evidence when it closes.
        - EV, pin `k_fin`: plain 12.6–13.8 ms, drag 6.0–6.2 ms (2.0–2.3×);
        - small model, pin `Q`: plain 2.2–2.3 ms, drag 0.8–0.9 ms.
      - WASM 3,915.5 KiB raw / 1,562.5 KiB gzipped, inside the 5,120 KiB budget.
-- **H. Motion and state on recorded runs (no live engine needed).**
+- **H. Motion and state on recorded runs (no live engine needed).** Landed as five pull requests:
+  - H1: items 1, 2 and 4 for particles and arrows;
+  - H2: item 3;
+  - H3: item 5;
+  - H4: item 6;
+  - H5: item 7.
+  - **H1 done 2026-11-07 (`h1-flow-particles`).**
+    - **Port-flow rules.** `Connection::flow_into` (`components/expander.rs`) gives, per endpoint, the variable measuring the port's flow and the sign that makes it flow into that endpoint's component. These are the node equations' own conventions:
+      - Kirchhoff domains are signed into the block.
+      - Fluid `mdot` is read from the port name by `port_direction`, the rule `mass_conservation` uses.
+      - `null` for signal, for a fluid port named neither in nor out, and for a definition's own boundary port.
+      - The bridge sends it as `connections[].flows`.
+      - `flowAlong`'s in/out regex is gone. Arrows and particles both use `carriedAlong` (`schematic/overlay.ts`), which also gives shafts and rods their power (τ·ω, F·v).
+    - **Particles.** Overlay → Flow particles: round dashes moving along the routed path.
+      - The period comes from the log of the carried quantity, normalised per domain (`particlePeriods`). The legend says what each domain carries, Q̇ as energy, not matter.
+      - A schematic-speed multiplier (×0.25–×4) is labelled "not a physical velocity". The project stores `overlay.particles` and `overlay.speed`, sanitised on load.
+      - Particles freeze when playback is paused.
+      - Reduced motion removes them; arrows and colour remain.
+      - During playback, arrows and particles read only recorded columns, so an unrecorded flow shows no direction instead of its end-of-run sign.
+    - **Evidence.**
+      - `overlay.test.ts`: rules, shaft power, unknown power without ω, signal, per-domain log speed.
+      - `presentation.test.ts`: the sanitiser.
+      - `flow-particles.spec.ts`:
+        - A recorded heat flow reverses between samples, and the particles and arrow reverse with it.
+        - They pause and run with playback; the speed multiplier doubles the period.
+        - Reduced motion is honoured, with no `solve` or `check`.
+        - On the EV model, every wire with a known flow carries particles in its arrow's direction (more than 20 wires).
+      - The visual baseline is unchanged, since particles are off by default.
+    - **Not done in H1.** The refrigeration journey and the P-h cursor belong to H3.
+    - **Found:** at "end of run" an ODE-only model's schematic shows no values, because the solve has no ordinary variables; the recorded samples do. This is RUN-05 behaviour, not reverified beyond this model.
   1. **Explicit port-flow metadata.** The engine reports each port's role and measured-flow sign per domain (fluid, liquid, two-phase, moist air, heat, electrical, mechanical, translational). This replaces `flowAlong`'s in/out naming. Where a direction is not known, it stays unknown; it is never inferred from drawing order or a pressure gradient.
   2. **Flow particles.**
     - Particles move along the routed wire paths. Speed follows the log of the flow magnitude, normalised per domain; direction comes from (1).

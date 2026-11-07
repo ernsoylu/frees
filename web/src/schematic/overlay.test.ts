@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { SchematicEdge } from './layout'
-import { edgeReadings, flowAlong, overlayMetrics, rampColor } from './overlay'
+import { carriedAlong, edgeReadings, flowAlong, overlayMetrics, particlePeriods, rampColor } from './overlay'
 import { indexVariables } from './readouts'
 
-const edge = (id: string, domain: string, from: [string, string], to: [string, string]): SchematicEdge => ({
-  id, lineId: domain, domain, from: from[0], to: to[0], fromPort: from[1], toPort: to[1], fromStream: `${from[0]}.${from[1]}`, toStream: `${to[0]}.${to[1]}`,
-})
+const FLOW: Record<string, string> = { fluid: 'mdot', heat: 'qdot', electrical: 'i', mechanical: 'tau', translational: 'f' }
+// The rule the engine sends (`Connection::flow_into`): Kirchhoff flows are
+// signed into the block; fluid mdot by the port name, `out` tested first.
+const rule = (domain: string, stream: string, port: string) =>
+  !FLOW[domain] ? null : domain !== 'fluid' ? { variable: `${stream}.${FLOW[domain]}`, into: 1 }
+    : port.includes('out') ? { variable: `${stream}.mdot`, into: -1 } : port.includes('in') ? { variable: `${stream}.mdot`, into: 1 } : null
+const edge = (id: string, domain: string, from: [string, string], to: [string, string]): SchematicEdge => {
+  const [fromStream, toStream] = [from.join('.'), to.join('.')]
+  return { id, lineId: domain, domain, from: from[0], to: to[0], fromPort: from[1], toPort: to[1], fromStream, toStream, fromFlow: rule(domain, fromStream, from[1]), toFlow: rule(domain, toStream, to[1]) }
+}
 const values = indexVariables([
   { name: 'pump.out.P', value: 300, units: 'kPa' },
   { name: 'pipe.in.P', value: 300, units: 'kPa' },
@@ -51,5 +58,34 @@ describe('overlay (RUN-04)', () => {
     expect(flowAlong(E[3], values)).toBe(-1)
     expect(flowAlong(E[4], values)).toBeNull()
     expect(flowAlong(edge('z', 'fluid', ['a', 'out'], ['b', 'in']), indexVariables([{ name: 'b.in.mdot', value: 0, units: 'kg/s' }]))).toBe(0)
+  })
+
+  it('carries power on shafts, and none on signal lines', () => {
+    const shaft = edge('s', 'mechanical', ['motor', 'flange'], ['load', 'flange'])
+    const v = indexVariables([
+      { name: 'load.flange.tau', value: 3, units: 'N-m' },
+      { name: 'load.flange.w', value: 10, units: 'rad/s' },
+    ])
+    expect(carriedAlong(shaft, v)).toBe(30)
+    expect(flowAlong(edge('g', 'signal', ['pid', 'y'], ['valve', 'u']), v)).toBeNull()
+    // Without the angular speed the shaft's power is unknown, never guessed.
+    expect(carriedAlong(shaft, indexVariables([{ name: 'load.flange.tau', value: 3, units: 'N-m' }]))).toBeNull()
+  })
+
+  it('speeds particles by the log of the flow within each domain, and reverses them with its sign', () => {
+    const p = particlePeriods(E, values)
+    // e1 runs backwards at 2 kg/s, e2 forwards at 2 kg/s: same speed, opposite way.
+    expect(p.get('e1')?.period).toBeCloseTo(0.4, 12)
+    expect([p.get('e1')?.dir, p.get('e2')?.dir]).toEqual([-1, 1])
+    expect(p.get('e2')?.period).toBe(p.get('e1')?.period)
+    expect(p.get('e4')?.dir).toBe(-1)
+    // No rule (e3) and no value (e5): no particles.
+    expect(p.has('e3') || p.has('e5')).toBe(false)
+    const slow = particlePeriods([E[0], edge('e6', 'fluid', ['c', 'out'], ['d', 'in'])], indexVariables([
+      { name: 'pump.out.mdot', value: 100, units: 'kg/s' },
+      { name: 'd.in.mdot', value: 1, units: 'kg/s' },
+    ]))
+    expect(slow.get('e1')?.period).toBeCloseTo(0.4, 12)
+    expect(slow.get('e6')?.period).toBeCloseTo(1.6, 12)
   })
 })

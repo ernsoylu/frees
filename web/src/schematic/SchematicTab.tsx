@@ -23,6 +23,7 @@ import {
   Tooltip,
   useComputedColorScheme,
 } from '@mantine/core'
+import { useReducedMotion } from '@mantine/hooks'
 import {
   IconAdjustments,
   IconArrowBackUp,
@@ -90,7 +91,7 @@ import {
   type SourceEdit,
 } from './sourceEdit'
 import { componentFile, editInterface, extractSubsystem, importComponents, movePresentation, type Extraction, type InterfaceChange } from './encapsulation'
-import { edgeReadings, flowAlong, overlayMetrics, rampColor, RAMP_STOPS } from './overlay'
+import { CARRIES, edgeReadings, flowAlong, overlayMetrics, PARTICLE_GAP, particlePeriods, rampColor, RAMP_STOPS } from './overlay'
 import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, type NodeReadout, type Reading } from './readouts'
 import { wasmUnitConversions } from '../wasm/engineClient'
 import { COMPONENT_CATALOG, type ComponentSpec } from '../componentCatalog'
@@ -119,6 +120,7 @@ import {
   type BlockStyle,
   type BlockStyles,
   MAX_SYMBOLS,
+  PARTICLE_SPEEDS,
   type ProjectSymbol,
   type SavedView,
   type SchematicPresentation,
@@ -242,6 +244,10 @@ interface Props {
   blocks?: readonly BlockResult[]
   /** RUN-05: which recorded sample `variables` are, while a dynamic run plays back (`run 3 · t = 4 s`). */
   sample?: string
+  /** Phase H: whether recorded playback is paused, which freezes the flow particles. */
+  paused?: boolean
+  /** Phase H: during playback, the recorded columns (`m$port$t`); motion reads only these. */
+  recorded?: readonly string[]
 }
 
 export type SchematicHandoff = 'plot' | 'table' | 'state' | 'sensitivity'
@@ -367,6 +373,8 @@ export default function SchematicTab({
   components,
   variables,
   sample,
+  paused = false,
+  recorded,
   text,
   onRevealLine,
   onSelectLine,
@@ -1092,6 +1100,21 @@ export default function SchematicTab({
   const metrics = useMemo(() => overlayMetrics(layout.edges, values), [layout.edges, values])
   const metric = metrics.find((m) => m.key === overlaySet.metric) ?? null
   const overlayRead = useMemo(() => (metric ? edgeReadings(layout.edges, values, metric) : null), [metric, layout.edges, values])
+  // Phase H: flow particles follow whatever `values` are (the end of the run or
+  // the playback sample). Reduced motion shows colour and arrows only.
+  const reducedMotion = useReducedMotion()
+  // During playback a flow the run did not record has no value at the sample:
+  // its end-of-run sign must not move particles or point arrows.
+  const flowValues = useMemo(() => {
+    if (!recorded) return values
+    const kept = new Set(recorded.map((n) => n.replaceAll('$', '.').toLowerCase()))
+    return new Map([...values].filter(([name]) => kept.has(name)))
+  }, [values, recorded])
+  const particles = useMemo(
+    () => (overlaySet.particles && !reducedMotion ? particlePeriods(layout.edges, flowValues) : null),
+    [overlaySet.particles, reducedMotion, layout.edges, flowValues],
+  )
+  const particleSpeed = overlaySet.speed ?? 1
   const setOverlay = (next: Partial<SchematicPresentation['overlay']>) =>
     updatePres((p) => ({ ...p, overlay: { ...(p.overlay ?? { metric: '', arrows: false }), ...next } }), 'Change overlay')
   // VIEW-08: presets change view settings only; a named view also restores
@@ -2711,7 +2734,7 @@ export default function SchematicTab({
           )}
           <Popover position="bottom-end" withinPortal shadow="md">
             <Popover.Target>
-              <Button size="compact-xs" variant={metric || overlaySet.arrows ? 'light' : 'subtle'} color="gray">
+              <Button size="compact-xs" variant={metric || overlaySet.arrows || overlaySet.particles ? 'light' : 'subtle'} color="gray">
                 Overlay
               </Button>
             </Popover.Target>
@@ -2726,6 +2749,22 @@ export default function SchematicTab({
                   comboboxProps={{ withinPortal: false }}
                 />
                 <Switch size="xs" label="Measured flow arrows" checked={overlaySet.arrows} onChange={(e) => setOverlay({ arrows: e.currentTarget.checked })} />
+                <Switch size="xs" label="Flow particles" checked={overlaySet.particles === true} onChange={(e) => setOverlay({ particles: e.currentTarget.checked })} />
+                {overlaySet.particles && (
+                  <Select
+                    size="xs"
+                    label="Schematic speed (not a physical velocity)"
+                    data={PARTICLE_SPEEDS.map((v) => ({ value: String(v), label: `×${v}` }))}
+                    value={String(particleSpeed)}
+                    onChange={(v) => setOverlay({ speed: Number(v ?? 1) })}
+                    comboboxProps={{ withinPortal: false }}
+                  />
+                )}
+                {overlaySet.particles && reducedMotion && (
+                  <Text size="xs" c="dimmed" data-testid="particles-reduced">
+                    Reduced motion is on: no moving particles; colour and arrows show the flow.
+                  </Text>
+                )}
                 {metrics.length === 0 && (
                   <Text size="xs" c="dimmed">
                     Solve to colour wires by a result.
@@ -3277,7 +3316,8 @@ export default function SchematicTab({
               const openCard = () => setWireCard({ index, check: drawnCheck })
               const reading = overlayRead?.byEdge.get(e.id)
               const valued = reading?.state === 'value'
-              const flow = overlaySet.arrows ? flowAlong(e, values) : undefined
+              const flow = overlaySet.arrows ? flowAlong(e, flowValues) : undefined
+              const particle = particles?.get(e.id)
               return (
                 <g key={e.id}>
                 <path
@@ -3301,6 +3341,25 @@ export default function SchematicTab({
                   </title>
                 </path>
                 {flow && !out ? <FlowArrow pts={pts} dir={flow} fill={ink.text} /> : null}
+                {particle && !out ? (
+                  <path
+                    className="flow-particles"
+                    data-particles={particle.dir > 0 ? 'forward' : 'reverse'}
+                    d={pathOf(pts)}
+                    fill="none"
+                    stroke={ink.text}
+                    strokeOpacity={0.8}
+                    strokeWidth={3.5}
+                    strokeLinecap="round"
+                    strokeDasharray={`0 ${PARTICLE_GAP}`}
+                    pointerEvents="none"
+                    style={{
+                      animationDuration: `${particle.period / particleSpeed}s`,
+                      animationDirection: particle.dir > 0 ? 'normal' : 'reverse',
+                      animationPlayState: paused ? 'paused' : 'running',
+                    }}
+                  />
+                ) : null}
                 {onSourceEdit && !out && (
                   <path
                     data-wire={e.id}
@@ -3647,7 +3706,7 @@ export default function SchematicTab({
       <div role="status" aria-live="polite" data-testid="canvas-announcer" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>
         {announcement}
       </div>
-      {(overlayRead || overlaySet.arrows) && (
+      {(overlayRead || overlaySet.arrows || overlaySet.particles) && (
         <Paper withBorder shadow="sm" p="xs" role="region" aria-label="Overlay legend" data-testid="overlay-legend" style={{ position: 'absolute', right: 8, top: 44, width: 230, zIndex: 4 }}>
           {metric && overlayRead && (
             <Stack gap={2}>
@@ -3666,7 +3725,13 @@ export default function SchematicTab({
           )}
           {overlaySet.arrows && (
             <Text size="10px" c="dimmed" mt={metric ? 4 : 0}>
-              ▶ measured flow: current and heat flow by their sign into a port, mass flow from a port named in toward one named out. No arrow: zero flow, or no solved flow and convention.
+              ▶ measured flow, by the engine's sign convention: current, heat flow, torque and force signed into a port; mass flow from a port named in toward one named out. No arrow: zero flow, or no solved flow and convention.
+            </Text>
+          )}
+          {overlaySet.particles && (
+            <Text size="10px" c="dimmed" mt={metric || overlaySet.arrows ? 4 : 0} data-testid="particles-legend">
+              ● particles carry {Object.values(CARRIES).join(', ')}; signal lines carry none. Speed grows with the log of the flow within each domain; schematic speed ×{particleSpeed} is not a physical velocity.
+              {paused ? ' Paused with playback.' : ''}
             </Text>
           )}
         </Paper>

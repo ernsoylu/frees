@@ -38,6 +38,14 @@ export interface Connection {
   /** Per endpoint, the display prefix its member variables use — aligned with
    *  `endpoints` by index. Lets the drawing show an endpoint's solved state. */
   streams?: string[]
+  /** Phase H: per endpoint, the engine's flow-into rule (see `ConnectionDto.flows`). */
+  flows?: (FlowRule | null)[]
+}
+
+/** The variable measuring a port's flow and the sign making it flow INTO the block. */
+export interface FlowRule {
+  variable: string
+  into: number
 }
 
 export type PortSide = 'left' | 'right' | 'top' | 'bottom'
@@ -86,6 +94,9 @@ export interface SchematicEdge {
   /** Variable display prefixes at each end (`chlr.in`, `s2`), for readouts. */
   fromStream?: string
   toStream?: string
+  /** The engine's flow-into rule at each end; absent at a junction's own end. */
+  fromFlow?: FlowRule | null
+  toFlow?: FlowRule | null
 }
 
 /**
@@ -307,16 +318,17 @@ interface Endpoint {
   instance: string
   port?: string
   stream?: string
+  flow?: FlowRule | null
 }
 
-function splitEndpoint(raw: string, stream?: string): Endpoint {
+function splitEndpoint(raw: string, stream?: string, flow?: FlowRule | null): Endpoint {
   // A subsystem's own boundary (`sub1$a`) is a node of its scope; otherwise the
   // port follows the last dot, so a nested `sub1.r1.b` is block `sub1.r1`.
   const dot = raw.includes('$') ? -1 : raw.lastIndexOf('.')
   if (dot <= 0) {
-    return { instance: raw.toLowerCase(), stream }
+    return { instance: raw.toLowerCase(), stream, flow }
   }
-  return { instance: raw.slice(0, dot).toLowerCase(), port: raw.slice(dot + 1), stream }
+  return { instance: raw.slice(0, dot).toLowerCase(), port: raw.slice(dot + 1), stream, flow }
 }
 
 /**
@@ -462,7 +474,7 @@ function buildGraph(
   }
 
   connections.forEach((conn, index) => {
-    const ends = conn.endpoints.map((raw, i) => splitEndpoint(raw, conn.streams?.[i]))
+    const ends = conn.endpoints.map((raw, i) => splitEndpoint(raw, conn.streams?.[i], conn.flows?.[i]))
     const key: LineKey = { domain: conn.domain, connector: conn.connector, fluid: conn.fluid }
     const line = lineId(key)
     g.lines.set(line, key)
@@ -495,6 +507,8 @@ function buildGraph(
         toPort: 'port' in to ? to.port : undefined,
         fromStream: 'stream' in from ? from.stream : undefined,
         toStream: 'stream' in to ? to.stream : undefined,
+        fromFlow: 'flow' in from ? from.flow : undefined,
+        toFlow: 'flow' in to ? to.flow : undefined,
       })
       addAdjacency(g.byLine, line, junctionId, e.instance)
       addAdjacency(g.byLine, line, e.instance, junctionId)
@@ -530,6 +544,8 @@ function addPairEdge(a: Endpoint, b: Endpoint, conn: Connection, line: string, i
     toPort: to.port,
     fromStream: from.stream,
     toStream: to.stream,
+    fromFlow: from.flow,
+    toFlow: to.flow,
   })
   addAdjacency(g.byLine, line, a.instance, b.instance)
   addAdjacency(g.byLine, line, b.instance, a.instance)
