@@ -22,10 +22,45 @@
 use crate::dae::assembly::{assemble, dae_values, AssemblySpec, DaeAssembly};
 use crate::dae::solver::{IdaDaeSolver, Step, IDA_YA_YDP_INIT};
 use crate::diag::{FreesError, Result};
+use crate::engine::{pinned_solver, VarSpec};
+use crate::eval::Scope;
 use crate::eval::{eval_with, EvalContext};
+use crate::ode::dynamic::{DynamicSolver, DynamicSystem, ParkedDynamic};
 use crate::ode::events::EventBinding;
+use crate::ode::integrator::{ExplicitStepper, Knots};
+use crate::ode::problem::DEFAULT_SAMPLE_COUNT;
 use crate::ode::problem::{OdeTableResult, TableEventHit};
 use crate::parser::defs::Definitions;
+use crate::solver::newton::SolverSettings;
+use std::collections::BTreeMap;
+
+/// Row `i` of `linspace(t0, tf, points)`, continued past `tf` with the same
+/// formula, so every row a batch run has sits at the identical time.
+pub(crate) fn grid_time((t0, tf, points): (f64, f64, usize), i: usize) -> f64 {
+    t0 + (tf - t0) * i as f64 / (points - 1) as f64
+}
+
+// ponytail: a live run is capped at 2³¹ rows (25 days of 1 ms rows, 68 years
+// of 1 s ones): a 32-bit wasm index, with room to step.
+const ROW_CAP: usize = 1 << 31;
+
+/// The last grid row at or before `t`: the row [`grid_time`] puts there,
+/// found from the spacing and then corrected for rounding.
+fn grid_last_row(t0: f64, tf: f64, points: usize, t: f64) -> usize {
+    let per = (points - 1) as f64 / (tf - t0);
+    let guess = ((t - t0) * per).floor();
+    if guess.is_nan() || guess < 0.0 {
+        return 0;
+    }
+    let mut k = (guess as usize).min(ROW_CAP);
+    while k > 0 && grid_time((t0, tf, points), k) > t {
+        k -= 1;
+    }
+    while k < ROW_CAP && grid_time((t0, tf, points), k + 1) <= t {
+        k += 1;
+    }
+    k
+}
 
 /// What one call to [`IdaRun::advance`] produced.
 #[derive(Debug, Default)]
@@ -98,7 +133,7 @@ impl IdaRun {
     /// a live run continues the same spacing past `tf`, with the same formula,
     /// so every row a batch run has sits at the identical time.
     pub fn time_of(&self, i: usize) -> f64 {
-        self.t0 + (self.tf - self.t0) * i as f64 / (self.points - 1) as f64
+        grid_time((self.t0, self.tf, self.points), i)
     }
 
     /// The `[time, states…, aux…]` column names of every row.
@@ -106,25 +141,8 @@ impl IdaRun {
         &self.columns
     }
 
-    /// The last grid row at or before `t`: the row [`Self::time_of`] puts
-    /// there, found from the spacing and then corrected for rounding.
     fn last_row_at(&self, t: f64) -> usize {
-        // ponytail: a live run is capped at 2³¹ rows (25 days of 1 ms rows,
-        // 68 years of 1 s ones): a 32-bit wasm index, with room to step.
-        const CAP: usize = 1 << 31;
-        let per = (self.points - 1) as f64 / (self.tf - self.t0);
-        let guess = ((t - self.t0) * per).floor();
-        if guess.is_nan() || guess < 0.0 {
-            return 0;
-        }
-        let mut k = (guess as usize).min(CAP);
-        while k > 0 && self.time_of(k) > t {
-            k -= 1;
-        }
-        while k < CAP && self.time_of(k + 1) <= t {
-            k += 1;
-        }
-        k
+        grid_last_row(self.t0, self.tf, self.points, t)
     }
 
     /// Grid index of the last row produced (0 once initialized).
@@ -489,6 +507,209 @@ fn row_of(t: f64, y: &[f64]) -> Vec<f64> {
     row
 }
 
+/// The stepping state of a live explicit run, which
+/// [`DynamicSolver::explicit_rows`] reads and advances.
+#[derive(Default)]
+pub(crate) struct ExplicitLive {
+    pub(crate) stepper: Option<ExplicitStepper>,
+    pub(crate) knots: Knots,
+    /// Where the current lap ends: the document's `tf`, then one span later
+    /// each time it is reached.
+    pub(crate) horizon: f64,
+    /// Grid index of the next row to produce.
+    pub(crate) next: usize,
+    /// How many of the stepper's recorded events are already in a chunk.
+    pub(crate) events_sent: usize,
+    pub(crate) end: Option<f64>,
+    t0: f64,
+    tf: f64,
+    points: usize,
+}
+
+impl ExplicitLive {
+    /// `(t0, tf, points)` of the batch grid, which the live one continues.
+    pub(crate) fn grid(&self) -> (f64, f64, usize) {
+        (self.t0, self.tf, self.points)
+    }
+}
+
+/// The resumable explicit (`ode45`, `ode23s`, …) loop of one `DYNAMIC` block
+/// (Phase K1b). It owns what a [`DynamicSolver`] borrows — the block, the
+/// solved base values, the inner solve's settings and specs — and rebuilds
+/// two solvers on them per chunk: one steps, one samples the output rows
+/// (see [`DynamicSolver::explicit_rows`] for why there are two). Their
+/// classification and warm chains are parked between chunks.
+pub struct ExplicitRun {
+    block: OwnedBlock,
+    columns: Vec<String>,
+    /// `None` before the first chunk and after a reset: the next chunk
+    /// prepares both solvers afresh, as a batch solve does.
+    parked: Option<(ParkedDynamic, ParkedDynamic)>,
+    live: ExplicitLive,
+    failed: bool,
+}
+
+impl ExplicitRun {
+    /// Prepare the block once, so a structural error is the open's to report,
+    /// and park the result for the first chunk.
+    pub(crate) fn new(
+        system: &DynamicSystem,
+        base: &Scope,
+        inner: SolverSettings,
+        specs: &BTreeMap<String, VarSpec>,
+        defs: &Definitions,
+    ) -> Result<ExplicitRun> {
+        let mut run = ExplicitRun {
+            block: OwnedBlock {
+                system: system.clone(),
+                base: base.clone(),
+                inner,
+                specs: specs.clone(),
+            },
+            columns: Vec::new(),
+            parked: None,
+            live: ExplicitLive::default(),
+            failed: false,
+        };
+        let (stepping, sampling) = run.block.prepared(defs)?;
+        run.columns = stepping.columns();
+        run.parked = Some((stepping.park(), sampling.park()));
+        run.restart_grid();
+        Ok(run)
+    }
+
+    fn restart_grid(&mut self) {
+        let options = &self.block.system.options;
+        let points = match options.points {
+            Some(p) if p >= 2 => p,
+            _ => DEFAULT_SAMPLE_COUNT,
+        };
+        self.live = ExplicitLive {
+            horizon: options.tf,
+            t0: options.t0,
+            tf: options.tf,
+            points,
+            ..ExplicitLive::default()
+        };
+        self.failed = false;
+    }
+
+    fn run(
+        &mut self,
+        defs: &Definitions,
+        last: usize,
+        more: &mut dyn FnMut(&Chunk) -> bool,
+        one_step: bool,
+    ) -> Chunk {
+        let mut chunk = Chunk::default();
+        if self.finished() {
+            chunk.stopped = self.live.end.is_some();
+            return chunk;
+        }
+        let parked = self.parked.take();
+        let outcome = (|| {
+            let (stepping, sampling) = match parked {
+                Some((a, b)) => {
+                    let (mut s, mut t) = (self.block.solver(defs), self.block.solver(defs));
+                    s.resume(a);
+                    t.resume(b);
+                    (s, t)
+                }
+                None => self.block.prepared(defs)?,
+            };
+            let mut live = std::mem::take(&mut self.live);
+            let out =
+                stepping.explicit_rows(&sampling, &mut live, last, more, &mut chunk, one_step);
+            let parked = (stepping.park(), sampling.park());
+            Ok::<_, FreesError>((out, live, parked))
+        })();
+        match outcome {
+            Ok((out, live, parked)) => {
+                self.live = live;
+                self.parked = Some(parked);
+                if let Err(e) = out {
+                    self.failed = true;
+                    chunk.error = Some(e);
+                }
+            }
+            Err(e) => {
+                self.failed = true;
+                chunk.error = Some(e);
+            }
+        }
+        chunk
+    }
+
+    fn index(&self) -> usize {
+        self.live.next.saturating_sub(1)
+    }
+
+    fn last_row_at(&self, t: f64) -> usize {
+        grid_last_row(self.live.t0, self.live.tf, self.live.points, t)
+    }
+
+    fn clock(&self) -> Option<(f64, f64)> {
+        self.live.stepper.as_ref().map(ExplicitStepper::clock)
+    }
+
+    fn finished(&self) -> bool {
+        self.live.end.is_some() || self.failed
+    }
+
+    fn restart(&mut self) {
+        self.parked = None;
+        self.restart_grid();
+    }
+
+    fn table(&self, rows: Vec<Vec<f64>>, events: Vec<TableEventHit>) -> OdeTableResult {
+        OdeTableResult {
+            name: self.block.system.name.clone(),
+            columns: self.columns.clone(),
+            rows,
+            events,
+            method: self.block.system.options.method.clone(),
+            stopped: self.live.end.is_some(),
+            end_time: self.live.end.unwrap_or(self.live.tf),
+        }
+    }
+}
+
+/// What a [`DynamicSolver`] borrows, owned.
+struct OwnedBlock {
+    system: DynamicSystem,
+    base: Scope,
+    inner: SolverSettings,
+    specs: BTreeMap<String, VarSpec>,
+}
+
+impl OwnedBlock {
+    fn solver<'s>(&'s self, defs: &'s Definitions) -> DynamicSolver<'s> {
+        DynamicSolver::new(
+            &self.system,
+            &self.base,
+            defs,
+            pinned_solver(&self.inner, &self.specs, EvalContext::with_defs(defs)),
+        )
+    }
+
+    /// Two freshly prepared solvers, as a batch solve prepares its one.
+    fn prepared<'s>(
+        &'s self,
+        defs: &'s Definitions,
+    ) -> Result<(DynamicSolver<'s>, DynamicSolver<'s>)> {
+        let (mut stepping, mut sampling) = (self.solver(defs), self.solver(defs));
+        stepping.prepare_explicit()?;
+        sampling.prepare_explicit()?;
+        Ok((stepping, sampling))
+    }
+}
+
+/// A live block's run: the implicit DAE loop or the explicit one.
+enum Run {
+    Ida(Box<IdaRun>),
+    Explicit(Box<ExplicitRun>),
+}
+
 /// One `DYNAMIC` block's transient, kept open between requests.
 ///
 /// It owns the document definitions and the run, so it borrows nothing; the
@@ -496,12 +717,36 @@ fn row_of(t: f64, y: &[f64]) -> Vec<f64> {
 /// the boundary not calling; disposing is dropping it.
 pub struct LiveSession {
     defs: Definitions,
-    run: IdaRun,
+    run: Run,
 }
 
 impl LiveSession {
     pub(crate) fn new(defs: Definitions, run: IdaRun) -> LiveSession {
-        LiveSession { defs, run }
+        LiveSession {
+            defs,
+            run: Run::Ida(Box::new(run)),
+        }
+    }
+
+    pub(crate) fn explicit(defs: Definitions, run: ExplicitRun) -> LiveSession {
+        LiveSession {
+            defs,
+            run: Run::Explicit(Box::new(run)),
+        }
+    }
+
+    fn rows(&mut self, last: usize, more: &mut dyn FnMut(&Chunk) -> bool) -> Chunk {
+        match &mut self.run {
+            Run::Ida(run) => run.advance(&self.defs, last, more, None),
+            Run::Explicit(run) => run.run(&self.defs, last, more, false),
+        }
+    }
+
+    fn index(&self) -> usize {
+        match &self.run {
+            Run::Ida(run) => run.index(),
+            Run::Explicit(run) => run.index(),
+        }
     }
 
     /// Integrate to `t_target`, producing every grid row at or before it.
@@ -510,51 +755,70 @@ impl LiveSession {
     /// resumes there. The tolerances are the document's; a frame budget never
     /// relaxes them.
     pub fn advance(&mut self, t_target: f64, more: &mut dyn FnMut(&Chunk) -> bool) -> Chunk {
-        let last = self.run.last_row_at(t_target).max(self.run.index());
-        self.run.advance(&self.defs, last, more, None)
+        let at = match &self.run {
+            Run::Ida(run) => run.last_row_at(t_target),
+            Run::Explicit(run) => run.last_row_at(t_target),
+        };
+        self.rows(at.max(self.index()), more)
     }
 
     /// Step to the next output row.
     pub fn step_sample(&mut self) -> Chunk {
-        let last = self.run.index() + 1;
-        self.run.advance(&self.defs, last, &mut |_| true, None)
+        self.rows(self.index() + 1, &mut |_| true)
     }
 
     /// Step to the next event crossing, or `max_rows` rows, whichever comes
     /// first.
     pub fn step_event(&mut self, max_rows: usize) -> Chunk {
-        let last = self.run.index().saturating_add(max_rows);
-        self.run
-            .advance(&self.defs, last, &mut |c| c.events.is_empty(), None)
+        let last = self.index().saturating_add(max_rows);
+        self.rows(last, &mut |c| c.events.is_empty())
     }
 
     /// Take one internal integrator step; see [`IdaRun::step_accepted`].
     pub fn step_accepted(&mut self) -> Chunk {
-        self.run.step_accepted(&self.defs)
+        match &mut self.run {
+            Run::Ida(run) => run.step_accepted(&self.defs),
+            Run::Explicit(run) => run.run(&self.defs, ROW_CAP, &mut |_| true, true),
+        }
     }
 
     /// Back to `t0`, with nothing integrated.
     pub fn reset(&mut self) {
-        self.run.restart();
+        match &mut self.run {
+            Run::Ida(run) => run.restart(),
+            Run::Explicit(run) => run.restart(),
+        }
     }
 
     /// The `[time, states…, aux…]` column names of every row.
     pub fn columns(&self) -> &[String] {
-        self.run.columns()
+        match &self.run {
+            Run::Ida(run) => run.columns(),
+            Run::Explicit(run) => &run.columns,
+        }
     }
 
-    /// The integrator's current time and last step size, once started.
+    /// The integrator's current time and step size, once started.
     pub fn clock(&self) -> Option<(f64, f64)> {
-        self.run.clock()
+        match &self.run {
+            Run::Ida(run) => run.clock(),
+            Run::Explicit(run) => run.clock(),
+        }
     }
 
     /// The run has ended: a stop event or a failure.
     pub fn finished(&self) -> bool {
-        self.run.finished()
+        match &self.run {
+            Run::Ida(run) => run.finished(),
+            Run::Explicit(run) => run.finished(),
+        }
     }
 
     /// The accepted rows and events as an ODE Table, ended where the run is.
     pub fn table(&self, rows: Vec<Vec<f64>>, events: Vec<TableEventHit>) -> OdeTableResult {
-        self.run.table(rows, events)
+        match &self.run {
+            Run::Ida(run) => run.table(rows, events),
+            Run::Explicit(run) => run.table(rows, events),
+        }
     }
 }

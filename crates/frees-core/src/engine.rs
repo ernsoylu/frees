@@ -516,7 +516,7 @@ pub struct VariableOverride {
 /// The Java `VariableSpec` carries more (display name, unit, format); only the
 /// three fields the solver reads are needed here.
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct VarSpec {
+pub(crate) struct VarSpec {
     guess: f64,
     lower: f64,
     upper: f64,
@@ -750,7 +750,7 @@ pub fn solve_all_with_tables(
 /// `changeInVariables` knob (its stop rule is the residual only) and no clock,
 /// so the transcription is the one field that exists here: `rel_tolerance`.
 /// `abs_tolerance` is left alone — it is already inert below the relaxed target.
-fn relaxed_ode_settings(base: &SolverSettings, rel_tol: f64) -> SolverSettings {
+pub(crate) fn relaxed_ode_settings(base: &SolverSettings, rel_tol: f64) -> SolverSettings {
     SolverSettings {
         rel_tolerance: rel_tol,
         ..*base
@@ -798,11 +798,13 @@ fn solve_dynamic_systems(
             ))
         })?;
         if !crate::ode::dynamic::is_ida_method(&system.options.method) {
-            return Err(FreesError::solver(format!(
-                "Live mode runs a DYNAMIC block on the implicit DAE solver for now; \
-                 DYNAMIC {} uses {}. Set its method to ida to run it live.",
-                system.name, system.options.method
-            )));
+            let run =
+                crate::ode::live::ExplicitRun::new(system, base_values, inner, specs, &doc.defs)?;
+            capture.session = Some(crate::ode::live::LiveSession::explicit(
+                doc.defs.clone(),
+                run,
+            ));
+            return Ok(Vec::new());
         }
         let algebraic = pinned_solver(&inner, specs, ctx);
         let run =
@@ -853,7 +855,7 @@ fn solve_dynamic_systems(
 /// source text (which the failure annotator quotes) are rewritten in place
 /// each call, so residuals and diagnostics are byte-identical to the
 /// uncached path.
-fn pinned_solver<'a>(
+pub(crate) fn pinned_solver<'a>(
     settings: &'a SolverSettings,
     specs: &'a BTreeMap<String, VarSpec>,
     ctx: EvalContext<'a>,
@@ -1275,6 +1277,19 @@ impl PreparedPinnedSolver<'_> {
 }
 
 impl crate::ode::dynamic::AlgebraicSolve for PreparedPinnedSolver<'_> {
+    /// The prepared structure, the watch list and the deferred-result flag:
+    /// everything that is not a borrow.
+    fn park(&mut self) -> Option<Box<dyn std::any::Any>> {
+        let watch = std::mem::take(&mut self.watch);
+        Some(Box::new((self.prep.take(), watch, self.pending)))
+    }
+
+    fn resume(&mut self, state: Box<dyn std::any::Any>) {
+        if let Ok(state) = state.downcast::<(Option<PinnedPrep>, Vec<String>, bool)>() {
+            (self.prep, self.watch, self.pending) = *state;
+        }
+    }
+
     /// Accepted only before the first solve, which is where the caller offers
     /// it — there is then no warm chain in flight to reason about.
     fn watch(&mut self, names: &[String]) -> bool {
