@@ -590,6 +590,12 @@ entry here is checked off with evidence when it closes.
     - A reloaded lesson resets its panel (keyed by the workspace epoch), so Reset returns to step 1.
     - **Evidence.** `embed.test.ts` (parsing, whitelist, bounds, the full-app URL); `embed.spec.ts`: the RC lesson embedded as a light-theme plot kiosk with one slider, solved, changed through the lesson (6.3212 → 3.9347 V), Reset to unsolved, and the seeded `frees.project` byte-identical afterwards; `?example=lesson-diode` in the full app.
     - **Found:** a fresh visit's welcome document counts as unsaved, so opening any example (gallery, `?example=`) asks to save first. Left as is: the prompt is the guard that protects real work.
+  - **I5 done 2026-11-07 (`i5-book-search`).**
+    - **One search page for the whole Book** (`search.html`, linked from the contents): guides, reference pages and gallery models are indexed by title, blurb, keywords and text. The index and the script are inlined in the page: no server and no extra fetch.
+    - **Filters come from the lessons.** Every lesson manifest now names a `domain` and its `concepts`. The Concept, Domain and Prerequisite selects list exactly the values the lessons use, and every chosen filter must match. A bare page lists the lessons in course order. A title hit ranks first and a lesson breaks ties. `?q=` pre-fills the query.
+    - **Lesson pages in the gallery** show the objective, domain, concepts, prerequisites, the prediction asked, the paired lesson and the sources. Lessons are exempt from the per-category gallery cap.
+    - **Gates in `build-book`.** The build fails if a lesson is missing from the gallery or a built page is missing from the index. Results are built with DOM text nodes, never markup.
+    - **Evidence.** `search.test.ts` covers matching, facets and ranking. `searchPage.test.ts` drives the installed page in jsdom (filters, `?q=`, the live count). The built `search.html?q=capacitor` gives 9 results in Chromium, with the capacitor-sharing lesson first. `build-book` builds 903 pages, 54 of them in the gallery; `check-docs` is green.
   1. **Insight cards.** τ = RC, thermal τ = mC/UA, ω_n and ζ, Carnot and actual COP, NTU-ε and glide, each computed from solved values and attached to blocks or areas (VIEW-09).
   2. **A lesson manifest beside a gallery example.** It holds:
      - the objective, prerequisites and the governing equation;

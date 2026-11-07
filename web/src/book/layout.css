@@ -21,6 +21,12 @@ a { color: var(--mantine-color-teal-text); }
 .plot svg { width: 100%; max-width: 640px; height: auto; font-size: 11px; fill: var(--mantine-color-text); }
 .plot .grid { stroke: var(--mantine-color-default-border); }
 .plot figcaption { font-size: 13px; color: var(--mantine-color-dimmed); }
+.lesson { border-left: 3px solid var(--mantine-color-grape-filled); padding: 2px 14px; margin: 16px 0; }
+.lesson .sources { font-size: 13px; color: var(--mantine-color-dimmed); }
+.search input { width: 100%; max-width: 560px; font: inherit; padding: 6px 10px; }
+.search select { font: inherit; }
+.search .facets { display: flex; flex-wrap: wrap; gap: 12px; }
+.hits .kind { font-size: 12px; color: var(--mantine-color-dimmed); text-transform: uppercase; }
 @media (max-width: 800px) {
   .book { display: block; }
   .toc { position: static; width: auto; height: auto; max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--mantine-color-default-border); }
