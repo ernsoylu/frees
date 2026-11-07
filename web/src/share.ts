@@ -1,4 +1,5 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
+import type { PinnedSlider } from './sliders'
 
 /**
  * Share-by-URL: the whole document travels in the URL fragment as
@@ -117,32 +118,83 @@ export function deriveProjectTitle(source: string, text?: string): string {
  *  that truncates silently. */
 export const MAX_SHARE_URL_CHARS = 16000
 
-/** Builds a share URL for the given document text, or null when the
- *  compressed link would exceed {@link MAX_SHARE_URL_CHARS}. */
-export function buildShareUrl(text: string, base?: string): string | null {
+/**
+ * I6: what a link carries. Version 1 (`#share=<lz text>`, no prefix) is the
+ * document alone, and is still what a link without lesson settings emits, so
+ * every deployed reader opens it. Version 2 (`#share=2.<lz JSON>`) adds the
+ * open lesson and the pinned sliders. lz-string's URI alphabet has no `.`, so
+ * the prefix cannot be mistaken for a v1 payload.
+ */
+export interface SharedDocument {
+  text: string
+  /** The gallery example whose lesson was open. */
+  lesson?: string
+  sliders?: PinnedSlider[]
+}
+export type ShareRead = SharedDocument | { error: string } | null
+
+export const SHARE_VERSION = 2
+export const MAX_SHARED_SLIDERS = 16
+const MAX_SHARED_TEXT = 2 * 1024 * 1024
+const IDENT = /^[A-Za-z_]\w{0,63}$/
+const SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/
+// A unit is written into an override equation (`x = 1 [units]`): no brackets,
+// braces, quotes or line breaks can close it.
+const UNITS = /^[^[\]{}"\r\n]{0,40}$/
+
+/** Builds a share URL for the document and, when given, its lesson settings;
+ *  null when the link would exceed {@link MAX_SHARE_URL_CHARS}. */
+export function buildShareUrl(text: string, base?: string, extras: Omit<SharedDocument, 'text'> = {}): string | null {
   const origin = base ?? globalThis.location.origin + globalThis.location.pathname
-  const url = origin + SHARE_PREFIX + compressToEncodedURIComponent(text)
+  const sliders = extras.sliders?.length ? extras.sliders : undefined
+  const payload = extras.lesson || sliders
+    ? `${SHARE_VERSION}.${compressToEncodedURIComponent(JSON.stringify({ text, lesson: extras.lesson, sliders }))}`
+    : compressToEncodedURIComponent(text)
+  const url = origin + SHARE_PREFIX + payload
   return url.length > MAX_SHARE_URL_CHARS ? null : url
 }
 
-/** Extracts the document text carried by a `#share=` fragment, or null when
- *  the hash is absent, not a share link, or fails to decompress (a truncated
- *  or hand-mangled link must open the normal workspace, not throw). */
-export function extractSharedText(hash: string): string | null {
-  if (!hash.startsWith(SHARE_PREFIX)) {
-    return null
+/** Only well-formed sliders survive: identifier names, finite bracketing
+ *  ranges, the value clamped into them, units that cannot leave the bracket. */
+function readSliders(raw: unknown): PinnedSlider[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const out: PinnedSlider[] = []
+  for (const r of raw.slice(0, MAX_SHARED_SLIDERS)) {
+    const { name, value, units, min, max } = (r ?? {}) as Record<string, unknown>
+    if (typeof name !== 'string' || !IDENT.test(name) || out.some((o) => o.name.toLowerCase() === name.toLowerCase())) continue
+    if (![value, min, max].every((n) => typeof n === 'number' && Number.isFinite(n)) || !((min as number) < (max as number))) continue
+    const u = typeof units === 'string' && UNITS.test(units) ? units : ''
+    out.push({ name, units: u, min: min as number, max: max as number, value: Math.min(max as number, Math.max(min as number, value as number)) })
   }
+  return out.length ? out : undefined
+}
+
+/** Reads a `#share=` fragment. Null when the hash is absent, not a share link,
+ *  or does not decode (a truncated or hand-mangled link must open the normal
+ *  workspace, not throw); an error only for a link from a newer frees. */
+export function readShareHash(hash: string): ShareRead {
+  if (!hash.startsWith(SHARE_PREFIX)) return null
   const payload = hash.slice(SHARE_PREFIX.length)
-  if (payload.length === 0) {
-    return null
-  }
+  if (payload.length === 0 || payload.length > MAX_SHARE_URL_CHARS) return null
+  const versioned = /^(\d+)\.(.*)$/s.exec(payload)
+  const version = versioned ? Number(versioned[1]) : 1
+  if (versioned && version < 2) return null // v1 never carried a prefix
+  if (version > SHARE_VERSION) return { error: `This link was made by a newer version of frees (link format ${version}). Reload to update, then open it again.` }
   try {
-    const text = decompressFromEncodedURIComponent(payload)
-    return text === null || text.length === 0 ? null : text
+    const decoded = decompressFromEncodedURIComponent(versioned ? versioned[2] : payload)
+    if (!decoded || decoded.length > MAX_SHARED_TEXT) return null
+    if (version === 1) return { text: decoded }
+    const data = JSON.parse(decoded) as Record<string, unknown>
+    if (typeof data.text !== 'string' || data.text.length === 0 || data.text.length > MAX_SHARED_TEXT) return null
+    const lesson = typeof data.lesson === 'string' && SLUG.test(data.lesson) ? data.lesson : undefined
+    return { text: data.text, lesson, sliders: readSliders(data.sliders) }
   } catch {
     return null
   }
 }
+
+/** A read that opens a document, or null (nothing to open, or an error). */
+export const sharedDocumentOf = (read: ShareRead): SharedDocument | null => (read && 'text' in read ? read : null)
 
 /** Removes the share fragment from the address bar without reloading, so a
  *  refresh returns to the user's own autosaved work instead of re-importing

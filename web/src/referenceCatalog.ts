@@ -25405,6 +25405,87 @@ ab.out.sig = 4
 <!-- verified-reference-example:end -->`,
   },
   {
+    name: `SigChirp`,
+    slug: `sigchirp`,
+    category: `Component (signal)`,
+    summary: `Linear chirp: a sine whose frequency sweeps from f0 at t = 0 to f1 at t = T.`,
+    related: [`SigSine`],
+    examples: [],
+    tags: [`sigchirp`, `component`, `signal`, `acausal`],
+    references: [`A. V. Oppenheim and R. W. Schafer`, `Discrete-Time Signal Processing`, `3rd ed.`, `Pearson`, `2010 (linear frequency modulation)`],
+    guides: [],
+    body: `Linear chirp: a sine whose frequency sweeps from f0 at t = 0 to f1 at t = T.
+
+## What it models
+
+A swept-sine test signal, bias + amp·sin(2π·(f0·t + (f1 − f0)·t²/(2T))). The instantaneous frequency f0 + (f1 − f0)·t/T rises linearly, reaching f1 at T and continuing at the same rate after it. Feed it to a plant to see its response change with frequency in one run.
+
+## Domain
+
+A **causal signal-domain** block — each port carries one value \`sig\`; a signal wire copies the output's value to the inputs it feeds. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`out\`
+
+## Usage
+
+\`\`\`
+SigChirp inst(amp, f0, f1, T, bias)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`amp\` | Number | Amplitude [-]. |
+| \`f0\` | Number | Frequency at t = 0 [Hz]. |
+| \`f1\` | Number | Frequency at t = T [Hz]. |
+| \`T\` | Number | Sweep duration [s]. |
+| \`bias\` | Number | Offset [-]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+out.sig &= bias + amp\\cdot \\sin\\left(2\\,3.141592653589793\\cdot \\left(f0\\cdot time + \\frac{\\left(f1 - f0\\right)\\cdot time^{2}}{2\\,t}\\right)\\right)
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — a chirp's value and instantaneous frequency
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A unit chirp sweeping 1 Hz → 11 Hz over 1 s, read at t = 50 ms. Its phase
+  is 2π·(f0·t + (f1 − f0)·t²/(2T)) = 2π·0.0625, so the value is sin(π/8), and
+  its instantaneous frequency f0 + (f1 − f0)·t/T is 1.5 Hz. }
+time = 0.05 [s]
+SigChirp CH(amp=1, f0=1 [Hz], f1=11 [Hz], T=1 [s], bias=0)
+y      = CH.out.sig
+f_inst = 1 [Hz] + (11 [Hz] - 1 [Hz]) * time / 1 [s]
+
+{ CHECK y 0.38268343236508984 1e-12 }
+{ CHECK f_inst 1.5 1e-12 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+y = 0.38268343236508984
+f_inst = 1.5
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `SigConstant`,
     slug: `sigconstant`,
     category: `Component (signal)`,
@@ -26466,6 +26547,88 @@ s3.sig = 7
 <!-- verified-reference-example:end -->`,
   },
   {
+    name: `SigNoise`,
+    slug: `signoise`,
+    category: `Component (signal)`,
+    summary: `Seeded Gaussian noise: samples of standard deviation sigma every dt, joined linearly, the same on every run.`,
+    related: [`SigFirstOrder`, `randg`],
+    examples: [],
+    tags: [`signoise`, `component`, `signal`, `acausal`],
+    references: [`D. E. Knuth`, `The Art of Computer Programming`, `Vol. 2: Seminumerical Algorithms`, `3rd ed.`, `Addison-Wesley`, `1997 (linear congruential generators and the polar method)`],
+    guides: [],
+    body: `Seeded Gaussian noise: samples of standard deviation sigma every dt, joined linearly, the same on every run.
+
+## What it models
+
+A reproducible noise source. Sample k is the first Gaussian draw of \`java.util.Random\` seeded with mod(k·2654435761 + seed·40503, 2147483647) + 1, the same generator \`randg\` uses, so a given seed gives the same trace on every run and on every target. The samples are joined linearly, so the signal is continuous and an integrator never meets a jump; its spectrum is band-limited to about 1/(2·dt). The multiplicative seed mix is there because Java's first draws for consecutive seeds are almost identical (lag-one correlation 0.999 for seed + k, against −0.03 with the mix, measured over 5,000 samples).
+
+## Domain
+
+A **causal signal-domain** block — each port carries one value \`sig\`; a signal wire copies the output's value to the inputs it feeds. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`out\`
+
+## Usage
+
+\`\`\`
+SigNoise inst(sigma, dt, seed)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`sigma\` | Number | Standard deviation of the samples [-]. |
+| \`dt\` | Number | Time between samples [s]. |
+| \`seed\` | Number | Run identity: any non-negative integer [-]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+out.sig &= \\text{randg}\\left(0, sigma, \\text{mod}\\left(\\text{floor}\\left(\\frac{time}{dt}\\right)\\cdot 2654435761 + seed\\cdot 40503, 2147483647\\right) + 1\\right)\\cdot \\left(1 + \\text{floor}\\left(\\frac{time}{dt}\\right) - \\frac{time}{dt}\\right) + \\text{randg}\\left(0, sigma, \\text{mod}\\left(\\left(\\text{floor}\\left(\\frac{time}{dt}\\right) + 1\\right)\\cdot 2654435761 + seed\\cdot 40503, 2147483647\\right) + 1\\right)\\cdot \\left(\\frac{time}{dt} - \\text{floor}\\left(\\frac{time}{dt}\\right)\\right)
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — the same draw as randg, halfway between samples
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ Seeded noise, σ = 1, a sample every 10 ms, seed 42. Sample k is the first
+  Gaussian draw of java.util.Random seeded with
+  mod(k·2654435761 + seed·40503, 2147483647) + 1, so it is the same on every
+  run. At t = 0 the output is sample 0. Halfway between samples 1 and 2 it is
+  their average, drawn here directly with randg for comparison. }
+time = 0.015 [s]
+SigNoise NZ(sigma=1, dt=0.01 [s], seed=42)
+n_mid    = NZ.out.sig
+n_direct = 0.5 * (randg(0, 1, 508653241) + randg(0, 1, 1015605355))
+n_gap    = n_mid - n_direct
+
+{ CHECK n_mid 0.00029017144404624995 1e-12 }
+{ CHECK n_gap 0 1e-15 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+n_mid = 0.00029017144404624995
+n_gap = 0
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `SigPID`,
     slug: `sigpid`,
     category: `Component (signal)`,
@@ -26722,6 +26885,86 @@ time = 2
 <!-- verified-reference-example:end -->`,
   },
   {
+    name: `SigQuantize`,
+    slug: `sigquantize`,
+    category: `Component (signal)`,
+    summary: `Quantizer: rounds the input to the nearest multiple of q, each step smoothed over a fraction eps of q.`,
+    related: [`SigSampleHold`],
+    examples: [],
+    tags: [`sigquantize`, `component`, `signal`, `acausal`],
+    references: [`A. V. Oppenheim and R. W. Schafer`, `Discrete-Time Signal Processing`, `3rd ed.`, `Pearson`, `2010 (quantization)`],
+    guides: [],
+    body: `Quantizer: rounds the input to the nearest multiple of q, each step smoothed over a fraction eps of q.
+
+## What it models
+
+The amplitude quantization of an analog-to-digital converter: the output is q·round(in/q). Each step is smoothed by a tanh over a fraction \`eps\` of the step (eps = 0.01 is sharp), so a solver can pass through it. Combine it with \`SigSampleHold\` to model a sampled converter: quantization in amplitude, sample-and-hold in time.
+
+## Domain
+
+A **causal signal-domain** block — each port carries one value \`sig\`; a signal wire copies the output's value to the inputs it feeds. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`in\`, \`out\`
+
+## Usage
+
+\`\`\`
+SigQuantize inst(q, eps)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`q\` | Number | Quantization step [-]. |
+| \`eps\` | Number | Smoothing width as a fraction of q [-]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+out.sig &= q\\cdot \\left(\\text{floor}\\left(\\frac{in.sig}{q}\\right) + 0.5\\,\\left(1 + \\tanh\\left(\\frac{\\frac{in.sig}{q} - \\text{floor}\\left(\\frac{in.sig}{q}\\right) - 0.5}{eps}\\right)\\right)\\right)
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — round two levels to a 0.25 step
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A quantizer with a 0.25 step rounds 0.30 to 0.25 and 0.40 to 0.50. }
+SigConstant LO(k=0.30)
+SigConstant HI(k=0.40)
+SigQuantize QL(q=0.25, eps=0.01)
+SigQuantize QH(q=0.25, eps=0.01)
+connect(LO.out, QL.in)
+connect(HI.out, QH.in)
+y_lo = QL.out.sig
+y_hi = QH.out.sig
+
+{ CHECK y_lo 0.25 1e-09 }
+{ CHECK y_hi 0.5 1e-08 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+y_lo = 0.25
+y_hi = 0.5
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `SigRamp`,
     slug: `sigramp`,
     category: `Component (signal)`,
@@ -26967,6 +27210,97 @@ Expected output (selected solution values; numerical rounding may vary):
 ctrl0.out.sig = 0
 ctrl1.out.sig = 1
 highin.out.sig = 3
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `SigSampleHold`,
+    slug: `sigsamplehold`,
+    category: `Component (signal)`,
+    summary: `Sample-and-hold: tracks the input during a short aperture around every sample instant and holds it between them.`,
+    related: [`SigQuantize`, `SigFirstOrder`],
+    examples: [],
+    tags: [`sigsamplehold`, `component`, `signal`, `acausal`],
+    references: [`W. Kester (ed.)`, `The Data Conversion Handbook`, `Analog Devices / Newnes`, `2005 (track-and-hold amplifiers`, `aperture and acquisition time)`],
+    guides: [],
+    body: `Sample-and-hold: tracks the input during a short aperture around every sample instant and holds it between them.
+
+## What it models
+
+A track-and-hold stage, as built in hardware. For an aperture \`ta\` centred on every instant k·Ts, the output follows the input with time constant \`tau\`, and for the rest of the period it holds the value it reached. Keep tau a small fraction of ta: the acquisition error is about e^(−ta/tau). The aperture is a smooth periodic gate with edges a tenth of ta, so the integrator never meets a jump; it is not an instantaneous, event-driven sampler. It needs a \`DYNAMIC\` block.
+
+## Domain
+
+A **causal signal-domain** block — each port carries one value \`sig\`; a signal wire copies the output's value to the inputs it feeds. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`in\`, \`out\`
+
+## Usage
+
+\`\`\`
+SigSampleHold inst(Ts, ta, tau, y0)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Ts\` | Number | Sample period [s]. |
+| \`ta\` | Number | Aperture (tracking window) [s]. |
+| \`tau\` | Number | Tracking time constant [s]. |
+| \`y0\` | Number | Initial held value [-]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+ca &= \\cos\\left(\\frac{3.141592653589793\\,ta}{ts}\\right) \\\\
+u &= \\frac{\\cos\\left(\\frac{2\\,3.141592653589793\\cdot time}{ts}\\right) - ca}{1 - ca} \\\\
+g &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{u}{0.1}\\right)\\right) \\\\
+\\text{der}\\left(y\\right) &= \\frac{g\\cdot \\left(in.sig - y\\right)}{tau} \\\\
+\\text{init}\\left(y\\right) &= y0 \\\\
+out.sig &= y
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — a step between samples waits for the next one
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A sample-and-hold every 100 ms (1 ms aperture, 20 µs tracking) sees its
+  input step from 0 to 1 at t = 30 ms, between samples. It holds 0 until the
+  aperture around t = 100 ms, then holds 1: the aperture lasts about fifty
+  tracking time constants, so the residue e^(−50) is far below the CHECK. }
+SigStep       IN(t0=0.03, before=0, after=1, eps=1e-4)
+SigSampleHold SH(Ts=0.1 [s], ta=0.001 [s], tau=2e-5 [s], y0=0)
+SigFirstOrder VIEW(tau=1 [s], y0=0)
+connect(IN.out, SH.in)
+connect(SH.out, VIEW.in)
+DYNAMIC hold (method = ida, time = 0 .. 0.2, points = 2001)
+END
+y_before = ODEValue('sh.out.sig', 0.09)
+y_after  = ODEValue('sh.out.sig', 0.15)
+
+{ CHECK y_before 0 1e-09 }
+{ CHECK y_after 1 1e-06 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+y_before = 0
+y_after = 1
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -27728,6 +28062,105 @@ Expected output (selected solution values; numerical rounding may vary):
 clk.out.sig = 2.5
 y = 2.5
 time = 2.5
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `SigTimer`,
+    slug: `sigtimer`,
+    category: `Component (signal)`,
+    summary: `Timer on a logical input: an on-delay output and a one-shot pulse, both of duration T.`,
+    related: [`SigPulse`, `SigStep`],
+    examples: [],
+    tags: [`sigtimer`, `component`, `signal`, `acausal`],
+    references: [`IEC 61131-3:2013`, `Programmable controllers \\u2014 Part 3: Programming languages (the TON and TP timer functions)`],
+    guides: [],
+    body: `Timer on a logical input: an on-delay output and a one-shot pulse, both of duration T.
+
+## What it models
+
+A PLC-style timer. The input counts as high above 0.5. \`delayed\` rises once the input has been high for \`T\`, and falls with it (an on-delay, TON). \`pulse\` is high for the first \`T\` after each rising edge, provided the input stays high that long; it ends early if the input falls first, so it is not a retriggerable monostable. An elapsed-time state counts while the input is high, and relaxes to zero with time constant \`tr\` while it is low, which re-arms the timer; leave the input low for about 5·tr between uses. The input level is smoothed over \`eps\` and the output edges over eps·T. It needs a \`DYNAMIC\` block.
+
+## Domain
+
+A **causal signal-domain** block — each port carries one value \`sig\`; a signal wire copies the output's value to the inputs it feeds. Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`in\`, \`delayed\`, \`pulse\`
+
+## Usage
+
+\`\`\`
+SigTimer inst(T, tr, eps)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`T\` | Number | Delay and pulse duration [s]. |
+| \`tr\` | Number | Re-arm time constant while the input is low [s]. |
+| \`eps\` | Number | Smoothing of the input level, and of the output edges as a fraction of T [-]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+w &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{in.sig - 0.5}{eps}\\right)\\right) \\\\
+\\text{der}\\left(c\\right) &= w - \\frac{\\left(1 - w\\right)\\cdot c}{tr} \\\\
+\\text{init}\\left(c\\right) &= 0\\,\\left[s\\right] \\\\
+delayed.sig &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{c - t}{eps\\cdot t}\\right)\\right) \\\\
+pulse.sig &= w\\cdot 0.5\\cdot \\left(1 + \\tanh\\left(\\frac{t - c}{eps\\cdot t}\\right)\\right)
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — on-delay and one-shot on a 0.5 s pulse
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A 0.1 s timer on an input that is high from 0.2 s to 0.7 s. The on-delay
+  output rises at 0.3 s and falls with the input; the one-shot output is high
+  from 0.2 s to 0.3 s. }
+SigPulse      IN(t0=0.2 [s], width=0.5 [s], high=1, low=0, eps=1e-4 [s])
+SigTimer      TM(T=0.1 [s], tr=0.01 [s], eps=0.01)
+SigFirstOrder V1(tau=1 [s], y0=0)
+SigFirstOrder V2(tau=1 [s], y0=0)
+connect(IN.out, TM.in)
+connect(TM.delayed, V1.in)
+connect(TM.pulse, V2.in)
+DYNAMIC timer (method = ida, time = 0 .. 1, points = 1001)
+END
+delayed_025 = ODEValue('tm.delayed.sig', 0.25)
+delayed_035 = ODEValue('tm.delayed.sig', 0.35)
+delayed_080 = ODEValue('tm.delayed.sig', 0.8)
+pulse_025   = ODEValue('tm.pulse.sig', 0.25)
+pulse_035   = ODEValue('tm.pulse.sig', 0.35)
+
+{ CHECK delayed_025 0 1e-09 }
+{ CHECK delayed_035 1 1e-09 }
+{ CHECK delayed_080 0 1e-09 }
+{ CHECK pulse_025 1 1e-09 }
+{ CHECK pulse_035 0 1e-09 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+delayed_025 = 0
+delayed_035 = 1
+delayed_080 = 0
+pulse_025 = 1
+pulse_035 = 0
 \`\`\`
 
 <!-- verified-reference-example:end -->`,

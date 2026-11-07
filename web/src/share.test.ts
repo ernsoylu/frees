@@ -3,11 +3,14 @@ import {
   buildRawDocumentUrl,
   buildShareUrl,
   clearRawDocumentUrl,
-  extractSharedText,
   MAX_SHARE_URL_CHARS,
+  readShareHash,
+  type ShareRead,
 } from './share'
 
 const BASE = 'https://frees.example/'
+const textOf = (r: ShareRead) => (r && 'text' in r ? r.text : null)
+const extractSharedText = (hash: string) => textOf(readShareHash(hash))
 
 describe('share-by-URL', () => {
   it('builds a raw document url with url encoding', () => {
@@ -65,5 +68,60 @@ describe('share-by-URL', () => {
     const url = buildShareUrl('x = 1', BASE)!
     const truncated = new URL(url).hash.slice(0, 12)
     expect(extractSharedText(truncated)).toBeNull()
+  })
+
+  describe('I6: versioned lesson settings', () => {
+    const RC = { name: 'R', value: 2000, units: 'Ohm', min: 100, max: 5000 }
+    const hashOf = (url: string | null) => new URL(url!).hash
+
+    it('a plain document still emits the unprefixed v1 link every reader opens', () => {
+      const hash = hashOf(buildShareUrl('x = 1', BASE, { sliders: [] }))
+      expect(hash).toMatch(/^#share=[^.]+$/)
+      expect(readShareHash(hash)).toEqual({ text: 'x = 1' })
+    })
+
+    it('round-trips the lesson and the sliders in a v2 link', () => {
+      const hash = hashOf(buildShareUrl('R = 1000 [Ohm]', BASE, { lesson: 'lesson-rc-charging', sliders: [RC] }))
+      expect(hash.startsWith('#share=2.')).toBe(true)
+      expect(readShareHash(hash)).toEqual({ text: 'R = 1000 [Ohm]', lesson: 'lesson-rc-charging', sliders: [RC] })
+    })
+
+    it('a link from a newer frees says so instead of opening nothing', () => {
+      const read = readShareHash('#share=3.' + new URL(buildShareUrl('x = 1', BASE)!).hash.slice(7))
+      expect(read).toEqual({ error: expect.stringMatching(/newer version of frees \(link format 3\)/) })
+      expect(readShareHash('#share=1.abc')).toBeNull()
+      expect(readShareHash('#share=0.abc')).toBeNull()
+    })
+
+    it('keeps only well-formed settings from a hand-made link', async () => {
+      const { compressToEncodedURIComponent } = await import('lz-string')
+      const forge = (data: unknown) => readShareHash('#share=2.' + compressToEncodedURIComponent(JSON.stringify(data)))
+      const read = forge({
+        text: 'x = 1',
+        lesson: '../evil',
+        sliders: [
+          { name: 'a', value: 99, units: 'm', min: 0, max: 10 }, // clamped to 10
+          { name: 'A', value: 1, units: '', min: 0, max: 2 }, // duplicate (case-insensitive)
+          { name: 'b b', value: 1, units: '', min: 0, max: 2 }, // not an identifier
+          { name: 'c', value: 1, units: '', min: 2, max: 2 }, // empty range
+          { name: 'd', value: Number.NaN, units: '', min: 0, max: 2 }, // NaN → null in JSON
+          { name: 'e', value: 1, units: 'm]\ny = 5 [m', min: 0, max: 2 }, // units cannot leave the bracket
+          ...Array.from({ length: 20 }, (_, i) => ({ name: `s${i}`, value: 0, units: '', min: 0, max: 1 })),
+        ],
+      })
+      expect(read).toMatchObject({ text: 'x = 1', lesson: undefined })
+      const sliders = (read as { sliders: { name: string; value: number; units: string }[] }).sliders
+      expect(sliders.slice(0, 2)).toEqual([
+        { name: 'a', value: 10, units: 'm', min: 0, max: 10 },
+        { name: 'e', value: 1, units: '', min: 0, max: 2 },
+      ])
+      expect(sliders).toHaveLength(2 + 16 - 6) // the first 16 entries are read, six of them rejected
+      expect(forge({ lesson: 'lesson-rc-charging' })).toBeNull()
+      expect(forge('not an object')).toBeNull()
+    })
+
+    it('refuses a payload longer than any link frees emits', () => {
+      expect(readShareHash('#share=' + 'A'.repeat(MAX_SHARE_URL_CHARS + 1))).toBeNull()
+    })
   })
 })

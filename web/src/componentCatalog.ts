@@ -3411,6 +3411,21 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     variants: [],
   },
   {
+    type: `SigChirp`,
+    library: `signal`,
+    summary: `Linear chirp: a sine whose frequency sweeps from f0 at t = 0 to f1 at t = T.`,
+    tags: [`sigchirp`, `component`, `signal`, `acausal`],
+    ports: [`out`],
+    params: [
+      { name: `amp`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Amplitude [-].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `f0`, isString: false, isSelector: false, isMap: false, unit: `Hz`, description: `Frequency at t = 0 [Hz].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `f1`, isString: false, isSelector: false, isMap: false, unit: `Hz`, description: `Frequency at t = T [Hz].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `T`, isString: false, isSelector: false, isMap: false, unit: `s`, description: `Sweep duration [s].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `bias`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Offset [-].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
     type: `SigConstant`,
     library: `signal`,
     summary: `Constant signal source of value k.`,
@@ -3559,6 +3574,19 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     variants: [],
   },
   {
+    type: `SigNoise`,
+    library: `signal`,
+    summary: `Seeded Gaussian noise: samples of standard deviation sigma every dt, joined linearly, the same on every run.`,
+    tags: [`signoise`, `component`, `signal`, `acausal`],
+    ports: [`out`],
+    params: [
+      { name: `sigma`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Standard deviation of the samples [-].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `dt`, isString: false, isSelector: false, isMap: false, unit: `s`, description: `Time between samples [s].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `seed`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Run identity: any non-negative integer [-].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
     type: `SigPID`,
     library: `signal`,
     summary: `PID controller on the (sp − pv) error with an integrator state and a realizable filtered derivative (filter τ).`,
@@ -3605,6 +3633,18 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     variants: [],
   },
   {
+    type: `SigQuantize`,
+    library: `signal`,
+    summary: `Quantizer: rounds the input to the nearest multiple of q, each step smoothed over a fraction eps of q.`,
+    tags: [`sigquantize`, `component`, `signal`, `acausal`],
+    ports: [`in`, `out`],
+    params: [
+      { name: `q`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Quantization step [-].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Smoothing width as a fraction of q [-].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
     type: `SigRamp`,
     library: `signal`,
     summary: `Ramp of the given slope starting at t0 (C¹ smooth-max hinge of width eps).`,
@@ -3641,6 +3681,20 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       { name: `low`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Output below the threshold.`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `high`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Output above the threshold.`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `eps`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Width of the transition, in the input’s units.`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
+    type: `SigSampleHold`,
+    library: `signal`,
+    summary: `Sample-and-hold: tracks the input during a short aperture around every sample instant and holds it between them.`,
+    tags: [`sigsamplehold`, `component`, `signal`, `acausal`],
+    ports: [`in`, `out`],
+    params: [
+      { name: `Ts`, isString: false, isSelector: false, isMap: false, unit: `s`, description: `Sample period [s].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `ta`, isString: false, isSelector: false, isMap: false, unit: `s`, description: `Aperture (tracking window) [s].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `tau`, isString: false, isSelector: false, isMap: false, unit: `s`, description: `Tracking time constant [s].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `y0`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Initial held value [-].`, required: true, values: [], variants: [], defaultValue: `` }
     ],
     variants: [],
   },
@@ -3762,6 +3816,19 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     ports: [`out`],
     params: [
 
+    ],
+    variants: [],
+  },
+  {
+    type: `SigTimer`,
+    library: `signal`,
+    summary: `Timer on a logical input: an on-delay output and a one-shot pulse, both of duration T.`,
+    tags: [`sigtimer`, `component`, `signal`, `acausal`],
+    ports: [`in`, `delayed`, `pulse`],
+    params: [
+      { name: `T`, isString: false, isSelector: false, isMap: false, unit: `s`, description: `Delay and pulse duration [s].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `tr`, isString: false, isSelector: false, isMap: false, unit: `s`, description: `Re-arm time constant while the input is low [s].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Smoothing of the input level, and of the output edges as a fraction of T [-].`, required: true, values: [], variants: [], defaultValue: `` }
     ],
     variants: [],
   },
