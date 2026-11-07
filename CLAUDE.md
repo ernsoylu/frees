@@ -27,9 +27,9 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Worker Pool**: Up to 4 Web Workers executing independent parametric sweep chunks in parallel with weighted progress, preserving deterministic row ordering.
 - **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-11-06: 3,900.8 KiB raw / 1,556.5 KiB gzipped, 1,219.2 KiB headroom, after Phase E moved 24 fluids and the mixture tables out of the module). Raised from 4,096 on 2026-09-10, owner-authorized; the `ci.yml` header carries the full ledger.
 - **Test Suite Health**:
-  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,446 tests pass across all workspace crates.
+  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,450 tests pass across all workspace crates.
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 86 test files, 1,060 tests passing (needs the built `web/src/wasm/pkg`).
+  - `vitest run` (Node 22): 88 test files, 1,068 tests passing (needs the built `web/src/wasm/pkg`).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
   - `npm run check-examples`: 826/826 documentation blocks (2,954 assertions), including the 20 multi-domain examples and their 19 optimization requests. Every graded block must also check with zero unit warnings.
@@ -71,6 +71,7 @@ frees-wasm/
   - Rejects stranded requests with `'Operation stopped'` when extra workers are retired (`retireExtraWorkers`).
   - Guards message and error callbacks (`if (!pool.includes(w)) return`) against late events from retired or terminated workers.
   - On fatal WASM traps, terminates all active workers and respawns cleanly on subsequent requests.
+- **Live worker (`web/src/wasm/liveClient.ts`)**: live mode runs on its own instance of `engine.worker.ts`, outside the pool, because the open `LiveSession` lives in that module between requests. It pulls with at most one advance in flight. Every reply is checked against the open's generation; a stale reply or a `gone` session answers `null`, never stale state. A trap retires the worker, and the next open respawns it.
 - **Prepared Solver Reuse (`PreparedDocument`)**:
   - Structural compilation (AST parsing, component expansion, call flattening, block decomposition, analytic differentiation, variable specs, dense plans) is hoisted.
   - Numeric pin mutations update in-place without re-compilation.
