@@ -6,15 +6,13 @@
 //
 // Run:  npm run build && npx playwright test e2e/lessons.spec.ts --project=chromium
 import { expect, test, type Page } from '@playwright/test'
+import { runCommand } from './journey'
 
 test.use({ serviceWorkers: 'block', viewport: { width: 1440, height: 960 } })
 test.skip(({ browserName }) => browserName !== 'chromium', 'One engine is enough for this journey.')
 
 async function openExample(page: Page, title: string) {
-  await page.locator('body').click({ position: { x: 5, y: 5 } })
-  await page.keyboard.press('Control+K')
-  await page.getByPlaceholder('Search views, tools, and actions…').fill('Open Example')
-  await page.keyboard.press('Enter')
+  await runCommand(page, 'Open Example')
   await page.getByRole('dialog', { name: 'Open an Example' }).getByRole('button', { name: new RegExp(`^${title}`) }).click()
   await discardIfAsked(page)
 }
