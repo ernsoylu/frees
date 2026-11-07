@@ -321,3 +321,61 @@ port(out)
   init(c) = c0
   out.sig = c
 end
+
+// ── Teaching sources and timers (Phase J) ────────────────────────────────────
+
+// Linear chirp: a sine whose frequency sweeps from f0 at t = 0 to f1 at t = T
+// (and keeps sweeping at the same rate after T).
+function [out] = SigChirp(amp, f0 [Hz], f1 [Hz], T [s], bias)
+port(out)
+  out.sig = bias + amp * sin(2 * pi# * (f0 * time + (f1 - f0) * time^2 / (2 * T)))
+end
+
+// Seeded noise: zero-mean Gaussian samples of standard deviation sigma, drawn
+// every dt and joined linearly. Sample k depends only on (seed, k), so the same
+// seed gives the same trace on every run and every target. (One expression:
+// the sample index jumps, and only the joined output may be a variable.)
+function [out] = SigNoise(sigma, dt [s], seed)
+port(out)
+  out.sig = randg(0, sigma, mod(floor(time / dt) * 2654435761 + seed * 40503, 2147483647) + 1) * (1 + floor(time / dt) - time / dt) + randg(0, sigma, mod((floor(time / dt) + 1) * 2654435761 + seed * 40503, 2147483647) + 1) * (time / dt - floor(time / dt))
+end
+
+// Quantizer: rounds the input to the nearest multiple of q, with each step
+// smoothed over a fraction eps of q. (One expression, for the same reason.)
+function [in, out] = SigQuantize(q, eps)
+port(in)
+port(out)
+  out.sig = q * (floor(in.sig / q) + 0.5 * (1 + tanh((in.sig / q - floor(in.sig / q) - 0.5) / eps)))
+end
+
+// Sample-and-hold, as a track-and-hold stage: for an aperture ta centred on
+// every sample instant k·Ts the output tracks the input with time constant tau,
+// and holds the value it reached for the rest of the period. The aperture is a
+// smooth periodic gate (edges a tenth of ta), so the integrator never meets a
+// jump.
+function [in, out] = SigSampleHold(Ts [s], ta [s], tau [s], y0)
+port(in)
+port(out)
+  ca       = cos(pi# * ta / Ts)
+  u        = (cos(2 * pi# * time / Ts) - ca) / (1 - ca)
+  g        = 0.5 * (1 + tanh(u / 0.1))
+  der(y)   = g * (in.sig - y) / tau
+  init(y)  = y0
+  out.sig  = y
+end
+
+// Timer on a logical input (high above 0.5, smoothed over eps). `delayed`
+// rises once the input has been high for T (on-delay); `pulse` is high for the
+// first T after each rising edge while the input stays high (one-shot). The
+// output edges are smoothed over eps·T. The elapsed-time state c relaxes back
+// to 0 with time constant tr while the input is low, which re-arms the timer.
+function [in, delayed, pulse] = SigTimer(T [s], tr [s], eps)
+port(in)
+port(delayed)
+port(pulse)
+  w           = 0.5 * (1 + tanh((in.sig - 0.5) / eps))
+  der(c)      = w - (1 - w) * c / tr
+  init(c)     = 0 [s]
+  delayed.sig = 0.5 * (1 + tanh((c - T) / (eps * T)))
+  pulse.sig   = w * 0.5 * (1 + tanh((T - c) / (eps * T)))
+end

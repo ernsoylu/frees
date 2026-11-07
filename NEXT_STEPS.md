@@ -651,6 +651,27 @@ entry here is checked off with evidence when it closes.
       - `check-examples` 821/821 blocks with 2,936 assertions, through a rebuilt WASM module.
       - `component_families`, `component_library`, `u5_components` and the `components` unit tests (pinned counts 43 and 324).
       - `componentPorts.test.tsx` pins the new symbol mapping.
+  - **J2 done 2026-11-07 (`j2-signal`): five signal blocks** in `signal.frees` (library 324 → 329).
+    - **`SigChirp`:** a linear sweep from f0 to f1 over T.
+    - **`SigNoise`:** seeded Gaussian samples every dt, joined linearly.
+      - Sample k is `randg`'s Java draw for mod(k·2654435761 + seed·40503, 2³¹ − 1) + 1, so it is deterministic per seed on every target.
+      - The mix is needed because Java's first draws for consecutive seeds are nearly identical: lag-one correlation 0.999 for seed + k, against −0.03 with the mix.
+    - **`SigQuantize`:** q·round(in/q), with tanh steps.
+    - **`SigSampleHold`:** a track-and-hold. A smooth periodic aperture ta, centred on every k·Ts, tracks with time constant tau.
+    - **`SigTimer`:** an on-delay output and a one-shot pulse, with an elapsed-time state that re-arms through tr.
+    - **Found:** IDA's step size underflows on a hard gate, and on intermediates that jump (a sample index, a floor), even when the output is continuous. So the blocks keep only continuous variables: the gate is C∞, and noise and quantize are single expressions. The one-shot ends early if its input falls before T; it is not a retriggerable monostable, and the page says so.
+    - **Each has a reference page** with a CHECKed example:
+      - the chirp against sin(π/8) and its instantaneous frequency;
+      - the noise midpoint against two direct `randg` draws, the sample also matching an independent Python port of `java.util.Random.nextGaussian`;
+      - the quantizer at two levels;
+      - sample-and-hold holding 0 until the next aperture and 1 after it;
+      - the timer's on-delay and pulse at the analytic times.
+  - **Phase J acceptance, 2026-11-07.**
+    - `check-docs` coverage is 100% (771/771).
+    - Every new component has unit-typed parameters, and its CHECKs grade with zero unit warnings (`check-examples` 826/826, 2,954 assertions).
+    - Each component is graded against an analytic or independent reference.
+    - The `ThermalFuse` page states what it models.
+    - Out of scope, as F decided: the I²t fuse and the meter symbols.
   1. **Electrical primitives** (scope as decided in F):
      - an event- or signal-driven `Switch` (and an SPDT);
      - sine and signal-controlled voltage and current sources;
