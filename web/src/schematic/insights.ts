@@ -60,8 +60,8 @@ export const INSIGHTS: readonly Insight[] = [
     roles: { mass: ['ThermalMass', 'MassGen'], path: ['Conduction', 'Convection', 'ContactResistance'] },
     compute: (b) => {
       const p = b.path
-      const ua = param(p, 'k') !== undefined ? (param(p, 'k')! * (param(p, 'area') ?? NaN)) / (param(p, 'L') ?? NaN)
-        : param(p, 'htc') !== undefined ? param(p, 'htc')! * (param(p, 'area') ?? NaN)
+      const ua = param(p, 'k') !== undefined ? (param(p, 'k')! * (param(p, 'area') ?? Number.NaN)) / (param(p, 'L') ?? Number.NaN)
+        : param(p, 'htc') !== undefined ? param(p, 'htc')! * (param(p, 'area') ?? Number.NaN)
         : param(p, 'Rth') !== undefined ? 1 / param(p, 'Rth')!
         : undefined
       const v = need({ C: param(b.mass, 'C'), UA: ua !== undefined && Number.isFinite(ua) ? ua : undefined })

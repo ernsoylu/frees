@@ -2873,7 +2873,7 @@ export default function SchematicTab({
                     key={i.kind}
                     onClick={() => {
                       const n = positioned.get(selection[0])!
-                      annotate('insight', `${i.kind}:${[...selection].sort().join(',')}`, { x: n.x + n.w + 30, y: n.y - 60 })
+                      annotate('insight', `${i.kind}:${[...selection].sort((a, b) => a.localeCompare(b)).join(',')}`, { x: n.x + n.w + 30, y: n.y - 60 })
                     }}
                   >
                     {i.label}
