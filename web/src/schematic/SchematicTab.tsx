@@ -73,7 +73,7 @@ import {
   type SchematicNode,
 } from './layout'
 import { glyphFillPath, glyphPath, SHAPE_LABELS, type Shape } from './symbols'
-import { sanitizeSvg, type CleanSymbol, type SvgChild } from './symbolSvg'
+import { bindingOf, boundAttrs, sanitizeSvg, type CleanSymbol, type SvgChild } from './symbolSvg'
 import {
   appendStatement,
   applyChanges,
@@ -3568,6 +3568,7 @@ export default function SchematicTab({
                   highlighted={highlightIds.includes(n.id) || selected.has(n.id)}
                   flash={flashIds.has(n.id)}
                   summary={(port) => streamSummary(`${n.id}.${port}`, values)}
+                  valueOf={(member) => flowValues.get(`${n.id}.${member}`.toLowerCase())?.value}
                   onPointerDown={(e) => {
                     takeControl()
                     // Dragging a selected block carries the whole selection; locked blocks stay.
@@ -4096,13 +4097,23 @@ interface BlockProps {
   flash?: boolean
   /** H4: a port's hover summary (every member with a value). */
   summary?: (port: string) => string
+  /** H5: the value of one of the block's own members (`opening`, `shaft.phi`), for a bound symbol part. */
+  valueOf?: (member: string) => number | undefined
 }
 
 const reactAttr = (name: string) => name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 
-/** COMP-08: a sanitised symbol tree as React elements; only allowlisted tags and attributes reach here. */
-const svgNode = (n: SvgChild): ReactNode =>
-  typeof n === 'string' ? n : createElement(n.tag, Object.fromEntries(Object.entries(n.attrs).map(([k, v]) => [reactAttr(k), v])), ...n.children.map(svgNode))
+/**
+ * COMP-08: a sanitised symbol tree as React elements; only allowlisted tags and
+ * attributes reach here. H5: a part that declares a binding takes its value
+ * from `valueOf` (the block's own output, at the playback sample when one plays).
+ */
+const svgNode = (n: SvgChild, valueOf: (member: string) => number | undefined, viewBox: CleanSymbol['viewBox']): ReactNode => {
+  if (typeof n === 'string') return n
+  const b = bindingOf(n.attrs)
+  const attrs = b ? boundAttrs(n.attrs, b, valueOf(b.member), viewBox) : n.attrs
+  return createElement(n.tag, Object.fromEntries(Object.entries(attrs).map(([k, v]) => [k.startsWith('data-') ? k : reactAttr(k), v])), ...n.children.map((c) => svgNode(c, valueOf, viewBox)))
+}
 
 /** One component, drawn as its circuit symbol with its identity and its most
  *  telling number. */
@@ -4133,6 +4144,7 @@ function NodeBlock({
   compat,
   flash = false,
   summary,
+  valueOf,
 }: Readonly<BlockProps>) {
   // COMP-08: a missing project symbol falls back to a labelled block.
   const shape = custom === null ? 'block' : (look?.shape ?? node.shape)
@@ -4212,7 +4224,7 @@ function NodeBlock({
       {!chip && custom && (
         <g color={ink.glyph} transform={`translate(6, ${(node.h - GLYPH) / 2}) scale(${GLYPH})`}>
           <g transform={turn || undefined}>
-            {createElement('svg', { width: 1, height: 1, viewBox: custom.viewBox.join(' '), 'data-symbol': 'custom' }, ...custom.children.map(svgNode))}
+            {createElement('svg', { width: 1, height: 1, viewBox: custom.viewBox.join(' '), 'data-symbol': 'custom' }, ...custom.children.map((c) => svgNode(c, (m) => valueOf?.(m), custom.viewBox)))}
           </g>
         </g>
       )}

@@ -41,6 +41,69 @@ const SAFE_VALUE = /^[\w\s.,#%()+-]*$/
 
 const numbers = (v: string | null) => (v ?? '').trim().split(/[\s,]+/).map(Number)
 
+/**
+ * H5: stateful symbols. A part of a project symbol may bind one approved
+ * attribute to one output of the block it draws, declared in the SVG itself:
+ *
+ *   data-bind="opening"            the block's member (`valve.opening`), or `port.member`
+ *   data-bind-attr="rotate"        one of {@link BIND_ATTRS}
+ *   data-bind-range="0 1 0 90"     output from..to mapped linearly (clamped) onto attribute from..to
+ *   data-bind-about="10 10"        optional pivot for rotate/scale, in symbol units (default: the viewBox centre)
+ *
+ * Each value is checked here like every other attribute; a malformed one is
+ * dropped and named. The bound attribute is composed in front of the part's
+ * own transform (or replaces its opacity) only from a value the model outputs.
+ */
+export const BIND_ATTRS = ['rotate', 'translate-x', 'translate-y', 'scale-x', 'scale-y', 'opacity'] as const
+export type BindAttr = (typeof BIND_ATTRS)[number]
+const finite = (v: string, n: number) => {
+  const xs = numbers(v)
+  return xs.length === n && xs.every(Number.isFinite)
+}
+const BIND_RULES: Record<string, (v: string) => boolean> = {
+  'data-bind': (v) => /^[a-z_]\w{0,63}(\.[a-z_]\w{0,63})?$/i.test(v),
+  'data-bind-attr': (v) => (BIND_ATTRS as readonly string[]).includes(v),
+  'data-bind-range': (v) => finite(v, 4) && numbers(v)[0] !== numbers(v)[1],
+  'data-bind-about': (v) => finite(v, 2),
+}
+
+export interface SymbolBinding {
+  member: string
+  attr: BindAttr
+  range: [number, number, number, number]
+  about?: [number, number]
+}
+
+/** The binding a sanitised part declares, or null when it declares none or only part of one. */
+export function bindingOf(attrs: Readonly<Record<string, string>>): SymbolBinding | null {
+  const [member, attr, range] = [attrs['data-bind'], attrs['data-bind-attr'], attrs['data-bind-range']]
+  if (!member || !attr || !range) return null
+  const r = numbers(range) as SymbolBinding['range']
+  const about = attrs['data-bind-about'] ? (numbers(attrs['data-bind-about']) as [number, number]) : undefined
+  return { member: member.toLowerCase(), attr: attr as BindAttr, range: r, ...(about ? { about } : {}) }
+}
+
+/**
+ * The part's attributes with its binding applied for `value`. With no value
+ * (the model does not output it, or it is not finite) the part is drawn as
+ * authored and marked `data-bound="missing"`.
+ */
+export function boundAttrs(attrs: Readonly<Record<string, string>>, b: SymbolBinding, value: number | undefined, viewBox: CleanSymbol['viewBox']): Record<string, string> {
+  if (value === undefined || !Number.isFinite(value)) return { ...attrs, 'data-bound': 'missing' }
+  const [v0, v1, a0, a1] = b.range
+  const t = Math.min(1, Math.max(0, (value - v0) / (v1 - v0)))
+  const a = a0 + t * (a1 - a0)
+  const [px, py] = b.about ?? [viewBox[0] + viewBox[2] / 2, viewBox[1] + viewBox[3] / 2]
+  if (b.attr === 'opacity') return { ...attrs, opacity: String(Math.min(1, Math.max(0, a))), 'data-bound': String(a) }
+  const move =
+    b.attr === 'rotate' ? `rotate(${a} ${px} ${py})`
+    : b.attr === 'translate-x' ? `translate(${a} 0)`
+    : b.attr === 'translate-y' ? `translate(0 ${a})`
+    : b.attr === 'scale-x' ? `translate(${px} ${py}) scale(${a} 1) translate(${-px} ${-py})`
+    : `translate(${px} ${py}) scale(1 ${a}) translate(${-px} ${-py})`
+  return { ...attrs, transform: attrs.transform ? `${move} ${attrs.transform}` : move, 'data-bound': String(a) }
+}
+
 export function sanitizeSvg(markup: unknown): CleanSymbol | { error: string } {
   if (typeof markup !== 'string' || !markup.trim()) return { error: 'The file is empty.' }
   if (markup.length > MAX_SVG_CHARS) return { error: `The SVG is over ${MAX_SVG_CHARS / 1000} k characters.` }
@@ -100,6 +163,7 @@ function safeAttrs(el: Element, dropped: Set<string>): Record<string, string> {
   for (const a of el.attributes) {
     const name = a.name.toLowerCase()
     if (!a.namespaceURI && ATTRS.has(name) && a.value.length <= 20_000 && SAFE_VALUE.test(a.value) && !/url\s*\(/i.test(a.value)) attrs[name] = a.value
+    else if (!a.namespaceURI && BIND_RULES[name]?.(a.value)) attrs[name] = a.value.trim()
     else dropped.add(a.name)
   }
   return attrs

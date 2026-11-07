@@ -476,6 +476,38 @@ entry here is checked off with evidence when it closes.
         - Reduced motion stops the pulse.
         - No `solve` or `check` runs.
       - The shared journey steps live in `e2e/journey.ts`.
+  - **H5 done 2026-11-07 (`h5-stateful-symbols`).**
+    - **Bindings travel in the symbol.** A part of an imported project symbol declares its own binding:
+      - `data-bind`: the block's member, `opening` or `port.t`;
+      - `data-bind-attr`: one of rotate, translate-x/y, scale-x/y or opacity;
+      - `data-bind-range`: output from..to onto attribute from..to, linear and clamped;
+      - `data-bind-about`: an optional pivot.
+    - The COMP-08 sanitiser checks each value (`symbolSvg.ts`); a malformed one is dropped and named in the import note. A type-scope symbol therefore animates every instance of the type, with no separate editor.
+    - **Only from a value the model outputs.**
+      - The canvas reads the block's own member: at the playback sample while one plays (recorded columns only), else the solved value.
+      - With no such value the part is drawn as authored and marked `data-bound="missing"`. An ODE-only model's end of run has none.
+    - Valve opening, shaft angle, tank level, piston position, melt fraction and zone lengths are all expressed with these six attributes. Built-in symbols are not bound.
+    - The allowlist widening was security-reviewed and recorded in ARCHITECTURE (COMP-08 entry).
+    - **Evidence.**
+      - `symbolSvg.test.ts`:
+        - A well-formed binding survives re-sanitising; malformed ones are dropped by name.
+        - Scale about a pivot, clamping, missing and non-finite values.
+        - Rotation composed in front of the part's own transform.
+      - `stateful-symbols.spec.ts`:
+        - A tank fill bound to `port.t` stays as drawn at the end of the run.
+        - It is full at 400 K and 0.4493 at the recorded 344.93 K.
+        - A binding to an unknown member never moves.
+        - An `href` binding is removed and named.
+        - No `solve` or `check` runs.
+  - **Phase H acceptance (2026-11-07).**
+    - Met:
+      - The sign and metadata contracts have unit tests (`flow_into` on every domain, `phase_at`, event owners).
+      - The EV journey: particles match the arrows on every wire.
+      - Playback and the P-h cursor show one recorded sample.
+      - Reduced motion is honoured (particles, event pulse).
+      - No engine call during any playback journey.
+      - The visual baseline is unchanged with animation off.
+    - **Deviation.** No gallery refrigeration model records a dynamic run; every refrigerant cycle is steady. The P-h cursor journey therefore uses the water pressure cooker. The R134a cycle is covered steady, by the phase scale (H2). A transient refrigeration lesson would close this; it is not reverified beyond the gallery as of this date.
   1. **Explicit port-flow metadata.** The engine reports each port's role and measured-flow sign per domain (fluid, liquid, two-phase, moist air, heat, electrical, mechanical, translational). This replaces `flowAlong`'s in/out naming. Where a direction is not known, it stays unknown; it is never inferred from drawing order or a pressure gradient.
   2. **Flow particles.**
     - Particles move along the routed wire paths. Speed follows the log of the flow magnitude, normalised per domain; direction comes from (1).
