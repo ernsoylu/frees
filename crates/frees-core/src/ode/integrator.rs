@@ -196,94 +196,206 @@ struct Trajectory {
     rejected: usize,
 }
 
-/// The shared time loop: advances knot by knot, handling stop events
-/// (terminate) and set events (discrete state reassignment at the crossing,
-/// then resume). Port of `OdeIntegrator.run`.
-fn run(p: &OdeProblem<'_>) -> Result<Trajectory> {
-    // Integration time is the only honest progress signal a transient has: the
-    // step count is adaptive and its total is unknown in advance. The claim is
-    // the load-bearing half — every RHS evaluation, event scan and per-step
-    // algebraic solve goes through `engine::run_blocks`, which would otherwise
-    // reset the bar to this block's `0` thousands of times. Taken before the
-    // setup rather than at the loop, because `compute_initial_step` already
-    // evaluates the system. See `crate::progress`.
-    let progress = crate::progress::claim();
-    let method = resolve_method(&p.method)?;
-    // A non-finite endpoint has to be screened *before* the `tf <= t0` test,
-    // which it slips past in both directions: `tf = inf` is greater than any
-    // `t0`, and every comparison against `NaN` is false. What follows is worse
-    // than a crash — `span` and `min_step` become non-finite, the loop condition
-    // `t < tf - min_step` evaluates to false at the first pass, and `integrate`
-    // then publishes a full-height table of `[NaN, inf, inf, …]` as if it were a
-    // trajectory. Measured: `tf = inf` returned 200 such rows. The Java has the
-    // same hole; a document cannot reach it because the parser's `signedNumber`
-    // admits no infinite literal, but `OdeProblem` is public API here and
-    // `analysis` builds one directly.
-    if !p.t0.is_finite() || !p.tf.is_finite() {
-        return Err(FreesError::solver(format!(
-            "DYNAMIC: the time span must be finite (got {} .. {}).",
-            java_double_to_string(p.t0),
-            java_double_to_string(p.tf)
-        )));
+/// The accepted-step knots `(t, y, f)` of an integration, in order: what the
+/// Hermite sampler interpolates between.
+#[derive(Debug, Default, Clone)]
+pub struct Knots {
+    pub t: Vec<f64>,
+    pub y: Vec<Vec<f64>>,
+    pub f: Vec<Vec<f64>>,
+}
+
+impl Knots {
+    fn push(&mut self, t: f64, y: Vec<f64>, f: Vec<f64>) {
+        self.t.push(t);
+        self.y.push(y);
+        self.f.push(f);
     }
-    if p.tf <= p.t0 {
-        return Err(FreesError::solver(format!(
-            "DYNAMIC: the time span must satisfy t0 < tf (got {} .. {}).",
-            java_double_to_string(p.t0),
-            java_double_to_string(p.tf)
-        )));
+
+    /// Forget the knots no sample after `t` can need: every one whose
+    /// successor is still before `t`. [`interpolate_at`] then finds the same
+    /// interval for any later time as it would with the full list, so a live
+    /// run's samples are the batch samples while its memory stays flat.
+    pub fn drop_before(&mut self, t: f64) {
+        let mut drop = 0;
+        while self.t.len() - drop > 2 && self.t[drop + 1] < t {
+            drop += 1;
+        }
+        self.t.drain(..drop);
+        self.y.drain(..drop);
+        self.f.drain(..drop);
     }
-    let span = p.tf - p.t0;
-    let min_step = span * 1e-12;
 
-    let mut knot_t: Vec<f64> = Vec::new();
-    let mut knot_y: Vec<Vec<f64>> = Vec::new();
-    let mut knot_f: Vec<Vec<f64>> = Vec::new();
+    /// The trajectory at `t`, which the knots must cover.
+    pub fn sample(&self, t: f64) -> Vec<f64> {
+        interpolate_at(&self.t, &self.y, &self.f, &[t])
+            .pop()
+            .unwrap_or_default()
+    }
 
-    let mut t = p.t0;
-    let mut y = p.y0.clone();
-    // The Java checks only the initial *derivative*. A non-finite initial
-    // *state* with a finite derivative slips through and poisons the step
-    // controller instead: `scale = atol + rtol*|NaN|` is NaN, so every error
-    // test and every `h_use < min_step` comparison is false, no step is ever
-    // rejected and no underflow is ever declared. The run then burns the whole
-    // `MAX_STEPS` budget and blames stiffness. Measured before this line: a
-    // `y0 = [NaN]` problem with `der(y) = 1` reported "exceeded 1000000
-    // integration steps". One comparison up front is both faster and true.
-    check_finite(&y, t, "initial state")?;
-    let mut f = p.rhs.eval(t, &y)?;
-    check_finite(&f, t, "initial derivative")?;
-    knot_t.push(t);
-    knot_y.push(y.clone());
-    knot_f.push(f.clone());
+    /// The newest knot's time.
+    pub fn last_time(&self) -> f64 {
+        self.t.last().copied().unwrap_or(f64::NEG_INFINITY)
+    }
+}
 
-    let fixed = !method.adaptive();
-    let h_fixed = match p.fixed_step {
-        Some(step) => step,
-        None => span / (p.sample_count() - 1) as f64,
-    };
-    let mut h = compute_initial_step(p, method.as_ref(), &y, &f, span, fixed, h_fixed)?;
-
-    let mut recorded: Vec<EventRecord> = Vec::new();
-    let mut g_prev = eval_events(p, t, &y)?;
-    let mut accepted = 0usize;
-    let mut rejected = 0usize;
-    let mut steps = 0usize;
-    let mut stopped = false;
-    let mut end_time = p.tf;
+/// The shared time loop, one accepted step at a time: the batch run
+/// ([`run`]) drives it to `tf` and a live run (Phase K1b) in chunks.
+/// Stop events terminate; set events reassign a state at the crossing and
+/// resume. Port of `OdeIntegrator.run`, with the loop's locals as fields.
+pub struct ExplicitStepper {
+    method: Box<dyn OdeMethod>,
+    span: f64,
+    min_step: f64,
+    fixed: bool,
+    h_fixed: f64,
+    t: f64,
+    y: Vec<f64>,
+    f: Vec<f64>,
+    h: f64,
+    recorded: Vec<EventRecord>,
+    g_prev: Vec<f64>,
+    accepted: usize,
+    rejected: usize,
+    steps: usize,
+    stopped: bool,
+    end_time: f64,
     // Set-event restarts taken back to back with no ordinary accepted step in
     // between, and the time the current such window opened — see
     // [`MAX_CONSECUTIVE_SET_RESTARTS`].
-    let mut consecutive_sets = 0usize;
-    let mut window_start_t = p.t0;
+    consecutive_sets: usize,
+    window_start_t: f64,
+}
 
-    while t < p.tf - min_step {
-        progress.report((t - p.t0) / span);
-        let out = step_with_retries(method.as_ref(), p, t, &y, &f, h, min_step, steps)?;
-        steps += out.extra_steps;
-        rejected += out.rejections;
+impl ExplicitStepper {
+    /// Validate `p`, evaluate the initial state, and push the first knot.
+    pub fn new(p: &OdeProblem<'_>, knots: &mut Knots) -> Result<ExplicitStepper> {
+        let method = resolve_method(&p.method)?;
+        // A non-finite endpoint has to be screened *before* the `tf <= t0` test,
+        // which it slips past in both directions: `tf = inf` is greater than any
+        // `t0`, and every comparison against `NaN` is false. What follows is worse
+        // than a crash — `span` and `min_step` become non-finite, the loop condition
+        // `t < tf - min_step` evaluates to false at the first pass, and `integrate`
+        // then publishes a full-height table of `[NaN, inf, inf, …]` as if it were a
+        // trajectory. Measured: `tf = inf` returned 200 such rows. The Java has the
+        // same hole; a document cannot reach it because the parser's `signedNumber`
+        // admits no infinite literal, but `OdeProblem` is public API here and
+        // `analysis` builds one directly.
+        if !p.t0.is_finite() || !p.tf.is_finite() {
+            return Err(FreesError::solver(format!(
+                "DYNAMIC: the time span must be finite (got {} .. {}).",
+                java_double_to_string(p.t0),
+                java_double_to_string(p.tf)
+            )));
+        }
+        if p.tf <= p.t0 {
+            return Err(FreesError::solver(format!(
+                "DYNAMIC: the time span must satisfy t0 < tf (got {} .. {}).",
+                java_double_to_string(p.t0),
+                java_double_to_string(p.tf)
+            )));
+        }
+        let span = p.tf - p.t0;
+        let min_step = span * 1e-12;
+
+        let t = p.t0;
+        let y = p.y0.clone();
+        // The Java checks only the initial *derivative*. A non-finite initial
+        // *state* with a finite derivative slips through and poisons the step
+        // controller instead: `scale = atol + rtol*|NaN|` is NaN, so every error
+        // test and every `h_use < min_step` comparison is false, no step is ever
+        // rejected and no underflow is ever declared. The run then burns the whole
+        // `MAX_STEPS` budget and blames stiffness. Measured before this line: a
+        // `y0 = [NaN]` problem with `der(y) = 1` reported "exceeded 1000000
+        // integration steps". One comparison up front is both faster and true.
+        check_finite(&y, t, "initial state")?;
+        let f = p.rhs.eval(t, &y)?;
+        check_finite(&f, t, "initial derivative")?;
+        knots.push(t, y.clone(), f.clone());
+
+        let fixed = !method.adaptive();
+        let h_fixed = match p.fixed_step {
+            Some(step) => step,
+            None => span / (p.sample_count() - 1) as f64,
+        };
+        let h = compute_initial_step(p, method.as_ref(), &y, &f, span, fixed, h_fixed)?;
+        let g_prev = eval_events(p, t, &y)?;
+        Ok(ExplicitStepper {
+            method,
+            span,
+            min_step,
+            fixed,
+            h_fixed,
+            t,
+            y,
+            f,
+            h,
+            recorded: Vec::new(),
+            g_prev,
+            accepted: 0,
+            rejected: 0,
+            steps: 0,
+            stopped: false,
+            end_time: p.tf,
+            consecutive_sets: 0,
+            window_start_t: p.t0,
+        })
+    }
+
+    /// The run is over: a stop event fired, or `p.tf` is reached.
+    pub fn done(&self, p: &OdeProblem<'_>) -> bool {
+        self.stopped || self.t >= p.tf - self.min_step
+    }
+
+    /// The current time, and the next step size the controller will try.
+    pub fn clock(&self) -> (f64, f64) {
+        (self.t, self.h)
+    }
+
+    /// The span the step limits were sized from (`tf − t0` of the problem the
+    /// stepper was created with).
+    pub fn span(&self) -> f64 {
+        self.span
+    }
+
+    /// The current state `(t, y)`.
+    pub fn state(&self) -> (f64, &[f64]) {
+        (self.t, &self.y)
+    }
+
+    /// Start a new lap of a live run past `tf`: the problem's horizon moved
+    /// on by a span, so the step guard counts afresh.
+    pub fn start_lap(&mut self) {
+        self.steps = 0;
+    }
+
+    /// Where a stop event ended the run, if one did.
+    pub fn stopped_at(&self) -> Option<f64> {
+        self.stopped.then_some(self.end_time)
+    }
+
+    /// The events recorded so far, in order.
+    pub fn recorded(&self) -> &[EventRecord] {
+        &self.recorded
+    }
+
+    /// One pass of the time loop: an accepted step, or a set event's restart
+    /// at its crossing, pushing the knots it produces.
+    pub fn step(&mut self, p: &OdeProblem<'_>, knots: &mut Knots) -> Result<()> {
+        let out = step_with_retries(
+            self.method.as_ref(),
+            p,
+            self.t,
+            &self.y,
+            &self.f,
+            self.h,
+            self.min_step,
+            self.steps,
+        )?;
+        self.steps += out.extra_steps;
+        self.rejected += out.rejections;
         let sr = out.sr;
-        let t_new = t + out.h_use;
+        let t_new = self.t + out.h_use;
         // An accepted StepResult always carries both vectors; `step_with_retries`
         // only returns once `accepted` is true.
         let (y_new, f_new) = match (sr.y_new, sr.f_new) {
@@ -298,17 +410,23 @@ fn run(p: &OdeProblem<'_>) -> Result<Trajectory> {
         check_finite(&f_new, t_new, "derivative")?;
 
         let g_new = eval_events(p, t_new, &y_new)?;
-        let hit = earliest_event(p, t, &y, &f, t_new, &y_new, &f_new, &g_prev, &g_new)?;
-        let mut stop_at = None;
+        let hit = earliest_event(
+            p,
+            self.t,
+            &self.y,
+            &self.f,
+            t_new,
+            &y_new,
+            &f_new,
+            &self.g_prev,
+            &g_new,
+        )?;
         if let Some(hit) = hit.as_ref() {
-            if record_events(p, hit, &mut recorded, &mut knot_t, &mut knot_y, &mut knot_f)? {
-                stop_at = Some(hit.time);
+            if record_events(p, hit, &mut self.recorded, knots)? {
+                self.end_time = hit.time;
+                self.stopped = true;
+                return Ok(());
             }
-        }
-        if let Some(time) = stop_at {
-            end_time = time;
-            stopped = true;
-            break;
         }
 
         match hit {
@@ -319,15 +437,15 @@ fn run(p: &OdeProblem<'_>) -> Result<Trajectory> {
                 // the trajectory shows the switch; re-evaluating gPrev there
                 // re-arms every event against the new state (direction guards
                 // stop immediate retriggering).
-                consecutive_sets += 1;
-                if consecutive_sets >= MAX_CONSECUTIVE_SET_RESTARTS {
+                self.consecutive_sets += 1;
+                if self.consecutive_sets >= MAX_CONSECUTIVE_SET_RESTARTS {
                     // Close the window and ask the only question that matters:
                     // at the rate this window advanced time, can the run reach
                     // `tf` inside the step budget it has left? A modelled
                     // switch that fires thousands of times still says yes by a
                     // wide margin; a `set` that re-arms its own crossing misses
                     // by ten orders of magnitude.
-                    let advanced = hit.time - window_start_t;
+                    let advanced = hit.time - self.window_start_t;
                     let projected = if advanced > 0.0 {
                         (p.tf - hit.time) / advanced * MAX_CONSECUTIVE_SET_RESTARTS as f64
                     } else {
@@ -336,7 +454,7 @@ fn run(p: &OdeProblem<'_>) -> Result<Trajectory> {
                     // `is_nan` first, then a positive comparison: the negated
                     // form `!(… <= …)` says the same thing about NaN but trips
                     // `clippy::neg_cmp_op_on_partial_ord`.
-                    if projected.is_nan() || steps as f64 + projected > MAX_STEPS as f64 {
+                    if projected.is_nan() || self.steps as f64 + projected > MAX_STEPS as f64 {
                         return Err(FreesError::solver(format!(
                             "EVENT {}: the set action re-arms its own crossing — \
                              {MAX_CONSECUTIVE_SET_RESTARTS} consecutive set events fired \
@@ -345,16 +463,16 @@ fn run(p: &OdeProblem<'_>) -> Result<Trajectory> {
                              clear of the crossing, or give the event a direction the new state \
                              cannot immediately satisfy.",
                             hit.name,
-                            java_double_to_string(window_start_t),
+                            java_double_to_string(self.window_start_t),
                             java_double_to_string(hit.time),
                             java_double_to_string(p.tf)
                         )));
                     }
-                    consecutive_sets = 0;
-                    window_start_t = hit.time;
+                    self.consecutive_sets = 0;
+                    self.window_start_t = hit.time;
                 }
-                t = hit.time;
-                y = hit.y.clone();
+                self.t = hit.time;
+                self.y = hit.y.clone();
                 let set = &p.events[hit.event].set;
                 if let Some(reset) = set.as_ref() {
                     // `DynamicSolver.eventSetStateIndex` already rejects a
@@ -362,8 +480,8 @@ fn run(p: &OdeProblem<'_>) -> Result<Trajectory> {
                     // — but the Java would throw ArrayIndexOutOfBounds here and
                     // the wasm profile is `panic = "abort"`, so it becomes an
                     // ordinary solver error instead of killing the worker.
-                    let value = reset.value.eval(t, &y)?;
-                    match y.get_mut(reset.index) {
+                    let value = reset.value.eval(self.t, &self.y)?;
+                    match self.y.get_mut(reset.index) {
                         Some(slot) => *slot = value,
                         None => {
                             return Err(FreesError::solver(format!(
@@ -371,43 +489,60 @@ fn run(p: &OdeProblem<'_>) -> Result<Trajectory> {
                                  vector of this DYNAMIC block.",
                                 hit.name,
                                 reset.index,
-                                y.len()
+                                self.y.len()
                             )))
                         }
                     }
                 }
-                f = p.rhs.eval(t, &y)?;
-                check_finite(&f, t, "post-event derivative")?;
-                g_prev = eval_events(p, t, &y)?;
+                self.f = p.rhs.eval(self.t, &self.y)?;
+                check_finite(&self.f, self.t, "post-event derivative")?;
+                self.g_prev = eval_events(p, self.t, &self.y)?;
             }
             _ => {
-                consecutive_sets = 0;
-                window_start_t = t_new;
-                accepted += 1;
-                t = t_new;
-                y = y_new;
-                f = f_new;
-                g_prev = g_new;
-                h = if fixed { h_fixed } else { sr.h_next };
+                self.consecutive_sets = 0;
+                self.window_start_t = t_new;
+                self.accepted += 1;
+                self.t = t_new;
+                self.y = y_new;
+                self.f = f_new;
+                self.g_prev = g_new;
+                self.h = if self.fixed { self.h_fixed } else { sr.h_next };
                 if let Some(max) = p.max_step {
-                    h = java_min(h, max);
+                    self.h = java_min(self.h, max);
                 }
             }
         }
-        knot_t.push(t);
-        knot_y.push(y.clone());
-        knot_f.push(f.clone());
+        knots.push(self.t, self.y.clone(), self.f.clone());
+        Ok(())
     }
+}
 
+/// The batch time loop: the stepper driven to `tf`. Port of
+/// `OdeIntegrator.run`.
+fn run(p: &OdeProblem<'_>) -> Result<Trajectory> {
+    // Integration time is the only honest progress signal a transient has: the
+    // step count is adaptive and its total is unknown in advance. The claim is
+    // the load-bearing half — every RHS evaluation, event scan and per-step
+    // algebraic solve goes through `engine::run_blocks`, which would otherwise
+    // reset the bar to this block's `0` thousands of times. Taken before the
+    // setup rather than at the loop, because `compute_initial_step` already
+    // evaluates the system. See `crate::progress`.
+    let progress = crate::progress::claim();
+    let mut knots = Knots::default();
+    let mut stepper = ExplicitStepper::new(p, &mut knots)?;
+    while !stepper.done(p) {
+        progress.report((stepper.t - p.t0) / stepper.span);
+        stepper.step(p, &mut knots)?;
+    }
     Ok(Trajectory {
-        knot_t,
-        knot_y,
-        knot_f,
-        recorded,
-        stopped,
-        end_time,
-        accepted,
-        rejected,
+        knot_t: knots.t,
+        knot_y: knots.y,
+        knot_f: knots.f,
+        recorded: stepper.recorded,
+        stopped: stepper.stopped,
+        end_time: stepper.end_time,
+        accepted: stepper.accepted,
+        rejected: stepper.rejected,
     })
 }
 
@@ -499,9 +634,7 @@ fn record_events(
     p: &OdeProblem<'_>,
     hit: &EventHit,
     recorded: &mut Vec<EventRecord>,
-    knot_t: &mut Vec<f64>,
-    knot_y: &mut Vec<Vec<f64>>,
-    knot_f: &mut Vec<Vec<f64>>,
+    knots: &mut Knots,
 ) -> Result<bool> {
     recorded.push(EventRecord {
         name: hit.name.clone(),
@@ -509,9 +642,7 @@ fn record_events(
         state: hit.y.clone(),
     });
     if hit.stop {
-        knot_t.push(hit.time);
-        knot_y.push(hit.y.clone());
-        knot_f.push(p.rhs.eval(hit.time, &hit.y)?);
+        knots.push(hit.time, hit.y.clone(), p.rhs.eval(hit.time, &hit.y)?);
         return Ok(true);
     }
     Ok(false)

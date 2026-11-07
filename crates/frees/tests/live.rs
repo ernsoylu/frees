@@ -101,15 +101,25 @@ fn steps_and_reset() {
 }
 
 #[test]
-fn an_explicit_block_opens_with_the_reason_it_cannot_run_live() {
+fn an_explicit_block_runs_live_with_the_batch_states() {
     let src = BALL.replace("method = ida", "method = ode45");
-    let header: Value = serde_json::from_str(&live_open_json(&src, "", 0)).unwrap();
-    assert_eq!(header["ok"], false);
-    assert!(
-        header["error"]
-            .as_str()
-            .unwrap()
-            .contains("Set its method to ida"),
-        "{header}"
-    );
+    let core = frees_core::solve(&src, &frees_core::SolverSettings::default())
+        .unwrap_or_else(|e| panic!("{}", e.error));
+    let table = &core.ode_tables[0];
+    let (id, header) = open(&src);
+    let cols = header["table"]["vars"].as_array().unwrap().len();
+    assert_eq!(cols, table.columns.len());
+    let mut rows = Vec::new();
+    while rows.len() < table.rows.len() * cols {
+        let reply = live_advance_json(id, 2.0, 0.0);
+        assert!(parse(&reply)["error"].is_null(), "{}", reply.0);
+        assert!(!reply.1.is_empty(), "every chunk has a row until tf");
+        rows.extend(reply.1);
+    }
+    // Time and the two states h, v are the batch run's bit for bit.
+    for (live, batch) in rows.chunks(cols).zip(&table.rows) {
+        let bits = |r: &[f64]| r[..3].iter().map(|v| v.to_bits()).collect::<Vec<_>>();
+        assert_eq!(bits(live), bits(batch), "t = {}", batch[0]);
+    }
+    live_dispose(id);
 }

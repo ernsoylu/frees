@@ -54,7 +54,7 @@ use crate::dae::assembly::{AssemblySpec, DaeAssembly, EventSpec};
 use crate::diag::{FreesError, Result};
 use crate::eval::{eval_with, EvalContext, Scope};
 use crate::ode::events::{bind_events, DynamicEvent, EventBinding, OdeEvent, StateReset};
-use crate::ode::problem::{OdeProblem, OdeResult, OdeTableResult, TableEventHit};
+use crate::ode::problem::{OdeProblem, OdeResult, OdeRhs, OdeTableResult, TableEventHit};
 use crate::parser::defs::Definitions;
 
 // ---------------------------------------------------------------------------
@@ -233,6 +233,17 @@ pub trait AlgebraicSolve {
     /// Make `warm` the value map of the last solve. A no-op when nothing is
     /// outstanding, and for every implementation that never deferred.
     fn materialise(&mut self, _warm: &mut Option<Scope>) {}
+
+    /// Phase K1b — hand over the state this implementation built across
+    /// solves (a prepared structure, a watch list), so a live run can keep it
+    /// between chunks and [`resume`](Self::resume) a fresh instance with it.
+    /// `None` (the default) means there is nothing worth keeping.
+    fn park(&mut self) -> Option<Box<dyn std::any::Any>> {
+        None
+    }
+
+    /// Take back what [`park`](Self::park) handed over.
+    fn resume(&mut self, _state: Box<dyn std::any::Any>) {}
 }
 
 /// A closure still returns an owned `Scope` — only the production
@@ -323,6 +334,25 @@ pub struct DynamicSolver<'a> {
     watching: std::cell::Cell<bool>,
 }
 
+/// The owned half of a [`DynamicSolver`]: its classification, its warm
+/// chain and its algebraic solver's prepared state. A live explicit run
+/// (Phase K1b) keeps this between chunks and [resumes](DynamicSolver::resume)
+/// a solver rebuilt on the same borrows, so a chunk does not classify or
+/// prepare again.
+pub struct ParkedDynamic {
+    time_var: String,
+    states: Vec<String>,
+    state_set: HashSet<String>,
+    aux_names: Vec<String>,
+    algebraic_template: Vec<Equation>,
+    event_bindings: Vec<EventBinding>,
+    y0: Vec<f64>,
+    warm_start: Option<Scope>,
+    pin_template: Option<PinTemplate>,
+    watching: bool,
+    algebraic: Option<Box<dyn std::any::Any>>,
+}
+
 /// See [`DynamicSolver::pin_template`].
 struct PinTemplate {
     /// `pin_map`'s entries in its own (sorted) order — the order the first
@@ -364,6 +394,41 @@ impl<'a> DynamicSolver<'a> {
             warm_start: RefCell::new(None),
             pin_template: RefCell::new(None),
             watching: std::cell::Cell::new(false),
+        }
+    }
+
+    /// This solver's owned state, for a live run to keep between chunks.
+    pub fn park(self) -> ParkedDynamic {
+        ParkedDynamic {
+            time_var: self.time_var,
+            states: self.states,
+            state_set: self.state_set,
+            aux_names: self.aux_names,
+            algebraic_template: self.algebraic_template,
+            event_bindings: self.event_bindings,
+            y0: self.y0,
+            warm_start: self.warm_start.into_inner(),
+            pin_template: self.pin_template.into_inner(),
+            watching: self.watching.get(),
+            algebraic: self.algebraic.into_inner().park(),
+        }
+    }
+
+    /// Take back a [`park`](Self::park)ed state onto a solver built on the
+    /// same system, values and definitions.
+    pub fn resume(&mut self, parked: ParkedDynamic) {
+        self.time_var = parked.time_var;
+        self.states = parked.states;
+        self.state_set = parked.state_set;
+        self.aux_names = parked.aux_names;
+        self.algebraic_template = parked.algebraic_template;
+        self.event_bindings = parked.event_bindings;
+        self.y0 = parked.y0;
+        *self.warm_start.get_mut() = parked.warm_start;
+        *self.pin_template.get_mut() = parked.pin_template;
+        self.watching.set(parked.watching);
+        if let Some(state) = parked.algebraic {
+            self.algebraic.get_mut().resume(state);
         }
     }
 
@@ -432,13 +497,28 @@ impl<'a> DynamicSolver<'a> {
             // own stepper.
             return self.solve_with_ida(&progress);
         }
-        // Wave R3: offer the solver the one list `rhs` reads. Only the explicit
-        // (non-IDA) driver takes this path — `solve_with_ida` above has its own
-        // stepper and never asks — and the offer is declined by every
-        // implementation but the engine's prepared solver.
+        self.offer_watch();
+        let this: &DynamicSolver<'a> = self;
+        let rhs = move |t: f64, y: &[f64]| this.rhs(t, y);
+        let problem = this.explicit_problem(&rhs, this.system.options.tf);
+        let result = integrate(&problem)?;
+        this.build_table(&result)
+    }
+
+    /// Wave R3: offer the solver the one list `rhs` reads. Only the explicit
+    /// (non-IDA) driver takes this path — `solve_with_ida` has its own stepper
+    /// and never asks — and the offer is declined by every implementation but
+    /// the engine's prepared solver.
+    fn offer_watch(&self) {
         let der_names: Vec<String> = self.states.iter().map(|s| der_var(s)).collect();
         let accepted = self.algebraic.borrow_mut().watch(&der_names);
         self.watching.set(accepted);
+    }
+
+    /// The explicit path's problem over `rhs`, ending at `tf`: the document's
+    /// for a batch run, the current horizon for a live one. The step limits
+    /// come from the document's span either way.
+    fn explicit_problem<'s>(&'s self, rhs: &'s dyn OdeRhs, tf: f64) -> OdeProblem<'s> {
         let options = &self.system.options;
         // Cap the step (default span/100) so the adaptive controller cannot grow
         // a single step large enough to step over an event — e.g. a high-altitude
@@ -447,24 +527,114 @@ impl<'a> DynamicSolver<'a> {
         let max_step = options
             .max_step
             .unwrap_or((options.tf - options.t0) / 100.0);
-
-        let this: &DynamicSolver<'a> = self;
-        let rhs = move |t: f64, y: &[f64]| this.rhs(t, y);
-        let problem = OdeProblem {
+        OdeProblem {
             method: options.method.clone(),
             t0: options.t0,
-            tf: options.tf,
-            y0: this.y0.clone(),
-            rhs: &rhs,
+            tf,
+            y0: self.y0.clone(),
+            rhs,
             points: options.points,
             fixed_step: options.step,
             rtol: options.rtol,
             atol: options.atol,
             max_step: Some(max_step),
-            events: this.build_events(),
-        };
-        let result = integrate(&problem)?;
-        this.build_table(&result)
+            events: self.build_events(),
+        }
+    }
+
+    /// Classify and offer the watch list, as a batch explicit solve does
+    /// before it integrates: the setup a live explicit run parks (Phase K1b).
+    pub(crate) fn prepare_explicit(&mut self) -> Result<()> {
+        self.classify()?;
+        self.offer_watch();
+        Ok(())
+    }
+
+    /// One live explicit chunk (Phase K1b): integrate, emit the grid rows the
+    /// knots cover up to row `last`, and stop when `more` says so (after at
+    /// least one row), on a stop event, or — with `one_step` — after one pass
+    /// of the time loop, whose end state goes in [`Chunk::state`].
+    ///
+    /// `self` steps; `sampler` is a second solver on the same block that
+    /// solves the output rows' auxiliaries. The rows' solves then never touch
+    /// the stepper's warm chain, so the states are the batch run's bit for bit
+    /// (the batch run samples after integrating, from the same chain); the
+    /// auxiliaries agree to the inner solve's tolerance.
+    ///
+    /// [`Chunk::state`]: crate::ode::live::Chunk::state
+    pub(crate) fn explicit_rows(
+        &self,
+        sampler: &DynamicSolver<'_>,
+        st: &mut crate::ode::live::ExplicitLive,
+        last: usize,
+        more: &mut dyn FnMut(&crate::ode::live::Chunk) -> bool,
+        chunk: &mut crate::ode::live::Chunk,
+        one_step: bool,
+    ) -> Result<()> {
+        let rhs = |t: f64, y: &[f64]| self.rhs(t, y);
+        let mut p = self.explicit_problem(&rhs, st.horizon);
+        if st.stepper.is_none() {
+            st.stepper = Some(crate::ode::integrator::ExplicitStepper::new(
+                &p,
+                &mut st.knots,
+            )?);
+        }
+        let grid = st.grid();
+        let time_of = |i: usize| crate::ode::live::grid_time(grid, i);
+        let stepper = st.stepper.as_mut().expect("created above");
+        let mut stepped = false;
+        loop {
+            // At the end of a lap the batch run samples what it has: a row at
+            // the horizon may sit up to the stepper's `min_step` past the last
+            // knot, and is extrapolated from the last interval, as there.
+            let reach = if stepper.stopped_at().is_none() && stepper.done(&p) {
+                st.knots.last_time().max(st.horizon)
+            } else {
+                st.knots.last_time()
+            };
+            while st.next <= last && reach >= time_of(st.next) {
+                let t = time_of(st.next);
+                chunk.rows.push(sampler.table_row(t, &st.knots.sample(t))?);
+                st.next += 1;
+                st.knots.drop_before(t);
+            }
+            for hit in &stepper.recorded()[st.events_sent..] {
+                chunk.events.push(TableEventHit {
+                    name: hit.name.clone(),
+                    time: hit.time,
+                });
+            }
+            st.events_sent = stepper.recorded().len();
+            if let Some(t_stop) = stepper.stopped_at() {
+                // The rows past the stop do not exist: end on the stop itself,
+                // as the IDA path does.
+                if chunk.rows.last().map(|r| r[0]) != Some(t_stop) {
+                    let y = st.knots.y.last().cloned().unwrap_or_default();
+                    chunk.rows.push(sampler.table_row(t_stop, &y)?);
+                }
+                chunk.stopped = true;
+                st.end = Some(t_stop);
+                return Ok(());
+            }
+            if st.next > last || (one_step && stepped) {
+                break;
+            }
+            if !one_step && !chunk.rows.is_empty() && !more(chunk) {
+                break;
+            }
+            if stepper.done(&p) {
+                st.horizon += stepper.span();
+                p.tf = st.horizon;
+                stepper.start_lap();
+            }
+            stepper.step(&p, &mut st.knots)?;
+            stepped = true;
+        }
+        if one_step {
+            let (t, y) = stepper.state();
+            chunk.state = Some(sampler.table_row(t, y)?);
+        }
+        Ok(())
     }
 
     /// Integrate the block on the implicit-DAE path and publish its ODE
@@ -1475,21 +1645,26 @@ impl<'a> DynamicSolver<'a> {
     /// Port of `DynamicSolver.buildTable`: re-solve the algebraic block at every
     /// sampled time so the auxiliary columns are consistent with the state
     /// trajectory the driver returned.
+    /// One output row `[t, states…, aux…]`: the states as given, the
+    /// auxiliaries from the inner algebraic solve at them.
+    fn table_row(&self, t: f64, yi: &[f64]) -> Result<Vec<f64>> {
+        let values = self.solve_algebraic_at(t, yi)?;
+        let mut row = Vec::with_capacity(1 + self.states.len() + self.aux_names.len());
+        row.push(t);
+        row.extend(yi.iter().take(self.states.len()).copied());
+        for aux in &self.aux_names {
+            // Always present: `register_implicit_auxiliaries` made every
+            // auxiliary a variable of the template the inner solve returns.
+            row.push(values.get(aux).copied().unwrap_or(f64::NAN));
+        }
+        Ok(row)
+    }
+
     fn build_table(&self, result: &OdeResult) -> Result<OdeTableResult> {
         let columns = self.columns();
         let mut rows: Vec<Vec<f64>> = Vec::with_capacity(result.times.len());
         for (i, &t) in result.times.iter().enumerate() {
-            let yi = &result.states[i];
-            let values = self.solve_algebraic_at(t, yi)?;
-            let mut row = Vec::with_capacity(columns.len());
-            row.push(t);
-            row.extend(yi.iter().take(self.states.len()).copied());
-            for aux in &self.aux_names {
-                // Always present: `register_implicit_auxiliaries` made every
-                // auxiliary a variable of the template the inner solve returns.
-                row.push(values.get(aux).copied().unwrap_or(f64::NAN));
-            }
-            rows.push(row);
+            rows.push(self.table_row(t, &result.states[i])?);
         }
         Ok(OdeTableResult {
             name: self.system.name.clone(),
