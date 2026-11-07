@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
@@ -14,5 +15,10 @@ export default defineConfig({
     // here is what puts the gate in CI without a second workflow step.
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.{test,spec}.mjs'],
     css: false,
+    // The PWA plugin (vite.config.ts) is not loaded here, so its virtual
+    // module needs a stand-in for src/pwa.tsx to resolve under test.
+    alias: {
+      'virtual:pwa-register': fileURLToPath(new URL('./src/test/pwaRegisterStub.ts', import.meta.url)),
+    },
   },
 })
