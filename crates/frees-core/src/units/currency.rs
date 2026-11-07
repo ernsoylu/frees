@@ -199,16 +199,19 @@ mod tests {
         assert_eq!(usd_per("kg"), None);
         assert_eq!(usd_per("NOTACODE"), None);
 
-        let n = install_rates_json(r#"{"base":"USD","rates":{"EUR":0.5,"XYZ":"bad"}}"#).unwrap();
-        assert_eq!(n, 2); // USD + EUR; the malformed entry is skipped
-        assert_eq!(usd_per("EUR"), Some(2.0));
+        // The table is process-global and other tests read it in parallel, so
+        // install only a code the fallback lacks: no factor they see changes.
+        assert_eq!(usd_per("XAU"), None);
+        let n = install_rates_json(r#"{"base":"USD","rates":{"XAU":0.5,"XYZ":"bad"}}"#).unwrap();
+        assert_eq!(n, 2); // USD + XAU; the malformed entry is skipped
+        assert_eq!(usd_per("XAU"), Some(2.0));
         // Codes the feed omits fall back to the baked table.
         assert_eq!(usd_per("GBP"), Some(1.27));
         assert!(install_rates_json(r#"{"base":"EUR","rates":{}}"#).is_err());
 
         // The registry treats money like any other unit family.
         use crate::units::UnitRegistry;
-        assert_eq!(UnitRegistry::convert("EUR", "USD").unwrap(), 2.0);
+        assert_eq!(UnitRegistry::convert("XAU", "USD").unwrap(), 2.0);
         assert!(UnitRegistry::convert("USD", "kg").is_err());
         assert_eq!(
             UnitRegistry::parse("USD/kg").unwrap().dims[DIMENSIONS - 1],

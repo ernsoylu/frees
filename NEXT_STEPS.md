@@ -533,6 +533,34 @@ entry here is checked off with evidence when it closes.
     - Zero engine calls during playback (the RUN-10 check).
     - The visual baseline is unchanged with animation off.
 - **I. Teaching layer on existing models.**
+  - Lands as six pull requests, I1–I6, one per item below.
+  - **I1 done 2026-11-07 (`i1-insight-cards`).**
+    - **Cards.** Annotate → "Insight on the selected blocks" offers each insight whose roles the selected blocks fill, one block per role, by component type (`schematic/insights.ts`):
+      - τ = RC (Resistor + Capacitor/Supercapacitor);
+      - thermal τ = C/UA (ThermalMass/MassGen + Conduction, Convection or ContactResistance);
+      - ω_n and ζ (TransMass/Inertia + spring + damper);
+      - series RLC ω_n and ζ;
+      - COP and Carnot COP (Compressor + evaporator + Condenser);
+      - NTU, C_r and ε (HeatExchanger family);
+      - glide (any two-phase exchanger).
+    - **Storage.** A card is a VIEW-09 `insight` annotation with target `kind:block,block`. Rename moves each block; the sanitiser drops an unknown kind or a malformed list.
+    - **Computation.** Each card is computed on every draw from the blocks' own resolved parameters and the solved (or playback) values; nothing is stored.
+      - A parameter bound to an expression, or a value the model lacks, reads "Not available: the model gives no R"; nothing is assumed.
+      - A missing block reads "Link broken".
+    - **Engine.** Each subcritical real-fluid stream's phase now carries its bubble and dew temperatures (`props::propfun::saturation_temperatures`, `tBubble`/`tDew`).
+      - Carnot uses the evaporator's dew and the condenser's bubble temperature.
+      - Glide is dew − bubble at the inlet pressure.
+    - **Found:** `resolve_fluid("R454B")` passes an upper-case blend name through unchanged, while `"r454b"` resolves to `R454B.mix`. The bridge passes connection fluids lowercased, so streams are unaffected. Not reverified for other call sites.
+    - **Evidence.**
+      - `saturation_temperatures_are_one_for_a_pure_fluid_and_glide_for_a_blend` (Water 373.12 K, R454B glide 0.5–3 K, none above critical).
+      - `two_phase_streams_report_their_phase`: R134a at 0.14 MPa, 254.38 K.
+      - `insights.test.ts`: roles, each formula, missing quantities, COP and Carnot, NTU.
+      - `presentation.test.ts`: sanitiser and rename.
+      - `insight-cards.spec.ts`:
+        - The mass alone fits nothing; with its wall, τ = 250 s, the run's own exponential.
+        - The ideal R134a cycle reads COP ≈ 3.97 (Cengel Example 11-1) and Carnot ≈ 5.08.
+        - No `solve` or `check` runs.
+      - VIEW-09's journey now waits for the Annotate menu to finish closing. With the insight section it is tall enough to cover the note the test then drags.
   1. **Insight cards.** τ = RC, thermal τ = mC/UA, ω_n and ζ, Carnot and actual COP, NTU-ε and glide, each computed from solved values and attached to blocks or areas (VIEW-09).
   2. **A lesson manifest beside a gallery example.** It holds:
      - the objective, prerequisites and the governing equation;

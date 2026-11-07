@@ -800,6 +800,25 @@ pub fn phase_at(fluid: &str, p: f64, h: f64) -> Option<PhaseClass> {
     })
 }
 
+/// Bubble and dew temperatures of `fluid` at pressure `p` (K): equal for a
+/// pure fluid, apart by the glide for a zeotropic blend. `None` at or above the
+/// critical pressure, or where the backend has no saturation state.
+pub fn saturation_temperatures(fluid: &str, p: f64) -> Option<(f64, f64)> {
+    if !p.is_finite() {
+        return None;
+    }
+    let resolved = resolve_fluid(fluid).ok()?;
+    let fluid = resolved.as_str();
+    // A blend's critical point is not always defined; its dome then ends
+    // where the saturation calls stop converging.
+    if props1_si(fluid, "Pcrit").is_ok_and(|p_crit| p >= p_crit) {
+        return None;
+    }
+    let bubble = props_si("T", "P", p, "Q", 0.0, fluid).ok()?;
+    let dew = props_si("T", "P", p, "Q", 1.0, fluid).ok()?;
+    (bubble.is_finite() && dew.is_finite()).then_some((bubble, dew))
+}
+
 /// Port of `CoolProp.propsSIOrNaN` — the diagram sweeps' entry point.
 pub fn props_si_or_nan(
     output: &str,
@@ -2178,6 +2197,21 @@ mod tests {
     /// Phase H: water at 1 atm either side of the dome, inside it, and above
     /// the critical pressure.
     #[cfg(feature = "rustprop-backend")]
+    #[test]
+    fn saturation_temperatures_are_one_for_a_pure_fluid_and_glide_for_a_blend() {
+        test_with_rustprop(|| {
+            let (b, d) = saturation_temperatures("Water", 101_325.0).unwrap();
+            assert!(
+                (b - 373.124).abs() < 0.01 && (d - b).abs() < 1e-6,
+                "{b} {d}"
+            );
+            // R454B (R32/R1234yf) is zeotropic: the dew point lies above the bubble point.
+            let (b, d) = saturation_temperatures("r454b", 500_000.0).unwrap();
+            assert!(d - b > 0.5 && d - b < 3.0, "glide {}", d - b);
+            assert!(saturation_temperatures("Water", 3.0e7).is_none());
+        });
+    }
+
     #[test]
     fn phase_at_classifies_against_the_dome() {
         test_with_rustprop(|| {

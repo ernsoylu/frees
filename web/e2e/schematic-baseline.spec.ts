@@ -2274,6 +2274,8 @@ test('VIEW-09: notes, callouts, variable cards and legends; links follow a renam
   const annotate = async (item: string | RegExp, text?: string) => {
     await page.getByRole('button', { name: 'Annotate', exact: true }).click()
     await page.getByRole('menuitem', { name: item }).click()
+    // The menu fades out; a drag started under it would land on the menu.
+    await expect(page.getByRole('menu')).toHaveCount(0)
     if (text === undefined) return
     const dialog = page.getByRole('dialog', { name: 'Annotation' })
     await dialog.getByRole('textbox', { name: 'Text' }).fill(text)

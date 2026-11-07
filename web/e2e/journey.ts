@@ -24,3 +24,19 @@ export async function openAndSolve(page: Page, name: string, text: string, solve
 
 /** The engine calls made so far. */
 export const engineCalls = (page: Page) => page.evaluate(() => [...(window as unknown as { engineCalls: string[] }).engineCalls])
+
+/** Runs a command-palette entry by its label. */
+export async function runCommand(page: Page, label: string) {
+  await page.locator('body').click({ position: { x: 5, y: 5 } })
+  await page.keyboard.press('Control+K')
+  await page.getByPlaceholder('Search views, tools, and actions…').fill(label)
+  await page.keyboard.press('Enter')
+}
+
+/** Opens the schematic and waits until block `node` is drawn; returns the canvas. */
+export async function openSchematic(page: Page, node: string) {
+  await runCommand(page, 'Schematic')
+  const svg = page.getByRole('application', { name: /Component network schematic/ })
+  await expect(svg.locator(`[data-node="${node}"]`)).toBeVisible({ timeout: 60_000 })
+  return svg
+}

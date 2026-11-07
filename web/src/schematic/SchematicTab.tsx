@@ -94,6 +94,7 @@ import {
 import { componentFile, editInterface, extractSubsystem, importComponents, movePresentation, type Extraction, type InterfaceChange } from './encapsulation'
 import { canDiverge, CARRIES, DIVERGING_STOPS, divergingColor, edgeReadings, flowAlong, overlayMetrics, PARTICLE_GAP, particlePeriods, PHASE_COLORS, PHASE_METRIC, phaseColor, phaseReadings, rampColor, RAMP_STOPS, type ScaleSetting } from './overlay'
 import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, streamSummary, type NodeReadout, type Reading } from './readouts'
+import { INSIGHTS, insightLines, insightsFor } from './insights'
 import { wasmUnitConversions } from '../wasm/engineClient'
 import { COMPONENT_CATALOG, type ComponentSpec } from '../componentCatalog'
 import { searchModel, type SearchHit } from './search'
@@ -766,7 +767,7 @@ export default function SchematicTab({
     for (const a of pres.annotations ?? []) {
       if (a.scope !== scope) continue
       const lines = a.text ? a.text.split('\n') : []
-      const rows = a.kind === 'legend' ? layout.lines.length : a.kind === 'card' ? 2 : Math.max(1, lines.length)
+      const rows = a.kind === 'legend' ? layout.lines.length : a.kind === 'card' ? 2 : a.kind === 'insight' ? lines.length + 3 : Math.max(1, lines.length)
       minX = Math.min(minX, a.at.x - 5)
       minY = Math.min(minY, a.at.y - 5)
       maxX = Math.max(maxX, a.at.x + Math.max(a.kind === 'note' || a.kind === 'callout' ? 60 : 200, ...lines.map((l) => l.length * 6.4 + 14)) + 5)
@@ -1174,6 +1175,11 @@ export default function SchematicTab({
   // SYNC-10: an equation-only model's cards and the solve's block dependencies.
   const links = useMemo(() => blockDependencies(blocks ?? []), [blocks])
   const pinnedCards = annotations.filter((a) => a.kind === 'card' && a.scope === '')
+  // I1: the insights the selected blocks can carry, by their component types.
+  const selectedInsights = insightsFor(selection.flatMap((id) => {
+    const n = positioned.get(id)
+    return n?.kind === 'instance' && n.type ? [{ id, type: n.type }] : []
+  }))
   const togglePin = (name: string) => {
     const card = pinnedCards.find((a) => a.target === name)
     if (card) updatePres((p) => ({ ...p, annotations: (p.annotations ?? []).filter((x) => x.id !== card.id) }), 'Remove card')
@@ -1207,6 +1213,20 @@ export default function SchematicTab({
       return { lines: [title, f ? `${f.text} ${f.units}`.trim() : 'Not solved'], broken: false }
     }
     if (a.kind === 'legend') return { lines: legendRows.map((l) => l.label), broken: false }
+    if (a.kind === 'insight') {
+      // I1: computed from this model's own parameters and values, never stored.
+      const [kind, list = ''] = a.target.split(':')
+      const ids = list.split(',')
+      const label = INSIGHTS.find((i) => i.kind === kind)?.label ?? kind
+      const gone = ids.filter((id) => drawnCheck?.instances && !drawnCheck.instances.some((i) => i.name.toLowerCase() === id))
+      if (gone.length) return { lines: [...text, label, `Link broken: ${gone.join(', ')} no longer exists`], broken: true }
+      const blocks = ids.flatMap((id) => {
+        const c = components?.find((x) => x.name.toLowerCase() === id)
+        return c ? [{ id, type: c.type, params: c.params }] : []
+      })
+      const lines = components ? insightLines(kind, { blocks, value: (n) => values.get(n)?.value, phase: (s) => phases?.[s] }) : [label, 'Not solved']
+      return { lines: [...text, ...lines], broken: false, to: positioned.get(ids[0]) }
+    }
     return { lines: text.length ? text : ['Note'], broken: false }
   }
   // COMP-01/02: placing a component. The quick-add finds it, the wizard
@@ -2844,6 +2864,22 @@ export default function SchematicTab({
               <Menu.Item disabled={legendRows.length === 0} onClick={() => annotate('legend')}>
                 Legend
               </Menu.Item>
+              <Menu.Label>Insight on the selected blocks</Menu.Label>
+              {selectedInsights.length === 0 ? (
+                <Menu.Item disabled>{selection.length ? 'None fits these blocks' : 'Select blocks first'}</Menu.Item>
+              ) : (
+                selectedInsights.map((i) => (
+                  <Menu.Item
+                    key={i.kind}
+                    onClick={() => {
+                      const n = positioned.get(selection[0])!
+                      annotate('insight', `${i.kind}:${[...selection].sort((a, b) => a.localeCompare(b)).join(',')}`, { x: n.x + n.w + 30, y: n.y - 60 })
+                    }}
+                  >
+                    {i.label}
+                  </Menu.Item>
+                ))
+              )}
             </Menu.Dropdown>
           </Menu>
           <Popover position="bottom-end" withinPortal shadow="md">

@@ -1351,7 +1351,7 @@ fn connection_defs(
 /// moist air, an incompressible liquid or a gas) with a named fluid whose state
 /// the solve produced; a fluid the backend cannot classify is left out.
 fn stream_phases(solution: &Solution) -> Map<String, Value> {
-    use frees_core::props::propfun::{phase_at, PhaseClass};
+    use frees_core::props::propfun::{phase_at, saturation_temperatures, PhaseClass};
     let mut out = Map::new();
     for c in &solution.component_connections {
         let (Some(fluid), Some("fluid" | "twophase")) =
@@ -1371,13 +1371,19 @@ fn stream_phases(solution: &Solution) -> Map<String, Value> {
             let (Some(p), Some(h)) = (value("p"), value("h")) else {
                 continue;
             };
-            let entry = match phase_at(fluid, p, h) {
+            let mut entry = match phase_at(fluid, p, h) {
                 Some(PhaseClass::Subcooled) => json!({ "phase": "subcooled" }),
                 Some(PhaseClass::TwoPhase(x)) => json!({ "phase": "two-phase", "x": x }),
                 Some(PhaseClass::Superheated) => json!({ "phase": "superheated" }),
                 Some(PhaseClass::Supercritical) => json!({ "phase": "supercritical" }),
                 None => continue,
             };
+            // Phase I: the saturation temperatures at the stream's pressure, for
+            // the Carnot COP and glide insight cards.
+            if let Some((bubble, dew)) = saturation_temperatures(fluid, p) {
+                entry["tBubble"] = json!(bubble);
+                entry["tDew"] = json!(dew);
+            }
             out.insert(key, entry);
         }
     }
@@ -3632,5 +3638,14 @@ END\n\
         assert_eq!(phases["valve.out"]["phase"], "two-phase", "{phases}");
         let x = phases["valve.out"]["x"].as_f64().unwrap();
         assert!(x > 0.1 && x < 0.5, "x = {x}");
+        // R134a is pure: one saturation temperature at 0.14 MPa, -18.77 °C.
+        let (tb, td) = (
+            phases["valve.out"]["tBubble"].as_f64().unwrap(),
+            phases["valve.out"]["tDew"].as_f64().unwrap(),
+        );
+        assert!(
+            (tb - 254.38).abs() < 0.05 && (td - tb).abs() < 1e-6,
+            "{tb} {td}"
+        );
     }
 }
