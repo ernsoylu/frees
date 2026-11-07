@@ -696,7 +696,7 @@ entry here is checked off with evidence when it closes.
       - Steps: `step_sample` (the next row), `step_event` (to the next crossing) and `step_accepted` (one internal step, in a new IDA one-step mode that shares `step`'s re-entry and stepping code). The accepted-step state comes back beside the rows.
       - `reset`; pausing is not calling; disposing is dropping.
       - A live run continues past `tf` on the same grid formula, so its rows up to `tf` are the batch rows.
-    - **Out of K1.** An explicit-method block (ode45, the default) is refused with "Set its method to ida", as the plan put IDA first. The resumable explicit stepper is K1b.
+    - **Out of K1.** An explicit-method block (ode45, the default) was refused, as the plan put IDA first; K1b lifted that.
     - **Found and fixed.**
       - The batch path's error wording is kept exactly: assembly and configuration errors stand as they are, and integration errors take the block diagnosis.
       - A first one-step search ended at the step's start and missed a bounce inside it; it now searches to the step's end.
@@ -708,6 +708,13 @@ entry here is checked off with evidence when it closes.
       - accepted steps walk the trajectory within tolerance;
       - the refusals.
     - The parity corpus is unchanged, with the batch IDA path now running through `IdaRun`.
+  - **K1b done 2026-11-07 (`k1b-explicit-live`): explicit blocks run live.**
+    - **One stepper for batch and live** (`ode/integrator.rs`). The explicit time loop's locals are now `ExplicitStepper`, one accepted step (or set-event restart) per `step`. The batch `run` drives it to `tf`; a live `ExplicitRun` (`ode/live.rs`) drives it a chunk at a time and samples the grid rows as the knots cover them. Knots no later row can need are dropped (`Knots::drop_before`), so memory stays flat and each sample uses the interval the batch sampler would.
+    - **Owned between chunks.** `ExplicitRun` owns what a `DynamicSolver` borrows (block, base values, inner settings, specs). Each chunk rebuilds the solvers on them and resumes their parked classification, warm chain and prepared algebraic state (`DynamicSolver::park`/`resume`, `AlgebraicSolve::park`/`resume`).
+    - **Two solvers, so the states stay bitwise.** The batch run samples after integrating, so its output rows' algebraic solves never touch the stepping warm chain. A live run samples while integrating, so a second solver on the same block solves the rows' auxiliaries. Time and state columns equal the batch run's bit for bit; the auxiliaries agree within the inner solve's 1e-7 tolerance.
+    - **Past `tf`.** The horizon moves on one span each time it is reached; the step limits keep the document span's values, and the step guard restarts per lap. At a lap's end a row at the horizon is sampled from the last interval, as the batch sampler does.
+    - **Stop events.** A stopped batch explicit run rescales its grid to end on the stop; a live run cannot know the stop in advance, so it ends with a row at the stop time instead. The events are the batch events.
+    - **Evidence.** `tests/live_session.rs`, now 13 tests: ode45, ode23s and rk4 bouncing balls chunked three ways against batch (states bitwise, events equal); a stop event; the run past `tf` (bounces continue) and reset replaying bit for bit; accepted steps one at a time giving the batch states. The parity corpus is unchanged, with the batch explicit path now running through `ExplicitStepper`.
 - **L. Live inputs and instruments (stage 3).**
   1. **Input classes, applied at accepted-time boundaries and logged as events:**
      - **Presentation:** immediate, no revision.

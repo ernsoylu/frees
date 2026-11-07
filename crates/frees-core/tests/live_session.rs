@@ -1,6 +1,7 @@
 //! Phase K1: a live session advanced in chunks produces the batch run's rows,
 //! bit for bit — across chunk boundaries, set and stop events, the sparse
-//! linear path, a budget that cuts chunks short, and a reset.
+//! linear path, a budget that cuts chunks short, and a reset. Phase K1b: an
+//! explicit block's states match too.
 
 use frees_core::engine::prepared::PreparedDocument;
 use frees_core::ode::live::{Chunk, LiveSession};
@@ -172,13 +173,106 @@ fn step_sample_produces_one_row() {
     assert_eq!(one.rows[0][0], 0.1);
 }
 
+/// Phase K1b: an explicit block runs live too. Its time and state columns
+/// are the batch run's bit for bit; the auxiliaries come from a separate
+/// sampling solve, so they agree to the inner solve's tolerance.
+fn assert_explicit_matches_batch(src: &str, states: usize, dt: f64, per: usize) {
+    let table = batch(src);
+    let mut session = open(src);
+    assert_eq!(session.columns(), table.columns.as_slice());
+    let tf = table.rows.last().unwrap()[0];
+    let all = run(&mut session, tf, dt, per);
+    assert_eq!(all.rows.len(), table.rows.len());
+    for (live, batch) in all.rows.iter().zip(&table.rows) {
+        let bits = |r: &[f64]| r[..=states].iter().map(|v| v.to_bits()).collect::<Vec<_>>();
+        assert_eq!(bits(live), bits(batch), "t = {}", batch[0]);
+        for (a, b) in live[states + 1..].iter().zip(&batch[states + 1..]) {
+            assert!(
+                (a - b).abs() <= 1e-6 * (1.0 + b.abs()),
+                "t = {}: {a} vs {b}",
+                batch[0]
+            );
+        }
+    }
+    assert_eq!(all.events, table.events);
+}
+
 #[test]
-fn an_explicit_method_is_refused_with_the_way_out() {
+fn explicit_methods_run_live_with_the_batch_states() {
+    for method in ["ode45", "ode23s", "rk4"] {
+        let src = BOUNCE.replace("method = ida", &format!("method = {method}"));
+        assert!(!batch(&src).events.is_empty(), "{method}: the ball bounces");
+        for (dt, per) in [(0.05, 1), (0.37, 3), (4.0, 1000)] {
+            assert_explicit_matches_batch(&src, 2, dt, per);
+        }
+    }
+}
+
+#[test]
+fn an_explicit_live_run_ends_on_its_stop_event() {
+    let src = STOP.replace("method = ida", "method = ode45");
+    let table = batch(&src);
+    assert!(table.stopped);
+    let mut session = open(&src);
+    let all = run(&mut session, 10.0, 0.5, 2);
+    assert!(all.stopped && session.finished());
+    assert_eq!(all.events, table.events);
+    assert_eq!(
+        all.rows.last().unwrap()[0],
+        table.end_time,
+        "ends on the stop"
+    );
+    assert!(session.advance(20.0, &mut |_| true).rows.is_empty());
+}
+
+#[test]
+fn an_explicit_live_run_continues_past_tf_and_resets() {
     let src = BOUNCE.replace("method = ida", "method = ode45");
-    let mut doc = PreparedDocument::new(&src, &SolverSettings::default(), &[], &[])
-        .unwrap_or_else(|e| panic!("{}", e.error));
-    let message = doc.open_live(0).err().expect("refused").error.to_string();
-    assert!(message.contains("Set its method to ida"), "{message}");
+    let mut session = open(&src);
+    // Before the bounces pile up (~5.7 s, where k_e = 0.8 makes them Zeno).
+    let chunk = session.advance(5.0, &mut |_| true);
+    assert!(chunk.error.is_none(), "{:?}", chunk.error);
+    assert_eq!(chunk.rows.len(), 101, "rows every 0.05 s from 0 to 5");
+    assert_eq!(chunk.rows.last().unwrap()[0], 5.0);
+    let h = chunk.rows.last().unwrap()[1];
+    assert!(h.abs() < 0.1, "the ball has nearly settled: h = {h}");
+    assert!(
+        chunk.events.len() > batch(&src).events.len(),
+        "the bounces go on past tf"
+    );
+    session.reset();
+    let again = session.advance(5.0, &mut |_| true);
+    assert_eq!(bits(&chunk.rows), bits(&again.rows));
+    assert_eq!(chunk.events, again.events);
+}
+
+#[test]
+fn explicit_accepted_steps_move_forward() {
+    let src = BOUNCE.replace("method = ida", "method = ode45");
+    let table = batch(&src);
+    let mut session = open(&src);
+    let (mut rows, mut last_t) = (Vec::new(), -1.0);
+    for _ in 0..10_000 {
+        if rows.len() >= table.rows.len() {
+            break;
+        }
+        let mut chunk = session.step_accepted();
+        assert!(chunk.error.is_none(), "{:?}", chunk.error);
+        let state = chunk.state.expect("an accepted step reports its state");
+        assert!(state[0] > last_t, "{} after {last_t}", state[0]);
+        last_t = state[0];
+        rows.append(&mut chunk.rows);
+    }
+    let rows = &rows[..table.rows.len()];
+    assert_eq!(
+        rows.iter().map(|r| r[1].to_bits()).collect::<Vec<_>>(),
+        table
+            .rows
+            .iter()
+            .map(|r| r[1].to_bits())
+            .collect::<Vec<_>>(),
+        "one step at a time is still the batch trajectory"
+    );
 }
 
 #[test]
