@@ -165,12 +165,15 @@ describe('shown variables (RUN-03)', () => {
     // Phase H: particles and their schematic speed, one of the offered steps.
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: '', arrows: false, particles: true, speed: 2 } }).presentation.overlay).toEqual({ metric: '', arrows: false, particles: true, speed: 2 })
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: '', arrows: false, particles: 'yes', speed: 1e6 } as never })).toMatchObject({ presentation: { overlay: { metric: '', arrows: false } }, repaired: 1 })
+<<<<<<< HEAD
     // A reference and a fixed range per metric; a half range or an inverted one is dropped.
     const scales = { 'fluid:t': { reference: 300 }, 'fluid:p': { min: 1e5, max: 2e5 }, 'heat:t': { min: 400, max: 300 }, 'fluid:h': { min: 1 }, 'drop table': { reference: 1 } }
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: 'fluid:t', arrows: false, scales } as never })).toMatchObject({
       presentation: { overlay: { metric: 'fluid:t', arrows: false, scales: { 'fluid:t': { reference: 300 }, 'fluid:p': { min: 1e5, max: 2e5 } } } },
       repaired: 1,
     })
+=======
+>>>>>>> origin/main
   })
 })
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { SchematicEdge } from './layout'
+<<<<<<< HEAD
 import { carriedAlong, edgeReadings, flowAlong, overlayMetrics, particlePeriods, phaseColor, phaseReadings, rampColor } from './overlay'
+=======
+import { carriedAlong, edgeReadings, flowAlong, overlayMetrics, particlePeriods, rampColor } from './overlay'
+>>>>>>> origin/main
 import { indexVariables } from './readouts'
 
 const FLOW: Record<string, string> = { fluid: 'mdot', heat: 'qdot', electrical: 'i', mechanical: 'tau', translational: 'f' }
@@ -92,6 +96,7 @@ describe('overlay (RUN-04)', () => {
     expect(slow.get('e1')?.period).toBeCloseTo(0.4, 12)
     expect(slow.get('e6')?.period).toBeCloseTo(1.6, 12)
   })
+<<<<<<< HEAD
 
   it('diverges pressure about atmospheric, flows about zero, and clips a fixed range with a mark', () => {
     const P = { key: 'fluid:p', label: 'fluid P', units: 'kPa' }
@@ -125,4 +130,6 @@ describe('overlay (RUN-04)', () => {
     expect(phaseColor({ phase: 'two-phase', x: 0 })).toBe('#1b7837')
     expect(phaseColor({ phase: 'two-phase', x: 1 })).toBe('#e08214')
   })
+=======
+>>>>>>> origin/main
 })
