@@ -7,6 +7,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import LiveBar, { type LiveDriver } from './LiveBar'
 import { ModelRevisionTracker } from './modelRevision'
 import type { LiveChunk } from './wasm/liveClient'
+import type { OdeTableDto } from './api'
 
 vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
 vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
@@ -43,7 +44,7 @@ function fakeDriver(end = 1) {
     get isOpen() {
       return open
     },
-    open: vi.fn(async () => {
+    open: vi.fn(async (_source: string, _request: string, _block: number, _revision: number) => {
       open = true
       next = 0
       return { ok: true as const, session: 1, table: { name: 'tank', vars: ['t', 'L'], units: ['s', 'm'], method: 'ida' } }
@@ -67,10 +68,10 @@ function fakeDriver(end = 1) {
   return { driver: driver as unknown as LiveDriver, spy: driver, maxInFlight: () => maxInFlight }
 }
 
-function mount(driver: LiveDriver, tracker = new ModelRevisionTracker(), buildOpen = () => ({ source: 'src', request: '{}' })) {
+function mount(driver: LiveDriver, tracker = new ModelRevisionTracker(), buildOpen = () => ({ source: 'src', request: '{}' }), onTable?: (t: OdeTableDto) => void) {
   render(
     <MantineProvider>
-      <LiveBar blocks={['tank']} tracker={tracker} buildOpen={buildOpen} driver={driver} />
+      <LiveBar blocks={['tank']} tracker={tracker} buildOpen={buildOpen} driver={driver} onTable={onTable} />
     </MantineProvider>,
   )
   return tracker
@@ -139,4 +140,40 @@ it('a failed chunk stops the run and keeps its rows', async () => {
   await waitFor(() => expect(screen.getByTestId('live-notice').textContent).toContain('integration failed'))
   expect(screen.getByTestId('live-time').textContent).toBe('t = 0.1 s')
   expect(spy.advance).toHaveBeenCalledTimes(1)
+})
+
+it('publishes the run so far as an ODE Table on a stop and on a pause', async () => {
+  const { driver } = fakeDriver(0.3)
+  const tables: OdeTableDto[] = []
+  mount(driver, undefined, undefined, (t) => tables.push(t))
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(tables).toHaveLength(1), { timeout: 5000 })
+  expect(tables[0]).toMatchObject({ name: 'tank', vars: ['t', 'L'], units: ['s', 'm'], stopped: true, endTime: 0.3 })
+  expect(tables[0].rows).toEqual([[0, 2], [0.1, 1.9], [0.2, 1.8], [0.3, 1.7]])
+  expect(tables[0].events).toEqual([{ name: 'low', time: 0.3 }])
+
+  cleanup()
+  const long = fakeDriver(1000)
+  const paused: OdeTableDto[] = []
+  mount(long.driver, undefined, undefined, (t) => paused.push(t))
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(long.spy.advance.mock.calls.length).toBeGreaterThan(2))
+  fireEvent.click(screen.getByLabelText('Pause'))
+  expect(paused).toHaveLength(1)
+  expect(paused[0].stopped).toBe(false)
+  expect(paused[0].rows[0]).toEqual([0, 2])
+})
+
+it('a failure keeps the accepted rows and offers a retry with a smaller max step', async () => {
+  const { driver, spy } = fakeDriver(1000)
+  spy.advance.mockResolvedValueOnce(chunk([0, 0.1], { error: 'DYNAMIC tank: transient integration failed', finished: true, clock: { t: 0.12, h: 0.02 } }))
+  const tables: OdeTableDto[] = []
+  mount(driver, undefined, () => ({ source: 'src', request: '{"stopCriteria":{}}' }), (t) => tables.push(t))
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(tables).toHaveLength(1))
+  expect(tables[0].rows).toEqual([[0, 2], [0.1, 1.9]])
+  fireEvent.click(screen.getByText('Retry from the start with max step 0.005 s'))
+  await waitFor(() => expect(spy.open).toHaveBeenCalledTimes(2))
+  expect(JSON.parse(spy.open.mock.calls[1][1])).toEqual({ stopCriteria: {}, liveMaxStep: 0.005 })
+  await waitFor(() => expect(screen.getByLabelText('Pause')).toBeInTheDocument())
 })
