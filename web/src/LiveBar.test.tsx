@@ -1,0 +1,142 @@
+// LiveBar.test.tsx — Phase K3: the Live bar drives a live client by pulling,
+// one advance at a time, and closes on any model edit.
+
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MantineProvider } from '@mantine/core'
+import { afterEach, expect, it, vi } from 'vitest'
+import LiveBar, { type LiveDriver } from './LiveBar'
+import { ModelRevisionTracker } from './modelRevision'
+import type { LiveChunk } from './wasm/liveClient'
+
+vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
+vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
+afterEach(cleanup)
+
+const chunk = (times: number[], extra: Partial<LiveChunk> = {}): LiveChunk => ({
+  seq: 0,
+  rows: Float64Array.from(times.flatMap((t) => [t, 2 - t])),
+  numRows: times.length,
+  numCols: 2,
+  events: [],
+  stopped: false,
+  finished: false,
+  state: null,
+  clock: { t: times.at(-1) ?? 0, h: 0.01 },
+  error: null,
+  ...extra,
+})
+
+/** A fake session over a grid of 0.1 s rows, ending at `end` on a stop event. */
+function fakeDriver(end = 1) {
+  let open = false
+  let next = 0
+  let inFlight = 0
+  let maxInFlight = 0
+  // Like the engine, a target before t0 still produces the t0 row.
+  const rowsTo = (t: number) => {
+    const times: number[] = []
+    while (next <= Math.max(0, Math.round(t * 10)) && next <= end * 10) times.push(next++ / 10)
+    const finished = next > end * 10
+    return chunk(times, finished ? { finished: true, stopped: true, events: [{ name: 'low', time: end }] } : {})
+  }
+  const driver = {
+    get isOpen() {
+      return open
+    },
+    open: vi.fn(async () => {
+      open = true
+      next = 0
+      return { ok: true as const, session: 1, table: { name: 'tank', vars: ['t', 'L'], units: ['s', 'm'], method: 'ida' } }
+    }),
+    advance: vi.fn(async (t: number) => {
+      inFlight += 1
+      maxInFlight = Math.max(maxInFlight, inFlight)
+      await new Promise((r) => setTimeout(r, 1))
+      inFlight -= 1
+      return rowsTo(t)
+    }),
+    step: vi.fn(async (kind: string) => (kind === 'sample' ? rowsTo(next === 0 ? 0.1 : next / 10) : rowsTo(end))),
+    reset: vi.fn(async () => {
+      next = 0
+      return true
+    }),
+    dispose: vi.fn(() => {
+      open = false
+    }),
+  }
+  return { driver: driver as unknown as LiveDriver, spy: driver, maxInFlight: () => maxInFlight }
+}
+
+function mount(driver: LiveDriver, tracker = new ModelRevisionTracker(), buildOpen = () => ({ source: 'src', request: '{}' })) {
+  render(
+    <MantineProvider>
+      <LiveBar blocks={['tank']} tracker={tracker} buildOpen={buildOpen} driver={driver} />
+    </MantineProvider>,
+  )
+  return tracker
+}
+
+it('runs live to the stop event, one advance in flight at a time', async () => {
+  const { driver, spy, maxInFlight } = fakeDriver(0.5)
+  mount(driver)
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(screen.getByTestId('live-notice').textContent).toContain('A stop event ended the run at t = 0.5'), { timeout: 5000 })
+  expect(spy.open).toHaveBeenCalledWith('src', '{}', 0, 1)
+  expect(maxInFlight()).toBe(1)
+  expect(screen.getByTestId('live-time').textContent).toBe('t = 0.5 s')
+  expect(screen.getByTestId('live-event').textContent).toContain('low')
+  expect(screen.getByLabelText('Run live')).toBeDisabled()
+})
+
+it('a model edit closes the session', async () => {
+  const { driver, spy } = fakeDriver(1000)
+  const tracker = mount(driver)
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(spy.advance).toHaveBeenCalled())
+  act(() => {
+    tracker.bump()
+  })
+  expect(spy.dispose).toHaveBeenCalled()
+  expect(screen.getByTestId('live-notice').textContent).toContain('The model changed')
+  expect(screen.getByLabelText('Run live')).toBeEnabled()
+  const calls = spy.advance.mock.calls.length
+  await new Promise((r) => setTimeout(r, 100))
+  expect(spy.advance.mock.calls.length).toBeLessThanOrEqual(calls + 1)
+})
+
+it('a step opens a closed session, and reset starts again', async () => {
+  const { driver, spy } = fakeDriver(1)
+  mount(driver)
+  fireEvent.click(screen.getByText('Next sample'))
+  await waitFor(() => expect(screen.getByTestId('live-time').textContent).toBe('t = 0.1 s'))
+  expect(spy.open).toHaveBeenCalledTimes(1)
+  expect(spy.step).toHaveBeenCalledWith('sample')
+  fireEvent.click(screen.getByText('Reset'))
+  await waitFor(() => expect(spy.reset).toHaveBeenCalled())
+  expect(screen.queryByTestId('live-time')).toBeNull()
+})
+
+it('reports an open that fails, and a request that cannot be built', async () => {
+  const { driver, spy } = fakeDriver()
+  spy.open.mockResolvedValueOnce({ ok: false, error: 'Live mode: no block 1.' } as never)
+  mount(driver)
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(screen.getByTestId('live-notice').textContent).toBe('Live mode: no block 1.'))
+  expect(spy.advance).not.toHaveBeenCalled()
+  cleanup()
+  mount(fakeDriver().driver, new ModelRevisionTracker(), () => {
+    throw new Error('Table T: row 2 is not a number')
+  })
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(screen.getByTestId('live-notice').textContent).toBe('Table T: row 2 is not a number'))
+})
+
+it('a failed chunk stops the run and keeps its rows', async () => {
+  const { driver, spy } = fakeDriver(1000)
+  spy.advance.mockResolvedValueOnce(chunk([0, 0.1], { error: 'DYNAMIC tank: transient integration failed', finished: true }))
+  mount(driver)
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(screen.getByTestId('live-notice').textContent).toContain('integration failed'))
+  expect(screen.getByTestId('live-time').textContent).toBe('t = 0.1 s')
+  expect(spy.advance).toHaveBeenCalledTimes(1)
+})

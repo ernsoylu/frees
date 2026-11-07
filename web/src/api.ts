@@ -451,6 +451,33 @@ function mapSolveData(data: any): SolveResponse {
   }
 }
 
+/**
+ * The solve request JSON (everything but the source). A live open (Phase K3)
+ * sends the same request, so its steady solve is the Solve button's.
+ */
+export function solveRequest(
+  stopCriteria: StopCriteria,
+  variableInfo: VariableInfo[],
+  findAllSolutions: boolean,
+  displayUnitSystem: UnitSystem,
+  fillMissing: boolean,
+  functionTables: FunctionTableDto[] = [],
+  overrides: string[] = [],
+  sliderDrag = false,
+): string {
+  return JSON.stringify({
+    stopCriteria,
+    variableInfo,
+    findAllSolutions,
+    displayUnitSystem,
+    fillMissing,
+    functionTables,
+    // REPL overrides ("eta = 0.75") take priority over the editor's value.
+    overrides,
+    ...(sliderDrag ? { sliderSolve: 'drag' } : {}),
+  })
+}
+
 export async function solve(
   text: string,
   stopCriteria: StopCriteria,
@@ -475,17 +502,7 @@ export async function solve(
   // argument). The wasm boundary honours variableInfo + stopCriteria today
   // and ignores the rest until those features port, so the signature and the
   // request stay stable as the engine grows.
-  const request = JSON.stringify({
-    stopCriteria,
-    variableInfo,
-    findAllSolutions,
-    displayUnitSystem,
-    fillMissing,
-    functionTables,
-    // REPL overrides ("eta = 0.75") take priority over the editor's value.
-    overrides,
-    ...(sliderDrag ? { sliderSolve: 'drag' } : {}),
-  })
+  const request = solveRequest(stopCriteria, variableInfo, findAllSolutions, displayUnitSystem, fillMissing, functionTables, overrides, sliderDrag)
 
   try {
     // Success, syntax errors (errorLine) and solver failures (error +

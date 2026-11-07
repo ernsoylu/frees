@@ -29,7 +29,7 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Test Suite Health**:
   - `cargo test --workspace -- --skip golden_corpus_parity`: 3,450 tests pass across all workspace crates.
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 88 test files, 1,068 tests passing (needs the built `web/src/wasm/pkg`).
+  - `vitest run` (Node 22): 89 test files, 1,073 tests passing (needs the built `web/src/wasm/pkg`).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
   - `npm run check-examples`: 826/826 documentation blocks (2,954 assertions), including the 20 multi-domain examples and their 19 optimization requests. Every graded block must also check with zero unit warnings.
@@ -71,6 +71,7 @@ frees-wasm/
   - Rejects stranded requests with `'Operation stopped'` when extra workers are retired (`retireExtraWorkers`).
   - Guards message and error callbacks (`if (!pool.includes(w)) return`) against late events from retired or terminated workers.
   - On fatal WASM traps, terminates all active workers and respawns cleanly on subsequent requests.
+- **Live bar (`web/src/LiveBar.tsx`)**: pulls one chunk per animation frame with at most one advance in flight, and subscribes to the `ModelRevisionTracker` so any model edit disposes the open session.
 - **Live worker (`web/src/wasm/liveClient.ts`)**: live mode runs on its own instance of `engine.worker.ts`, outside the pool, because the open `LiveSession` lives in that module between requests. It pulls with at most one advance in flight. Every reply is checked against the open's generation; a stale reply or a `gone` session answers `null`, never stale state. A trap retires the worker, and the next open respawns it.
 - **Prepared Solver Reuse (`PreparedDocument`)**:
   - Structural compilation (AST parsing, component expansion, call flattening, block decomposition, analytic differentiation, variable specs, dense plans) is hoisted.
