@@ -570,6 +570,16 @@ entry here is checked off with evidence when it closes.
       - `modelRevision.test.ts`: a value-only bump keeps a passing check, never revives an invalidated one.
       - `lessons.spec.ts`: RC lesson by mouse (6.3212 → 3.9347 V, ✓, Reset back to 6.3212); the paired thermal lesson by keyboard (336.79 → 313.5 K, ✓).
     - Not done here: reduced motion has no bearing (the panel does not animate).
+  - **I3 done 2026-11-07 (`i3-paired-lessons`).**
+    - **Ten new lesson examples** (category Lessons), each authored for the lesson with its own CHECKs and sources, and a manifest in `lessons.ts`:
+      - RLC ringing ↔ mass-spring-damper: ζ 0.2 → 0.4, overshoot 52.7 % → 25.4 % in both (graded against exp(−πζ/√(1−ζ²)) to 2e-5; the residue is the 2001-sample peak).
+      - Diode ↔ check valve: reversing the source / dropping the inlet below the outlet stops the current / flow (4.545 A and 0.1997 kg/s forward).
+      - Capacitor sharing ↔ gas receivers: the end state is the conserved C·V or P·V over ΣC or ΣV (5 V → 2.5 V; 5.5 → 3.25 barA).
+      - Throttling on P-h (x₂ 0.340 → 0.251, Cengel Example 5-8), mixing and the cooling coil on the psychrometric chart (T₃ 303.46 → 299.76 K; condensate 5.19 → 7.49 g/s), sensor → controller (a 0.5 → 2 s speed-sensor lag raises a PI cruise loop's overshoot 2.6 % → 54 %).
+      - The single-domain lessons carry no pair; the pair button only claims "another domain".
+    - **Chart lessons open their chart.** A lesson whose view is `plots` now opens its example's first code PLOT once the check declares it; the bare Plots container opened empty.
+    - **Evidence.** `lessons.test.ts` (25 tests) solves every lesson's baseline, change and reset through the WASM engine. `lessons.spec.ts` adds the RLC → mass-spring-damper journey (same overshoots) and the throttling lesson: its P-h chart renders with the stream states, and a wrong prediction is marked ✗.
+    - **Found, not reverified:** `md-hpwh`'s optimize block (`multidomain_examples.md:1176`) failed once in `check-examples` while another build and test suite loaded the machine, and passed on the next run (809/809). The cause is not known.
   1. **Insight cards.** τ = RC, thermal τ = mC/UA, ω_n and ζ, Carnot and actual COP, NTU-ε and glide, each computed from solved values and attached to blocks or areas (VIEW-09).
   2. **A lesson manifest beside a gallery example.** It holds:
      - the objective, prerequisites and the governing equation;

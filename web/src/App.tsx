@@ -1673,10 +1673,11 @@ export default function App() {
     setWorkspaceEpoch((e) => e + 1)
     const nextLesson = lessonFor(example.id)
     setLesson(nextLesson)
+    lessonPlotShown.current = null
     if (nextLesson) setPinnedSliders(nextLesson.sliders.map((sl) => ({ ...sl })))
     requestAnimationFrame(() => {
       dockRef.current?.reset()
-      if (nextLesson) dockRef.current?.open(nextLesson.view)
+      if (nextLesson?.view === 'schematic') dockRef.current?.open('schematic')
     })
   }
 
@@ -2641,6 +2642,17 @@ export default function App() {
     const codeNames = new Set(codePlots.map((p) => p.name.toLowerCase()))
     return [...plots.filter((p) => !codeNames.has(p.name.toLowerCase())), ...codePlots]
   }, [plots, codePlots])
+
+  // I2–I3: a chart lesson opens its example's first PLOT once the check has
+  // declared it — the Plots container alone would open empty.
+  const lessonPlotShown = useRef<string | null>(null)
+  useEffect(() => {
+    if (lesson?.view !== 'plots' || lessonPlotShown.current === lesson.example) return
+    const first = codePlots[0]
+    if (!first) return
+    lessonPlotShown.current = lesson.example
+    requestAnimationFrame(() => dockRef.current?.openInstance(`plot:${first.id}`, 'plot', first.name))
+  }, [lesson, codePlots])
 
   // Auto-close dock windows whose backing instance no longer exists — e.g. a
   // plot removed from its card, a deleted table, or a stale window
