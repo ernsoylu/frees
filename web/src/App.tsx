@@ -1917,6 +1917,10 @@ export default function App() {
   idleCheckRef.current = () => {
     if (checking || solving || solvingTableId) return
     if (!textRef.current.trim()) return
+    // A Solve pressed inside the debounce has checked this revision already;
+    // a lint check now would only clear the solution it produced.
+    const checked = modelRevisionRef.current.lastCheckedRevision
+    if (checked !== null && modelRevisionRef.current.isCurrent(checked)) return
     void onCheck(true)
   }
 
@@ -2366,10 +2370,16 @@ export default function App() {
       return
     }
     const res = await onCheck()
-    if (res?.solvable) {
+    // The document moved on while the check ran (an example still landing):
+    // the check is discarded, but the Solve the user asked for is not.
+    if (res === null) {
+      solvePendingRef.current = true
+      return
+    }
+    if (res.solvable) {
       const ok = await onSolve(false, undefined, res)
       if (ok) return 'workspace'
-    } else if (res && !res.solvable && res.parametricTables && res.parametricTables.length > 0) {
+    } else if (res.parametricTables && res.parametricTables.length > 0) {
       // Auto-fallback: if the main block is not fully determined but there is a parametric
       // sweep defined, the user likely intended to just "Solve Table".
       const dto = res.parametricTables[0]
