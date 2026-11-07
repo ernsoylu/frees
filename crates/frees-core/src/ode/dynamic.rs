@@ -51,7 +51,6 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use crate::ast::{Equation, Expr, Statement};
 use crate::dae::assembly::{AssemblySpec, DaeAssembly, EventSpec};
-use crate::dae::solver::{IdaDaeSolver, Step, IDA_YA_YDP_INIT};
 use crate::diag::{FreesError, Result};
 use crate::eval::{eval_with, EvalContext, Scope};
 use crate::ode::events::{bind_events, DynamicEvent, EventBinding, OdeEvent, StateReset};
@@ -485,193 +484,33 @@ impl<'a> DynamicSolver<'a> {
     ///   are IDA's own algebraic solution, with no per-sample re-solve, so
     ///   [`build_table`](Self::build_table) is deliberately not reused.
     fn solve_with_ida(&mut self, progress: &crate::progress::Claim) -> Result<OdeTableResult> {
-        let dae = self.assemble_dae()?;
+        let mut run = self.ida_run()?;
+        let last = run.points() - 1;
+        let chunk = run.advance(self.defs, last, &mut |_| true, Some(progress));
+        if let Some(e) = chunk.error {
+            return Err(e);
+        }
+        Ok(run.table(chunk.rows, chunk.events))
+    }
+
+    /// This block's IDA output loop, ready to integrate from `t0`: the batch
+    /// path runs it in one call, a live session in chunks
+    /// ([`crate::ode::live`]).
+    pub fn ida_run(&mut self) -> Result<crate::ode::live::IdaRun> {
+        let spec = self.assembly_spec()?;
         let options = &self.system.options;
-        let (t0, tf) = (options.t0, options.tf);
         let points = options
             .points
             .unwrap_or(DynamicOptions::DEFAULT_POINTS)
             .max(2);
-        let times: Vec<f64> = (0..points)
-            .map(|i| t0 + (tf - t0) * i as f64 / (points - 1) as f64)
-            .collect();
-        let columns = self.columns();
-        let mut rows: Vec<Vec<f64>> = Vec::with_capacity(points);
-        let mut hits: Vec<TableEventHit> = Vec::new();
-
-        let mut s = IdaDaeSolver::for_assembly(&dae, options.rtol, options.atol)?;
-        s.init(t0, &dae.y0, &dae.yp0)
-            .map_err(|e| self.ida_failure(&e))?;
-        let span = tf - t0;
-        // IDACalcIC refines the initial (y, y') to satisfy the algebraic
-        // constraints. Its line search can fail (-12) on a stiff coupled DAE
-        // even when the assembled initial state — already seeded from the
-        // inner algebraic solve at t0 — is itself near-consistent. Fall back
-        // to integrating from the seeded state rather than aborting; IDA's
-        // first BDF step will absorb any small residual.
-        if s.calc_consistent_ic(IDA_YA_YDP_INIT, t0 + span * 1e-3)
-            .is_err()
-        {
-            s.reinit(t0, &dae.y0, &dae.yp0)
-                .map_err(|e| self.ida_failure(&e))?;
-        }
-        rows.push(row_of(t0, &s.current_state()));
-
-        for (index, &tout) in times[1..].iter().enumerate() {
-            // The IDA output grid is uniform in time, so the row index is the
-            // integration fraction — no separate signal needed.
-            progress.report(index as f64 / (points - 1) as f64);
-            match self.advance_to(&mut s, tout, &mut hits)? {
-                // A stop event fired.
-                None => {
-                    let t_stop = hits.last().expect("a stop records its hit").time;
-                    rows.push(row_of(t_stop, &s.current_state()));
-                    return Ok(OdeTableResult {
-                        name: self.system.name.clone(),
-                        columns,
-                        rows,
-                        events: hits,
-                        method: self.system.options.method.clone(),
-                        stopped: true,
-                        end_time: t_stop,
-                    });
-                }
-                Some(step) => rows.push(row_of(tout, &step.y)),
-            }
-        }
-        Ok(OdeTableResult {
-            name: self.system.name.clone(),
-            columns,
-            rows,
-            events: hits,
-            method: self.system.options.method.clone(),
-            stopped: false,
-            end_time: tf,
-        })
-    }
-
-    /// Port of `DynamicSolver.advanceTo`: integrate to `tout`, recording any
-    /// non-stop root crossings and continuing; `Ok(None)` means a stop event
-    /// fired.
-    fn advance_to(
-        &self,
-        s: &mut IdaDaeSolver<'_>,
-        tout: f64,
-        hits: &mut Vec<TableEventHit>,
-    ) -> Result<Option<Step>> {
-        loop {
-            let step = s.step(tout).map_err(|e| self.ida_failure(&e))?;
-            if !step.root_return() {
-                return Ok(Some(step));
-            }
-            match self.handle_roots(s, step, tout, hits)? {
-                RootOutcome::Resume => {}
-                RootOutcome::Stop => return Ok(None),
-                RootOutcome::Report(step) => return Ok(Some(step)),
-            }
-        }
-    }
-
-    /// Port of `DynamicSolver.handleRoots`. SUNDIALS reports the crossing
-    /// direction as the sign of `roots_found[r]`; the event's declared
-    /// rising/falling filter is honoured exactly as on the explicit path. The
-    /// event order is the assembly's, which is [`Self::event_bindings`]'s own
-    /// order — both sides are built from the same iteration.
-    fn handle_roots(
-        &self,
-        s: &mut IdaDaeSolver<'_>,
-        step: Step,
-        tout: f64,
-        hits: &mut Vec<TableEventHit>,
-    ) -> Result<RootOutcome> {
-        let mut set_event: Option<usize> = None;
-        for (r, &found) in step.roots_found.iter().enumerate() {
-            let binding = &self.event_bindings[r];
-            let matches = found != 0 && (binding.direction == 0 || binding.direction * found > 0);
-            if matches {
-                hits.push(TableEventHit {
-                    name: binding.name.clone(),
-                    time: step.t,
-                });
-                if binding.stop {
-                    return Ok(RootOutcome::Stop);
-                }
-                if binding.set_index.is_some() && set_event.is_none() {
-                    set_event = Some(r);
-                }
-            }
-        }
-        if let Some(r) = set_event {
-            return self.apply_set_event(s, step, tout, r);
-        }
-        Ok(if step.t >= tout {
-            RootOutcome::Report(step)
-        } else {
-            RootOutcome::Resume
-        })
-    }
-
-    /// Port of `DynamicSolver.applySetEvent`: overwrite the state at the
-    /// crossing, re-initialize IDA there, and let IDACalcIC re-derive the
-    /// algebraic variables consistent with the modified state.
-    fn apply_set_event(
-        &self,
-        s: &mut IdaDaeSolver<'_>,
-        step: Step,
-        tout: f64,
-        r: usize,
-    ) -> Result<RootOutcome> {
-        let binding = &self.event_bindings[r];
-        let mut y = step.y.clone();
-        let yp = step.yp.clone();
-        let scope = crate::dae::assembly::dae_values(
-            self.analytic_values,
-            &self.time_var,
-            &self.states,
-            &self.aux_names,
-            step.t,
-            &y,
-            &yp,
-        );
-        let idx = binding.set_index.expect("a set event carries its index");
-        let expr = binding
-            .set_expr
-            .as_ref()
-            .expect("a set event carries its expression");
-        y[idx] = self.eval(expr, &scope).map_err(|e| self.ida_failure(&e))?;
-        s.reinit(step.t, &y, &yp)
-            .map_err(|e| self.ida_failure(&e))?;
-        // IDACalcIC's tout1 is a direction hint and must lie strictly beyond
-        // the reinit time (the root can land exactly on tout). A failure here
-        // is absorbed by the first BDF step — the same fallback as at t0.
-        let hint = step.t + f64::max(1e-9, 1e-6 * step.t.abs());
-        let _ = s.calc_consistent_ic(IDA_YA_YDP_INIT, f64::max(tout, hint));
-        if step.t >= tout {
-            // The crossing coincided with the requested sample: report the
-            // post-set state rather than asking IDA for tout == t.
-            return Ok(RootOutcome::Report(Step {
-                t: step.t,
-                y,
-                yp,
-                flag: 0,
-                roots_found: step.roots_found,
-            }));
-        }
-        Ok(RootOutcome::Resume)
-    }
-
-    /// The `solveWithIda` catch block: keep the integrator's own message, add
-    /// the diagnosable causes, and return the solver's exception type.
-    fn ida_failure(&self, e: &FreesError) -> FreesError {
-        FreesError::solver(format!(
-            "DYNAMIC {}: transient integration failed ({}). The usual causes: \
-             initial values that violate the algebraic constraints, a step \
-             across a property-surface boundary, or an algebraic coupling the \
-             structural checks cannot see. Adjust the initials, or run a \
-             built-in method (ode23s) to surface the per-step algebraic \
-             diagnosis.",
-            self.system.name,
-            e.to_string_message()
+        Ok(crate::ode::live::IdaRun::new(
+            spec,
+            self.event_bindings.clone(),
+            options.method.clone(),
+            self.columns(),
+            options.rtol,
+            options.atol,
+            (options.t0, options.tf, points),
         ))
     }
 
@@ -1673,23 +1512,6 @@ impl<'a> DynamicSolver<'a> {
     fn eval(&self, expr: &Expr, scope: &Scope) -> Result<f64> {
         eval_with(expr, scope, EvalContext::with_defs(self.defs))
     }
-}
-
-/// What a batch of root crossings means for the IDA integration. Port of the
-/// Java `RootOutcome(boolean terminal, Step step)` record: `Stop` is terminal
-/// with a null step, `Report` terminal with one, `Resume` not terminal.
-enum RootOutcome {
-    Resume,
-    Stop,
-    Report(Step),
-}
-
-/// Port of `DynamicSolver.rowOf`: `[t, y…]`.
-fn row_of(t: f64, y: &[f64]) -> Vec<f64> {
-    let mut row = Vec::with_capacity(y.len() + 1);
-    row.push(t);
-    row.extend_from_slice(y);
-    row
 }
 
 // ---------------------------------------------------------------------------

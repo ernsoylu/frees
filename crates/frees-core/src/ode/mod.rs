@@ -23,6 +23,7 @@ pub mod events;
 #[cfg(test)]
 pub(crate) mod hermite_root;
 pub mod integrator;
+pub mod live;
 pub mod methods;
 pub mod problem;
 pub mod radau;

@@ -716,6 +716,27 @@ entry here is checked off with evidence when it closes.
     - A worker trap respawns cleanly.
     - Commands are serviced within one chunk on small, EV and large models.
     - Measured against F's baseline, and within D3 and the WASM budget.
+  - **K1 done 2026-11-07 (`k1-live-session`): the engine `LiveSession`, IDA blocks.**
+    - **One driver for batch and live** (`ode/live.rs`). `IdaRun` is the IDA output loop of a `DYNAMIC` block, holding as owned state what `solve_with_ida` kept in locals: the parked integrator, the grid position, and how the run ended. The batch solve is one `advance` over the whole grid; a live session makes the same calls in pieces. Chunked rows therefore equal batch rows by construction, and the tests prove it across chunk boundaries.
+    - **No borrow between calls, no `unsafe`.** `frees-core` forbids `unsafe`, so the session cannot hold a solver that borrows its own definitions. Instead `IdaDaeSolver::rebind` moves the whole state (BDF history, step size, Jacobian and LU, root state) onto a residual rebuilt from the owned `AssemblySpec` at each chunk. Between chunks it is `parked`, pointing at a residual that refuses to evaluate. The rebuild costs about 57 µs per chunk on a 61-unknown model.
+    - **API.**
+      - `PreparedDocument::open_live(block)` runs the steady solve and returns the steady solution with the block's session at `t0`.
+      - `advance(t_target, budget)`: the budget sees the chunk so far between rows and ends it early after at least one row.
+      - Steps: `step_sample` (the next row), `step_event` (to the next crossing) and `step_accepted` (one internal step, in a new IDA one-step mode that shares `step`'s re-entry and stepping code). The accepted-step state comes back beside the rows.
+      - `reset`; pausing is not calling; disposing is dropping.
+      - A live run continues past `tf` on the same grid formula, so its rows up to `tf` are the batch rows.
+    - **Out of K1.** An explicit-method block (ode45, the default) is refused with "Set its method to ida", as the plan put IDA first. The resumable explicit stepper is K1b.
+    - **Found and fixed.**
+      - The batch path's error wording is kept exactly: assembly and configuration errors stand as they are, and integration errors take the block diagnosis.
+      - A first one-step search ended at the step's start and missed a bounce inside it; it now searches to the step's end.
+    - **Evidence.** `tests/live_session.rs`, 10 tests:
+      - bitwise equality of chunked and batch rows for a bouncing ball with a `set` event (four frame and budget patterns), a stop event, and a 30-node conduction chain on the sparse path;
+      - reset replays bit for bit;
+      - the run past `tf`;
+      - `step_event` stops at the first bounce at the batch event time;
+      - accepted steps walk the trajectory within tolerance;
+      - the refusals.
+    - The parity corpus is unchanged, with the batch IDA path now running through `IdaRun`.
 - **L. Live inputs and instruments (stage 3).**
   1. **Input classes, applied at accepted-time boundaries and logged as events:**
      - **Presentation:** immediate, no revision.

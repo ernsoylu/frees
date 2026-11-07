@@ -757,6 +757,13 @@ fn relaxed_ode_settings(base: &SolverSettings, rel_tol: f64) -> SolverSettings {
     }
 }
 
+/// Where a live open ([`prepared::PreparedDocument::open_live`]) asks the
+/// dynamic stage for one block's run instead of its table.
+pub(crate) struct LiveCapture {
+    pub(crate) block: usize,
+    pub(crate) session: Option<crate::ode::live::LiveSession>,
+}
+
 /// Run every `DYNAMIC` block with the solved scalars as its base values, and
 /// collect one ODE Table per block.
 ///
@@ -772,11 +779,38 @@ fn solve_dynamic_systems(
     specs: &BTreeMap<String, VarSpec>,
     ctx: EvalContext<'_>,
     reuse: Option<&crate::ode::accessors::DynamicAccessorContext<'_>>,
+    live: Option<&mut LiveCapture>,
 ) -> Result<Vec<crate::ode::problem::OdeTableResult>> {
-    if doc.dynamics.is_empty() {
+    if doc.dynamics.is_empty() && live.is_none() {
         return Ok(Vec::new());
     }
     let inner = relaxed_ode_settings(settings, 1e-7);
+    if let Some(capture) = live {
+        // Live mode (Phase K1): set up the chosen block's run on the same
+        // solved base values and stop there; nothing is integrated, and no
+        // other block runs.
+        let system = doc.dynamics.get(capture.block).ok_or_else(|| {
+            FreesError::solver(format!(
+                "Live mode: the document has {} DYNAMIC block{}, so there is no block {}.",
+                doc.dynamics.len(),
+                if doc.dynamics.len() == 1 { "" } else { "s" },
+                capture.block + 1
+            ))
+        })?;
+        if !crate::ode::dynamic::is_ida_method(&system.options.method) {
+            return Err(FreesError::solver(format!(
+                "Live mode runs a DYNAMIC block on the implicit DAE solver for now; \
+                 DYNAMIC {} uses {}. Set its method to ida to run it live.",
+                system.name, system.options.method
+            )));
+        }
+        let algebraic = pinned_solver(&inner, specs, ctx);
+        let run =
+            crate::ode::dynamic::DynamicSolver::new(system, base_values, &doc.defs, algebraic)
+                .ida_run()?;
+        capture.session = Some(crate::ode::live::LiveSession::new(doc.defs.clone(), run));
+        return Ok(Vec::new());
+    }
     let mut tables = Vec::with_capacity(doc.dynamics.len());
     for (index, system) in doc.dynamics.iter().enumerate() {
         // A live accessor has already integrated this system at every Newton

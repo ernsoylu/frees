@@ -369,6 +369,7 @@ fn add_columns(
 /// An event as the assembler needs it: the two sides of its switching
 /// expression (already `der`-substituted), its name and whether it stops the
 /// integration.
+#[derive(Clone)]
 pub struct EventSpec {
     pub name: String,
     pub lhs: Expr,
@@ -377,6 +378,7 @@ pub struct EventSpec {
 }
 
 /// Everything [`assemble`] needs from a classified `DYNAMIC` block.
+#[derive(Clone)]
 pub struct AssemblySpec<'a> {
     /// Block name, for diagnostics.
     pub block_name: String,
@@ -402,6 +404,26 @@ pub struct AssemblySpec<'a> {
     pub events: Vec<EventSpec>,
     /// Document definitions for the evaluator.
     pub ctx: EvalContext<'a>,
+}
+
+impl AssemblySpec<'_> {
+    /// This spec without its borrow of the document definitions, so it can be
+    /// kept between live chunks; [`Self::ctx`] is set again before each
+    /// [`assemble`].
+    pub fn detached(self) -> AssemblySpec<'static> {
+        AssemblySpec {
+            block_name: self.block_name,
+            time_var: self.time_var,
+            states: self.states,
+            aux: self.aux,
+            template: self.template,
+            analytic_values: self.analytic_values,
+            state_initials: self.state_initials,
+            seed: self.seed,
+            events: self.events,
+            ctx: EvalContext::default(),
+        }
+    }
 }
 
 /// Assembles a classified `DYNAMIC` block into an implicit DAE `F(t,y,y')=0`.
