@@ -4,6 +4,7 @@
 //
 // Run:  npm run build && npx playwright test e2e/diagram-cursor.spec.ts --project=chromium
 import { expect, test, type Page } from '@playwright/test'
+import { engineCalls, openAndSolve } from './journey'
 
 // The gallery's pressure cooker, shortened, with its P-h diagram declared.
 const COOKER = `// frees-language: 2
@@ -41,22 +42,7 @@ const traces = (page: Page) =>
 
 test.setTimeout(180_000)
 test('H3: the P-h cursor follows the recorded sample with a bounded trail, and nothing solves', async ({ page }) => {
-  await page.addInitScript(() => {
-    const calls: string[] = []
-    ;(window as unknown as { engineCalls: string[] }).engineCalls = calls
-    const post = Worker.prototype.postMessage
-    Worker.prototype.postMessage = function (this: Worker, message: unknown, ...rest: unknown[]) {
-      const method = (message as { method?: string } | null)?.method
-      if (method) calls.push(method)
-      return (post as (...a: unknown[]) => void).call(this, message, ...rest)
-    } as typeof Worker.prototype.postMessage
-  })
-  const source = 'https://raw.example/diagram-cursor.frees'
-  await page.route(source, (route) => route.fulfill({ contentType: 'text/plain', body: COOKER }))
-  await page.goto('/?url=' + encodeURIComponent(source))
-  await expect(page.locator('.cm-content')).toContainText('frees-language', { timeout: 60_000 })
-  await page.getByRole('button', { name: 'Solve', exact: true }).click()
-  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 150_000 })
+  await openAndSolve(page, 'diagram-cursor', COOKER, 150_000)
   await page.getByRole('button', { name: 'Plots windows' }).click()
   await page.getByRole('menuitem', { name: /Cooker P-h/ }).click()
 
@@ -64,7 +50,7 @@ test('H3: the P-h cursor follows the recorded sample with a bounded trail, and n
   await expect(page.locator('.js-plotly-plot')).toBeVisible({ timeout: 60_000 })
   await page.waitForTimeout(1000)
   expect(await traces(page)).toEqual([])
-  const before = (await page.evaluate(() => (window as unknown as { engineCalls: string[] }).engineCalls.length))
+  const before = (await engineCalls(page)).length
 
   // The first recorded sample: both water nodes, a one-sample trail, cold and near atmospheric.
   const bar = page.getByTestId('playback-bar')
@@ -96,6 +82,6 @@ test('H3: the P-h cursor follows the recorded sample with a bounded trail, and n
   expect(end.y[0]).toBeGreaterThan(195)
   expect(end.y[0]).toBeLessThan(215)
 
-  const during = (await page.evaluate((n) => (window as unknown as { engineCalls: string[] }).engineCalls.slice(n), before))
+  const during = (await engineCalls(page)).slice(before)
   expect(during.filter((m) => m === 'solve' || m === 'check')).toEqual([])
 })
