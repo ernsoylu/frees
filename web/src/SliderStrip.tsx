@@ -9,7 +9,8 @@ interface Props {
   onChange: (name: string, value: number) => void
   /** Handle released: commit the value with a re-solve. */
   onCommit: (name: string, value: number) => void
-  onUnpin: (name: string) => void
+  /** Absent in a kiosk embed: its sliders cannot be removed. */
+  onUnpin?: (name: string) => void
   /** True while a solve is in flight, so the strip can say so. */
   solving?: boolean
   /** A slider moved (or was re-ranged) since the last solve landed, so what
@@ -67,17 +68,19 @@ export default function SliderStrip({ pins, onChange, onCommit, onUnpin, solving
                 {formatValue(pin.value)}
                 {pin.units && pin.units !== '-' ? ` ${pin.units}` : ''}
               </Text>
-              <Tooltip label={`Unpin ${pin.name}`}>
-                <ActionIcon
-                  size="xs"
-                  variant="subtle"
-                  color="gray"
-                  aria-label={`Unpin ${pin.name}`}
-                  onClick={() => onUnpin(pin.name)}
-                >
-                  <IconX size={12} />
-                </ActionIcon>
-              </Tooltip>
+              {onUnpin && (
+                <Tooltip label={`Unpin ${pin.name}`}>
+                  <ActionIcon
+                    size="xs"
+                    variant="subtle"
+                    color="gray"
+                    aria-label={`Unpin ${pin.name}`}
+                    onClick={() => onUnpin(pin.name)}
+                  >
+                    <IconX size={12} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
             </Group>
             {isInert && (
               <Text size="xs" c="orange" mb={2}>
