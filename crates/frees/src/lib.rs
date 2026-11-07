@@ -1249,6 +1249,7 @@ fn solve_success(
                 }))
                 .collect::<Vec<_>>(),
             "connections": connection_defs(&solution.component_connections, None),
+            "phases": stream_phases(solution),
             // Tornado breakdown: per dependent variable, its propagated sigma and
             // each source's signed contribution, largest sigma first — the Java
             // `SolveController.uncertaintyBreakdownOf`. Empty when the document
@@ -1342,6 +1343,45 @@ fn connection_defs(
             })
         })
         .collect()
+}
+
+/// Phase H: each fluid stream's phase against the saturation dome at the
+/// solved `p` and `h`, keyed by the lowercase stream prefix (`chlr.in`, `s2`).
+/// Only streams of a real-fluid node (`fluid` or `twophase` connector, not
+/// moist air, an incompressible liquid or a gas) with a named fluid whose state
+/// the solve produced; a fluid the backend cannot classify is left out.
+fn stream_phases(solution: &Solution) -> Map<String, Value> {
+    use frees_core::props::propfun::{phase_at, PhaseClass};
+    let mut out = Map::new();
+    for c in &solution.component_connections {
+        let (Some(fluid), Some("fluid" | "twophase")) =
+            (c.fluid.as_deref(), c.connector.as_deref())
+        else {
+            continue;
+        };
+        for stream in &c.streams {
+            let key = stream.to_ascii_lowercase();
+            // Solved values name members with `$` (`comp$out$p`).
+            let value = |m: &str| {
+                solution
+                    .values
+                    .get(&format!("{key}.{m}").replace('.', "$"))
+                    .copied()
+            };
+            let (Some(p), Some(h)) = (value("p"), value("h")) else {
+                continue;
+            };
+            let entry = match phase_at(fluid, p, h) {
+                Some(PhaseClass::Subcooled) => json!({ "phase": "subcooled" }),
+                Some(PhaseClass::TwoPhase(x)) => json!({ "phase": "two-phase", "x": x }),
+                Some(PhaseClass::Superheated) => json!({ "phase": "superheated" }),
+                Some(PhaseClass::Supercritical) => json!({ "phase": "supercritical" }),
+                None => continue,
+            };
+            out.insert(key, entry);
+        }
+    }
+    out
 }
 
 /// The UTF-16 offset of every byte position that starts a character, and of
@@ -3550,5 +3590,24 @@ END\n\
         let (_, pins) = super::literal_pins(&lines)?;
         let texts: Vec<String> = pins.iter().map(|eq| eq.source_text.clone()).collect();
         Some(texts.join(" | "))
+    }
+
+    /// Phase H: the two-phase streams of an ideal R134a cycle, classified at
+    /// the solved state — superheated after the compressor, inside the dome
+    /// after the throttle.
+    #[test]
+    fn two_phase_streams_report_their_phase() {
+        let text = "P_L = 0.14 [MPa]\nP_H = 0.8 [MPa]\nCompressor comp(eta=1, fluid$=R134a)\n\
+            Condenser cond()\nThrottle valve()\nBoiler evap()\nconnect(comp.out, cond.in)\n\
+            connect(cond.out, valve.in)\nconnect(valve.out, evap.in)\nconnect(evap.out, comp.in)\n\
+            comp.in.mdot = 0.05 [kg/s]\ncomp.in.P = P_L\ncomp.in.h = Enthalpy(R134a, P=P_L, x=1)\n\
+            comp.out.P = P_H\ncond.out.h = Enthalpy(R134a, P=P_H, x=0)\n";
+        let v = parsed(&solve(text, "{}"));
+        assert_eq!(v["success"], true, "{v}");
+        let phases = &v["phases"];
+        assert_eq!(phases["comp.out"]["phase"], "superheated", "{phases}");
+        assert_eq!(phases["valve.out"]["phase"], "two-phase", "{phases}");
+        let x = phases["valve.out"]["x"].as_f64().unwrap();
+        assert!(x > 0.1 && x < 0.5, "x = {x}");
     }
 }

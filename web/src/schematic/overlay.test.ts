@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SchematicEdge } from './layout'
-import { carriedAlong, edgeReadings, flowAlong, overlayMetrics, particlePeriods, rampColor } from './overlay'
+import { carriedAlong, edgeReadings, flowAlong, overlayMetrics, particlePeriods, phaseColor, phaseReadings, rampColor } from './overlay'
 import { indexVariables } from './readouts'
 
 const FLOW: Record<string, string> = { fluid: 'mdot', heat: 'qdot', electrical: 'i', mechanical: 'tau', translational: 'f' }
@@ -35,9 +35,13 @@ const E = [
 describe('overlay (RUN-04)', () => {
   it('offers only metrics the solve produced, one domain and unit per scale', () => {
     expect(overlayMetrics(E, values).map((m) => `${m.key} ${m.units}`)).toEqual(['fluid:p kPa', 'fluid:mdot kg/s', 'electrical:i A'])
-    const { byEdge, min, max } = edgeReadings(E, values, { key: 'fluid:p', label: 'fluid P', units: 'kPa' })
-    expect([min, max]).toEqual([100, 300])
-    expect(Object.fromEntries(byEdge)).toEqual({
+    // A sequential member (here P read as a plain range by giving it no reference).
+    const { byEdge, min, max } = edgeReadings(E, values, { key: 'fluid:h', label: 'fluid h', units: 'kPa' }, undefined)
+    expect([min, max]).toEqual([Infinity, -Infinity])
+    expect(byEdge.get('e1')).toEqual({ state: 'missing' })
+    const p = edgeReadings(E, values, { key: 'fluid:p', label: 'fluid P', units: 'kPa' }, { reference: 200 })
+    expect([p.min, p.reference, p.max]).toEqual([100, 200, 300])
+    expect(Object.fromEntries(p.byEdge)).toEqual({
       e1: { state: 'value', value: 300, t: 1 },
       e2: { state: 'value', value: 100, t: 0 },
       e3: { state: 'nonfinite' },
@@ -87,5 +91,38 @@ describe('overlay (RUN-04)', () => {
     ]))
     expect(slow.get('e1')?.period).toBeCloseTo(0.4, 12)
     expect(slow.get('e6')?.period).toBeCloseTo(1.6, 12)
+  })
+
+  it('diverges pressure about atmospheric, flows about zero, and clips a fixed range with a mark', () => {
+    const P = { key: 'fluid:p', label: 'fluid P', units: 'kPa' }
+    // Automatic: symmetric about 101.325 kPa, so 100 kPa sits just below the neutral middle.
+    const auto = edgeReadings(E, values, P)
+    expect(auto.reference).toBe(101.325)
+    expect(auto.max - 101.325).toBeCloseTo(101.325 - auto.min, 9)
+    expect(auto.byEdge.get('e2')!.t!).toBeLessThan(0.5)
+    expect(auto.byEdge.get('e1')!.t).toBe(1)
+    // A unit with no ambient value and no setting is a plain sequential scale.
+    expect(edgeReadings(E, values, { ...P, units: 'mmHg' }).reference).toBeNull()
+    // Signed flows diverge about zero: -2 and +2 kg/s at opposite ends.
+    const m = edgeReadings(E, values, { key: 'fluid:mdot', label: 'fluid mdot', units: 'kg/s' })
+    expect(m.reference).toBe(0)
+    expect([m.byEdge.get('e1')!.t, m.byEdge.get('e2')!.t]).toEqual([0, 1])
+    // A fixed lesson range: 300 kPa is beyond 250 and drawn at the top end, marked.
+    const fixed = edgeReadings(E, values, P, { reference: 150, min: 120, max: 250 })
+    expect(fixed.fixed).toBe(true)
+    expect(fixed.byEdge.get('e1')).toEqual({ state: 'value', value: 300, t: 1, clipped: 'high' })
+    expect(fixed.byEdge.get('e2')).toEqual({ state: 'value', value: 100, t: 0, clipped: 'low' })
+  })
+
+  it('reads phase from the engine, or from a recorded quality inside the dome, never from x = -1', () => {
+    const tp = [edge('a', 'fluid', ['comp', 'out'], ['cond', 'in']), edge('b', 'fluid', ['valve', 'out'], ['evap', 'in']), edge('c', 'fluid', ['cond', 'out'], ['valve', 'in'])]
+    const read = phaseReadings(tp, indexVariables([
+      { name: 'evap.in.x', value: 0.3, units: '-' },
+      { name: 'cond.out.x', value: -1, units: '-' },
+    ]), { 'comp.out': { phase: 'superheated' } })
+    expect(Object.fromEntries(read)).toEqual({ a: { phase: 'superheated' }, b: { phase: 'two-phase', x: 0.3 }, c: null })
+    expect(phaseColor({ phase: 'superheated' })).toBe('#b2182b')
+    expect(phaseColor({ phase: 'two-phase', x: 0 })).toBe('#1b7837')
+    expect(phaseColor({ phase: 'two-phase', x: 1 })).toBe('#e08214')
   })
 })

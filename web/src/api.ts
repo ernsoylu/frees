@@ -139,6 +139,10 @@ export interface SolveResponse {
   failedBlockIndex?: number | null
   /** Tornado breakdown: per uncertain variable, the ranked per-source contributions. */
   uncertaintyBreakdown?: VariableUncertaintyResult[]
+  /** Phase H: each real-fluid stream's phase at the solved state, keyed by the
+   *  lowercase stream prefix (`comp.out`); a stream the engine cannot classify
+   *  is absent. */
+  phases?: Record<string, StreamPhase>
 }
 
 /** One parameter binding on a component instance (`UA=UA_chl_r`, `SH=5`, `fluid$=R1234yf`). */
@@ -399,6 +403,12 @@ export async function check(
   }
 }
 
+/** Phase H: where a stream sits against the saturation dome; `x` inside it. */
+export interface StreamPhase {
+  phase: 'subcooled' | 'two-phase' | 'superheated' | 'supercritical'
+  x?: number
+}
+
 /** The empty solve response returned on any infrastructure failure. */
 const SOLVE_FAILURE: Omit<SolveResponse, 'error'> = {
   success: false,
@@ -428,6 +438,7 @@ function mapSolveData(data: any): SolveResponse {
     stateTableDefs: data.stateTableDefs ?? [],
     odeTables: data.odeTables ?? [],
     components: data.components ?? [],
+    phases: data.phases ?? {},
     errorLine: data.errorLine ?? null,
     failedBlockIndex: data.failedBlockIndex ?? null,
     uncertaintyBreakdown: data.uncertaintyBreakdown ?? [],

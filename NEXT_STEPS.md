@@ -418,6 +418,30 @@ entry here is checked off with evidence when it closes.
       - The visual baseline is unchanged, since particles are off by default.
     - **Not done in H1.** The refrigeration journey and the P-h cursor belong to H3.
     - **Found:** at "end of run" an ODE-only model's schematic shows no values, because the solve has no ordinary variables; the recorded samples do. This is RUN-05 behaviour, not reverified beyond this model.
+  - **H2 done 2026-11-07 (`h2-colour-scales`).**
+    - **Diverging scales.** Temperature, pressure and signed flows (ṁ, Q̇, I, τ, F) diverge about a reference (`edgeReadings`, `schematic/overlay.ts`):
+      - Ambient 293.15 K or atmospheric pressure in the result's own unit (K, °C, °F, R; Pa, kPa, MPa, bar, psi, atm); zero for flows; or a value the user sets.
+      - Automatic ranges are symmetric about the reference.
+      - Blue is below, grey at, red above; width grows with the distance.
+      - A unit with no ambient value and no setting stays a plain range. Other members keep the sequential ramp.
+    - **Fixed lesson ranges.** A value beyond the range is drawn at the range's end with a hollow-diamond mark (`data-clipped`, `ClipMark`), and the title and legend say so.
+    - Each metric's reference and range are saved as `overlay.scales[metric]` and sanitised: both ends, min below max.
+    - **Quality-aware phase scale.** The engine classifies each real-fluid stream (`fluid`/`twophase` connector) at the solved `p` and `h` against the dome:
+      - `props::propfun::phase_at` gives subcooled, two-phase with x, superheated or supercritical. A 1e-6 band of the latent heat keeps a saturated state on the dome through round-off.
+      - The bridge sends it as `phases`.
+      - Overlay → Colour wires by → fluid phase: blue, green→orange by x, red, purple.
+      - During playback only a recorded x inside [0, 1] is shown; x = −1 is single phase, not which, and draws as unknown.
+      - Moist-air, liquid and gas lines are not classified. Humid air is coloured one metric at a time (dry-bulb, ω or h) through the existing selector.
+    - **Evidence.**
+      - `phase_at_classifies_against_the_dome` (core) and `two_phase_streams_report_their_phase` (bridge, ideal R134a cycle).
+      - `overlay.test.ts`: references, symmetric auto range, unit without ambient, flows about zero, fixed-range clipping, phase from the engine or a recorded x.
+      - `presentation.test.ts`: the scale sanitiser.
+      - `colour-scales.spec.ts`:
+        - The compressor outlet is superheated and the throttle outlet two-phase.
+        - Pressure diverges about 101,325 Pa.
+        - A fixed range from 200 kPa clips and marks exactly the two low-side wires.
+        - No `solve` or `check` runs.
+    - **Found and fixed on the way:** the phase of a saturated EV stream flipped between a slider drag and a plain solve under round-off. `sliderSolve.test.ts` caught it, and the band above fixes it.
   1. **Explicit port-flow metadata.** The engine reports each port's role and measured-flow sign per domain (fluid, liquid, two-phase, moist air, heat, electrical, mechanical, translational). This replaces `flowAlong`'s in/out naming. Where a direction is not known, it stays unknown; it is never inferred from drawing order or a pressure gradient.
   2. **Flow particles.**
     - Particles move along the routed wire paths. Speed follows the log of the flow magnitude, normalised per domain; direction comes from (1).
