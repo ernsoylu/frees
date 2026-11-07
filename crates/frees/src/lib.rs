@@ -37,6 +37,7 @@ use serde_json::{json, Map, Value};
 use wasm_bindgen::prelude::*;
 
 mod analysis;
+pub mod live;
 mod repl;
 
 // Wave B's wiring of the Phase-8 analysis layer behind the transcribed

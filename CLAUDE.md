@@ -71,6 +71,7 @@ frees-wasm/
   - Rejects stranded requests with `'Operation stopped'` when extra workers are retired (`retireExtraWorkers`).
   - Guards message and error callbacks (`if (!pool.includes(w)) return`) against late events from retired or terminated workers.
   - On fatal WASM traps, terminates all active workers and respawns cleanly on subsequent requests.
+- **Live worker (`web/src/wasm/liveClient.ts`)**: live mode runs on its own instance of `engine.worker.ts`, outside the pool, because the open `LiveSession` lives in that module between requests. It pulls with at most one advance in flight. Every reply is checked against the open's generation; a stale reply or a `gone` session answers `null`, never stale state. A trap retires the worker, and the next open respawns it.
 - **Prepared Solver Reuse (`PreparedDocument`)**:
   - Structural compilation (AST parsing, component expansion, call flattening, block decomposition, analytic differentiation, variable specs, dense plans) is hoisted.
   - Numeric pin mutations update in-place without re-compilation.

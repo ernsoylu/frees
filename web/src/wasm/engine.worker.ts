@@ -15,7 +15,8 @@
 //                     'psychrometricChart' | 'replEvaluate' | 'replClear' |
 //                     'monteCarlo' | 'optimize' | 'optimizeMulti' |
 //                     'curveFit' | 'parameterFit' | 'pidTune' |
-//                     'extractPlant',
+//                     'extractPlant' | 'liveOpen' | 'liveAdvance' |
+//                     'liveStep' | 'liveReset' | 'liveDispose',
 //             args: string[]}
 //   response {id, ok: true, result: string} | {id, ok: false, fatal?: boolean, error: string}
 //
@@ -23,6 +24,11 @@
 // SolveResponse/CheckResponse/LanguageReference; a bare semver string for
 // 'version'). Bulk numeric tables travel separately in transferable buffers;
 // envelope parsing happens on the client side.
+//
+// Live mode (Phase K2) runs on its own instance of this worker, outside the
+// sweep pool (liveClient.ts): the open session lives in the wasm module
+// between requests. A live chunk's rows come back as the one buffer in
+// `odeBuffers`, row-major like a solve's ODE tables.
 //
 // Failure discipline:
 // Document problems return {ok: true} with error data payloads from the wasm boundary.
@@ -48,6 +54,11 @@ import init, {
   sensitivity,
   install_currency_rates,
   install_property_table,
+  live_advance,
+  live_dispose,
+  live_open,
+  live_reset,
+  live_step,
   fluids_used,
   fluid_available,
   mixture_tables_available,
@@ -233,6 +244,11 @@ export interface EngineRequest {
     | 'psychrometricChart'
     | 'replEvaluate'
     | 'replClear'
+    | 'liveOpen'
+    | 'liveAdvance'
+    | 'liveStep'
+    | 'liveReset'
+    | 'liveDispose'
   args: string[]
 }
 
@@ -292,7 +308,7 @@ const handle = async (event: MessageEvent<EngineRequest>) => {
     let odeBuffers: Float64Array[] | null = null
     const transferables: Transferable[] = []
 
-    if (method === 'solve' || method === 'solveTable' || method === 'check') {
+    if (method === 'solve' || method === 'solveTable' || method === 'check' || method === 'liveOpen') {
       args[0] = await prepareSource(args[0] ?? '')
     }
     // Every request may name a fluid: a document, an analysis job's model, a
@@ -324,6 +340,30 @@ const handle = async (event: MessageEvent<EngineRequest>) => {
         }
         break
       }
+      case 'liveOpen':
+        result = live_open(args[0] ?? '', args[1] ?? '', Number(args[2] ?? 0))
+        break
+      case 'liveAdvance':
+      case 'liveStep': {
+        const out =
+          method === 'liveAdvance'
+            ? live_advance(Number(args[0]), Number(args[1]), Number(args[2]))
+            : live_step(Number(args[0]), args[1] ?? '', Number(args[2] ?? 1))
+        result = (out?.header as string) ?? ''
+        const rows = out?.rows as Float64Array | undefined
+        if (rows && rows.buffer) {
+          odeBuffers = [rows]
+          transferables.push(rows.buffer)
+        }
+        break
+      }
+      case 'liveReset':
+        result = live_reset(Number(args[0]))
+        break
+      case 'liveDispose':
+        live_dispose(Number(args[0]))
+        result = ''
+        break
       case 'monteCarlo':
         result = monte_carlo(args[0] ?? '', args[1] ?? '')
         break
