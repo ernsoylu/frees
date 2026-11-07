@@ -220,6 +220,17 @@ describe('annotations (VIEW-09) and rename', () => {
     expect(moved.annotations.map((a) => a.target)).toEqual(['', 'sub1.ra', 'sub1.ra.a.i'])
   })
 
+  it('I1: keeps an insight on known blocks, drops an unknown kind or a malformed list, and a rename moves each block', () => {
+    const good = { id: 'n1', kind: 'insight' as const, scope: '', at: { x: 0, y: 0 }, text: '', target: 'rc-tau:c1,r1' }
+    const { presentation, repaired } = sanitizePresentation({
+      ...EMPTY_PRESENTATION,
+      annotations: [good, { ...good, id: 'n2', target: 'nonsense:c1' }, { ...good, id: 'n3', target: 'rc-tau:' }, { ...good, id: 'n4', target: 'rc-tau:c1:r1' }],
+    })
+    expect(presentation.annotations).toEqual([good])
+    expect(repaired).toBe(3)
+    expect(renamePresentation(presentation, new Map([['r1', 'rload']])).annotations[0].target).toBe('rc-tau:c1,rload')
+  })
+
   it('keeps a junction place when the rename changes which endpoint sorts first', () => {
     const set = { domain: 'electrical', endpoints: ['a.p', 'b.p', 'c.p'] } as ConnectionDto
     const p = { ...EMPTY_PRESENTATION, positions: { '$node$a.p': { x: 1, y: 2 } }, locked: ['$node$a.p'] }
