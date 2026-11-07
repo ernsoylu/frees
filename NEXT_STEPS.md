@@ -597,6 +597,14 @@ entry here is checked off with evidence when it closes.
     - **Lesson pages in the gallery** show the objective, domain, concepts, prerequisites, the prediction asked, the paired lesson and the sources. Lessons are exempt from the per-category gallery cap.
     - **Gates in `build-book`.** The build fails if a lesson is missing from the gallery or a built page is missing from the index. Results are built with DOM text nodes, never markup.
     - **Evidence.** `search.test.ts` covers matching, facets and ranking. `searchPage.test.ts` drives the installed page in jsdom (filters, `?q=`, the live count). The built `search.html?q=capacitor` gives 9 results in Chromium, with the capacitor-sharing lesson first. `build-book` builds 903 pages, 54 of them in the gallery; `check-docs` is green.
+  - **I6 done 2026-11-07 (`i6-share-hardening`).**
+    - **A versioned, bounded `#share=` schema** (`web/src/share.ts`). Format 1 (no prefix) is the document alone, and a link without lesson settings still emits it, so every deployed frees opens it. Format 2 (`#share=2.<lz JSON>`) adds the open lesson and the pinned sliders (value, unit, range).
+    - **Reading is bounded.** It accepts a payload of at most 16,000 characters and a document of at most 2 MB. A lesson id must have gallery-id syntax and a known lesson. At most 16 sliders are read; each needs an identifier name, finite numbers, and a range that brackets the value, which is clamped into it. A unit cannot contain brackets, braces, quotes or line breaks, because it is written into an override equation. A newer format says so and asks for a reload. Anything malformed opens the normal workspace, as before.
+    - **Opening a format-2 link** reopens the lesson beside the shared text with the shared sliders, at boot, from the live `hashchange`, or through the open-shared prompt. The copy notice no longer lists the sliders as left behind.
+    - **Explicit fallback past the cap.** A link over 16,000 characters is refused with a notice that names the cap and the way out: save the project and send the file. When the document alone fits, a button copies that shorter link and says it leaves the lesson and the sliders behind. There is no server and no shortener.
+    - The early-Solve race the I6 build exposed is fixed on I4 (see its *Found and fixed*).
+    - **Evidence.** `share.test.ts` (12 tests: v1 compatibility, the v2 round-trip, a newer format, forged links with clamped, duplicate, non-identifier, empty-range, NaN and injected-unit sliders, the payload bound). `lessons.spec.ts`: the RC lesson changed to R_s = 2000 Ω and shared from the palette, then opened in a second tab with the lesson and slider back (solved 3.9347 V, hash cleared); a 30,000-character document refused with the cap named; the sensor-lag chart lesson under emulated reduced motion (predict, change, ✓, Reset to baseline).
+  - **Phase I acceptance, 2026-11-07.** Every lesson has graded CHECKs, and `lessons.test.ts` solves each one's baseline, change and reset through the WASM engine. Keyboard (I2 thermal) and reduced-motion (I6 sensor) journeys pass. `check-docs` (754/754), `check-examples` (809/809 blocks, 2,898 assertions) and `build-book` are green.
   1. **Insight cards.** τ = RC, thermal τ = mC/UA, ω_n and ζ, Carnot and actual COP, NTU-ε and glide, each computed from solved values and attached to blocks or areas (VIEW-09).
   2. **A lesson manifest beside a gallery example.** It holds:
      - the objective, prerequisites and the governing equation;
@@ -643,6 +651,27 @@ entry here is checked off with evidence when it closes.
       - `check-examples` 821/821 blocks with 2,936 assertions, through a rebuilt WASM module.
       - `component_families`, `component_library`, `u5_components` and the `components` unit tests (pinned counts 43 and 324).
       - `componentPorts.test.tsx` pins the new symbol mapping.
+  - **J2 done 2026-11-07 (`j2-signal`): five signal blocks** in `signal.frees` (library 324 → 329).
+    - **`SigChirp`:** a linear sweep from f0 to f1 over T.
+    - **`SigNoise`:** seeded Gaussian samples every dt, joined linearly.
+      - Sample k is `randg`'s Java draw for mod(k·2654435761 + seed·40503, 2³¹ − 1) + 1, so it is deterministic per seed on every target.
+      - The mix is needed because Java's first draws for consecutive seeds are nearly identical: lag-one correlation 0.999 for seed + k, against −0.03 with the mix.
+    - **`SigQuantize`:** q·round(in/q), with tanh steps.
+    - **`SigSampleHold`:** a track-and-hold. A smooth periodic aperture ta, centred on every k·Ts, tracks with time constant tau.
+    - **`SigTimer`:** an on-delay output and a one-shot pulse, with an elapsed-time state that re-arms through tr.
+    - **Found:** IDA's step size underflows on a hard gate, and on intermediates that jump (a sample index, a floor), even when the output is continuous. So the blocks keep only continuous variables: the gate is C∞, and noise and quantize are single expressions. The one-shot ends early if its input falls before T; it is not a retriggerable monostable, and the page says so.
+    - **Each has a reference page** with a CHECKed example:
+      - the chirp against sin(π/8) and its instantaneous frequency;
+      - the noise midpoint against two direct `randg` draws, the sample also matching an independent Python port of `java.util.Random.nextGaussian`;
+      - the quantizer at two levels;
+      - sample-and-hold holding 0 until the next aperture and 1 after it;
+      - the timer's on-delay and pulse at the analytic times.
+  - **Phase J acceptance, 2026-11-07.**
+    - `check-docs` coverage is 100% (771/771).
+    - Every new component has unit-typed parameters, and its CHECKs grade with zero unit warnings (`check-examples` 826/826, 2,954 assertions).
+    - Each component is graded against an analytic or independent reference.
+    - The `ThermalFuse` page states what it models.
+    - Out of scope, as F decided: the I²t fuse and the meter symbols.
   1. **Electrical primitives** (scope as decided in F):
      - an event- or signal-driven `Switch` (and an SPDT);
      - sine and signal-controlled voltage and current sources;

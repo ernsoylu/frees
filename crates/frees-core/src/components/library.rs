@@ -1,4 +1,4 @@
-//! The built-in standard component library — 324 components, embedded as
+//! The built-in standard component library — 329 components, embedded as
 //! `.frees` text and parsed by the ordinary front end.
 //!
 //! Port of
@@ -152,7 +152,7 @@ pub static FILES: [LibraryFile; 13] = [
     LibraryFile {
         domain: "signal",
         text: include_str!("library-data/signal.frees"),
-        components: 34,
+        components: 39,
     },
 ];
 
@@ -168,8 +168,10 @@ pub static FILES: [LibraryFile; 13] = [
 /// the airside economizer, four terminal units and a DOAS block. Twelve
 /// electrical teaching primitives followed (Phase J1, 2026-11-07): switches,
 /// sine and signal-controlled sources, an ideal transformer, an op-amp with
-/// rails, a Zener, a potentiometer, an NTC thermistor and a lamp.
-pub const COMPONENT_COUNT: usize = 324;
+/// rails, a Zener, a potentiometer, an NTC thermistor and a lamp; then five
+/// signal blocks (Phase J2): a chirp, seeded noise, a quantizer, a
+/// sample-and-hold and a timer.
+pub const COMPONENT_COUNT: usize = 329;
 
 /// The separator the Java appends after **every** file, including the last
 /// (`ComponentLibrary.loadSource`).

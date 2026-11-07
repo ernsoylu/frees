@@ -49,7 +49,7 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
-import { buildShareUrl, clearRawDocumentUrl, clearShareHash, deriveProjectTitle, extractSharedText, fetchRawDocument } from './share'
+import { buildShareUrl, clearRawDocumentUrl, clearShareHash, deriveProjectTitle, fetchRawDocument, MAX_SHARE_URL_CHARS, readShareHash, sharedDocumentOf, type SharedDocument } from './share'
 import { openPrintReport } from './report'
 import {
   check,
@@ -347,13 +347,16 @@ function replOverrideEquation(v: VariableResult): string {
  * `clearShareHash` exists to prevent. It runs from a mount effect instead,
  * which is after commit and, unlike a render body, never replayed.
  */
-const SHARED_BOOT: { text: string; conflicts: boolean } | null = (() => {
-  const shared = extractSharedText(globalThis.location.hash)
+const SHARE_READ = readShareHash(globalThis.location.hash)
+const SHARED_BOOT: { doc: SharedDocument; conflicts: boolean } | null = (() => {
+  const shared = sharedDocumentOf(SHARE_READ)
   if (shared === null) return null
   // I4: an embed never reads the visitor's own workspace, so it never conflicts.
   const saved = EMBED.embed ? null : loadProjectLocal()
-  return { text: shared, conflicts: saved?.text != null && saved.text !== shared }
+  return { doc: shared, conflicts: saved?.text != null && saved.text !== shared.text }
 })()
+/** I6: a link that carries lesson settings, not only the document. */
+const carriesSettings = (d: SharedDocument) => d.lesson !== undefined || d.sliders !== undefined
 
 // Capture before effects consume the URL; valid #share= links take precedence.
 const RAW_DOCUMENT_URL = new URLSearchParams(globalThis.location.search).get('url')
@@ -377,9 +380,9 @@ export default function App() {
   // `SharedLinkModal` below, which replaces the old blocking
   // `globalThis.confirm()` — a browser-chrome dialog that also stalled the
   // boot render while it was open.
-  const sharedBoot = SHARED_BOOT !== null && !SHARED_BOOT.conflicts ? SHARED_BOOT.text : null
-  const [shareOffer, setShareOffer] = useState<string | null>(
-    SHARED_BOOT !== null && SHARED_BOOT.conflicts ? SHARED_BOOT.text : null,
+  const sharedBoot = SHARED_BOOT !== null && !SHARED_BOOT.conflicts ? SHARED_BOOT.doc.text : null
+  const [shareOffer, setShareOffer] = useState<SharedDocument | null>(
+    SHARED_BOOT !== null && SHARED_BOOT.conflicts ? SHARED_BOOT.doc : null,
   )
 
   const bootRef = useRef<FreesProject | null | undefined>(undefined)
@@ -451,19 +454,9 @@ export default function App() {
 
   // currentSlices is built further down, from state declared after this.
   const currentSlicesRef = useRef<(() => ProjectSlices) | null>(null)
-  const handleShareLink = useCallback(() => {
-    // CFG-04: the link carries the equations only; say what stays behind.
-    const slices = currentSlicesRef.current?.()
-    const notes = slices ? projectOnlyNotes(buildProject(slices)) : []
-    const url = buildShareUrl(textRef.current)
-    if (url === null) {
-      notifications.show({
-        color: 'yellow',
-        title: 'Document too large to share by URL',
-        message: 'The compressed link would be too long to travel reliably — save the .frees file and send that instead.',
-      })
-      return
-    }
+  // The open lesson is declared further down too.
+  const shareLessonRef = useRef<string | undefined>(undefined)
+  const copyShareUrl = useCallback((url: string, notes: string[]) => {
     navigator.clipboard.writeText(url).then(
       () => notifications.show({
         color: 'teal',
@@ -475,6 +468,38 @@ export default function App() {
       () => { globalThis.prompt('Copy the share link:', url) },
     )
   }, [])
+  const handleShareLink = useCallback(() => {
+    // CFG-04: the link carries the equations, and (I6) the open lesson and
+    // the pinned sliders; say what stays behind.
+    const slices = currentSlicesRef.current?.()
+    const notes = slices ? projectOnlyNotes(buildProject({ ...slices, sliders: [] })) : []
+    const extras = { lesson: shareLessonRef.current, sliders: slices?.sliders }
+    const url = buildShareUrl(textRef.current, undefined, extras)
+    if (url !== null) return copyShareUrl(url, notes)
+    // I6: past the cap the fallback is explicit, never a silently shorter link.
+    const bare = extras.lesson || extras.sliders?.length ? buildShareUrl(textRef.current) : null
+    const id = 'share-too-long'
+    notifications.show({
+      id,
+      color: 'yellow',
+      autoClose: false,
+      title: 'Too large to share by URL',
+      message: (
+        <>
+          <Text size="sm">
+            The link would be longer than {MAX_SHARE_URL_CHARS.toLocaleString('en-US')} characters, too long to travel reliably.
+            Save the project (Ctrl+S) and send the .frees file instead.
+          </Text>
+          {bare !== null && (
+            <Button mt="xs" size="xs" variant="light" onClick={() => {
+              notifications.hide(id)
+              copyShareUrl(bare, [...notes, 'the lesson and the pinned sliders'])
+            }}>Copy a link to the document alone</Button>
+          )}
+        </>
+      ),
+    })
+  }, [copyShareUrl])
 
   const handleOpenUrl = useCallback(() => {
     setShowOpenUrl(true)
@@ -484,9 +509,10 @@ export default function App() {
   // Runs whether or not the document was accepted — declining still means the
   // link has been dealt with.
   useEffect(() => {
-    if (SHARED_BOOT !== null) {
+    if (SHARE_READ !== null) {
       clearShareHash()
-      if (RAW_DOCUMENT_URL !== null) clearRawDocumentUrl()
+      if (RAW_DOCUMENT_URL !== null && SHARED_BOOT !== null) clearRawDocumentUrl()
+      if ('error' in SHARE_READ) notifications.show({ color: 'yellow', title: 'Could not open the link', message: SHARE_READ.error, autoClose: false })
     }
   }, [])
 
@@ -501,10 +527,14 @@ export default function App() {
   // autosave and may never have been saved at all.
   useEffect(() => {
     const onHashChange = () => {
-      const shared = extractSharedText(globalThis.location.hash)
+      const shared = readShareHash(globalThis.location.hash)
       if (shared === null) return
       clearShareHash()
-      if (shared === textRef.current) return // already the open document
+      if ('error' in shared) {
+        notifications.show({ color: 'yellow', title: 'Could not open the link', message: shared.error, autoClose: false })
+        return
+      }
+      if (shared.text === textRef.current && !carriesSettings(shared)) return // already the open document
       setShareOffer(shared)
     }
     globalThis.addEventListener('hashchange', onHashChange)
@@ -512,13 +542,18 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (sharedBoot !== null) {
+    // I6: a link with lesson settings opens the way an example does, so the
+    // lesson and its sliders come with it.
+    if (sharedBoot !== null && SHARED_BOOT !== null && carriesSettings(SHARED_BOOT.doc)) openSharedDocument(SHARED_BOOT.doc)
+    else if (sharedBoot !== null) {
       notifications.show({
         color: 'teal',
         title: 'Opened shared document',
         message: 'Loaded from the link — nothing was stored on a server.',
       })
     }
+    // Boot only, like the read above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sharedBoot])
   const [checkResult, setCheckResult] = useState<CheckResponse | null>(null)
   const [stopped, setStopped] = useState(false)
@@ -589,6 +624,7 @@ export default function App() {
   const [solving, setSolving] = useState(false)
   // Phase I2: the lesson beside the open gallery example, if it has one.
   const [lesson, setLesson] = useState<Lesson | null>(null)
+  useEffect(() => { shareLessonRef.current = lesson?.example }, [lesson])
   // The engine's overall completion while a solve runs, 0…1, or null when
   // nothing is running. The Solve button paints it as its own background —
   // this is the answer to the Phase 7–8 "spinning worker with no cancel"
@@ -1699,11 +1735,14 @@ export default function App() {
     scheduleSliderSolve(30)
   }
 
-  function openSharedDocument(text: string) {
+  function openSharedDocument(doc: SharedDocument) {
+    // I6: a known lesson reopens beside the shared text, as its example would.
+    const shared = doc.lesson ? lessonFor(doc.lesson) : null
     actuallyLoadExample({
-      id: 'shared-link', title: 'Shared document',
-      description: 'Opened from a link', category: 'Shared', text,
+      id: shared?.example ?? 'shared-link', title: shared?.title ?? 'Shared document',
+      description: 'Opened from a link', category: 'Shared', text: doc.text,
     })
+    if (doc.sliders) setPinnedSliders(doc.sliders)
     notifications.show({ color: 'teal', title: 'Opened shared document', message: 'Loaded from the link.' })
   }
 
@@ -1740,9 +1779,9 @@ export default function App() {
     if (loaded === textRef.current) return
     // Include edits and project switches made while the download was pending.
     if (boot !== null || textRef.current !== initialText || workspaceEpoch !== initialEpoch) {
-      setShareOffer(loaded)
+      setShareOffer({ text: loaded })
     } else {
-      openSharedDocument(loaded)
+      openSharedDocument({ text: loaded })
     }
   })
 
@@ -3955,10 +3994,10 @@ export default function App() {
         opened={shareOffer !== null}
         onCancel={() => setShareOffer(null)}
         onOpenShared={() => {
-          const text = shareOffer
+          const doc = shareOffer
           setShareOffer(null)
-          if (text === null) return
-          openSharedDocument(text)
+          if (doc === null) return
+          openSharedDocument(doc)
         }}
       />
 
