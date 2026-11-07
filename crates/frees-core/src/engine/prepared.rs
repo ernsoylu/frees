@@ -64,6 +64,8 @@ pub struct PreparedDocument {
     literal_pins: Vec<Equation>,
     prep_count: usize,
     solve_count: usize,
+    /// Set only inside [`Self::open_live`].
+    live: Option<super::LiveCapture>,
 }
 
 impl PreparedDocument {
@@ -271,6 +273,7 @@ impl PreparedDocument {
             literal_pins: Vec::new(),
             prep_count: 0,
             solve_count: 0,
+            live: None,
         })
     }
 
@@ -432,6 +435,28 @@ impl PreparedDocument {
         self.solve_with_pins_and_warm(pinned, parametric, None)
     }
 
+    /// Solve the document's steady part and open DYNAMIC block `block`
+    /// (0-based) as a live session at `t0` (Phase K1). The solution is the
+    /// steady result, with no ODE Tables: the session integrates the block.
+    pub fn open_live(
+        &mut self,
+        block: usize,
+    ) -> std::result::Result<(Solution, crate::ode::live::LiveSession), SolveFailure> {
+        self.live = Some(super::LiveCapture {
+            block,
+            session: None,
+        });
+        let solved = self.solve_with_pins(&[], None);
+        let session = self.live.take().and_then(|c| c.session);
+        let solution = solved?;
+        let session = session.ok_or_else(|| SolveFailure {
+            error: FreesError::solver("Live mode: the document has no DYNAMIC block to run."),
+            failed_block_index: None,
+            partial: None,
+        })?;
+        Ok((solution, session))
+    }
+
     /// Solve with a given set of pinned variable values, optional parametric accessors, and optional warm-start scope.
     pub fn solve_with_pins_and_warm(
         &mut self,
@@ -460,6 +485,7 @@ impl PreparedDocument {
                 &BTreeMap::new(),
                 base_ctx,
                 None,
+                self.live.as_mut(),
             )?;
             let (_, unit_report) = unit_check(
                 &[],
@@ -629,6 +655,7 @@ impl PreparedDocument {
             base_ctx,
             bridge.as_ref(),
             solve_settings,
+            self.live.as_mut(),
         )
     }
 
@@ -647,6 +674,7 @@ impl PreparedDocument {
         base_ctx: EvalContext<'_>,
         bridge: Option<&crate::ode::accessors::DynamicAccessorContext<'_>>,
         solve_settings: &SolverSettings,
+        live: Option<&mut super::LiveCapture>,
     ) -> std::result::Result<Solution, SolveFailure> {
         let mut diagnostics = prep.diagnostics.clone();
         check_bounds(&prep.specs, scope, &mut diagnostics);
@@ -737,8 +765,15 @@ impl PreparedDocument {
         let mut inferred_units = prep.unit_report.inferred.clone();
         inferred_units.extend(prep.declared_units.clone());
 
-        let ode_tables =
-            solve_dynamic_systems(doc, &scope_mut, settings, &prep.specs, base_ctx, bridge)?;
+        let ode_tables = solve_dynamic_systems(
+            doc,
+            &scope_mut,
+            settings,
+            &prep.specs,
+            base_ctx,
+            bridge,
+            live,
+        )?;
 
         Ok(Solution {
             registered_calls: doc.registered_calls.clone(),
@@ -859,6 +894,7 @@ impl PreparedDocument {
                 base_ctx,
                 bridge.as_ref(),
                 solve_settings,
+                None,
             )?;
             solutions.push(sol);
         }

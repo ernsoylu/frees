@@ -670,6 +670,18 @@ enum NlFlag {
     ErrorTest,
 }
 
+/// The residual a [parked](IdaDaeSolver::parked) solver points at between
+/// live chunks: it holds no borrow, and evaluating it is an error.
+struct Parked;
+
+impl DaeResidual for Parked {
+    fn eval(&self, _t: f64, _y: &[f64], _yp: &[f64], _res: &mut [f64]) -> Result<()> {
+        Err(FreesError::solver(
+            "a parked DAE solver was stepped before being rebound to its residual",
+        ))
+    }
+}
+
 /// The frees-facing implicit-DAE integrator.
 ///
 /// ```ignore
@@ -827,6 +839,87 @@ impl<'a> IdaDaeSolver<'a> {
         })
     }
 
+    /// Moves this solver — its BDF history, step size, Jacobian and root
+    /// state, everything but the two borrows — onto `res` and `root_fn`, which
+    /// must describe the same problem (a residual rebuilt from the same
+    /// assembly). Integration continues exactly as if it had never stopped:
+    /// this is how a live session keeps one integration across calls without
+    /// holding a borrow between them. [`Self::parked`] is the borrow-free
+    /// resting form.
+    pub fn rebind<'b>(
+        self,
+        res: &'b dyn DaeResidual,
+        root_fn: Option<&'b dyn DaeRootFn>,
+    ) -> IdaDaeSolver<'b> {
+        IdaDaeSolver {
+            res,
+            root_fn,
+            n: self.n,
+            rtol: self.rtol,
+            atol: self.atol,
+            max_steps: self.max_steps,
+            hmax_inv: self.hmax_inv,
+            variable_id: self.variable_id,
+            nroots: self.nroots,
+            path: self.path,
+            phi: self.phi,
+            psi: self.psi,
+            alpha: self.alpha,
+            beta: self.beta,
+            sigma: self.sigma,
+            gamma: self.gamma,
+            tn: self.tn,
+            hh: self.hh,
+            hused: self.hused,
+            kk: self.kk,
+            kused: self.kused,
+            knew: self.knew,
+            phase: self.phase,
+            ns: self.ns,
+            nst: self.nst,
+            rr: self.rr,
+            tretlast: self.tretlast,
+            cj: self.cj,
+            cjlast: self.cjlast,
+            cjold: self.cjold,
+            cjratio: self.cjratio,
+            ss: self.ss,
+            oldnrm: self.oldnrm,
+            eps_newt: self.eps_newt,
+            toldel: self.toldel,
+            ewt: self.ewt,
+            yy: self.yy,
+            yp: self.yp,
+            yypredict: self.yypredict,
+            yppredict: self.yppredict,
+            ee: self.ee,
+            savres: self.savres,
+            jac: self.jac,
+            jcur: self.jcur,
+            force_setup: self.force_setup,
+            lu_sol: self.lu_sol,
+            tlo: self.tlo,
+            thi: self.thi,
+            trout: self.trout,
+            ttol: self.ttol,
+            glo: self.glo,
+            ghi: self.ghi,
+            grout: self.grout,
+            iroots: self.iroots,
+            gactive: self.gactive,
+            rootdir: self.rootdir,
+            irfnd: self.irfnd,
+            initialized: self.initialized,
+        }
+    }
+
+    /// This solver detached from its residual, to be [`rebind`](Self::rebind)
+    /// before the next step. Stepping a parked solver reports an error rather
+    /// than integrating anything.
+    pub fn parked(self) -> IdaDaeSolver<'static> {
+        self.rebind(&Parked, None)
+    }
+
     /// Builds a solver configured the way `DynamicSolver.solveWithIda` does:
     /// tolerances, variable id, roots, and the sparse linear solver above
     /// [`SPARSE_THRESHOLD`].
@@ -976,6 +1069,25 @@ impl<'a> IdaDaeSolver<'a> {
     pub fn reinit(&mut self, t0: f64, y0: &[f64], yp0: &[f64]) -> Result<()> {
         self.require_init()?;
         self.init(t0, y0, yp0)
+    }
+
+    /// The integrator's internal time `tn`: the end of its last accepted step,
+    /// which can lie past the last time handed out.
+    pub fn current_time(&self) -> f64 {
+        self.tn
+    }
+
+    /// The size of the last accepted step (`IDAGetLastStep`), 0 before the
+    /// first.
+    pub fn last_step(&self) -> f64 {
+        self.hused
+    }
+
+    /// The interpolated `(y, y')` at `t` from the current history, changing
+    /// nothing: valid over the last step, `[tn − h, tn]`. This is the value
+    /// [`Self::step`] hands out for a `tout` the integrator has already passed.
+    pub fn interpolate(&self, t: f64) -> (Vec<f64>, Vec<f64>) {
+        self.get_solution(t)
     }
 
     /// The `(y, y')` most recently handed out — the initial condition after
@@ -1627,31 +1739,15 @@ impl<'a> IdaDaeSolver<'a> {
     /// roots).
     pub fn step(&mut self, tout: f64) -> Result<Step> {
         self.require_init()?;
-        let root_fn_present = self.nroots > 0 && self.root_fn.is_some();
-
         if self.nst > 0 {
-            if root_fn_present {
-                let troundoff = 100.0 * UROUND * (self.tn.abs() + self.hh.abs());
-                if self.rcheck2()? {
-                    self.irfnd = true;
-                    return Ok(self.root_step());
-                }
-                if (self.tn - self.tretlast).abs() > troundoff {
-                    if self.rcheck3(tout)? {
-                        self.irfnd = true;
-                        return Ok(self.root_step());
-                    }
-                    self.irfnd = false;
-                }
+            if let Some(root) = self.reentry_roots(tout)? {
+                return Ok(root);
             }
             if (self.tn - tout) * self.hh >= 0.0 {
                 return Ok(self.solution_step(tout));
             }
         } else {
-            self.first_call_setup(tout)?;
-            if root_fn_present {
-                self.rcheck1()?;
-            }
+            self.first_call(tout)?;
         }
 
         let mut nstloc = 0u64;
@@ -1664,34 +1760,103 @@ impl<'a> IdaDaeSolver<'a> {
                     self.max_steps
                 )));
             }
-            // The boundary-installed wall-clock budget (Wave C1) — the same
-            // check `ode/integrator.rs::guard` makes on the explicit path.
-            // Native callers install nothing and can never strike here.
-            if let Some(message) = crate::ode::deadline::strike() {
-                return Err(FreesError::solver(message));
-            }
-            if self.nst > 0 {
-                let phi0 = self.phi[0].clone();
-                self.set_ewt(&phi0)?;
-            }
-            if self.tn + self.hh == self.tn {
-                return Err(FreesError::solver(format!(
-                    "the DAE integrator's step size underflowed at t = {} \
-                     (h = {:e}); the residual is probably discontinuous there",
-                    self.tn, self.hh
-                )));
-            }
-            self.ida_step()?;
             nstloc += 1;
-
-            if root_fn_present && self.rcheck3(tout)? {
-                self.irfnd = true;
-                return Ok(self.root_step());
+            if let Some(root) = self.internal_step(tout)? {
+                return Ok(root);
             }
             if (self.tn - tout) * self.hh >= 0.0 {
                 return Ok(self.solution_step(tout));
             }
         }
+    }
+
+    /// Takes one internal step in `IDA_ONE_STEP` mode and returns the state at
+    /// its end, or at the root it crossed. `tout` sizes the first step only, as
+    /// in IDA. The steps are the ones [`Self::step`] takes; what can differ is
+    /// where a root is searched for (up to the step's end here, up to `tout`
+    /// there), so interleaving the two modes keeps the trajectory within
+    /// tolerance, not bit for bit.
+    pub fn step_once(&mut self, tout: f64) -> Result<Step> {
+        self.require_init()?;
+        if self.nst > 0 {
+            if let Some(root) = self.reentry_roots(self.tn)? {
+                return Ok(root);
+            }
+            // Already past the last time handed out: hand out the step's end.
+            if (self.tn - self.tretlast) * self.hh > 0.0 {
+                return Ok(self.solution_step(self.tn));
+            }
+        } else {
+            self.first_call(tout)?;
+        }
+        // Search the whole step for roots: a `tout` beyond it in the
+        // direction of integration (the step's own end is not known yet).
+        let beyond = if self.hh >= 0.0 {
+            f64::INFINITY
+        } else {
+            f64::NEG_INFINITY
+        };
+        if let Some(root) = self.internal_step(beyond)? {
+            return Ok(root);
+        }
+        Ok(self.solution_step(self.tn))
+    }
+
+    /// The re-entry root checks of `IDASolve`: a root left over from the last
+    /// call, then the rest of the last step up to `tout`.
+    fn reentry_roots(&mut self, tout: f64) -> Result<Option<Step>> {
+        if !(self.nroots > 0 && self.root_fn.is_some()) {
+            return Ok(None);
+        }
+        let troundoff = 100.0 * UROUND * (self.tn.abs() + self.hh.abs());
+        if self.rcheck2()? {
+            self.irfnd = true;
+            return Ok(Some(self.root_step()));
+        }
+        if (self.tn - self.tretlast).abs() > troundoff {
+            if self.rcheck3(tout)? {
+                self.irfnd = true;
+                return Ok(Some(self.root_step()));
+            }
+            self.irfnd = false;
+        }
+        Ok(None)
+    }
+
+    fn first_call(&mut self, tout: f64) -> Result<()> {
+        self.first_call_setup(tout)?;
+        if self.nroots > 0 && self.root_fn.is_some() {
+            self.rcheck1()?;
+        }
+        Ok(())
+    }
+
+    /// One pass of `IDASolve`'s stepping loop: the budget, the weights, the
+    /// step, and the root search over it up to `tout`.
+    fn internal_step(&mut self, tout: f64) -> Result<Option<Step>> {
+        // The boundary-installed wall-clock budget (Wave C1) — the same
+        // check `ode/integrator.rs::guard` makes on the explicit path.
+        // Native callers install nothing and can never strike here.
+        if let Some(message) = crate::ode::deadline::strike() {
+            return Err(FreesError::solver(message));
+        }
+        if self.nst > 0 {
+            let phi0 = self.phi[0].clone();
+            self.set_ewt(&phi0)?;
+        }
+        if self.tn + self.hh == self.tn {
+            return Err(FreesError::solver(format!(
+                "the DAE integrator's step size underflowed at t = {} \
+                 (h = {:e}); the residual is probably discontinuous there",
+                self.tn, self.hh
+            )));
+        }
+        self.ida_step()?;
+        if self.nroots > 0 && self.root_fn.is_some() && self.rcheck3(tout)? {
+            self.irfnd = true;
+            return Ok(Some(self.root_step()));
+        }
+        Ok(None)
     }
 
     /// The first-call block of `IDASolve`: the initial step size, the
