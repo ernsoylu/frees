@@ -215,8 +215,11 @@ export interface SchematicPresentation extends SheetState {
   watch: string[]
   /** RUN-03: how a variable reads, by lower-case name. Display only: inputs are never rewritten. */
   formats: Record<string, VariableFormat>
-  /** RUN-04/WIRE-10: the metric the wires are coloured by (`domain:member`, '' for none) and measured-flow arrows. */
-  overlay: { metric: string; arrows: boolean }
+  /**
+   * RUN-04/WIRE-10: the metric the wires are coloured by (`domain:member`, '' for none) and measured-flow arrows.
+   * Phase H: flow particles, and their schematic speed (a multiplier, not a physical velocity).
+   */
+  overlay: { metric: string; arrows: boolean; particles?: boolean; speed?: number }
   /** VIEW-08: named views saved with the project. */
   views: SavedView[]
   /** VIEW-09: notes, callouts, variable cards and legends, each drawn in one scope. */
@@ -471,10 +474,16 @@ function viewOf(v: unknown): { view: ViewSettings; bad: number } {
   return { view, bad }
 }
 
+/** Phase H: the schematic-speed multipliers the overlay offers. */
+export const PARTICLE_SPEEDS = [0.25, 0.5, 1, 2, 4]
+
 function overlayOf(v: unknown): { overlay: SchematicPresentation['overlay']; bad: number } {
-  const { metric, arrows } = record(v) ?? {}
-  const overlay = { metric: typeof metric === 'string' && /^([a-z]+:[a-z]+)?$/.test(metric) ? metric : '', arrows: arrows === true }
-  return { overlay, bad: v !== undefined && (overlay.metric !== metric || overlay.arrows !== arrows) ? 1 : 0 }
+  const { metric, arrows, particles, speed } = record(v) ?? {}
+  const overlay: SchematicPresentation['overlay'] = { metric: typeof metric === 'string' && /^([a-z]+:[a-z]+)?$/.test(metric) ? metric : '', arrows: arrows === true }
+  if (particles === true) overlay.particles = true
+  if (typeof speed === 'number' && PARTICLE_SPEEDS.includes(speed)) overlay.speed = speed
+  const bad = overlay.metric !== metric || overlay.arrows !== arrows || (particles !== undefined && particles !== overlay.particles && particles !== false) || (speed !== undefined && speed !== overlay.speed)
+  return { overlay, bad: v !== undefined && bad ? 1 : 0 }
 }
 
 function badgesOf(v: unknown): { badges: Record<string, string>; bad: number } {

@@ -162,6 +162,9 @@ describe('shown variables (RUN-03)', () => {
     expect(lines.presentation.view.lineWidth).toBe('normal')
     expect(lines.repaired).toBe(3)
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: 'drop table', arrows: 1 } })).toMatchObject({ presentation: { overlay: { metric: '', arrows: false } }, repaired: 1 })
+    // Phase H: particles and their schematic speed, one of the offered steps.
+    expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: '', arrows: false, particles: true, speed: 2 } }).presentation.overlay).toEqual({ metric: '', arrows: false, particles: true, speed: 2 })
+    expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: '', arrows: false, particles: 'yes', speed: 1e6 } as never })).toMatchObject({ presentation: { overlay: { metric: '', arrows: false } }, repaired: 1 })
   })
 })
 

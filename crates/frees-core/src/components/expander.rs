@@ -159,6 +159,37 @@ pub struct Connection {
     pub in_definition: bool,
 }
 
+impl Connection {
+    /// Per endpoint, the solved variable measuring the flow at that port and
+    /// the sign that makes it positive INTO the endpoint's component: the
+    /// convention the node equations use. Kirchhoff domains sign their flow
+    /// into the component; fluid `mdot` runs from a component's inlet to its
+    /// outlet, read from the port name by [`port_direction`]. `None` where no
+    /// rule says: the signal domain, a fluid port named neither in nor out,
+    /// and a definition's own boundary port (an endpoint without an instance).
+    pub fn flow_into(&self) -> Vec<Option<(String, f64)>> {
+        use super::domains::{port_direction, PortDirection};
+        let member = self.domain.flow_member();
+        self.endpoints
+            .iter()
+            .zip(&self.streams)
+            .map(|(endpoint, stream)| {
+                let member = member?;
+                if !endpoint.contains('.') {
+                    return None;
+                }
+                let sign = match (self.domain, port_direction(endpoint)) {
+                    (Domain::Fluid, PortDirection::In) => 1.0,
+                    (Domain::Fluid, PortDirection::Out) => -1.0,
+                    (Domain::Fluid, PortDirection::Unknown) => return None,
+                    _ => 1.0,
+                };
+                Some((format!("{stream}.{member}"), sign))
+            })
+            .collect()
+    }
+}
+
 /// One port of one instance, connected or not — what the schematic needs to
 /// show a free port before a solve.
 #[derive(Debug, Clone, PartialEq)]
@@ -2225,6 +2256,51 @@ mod tests {
     use crate::components::def::{Param, Variant};
     use crate::lexer::tokenize;
     use crate::parser::{parse_expr, Cursor};
+
+    /// Phase H: the flow-into rule per endpoint, on every domain.
+    #[test]
+    fn flow_into_signs_each_endpoint() {
+        let conn = |domain, endpoints: &[&str]| Connection {
+            domain,
+            endpoints: endpoints.iter().map(|e| e.to_string()).collect(),
+            connector: None,
+            fluid: None,
+            streams: endpoints.iter().map(|e| format!("S.{e}")).collect(),
+            source: None,
+            alias: None,
+            in_definition: false,
+        };
+        let rule = |v: &str, s: f64| Some((format!("S.{v}"), s));
+        let fluid = conn(Domain::Fluid, &["pump.out", "hx.hot_in", "tank.port", "in"]);
+        assert_eq!(
+            fluid.flow_into(),
+            vec![
+                rule("pump.out.mdot", -1.0),
+                rule("hx.hot_in.mdot", 1.0),
+                None,
+                None
+            ]
+        );
+        for (domain, member) in [
+            (Domain::Heat, "qdot"),
+            (Domain::Electrical, "i"),
+            (Domain::Mechanical, "tau"),
+            (Domain::Translational, "f"),
+        ] {
+            let c = conn(domain, &["a.p", "b.n"]);
+            assert_eq!(
+                c.flow_into(),
+                vec![
+                    rule(&format!("a.p.{member}"), 1.0),
+                    rule(&format!("b.n.{member}"), 1.0)
+                ]
+            );
+        }
+        assert_eq!(
+            conn(Domain::Signal, &["a.y", "b.u"]).flow_into(),
+            vec![None, None]
+        );
+    }
 
     // ── Building documents by hand ───────────────────────────────────────────
     //

@@ -2990,6 +2990,8 @@ export default function App() {
             components={result?.components}
             variables={playIndex === null ? result?.variables : comparedVariables}
             sample={playSample && currentRun ? `run ${currentRun.revision} · ${playSample}` : undefined}
+            paused={playIndex !== null && !playback.playing}
+            recorded={playIndex !== null ? playTable?.vars : undefined}
             blocks={result?.blocks}
             text={textRef.current}
             onRevealLine={goToLine}

@@ -272,6 +272,11 @@ export interface ConnectionDto {
   alias?: string | null
   /** Written inside a component definition: editing it changes every instance. */
   inDefinition?: boolean
+  /** Phase H: per endpoint, the solved variable measuring the flow at that
+   *  port and the sign that makes it positive INTO the endpoint's component;
+   *  null where the engine knows no rule (signal, a fluid port named neither
+   *  in nor out, a definition's own boundary port). */
+  flows?: ({ variable: string; into: number } | null)[]
 }
 
 /** A fluid state table parsed from a STATE TABLE name(...) ... END block: the

@@ -28,3 +28,19 @@ body,
     min-width: 36px;
   }
 }
+
+/* Phase H: flow particles — round dashes moving along the wire's own path.
+   The duration, direction and play state come from the schematic. */
+@keyframes frees-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.flow-particles {
+  animation: frees-flow 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow-particles {
+    display: none;
+  }
+}
