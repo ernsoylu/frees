@@ -192,6 +192,6 @@ Because frees executes in the user's browser, execution boundaries and resource 
 ## Memory and Bundle Budgets
 
 - **WASM Memory**: WebAssembly linear memory grows dynamically as needed for large systems and matrices, bounded by browser tab memory limits.
-- **Binary Size**: The release WebAssembly binary is gated in CI at ≤ 5,120 KiB raw (3,981.7 KiB raw / 1,791.0 KiB gzipped as measured on 2026-09-12). It includes the rustprop real-fluid equations of state for 26 fluids and the 312-component library; there are no precomputed property tables.
+- **Binary Size**: The release WebAssembly binary is gated in CI at ≤ 5,120 KiB raw (3,981.7 KiB raw / 1,791.0 KiB gzipped as measured on 2026-09-12). It includes the rustprop real-fluid equations of state for 26 fluids and the component library; there are no precomputed property tables.
 
 [Related: arch-async, deploy-railway]
