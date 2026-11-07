@@ -117,6 +117,7 @@ import { downloadValuesAsCsv } from './tablesGrid/csv'
 // sessions never open, so they are code-split and only fetched when their tab
 // is first shown (wrapped in <Suspense> at their render sites below).
 const SchematicTab = lazy(() => import('./schematic/SchematicTab'))
+const LessonPanel = lazy(() => import('./LessonPanel'))
 import { declaredInstances } from './schematic/declaration'
 import { diagnosisOwners, LOCAL_ENGINE_FAILURE, withEnclosing } from './schematic/wiring'
 import { EMPTY_PRESENTATION, type SchematicPresentation } from './schematic/presentation'
@@ -169,6 +170,7 @@ const ShortcutsModal = lazy(() => import('./ShortcutsModal'))
 const GettingStartedModal = lazy(() => import('./GettingStartedModal'))
 import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
 import type { Example } from './examples'
+import { lessonFor, LESSONS, type Lesson } from './lessons'
 import type { EquationEditorHandle } from './EquationEditor'
 const EquationEditor = lazy(() => import('./EquationEditor'))
 import {
@@ -583,6 +585,8 @@ export default function App() {
     if (sliderTimer.current) clearTimeout(sliderTimer.current)
   }, [])
   const [solving, setSolving] = useState(false)
+  // Phase I2: the lesson beside the open gallery example, if it has one.
+  const [lesson, setLesson] = useState<Lesson | null>(null)
   // The engine's overall completion while a solve runs, 0…1, or null when
   // nothing is running. The Solve button paints it as its own background —
   // this is the answer to the Phase 7–8 "spinning worker with no cancel"
@@ -1667,7 +1671,21 @@ export default function App() {
     setLastSolvedWithFillMissing(false)
     setProjectName(example.title)
     setWorkspaceEpoch((e) => e + 1)
-    requestAnimationFrame(() => dockRef.current?.reset())
+    const nextLesson = lessonFor(example.id)
+    setLesson(nextLesson)
+    if (nextLesson) setPinnedSliders(nextLesson.sliders.map((sl) => ({ ...sl })))
+    requestAnimationFrame(() => {
+      dockRef.current?.reset()
+      if (nextLesson) dockRef.current?.open(nextLesson.view)
+    })
+  }
+
+  /** I2: the lesson's Reset — its baseline sliders, solved again. */
+  function resetLesson(l: Lesson) {
+    modelRevisionRef.current.bumpValues()
+    setSlidersStale(true)
+    setPinnedSliders(l.sliders.map((sl) => ({ ...sl })))
+    scheduleSliderSolve(30)
   }
 
   function openSharedDocument(text: string) {
@@ -1936,7 +1954,7 @@ export default function App() {
   }
 
   function setSliderValue(name: string, value: number, commit: boolean) {
-    modelRevisionRef.current.bump()
+    modelRevisionRef.current.bumpValues()
     setSlidersStale(true)
     setPinnedSliders((prev) => prev.map((p) => (p.name === name ? { ...p, value } : p)))
     // Dragging re-solves on a short debounce so the solution tracks the handle;
@@ -3683,6 +3701,25 @@ export default function App() {
         </Suspense>
       )}
 
+      {lesson && (
+        <Suspense fallback={null}>
+          <LessonPanel
+            key={lesson.example}
+            lesson={lesson}
+            value={(name) => result?.variables.find((v) => v.name.toLowerCase() === name.toLowerCase())?.value}
+            solving={solving}
+            onSet={(name, value) => setSliderValue(name, value, true)}
+            onReset={() => resetLesson(lesson)}
+            pairTitle={LESSONS.find((l) => l.example === lesson.pair)?.title}
+            onOpenPair={lesson.pair ? () => void import('./examples').then((m) => {
+              const pair = m.EXAMPLES.find((e) => e.id === lesson.pair)
+              if (pair) loadExample(pair)
+            }) : undefined}
+            onClose={() => setLesson(null)}
+          />
+        </Suspense>
+      )}
+
       {showExamples && (
         <Suspense fallback={null}>
           <ExamplesModal
@@ -3893,7 +3930,7 @@ export default function App() {
                 return range ? withSliderBounds(p, range.min, range.max) : p
               })
               if (next.some((p, i) => p.value !== prev[i].value)) {
-                modelRevisionRef.current.bump()
+                modelRevisionRef.current.bumpValues()
                 setSlidersStale(true)
                 scheduleSliderSolve(30)
               }

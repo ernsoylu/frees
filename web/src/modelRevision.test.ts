@@ -67,4 +67,17 @@ describe('ModelRevisionTracker', () => {
     expect(tracker.isCheckValidAndSolvable()).toBe(false)
     expect(tracker.lastCheckedRevision).toBeNull()
   })
+
+  it('carries a passing check across a value-only bump, never across a structural one', () => {
+    const tracker = new ModelRevisionTracker()
+    tracker.finishCheck(tracker.startCheck(), true)
+    const before = tracker.current
+    tracker.bumpValues()
+    expect(tracker.isCurrent(before)).toBe(false)
+    expect(tracker.isCheckValidAndSolvable()).toBe(true)
+    tracker.bump()
+    expect(tracker.isCheckValidAndSolvable()).toBe(false)
+    tracker.bumpValues()
+    expect(tracker.isCheckValidAndSolvable()).toBe(false)
+  })
 })
