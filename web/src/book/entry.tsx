@@ -13,6 +13,7 @@ import { theme } from '../theme'
 
 export { ALL_CATEGORIES, NAV_LABELS, DOCS_CATALOG, REFERENCE_PAGES }
 export { EXAMPLES } from '../examples'
+export { LESSONS } from '../lessons'
 export { buildShareUrl } from '../share'
 
 let appUrl = 'https://frees.softncon.com/'

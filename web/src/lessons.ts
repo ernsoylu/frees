@@ -11,6 +11,10 @@ export interface Lesson {
   /** The gallery example (`EXAMPLES` id) this lesson sits beside. */
   example: string
   title: string
+  /** The engineering domain, for the Book's lesson filters. */
+  domain: string
+  /** The ideas the lesson teaches, for the Book's lesson filters. */
+  concepts: string[]
   objective: string
   prerequisites: string[]
   /** The governing equation, LaTeX. */
@@ -40,6 +44,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-rc-charging',
     title: 'RC charging',
+    domain: 'Electrical',
+    concepts: ['time constant', 'first-order response'],
     objective: 'See that one number, τ = RC, sets how fast a capacitor charges, and that a larger resistance slows it in proportion.',
     prerequisites: ['Ohm’s law', 'A capacitor’s charge q = C·v'],
     equation: 'v(t) = E\\left(1 - e^{-t/\\tau}\\right), \\qquad \\tau = RC',
@@ -59,6 +65,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-thermal-mass',
     title: 'A cooling thermal mass',
+    domain: 'Heat transfer',
+    concepts: ['time constant', 'first-order response', 'lumped capacitance'],
     objective: 'See that a lumped mass cools with the same exponential as a charging capacitor, with τ = C/(hA) in place of RC.',
     prerequisites: ['Heat capacity C = m·c', 'Newton’s law of cooling q = hA·ΔT'],
     equation: 'T(t) - T_\\infty = (T_0 - T_\\infty)\\, e^{-t/\\tau}, \\qquad \\tau = \\frac{C}{hA}',
@@ -78,6 +86,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-rlc-ringing',
     title: 'A ringing RLC circuit',
+    domain: 'Electrical',
+    concepts: ['second-order response', 'damping ratio', 'overshoot'],
     objective: 'See that the damping ratio ζ = (R/2)·sqrt(C/L) alone sets how far a series RLC circuit overshoots its step.',
     prerequisites: ['RC charging', 'An inductor’s v = L·di/dt'],
     equation: 'LC\\,\\ddot v + RC\\,\\dot v + v = E, \\qquad \\zeta = \\frac{R}{2}\\sqrt{\\frac{C}{L}}, \\qquad M_p = e^{-\\pi\\zeta/\\sqrt{1-\\zeta^2}}',
@@ -97,6 +107,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-mass-spring-damper',
     title: 'A mass on a spring and damper',
+    domain: 'Mechanical',
+    concepts: ['second-order response', 'damping ratio', 'overshoot'],
     objective: 'See that a mass on a spring and damper overshoots by the same law as an RLC circuit, with ζ = c/(2·sqrt(k·m)).',
     prerequisites: ['Newton’s second law', 'A spring’s F = k·x and a damper’s F = c·v'],
     equation: 'm\\,\\ddot x + c\\,\\dot x + k\\,x = F, \\qquad \\zeta = \\frac{c}{2\\sqrt{km}}, \\qquad M_p = e^{-\\pi\\zeta/\\sqrt{1-\\zeta^2}}',
@@ -116,6 +128,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-diode',
     title: 'A diode lets current one way',
+    domain: 'Electrical',
+    concepts: ['one-way element'],
     objective: 'See that a diode conducts forward like a small resistance and blocks reverse bias entirely.',
     prerequisites: ['Ohm’s law'],
     equation: 'I = \\begin{cases} \\dfrac{E}{R + 1/G_{on}} & E > 0 \\\\[4pt] 0 & E < 0 \\end{cases}',
@@ -135,6 +149,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-check-valve',
     title: 'A check valve lets flow one way',
+    domain: 'Fluid',
+    concepts: ['one-way element', 'orifice flow'],
     objective: 'See that a check valve passes forward flow by the orifice law and blocks reverse pressure entirely — a diode for fluid.',
     prerequisites: ['Pressure difference drives flow', 'The orifice law ṁ = CdA·sqrt(2ρΔP)'],
     equation: '\\dot m = \\begin{cases} C_dA\\sqrt{2\\rho\\,\\Delta P} & \\Delta P > 0 \\\\[4pt] 0 & \\Delta P < 0 \\end{cases}',
@@ -154,6 +170,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-capacitor-sharing',
     title: 'Two capacitors share their charge',
+    domain: 'Electrical',
+    concepts: ['conservation', 'equalization'],
     objective: 'See that charge conservation, not the resistor, fixes the voltage two capacitors settle at.',
     prerequisites: ['RC charging', 'q = C·v'],
     equation: 'V_\\infty = \\frac{C_1 V_1 + C_2 V_2}{C_1 + C_2}',
@@ -173,6 +191,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-gas-receivers',
     title: 'Two air receivers equalize',
+    domain: 'Pneumatic',
+    concepts: ['conservation', 'equalization', 'ideal gas'],
     objective: 'See that two receivers settle at the volume-weighted pressure, the same conservation that fixes two capacitors’ shared voltage.',
     prerequisites: ['The ideal gas law P·V = m·R·T', 'Conservation of mass'],
     equation: 'P_\\infty = \\frac{P_1 V_1 + P_2 V_2}{V_1 + V_2}',
@@ -192,6 +212,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-throttling',
     title: 'Throttling on the P-h chart',
+    domain: 'Thermodynamics',
+    concepts: ['throttling', 'P-h chart', 'quality'],
     objective: 'See that a throttle keeps enthalpy constant, so its exit quality is read straight down the P-h chart.',
     prerequisites: ['The steady-flow energy equation', 'Quality x of a saturated mixture'],
     equation: 'h_2 = h_1, \\qquad x_2 = \\frac{h_1 - h_f(P_2)}{h_g(P_2) - h_f(P_2)}',
@@ -210,6 +232,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-air-mixing',
     title: 'Mixing two air streams',
+    domain: 'HVAC',
+    concepts: ['psychrometrics', 'mixing', 'conservation'],
     objective: 'See that an adiabatic mix lies on the straight line between its two streams, at the dry-air mass-weighted point.',
     prerequisites: ['Humidity ratio W', 'Reading the psychrometric chart'],
     equation: 'W_3 = \\frac{\\dot m_1 W_1 + \\dot m_2 W_2}{\\dot m_1 + \\dot m_2}, \\qquad h_3 = \\frac{\\dot m_1 h_1 + \\dot m_2 h_2}{\\dot m_1 + \\dot m_2}',
@@ -228,6 +252,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-cooling-coil',
     title: 'A coil that cools and dries air',
+    domain: 'HVAC',
+    concepts: ['psychrometrics', 'dehumidification', 'dew point'],
     objective: 'See that cooling air below its dew point condenses water, and that a colder coil condenses more.',
     prerequisites: ['Dew point', 'Relative humidity and humidity ratio'],
     equation: '\\dot m_w = \\dot m_a\\,(W_{in} - W_{out})',
@@ -246,6 +272,8 @@ export const LESSONS: readonly Lesson[] = [
   {
     example: 'lesson-sensor-lag',
     title: 'A slow sensor in a speed loop',
+    domain: 'Control',
+    concepts: ['feedback', 'sensor lag', 'overshoot'],
     objective: 'See that a controller acts on what its sensor reports, so a sensor lag makes a well-tuned loop overshoot.',
     prerequisites: ['Proportional-integral control', 'A first-order lag'],
     equation: 'F = K_p\\,(v_{set} - v_m) + K_i \\int (v_{set} - v_m)\\,dt, \\qquad \\tau_s\\,\\dot v_m = v - v_m',
