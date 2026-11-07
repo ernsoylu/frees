@@ -5,7 +5,7 @@
 //
 // Run:  npm run build && npx playwright test e2e/insight-cards.spec.ts --project=chromium
 import { expect, test } from '@playwright/test'
-import { engineCalls, openAndSolve } from './journey'
+import { engineCalls, openAndSolve, openSchematic } from './journey'
 
 // τ = C / (k·A/L) = 5000 / (2·1/0.1) = 250 s; the run is T = 300 + 100·exp(-t/250 s).
 const COOL = `// frees-language: 2
@@ -24,12 +24,7 @@ test.skip(({ browserName }) => browserName !== 'chromium', 'One engine is enough
 test.setTimeout(150_000)
 test('I1: a thermal time-constant card from the blocks’ own parameters, offered only where it fits, without solving', async ({ page }) => {
   await openAndSolve(page, 'insight-cards', COOL)
-  await page.locator('body').click({ position: { x: 5, y: 5 } })
-  await page.keyboard.press('Control+K')
-  await page.getByPlaceholder('Search views, tools, and actions…').fill('Schematic')
-  await page.keyboard.press('Enter')
-  const svg = page.getByRole('application', { name: /Component network schematic/ })
-  await expect(svg.locator('[data-node="m"]')).toBeVisible({ timeout: 60_000 })
+  const svg = await openSchematic(page, 'm')
   await page.waitForTimeout(1000)
   const before = (await engineCalls(page)).length
 
@@ -71,12 +66,7 @@ cond.out.h = Enthalpy(R134a, P=P_H, x=0)
 
 test('I1: the refrigeration COP card takes Q and W from the solve and Carnot from the engine’s saturation temperatures', async ({ page }) => {
   await openAndSolve(page, 'insight-cop', CYCLE)
-  await page.locator('body').click({ position: { x: 5, y: 5 } })
-  await page.keyboard.press('Control+K')
-  await page.getByPlaceholder('Search views, tools, and actions…').fill('Schematic')
-  await page.keyboard.press('Enter')
-  const svg = page.getByRole('application', { name: /Component network schematic/ })
-  await expect(svg.locator('[data-node="comp"]')).toBeVisible({ timeout: 60_000 })
+  const svg = await openSchematic(page, 'comp')
   // The style editor opens over the canvas once a block is selected, so add the others by event.
   await svg.locator('[data-node="comp"]').click()
   for (const id of ['evap', 'cond']) await svg.locator(`[data-node="${id}"]`).dispatchEvent('click', { shiftKey: true })
