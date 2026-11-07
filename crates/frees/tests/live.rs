@@ -110,12 +110,20 @@ fn an_explicit_block_runs_live_with_the_batch_states() {
     let cols = header["table"]["vars"].as_array().unwrap().len();
     assert_eq!(cols, table.columns.len());
     let mut rows = Vec::new();
+    let mut calls = 0;
     while rows.len() < table.rows.len() * cols {
+        // At a zero budget an explicit chunk is one internal step, which may
+        // not reach the next row.
         let reply = live_advance_json(id, 2.0, 0.0);
         assert!(parse(&reply)["error"].is_null(), "{}", reply.0);
-        assert!(!reply.1.is_empty(), "every chunk has a row until tf");
         rows.extend(reply.1);
+        calls += 1;
+        assert!(calls < 10_000, "the run makes progress");
     }
+    assert!(
+        calls > table.rows.len(),
+        "zero-budget chunks are single steps: {calls}"
+    );
     // Time and the two states h, v are the batch run's bit for bit.
     for (live, batch) in rows.chunks(cols).zip(&table.rows) {
         let bits = |r: &[f64]| r[..3].iter().map(|v| v.to_bits()).collect::<Vec<_>>();

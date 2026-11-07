@@ -438,12 +438,16 @@ impl PreparedDocument {
     /// Solve the document's steady part and open DYNAMIC block `block`
     /// (0-based) as a live session at `t0` (Phase K1). The solution is the
     /// steady result, with no ODE Tables: the session integrates the block.
+    /// `max_step` caps the integrator's step for this session only (K4's
+    /// retry after a failure); the document's block is unchanged.
     pub fn open_live(
         &mut self,
         block: usize,
+        max_step: Option<f64>,
     ) -> std::result::Result<(Solution, crate::ode::live::LiveSession), SolveFailure> {
         self.live = Some(super::LiveCapture {
             block,
+            max_step,
             session: None,
         });
         let solved = self.solve_with_pins(&[], None);

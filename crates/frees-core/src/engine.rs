@@ -761,6 +761,8 @@ pub(crate) fn relaxed_ode_settings(base: &SolverSettings, rel_tol: f64) -> Solve
 /// dynamic stage for one block's run instead of its table.
 pub(crate) struct LiveCapture {
     pub(crate) block: usize,
+    /// A step cap for this session (K4), over the document's own.
+    pub(crate) max_step: Option<f64>,
     pub(crate) session: Option<crate::ode::live::LiveSession>,
 }
 
@@ -797,6 +799,18 @@ fn solve_dynamic_systems(
                 capture.block + 1
             ))
         })?;
+        let capped;
+        let system = match capture.max_step {
+            Some(h) if h > 0.0 && h.is_finite() => {
+                capped = {
+                    let mut s = system.clone();
+                    s.options.max_step = Some(s.options.max_step.map_or(h, |m| m.min(h)));
+                    s
+                };
+                &capped
+            }
+            _ => system,
+        };
         if !crate::ode::dynamic::is_ida_method(&system.options.method) {
             let run =
                 crate::ode::live::ExplicitRun::new(system, base_values, inner, specs, &doc.defs)?;
@@ -807,9 +821,14 @@ fn solve_dynamic_systems(
             return Ok(Vec::new());
         }
         let algebraic = pinned_solver(&inner, specs, ctx);
-        let run =
+        let mut run =
             crate::ode::dynamic::DynamicSolver::new(system, base_values, &doc.defs, algebraic)
                 .ida_run()?;
+        // The batch IDA path runs uncapped whatever the block says; only a
+        // live retry caps it, so a document's batch result never moves.
+        if let Some(h) = capture.max_step.filter(|h| *h > 0.0 && h.is_finite()) {
+            run.cap_step(h);
+        }
         capture.session = Some(crate::ode::live::LiveSession::new(doc.defs.clone(), run));
         return Ok(Vec::new());
     }

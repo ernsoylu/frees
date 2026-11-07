@@ -43,8 +43,12 @@ pub fn live_open_json(source: &str, request_json: &str, block: u32) -> String {
     let overrides = overrides_of(&request);
     let source = apply_overrides(source, request.overrides.as_deref().unwrap_or_default());
     let tables = function_table_defs_of(&request.function_tables);
+    // K4: a retry after a failure caps the step for this session.
+    let max_step = serde_json::from_str::<serde_json::Value>(request_json)
+        .ok()
+        .and_then(|v| v.get("liveMaxStep").and_then(serde_json::Value::as_f64));
     let opened = PreparedDocument::new(&source, &settings, &overrides, &tables)
-        .and_then(|mut doc| doc.open_live(block as usize));
+        .and_then(|mut doc| doc.open_live(block as usize, max_step));
     let (solution, session) = match opened {
         Ok(opened) => opened,
         Err(failure) => {
@@ -124,7 +128,8 @@ fn chunk_reply(session: &LiveSession, chunk: Chunk) -> (String, Vec<f64>) {
 }
 
 /// Integrate session `id` toward `t_target`, for at most `budget_ms` of wall
-/// clock (capped at [`MAX_BUDGET_MS`]) once the first row is out.
+/// clock (capped at [`MAX_BUDGET_MS`]) once the first row (IDA) or the first
+/// internal step (explicit methods) is done; see `LiveSession::advance`.
 pub fn live_advance_json(id: u32, t_target: f64, budget_ms: f64) -> (String, Vec<f64>) {
     let budget = if budget_ms.is_finite() {
         budget_ms.clamp(0.0, MAX_BUDGET_MS)

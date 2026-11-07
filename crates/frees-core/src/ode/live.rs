@@ -98,6 +98,8 @@ pub struct IdaRun {
     /// Where the run ended: a stop event's time, or the failure.
     end: Option<f64>,
     failed: bool,
+    /// A live session's step cap ([`Self::cap_step`]); `None` in a batch run.
+    hmax: Option<f64>,
 }
 
 impl IdaRun {
@@ -126,7 +128,13 @@ impl IdaRun {
             index: 0,
             end: None,
             failed: false,
+            hmax: None,
         }
+    }
+
+    /// Cap the integrator's step size from the next initialization on.
+    pub(crate) fn cap_step(&mut self, hmax: f64) {
+        self.hmax = Some(hmax);
     }
 
     /// The time of grid row `i`. The batch grid is `linspace(t0, tf, points)`;
@@ -226,6 +234,9 @@ impl IdaRun {
                     Ok(s) => s,
                     Err(e) => return self.fail(chunk, e, false),
                 };
+                if let Some(h) = self.hmax {
+                    s.set_max_step(h);
+                }
                 if let Err(e) = self.initialize(&mut s, &dae) {
                     return self.fail(chunk, e, true);
                 }
@@ -750,9 +761,11 @@ impl LiveSession {
     }
 
     /// Integrate to `t_target`, producing every grid row at or before it.
-    /// `more` is the work budget: shown the chunk so far between rows, a
-    /// `false` ends the chunk early (after at least one row), and the next call
-    /// resumes there. The tolerances are the document's; a frame budget never
+    /// `more` is the work budget: shown the chunk so far, a `false` ends the
+    /// chunk early and the next call resumes there. An IDA run asks between
+    /// rows, after at least one (ending between its internal steps would move
+    /// its root search off the batch run's); an explicit run asks between
+    /// internal steps, after at least one, so its chunk may hold no rows. The tolerances are the document's; a frame budget never
     /// relaxes them.
     pub fn advance(&mut self, t_target: f64, more: &mut dyn FnMut(&Chunk) -> bool) -> Chunk {
         let at = match &self.run {
