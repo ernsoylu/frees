@@ -397,3 +397,142 @@ port(G)
 port(out)
   out.sig = vmp$(G.sig)
 end
+
+// ── Teaching primitives (Phase J) ────────────────────────────────────────────
+// Each switches through a signal input or a smooth law, never by changing the
+// circuit: the equation set is the same open or closed.
+
+// Signal-driven switch: the conductance moves from 1/Roff to 1/Ron as ctrl
+// passes thresh (tanh, width eps).
+function [p, n, ctrl] = Switch(Ron [ohm], Roff [ohm], thresh, eps)
+port(p)
+port(n)
+port(ctrl)
+  w   = 0.5 * (1 + tanh((ctrl.sig - thresh) / eps))
+  G   = w / Ron + (1 - w) / Roff
+  p.I = G * (p.V - n.V)
+  p.I + n.I = 0
+end
+
+// Signal-driven changeover (SPDT): com joins a while ctrl > thresh, b below.
+function [com, a, b, ctrl] = SwitchSPDT(Ron [ohm], Roff [ohm], thresh, eps)
+port(com)
+port(a)
+port(b)
+port(ctrl)
+  w   = 0.5 * (1 + tanh((ctrl.sig - thresh) / eps))
+  a.I = (w / Ron + (1 - w) / Roff) * (a.V - com.V)
+  b.I = ((1 - w) / Ron + w / Roff) * (b.V - com.V)
+  com.I + a.I + b.I = 0
+end
+
+// Sinusoidal voltage source: v = Voff + Vamp·sin(2π·freq·t + phase).
+function [p, n] = SineVoltageSource(Vamp [V], freq [Hz], phase [rad], Voff [V])
+port(p)
+port(n)
+  p.V - n.V = Voff + Vamp * sin(2 * pi# * freq * time + phase)
+  p.I + n.I = 0
+end
+
+// Sinusoidal current source, driving i = Ioff + Iamp·sin(2π·freq·t + phase)
+// out of p through the external circuit.
+function [p, n] = SineCurrentSource(Iamp [A], freq [Hz], phase [rad], Ioff [A])
+port(p)
+port(n)
+  p.I = -(Ioff + Iamp * sin(2 * pi# * freq * time + phase))
+  p.I + n.I = 0
+end
+
+// Signal-controlled voltage source: v = k·in.
+function [p, n, in] = SignalVoltageSource(k [V])
+port(p)
+port(n)
+port(in)
+  p.V - n.V = k * in.sig
+  p.I + n.I = 0
+end
+
+// Signal-controlled current source: i = k·in out of p.
+function [p, n, in] = SignalCurrentSource(k [A])
+port(p)
+port(n)
+port(in)
+  p.I = -k * in.sig
+  p.I + n.I = 0
+end
+
+// Ideal transformer, turns ratio N = N1/N2: v1 = N·v2 and N·i1 + i2 = 0, so
+// it stores and dissipates nothing. Each winding is its own loop.
+function [p1, n1, p2, n2] = IdealTransformer(N [-])
+port(p1)
+port(n1)
+port(p2)
+port(n2)
+  p1.V - n1.V = N * (p2.V - n2.V)
+  p2.I = -N * p1.I
+  p1.I + n1.I = 0
+  p2.I + n2.I = 0
+end
+
+// Ideal op-amp with rails: no input current, open-loop gain A, and an output
+// (referred to ground) that saturates smoothly at Vneg and Vpos.
+function [inp, inn, out] = OpAmp(A [-], Vpos [V], Vneg [V])
+port(inp)
+port(inn)
+port(out)
+  inp.I = 0
+  inn.I = 0
+  Vmid  = 0.5 * (Vpos + Vneg)
+  Vhalf = 0.5 * (Vpos - Vneg)
+  out.V = Vmid + Vhalf * tanh(A * (inp.V - inn.V) / Vhalf)
+end
+
+// Zener diode (p = anode): forward conduction above 0 V, reverse breakdown
+// below −Vz, each a smooth ramp of conductance Gon (width eps).
+function [p, n] = Zener(Vz [V], Gon [siemens], eps [V])
+port(p)
+port(n)
+  vd  = p.V - n.V
+  vr  = -vd - Vz
+  p.I = Gon * (vd * 0.5 * (1 + tanh(vd / eps)) - vr * 0.5 * (1 + tanh(vr / eps)))
+  p.I + n.I = 0
+end
+
+// Potentiometer: track resistance R between a and b, wiper w at fraction pos
+// from a (clamped to 0…1).
+function [a, b, w] = Potentiometer(R [ohm], pos [-])
+port(a)
+port(b)
+port(w)
+  x = min(1, max(0, pos))
+  a.V - w.V = R * x * a.I
+  w.V - b.V = -R * (1 - x) * b.I
+  a.I + b.I + w.I = 0
+end
+
+// NTC thermistor, beta model R = R0·exp(B·(1/T − 1/T0)) at the heat-port
+// temperature; its Joule heat leaves through that port (self-heating).
+function [p, n, heat] = Thermistor(R0 [ohm], B [K], T0 [K])
+port(p)
+port(n)
+port(heat)
+  R         = R0 * exp(B * (1 / heat.T - 1 / T0))
+  p.V - n.V = R * p.I
+  p.I + n.I = 0
+  heat.Qdot = -(p.V - n.V) * p.I
+end
+
+// Incandescent lamp: a filament whose resistance rises as (Tf/T0)^kexp, heated
+// by its own current and cooled by radiation (emissivity × area epsA) to Tamb.
+// A cold filament draws an inrush current until it heats.
+function [p, n] = Lamp(R0 [ohm], T0 [K], kexp [-], C_th [J/K], epsA [m^2], Tamb [K], Tf0 [K])
+port(p)
+port(n)
+  R         = R0 * (Tf / T0)^kexp
+  p.V - n.V = R * p.I
+  p.I + n.I = 0
+  Pel       = (p.V - n.V) * p.I
+  Prad      = epsA * sigma# * (Tf^4 - Tamb^4)
+  der(Tf)   = (Pel - Prad) / C_th
+  init(Tf)  = Tf0
+end

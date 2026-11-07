@@ -1,4 +1,4 @@
-//! The built-in standard component library — 312 components, embedded as
+//! The built-in standard component library — 324 components, embedded as
 //! `.frees` text and parsed by the ordinary front end.
 //!
 //! Port of
@@ -117,7 +117,7 @@ pub static FILES: [LibraryFile; 13] = [
     LibraryFile {
         domain: "electrical",
         text: include_str!("library-data/electrical.frees"),
-        components: 31,
+        components: 43,
     },
     LibraryFile {
         domain: "mechanical",
@@ -165,8 +165,11 @@ pub static FILES: [LibraryFile; 13] = [
 /// it: sensible air-to-air recovery, total-energy exchange, solid and liquid
 /// desiccant, indirect and two-stage evaporative cooling, steam humidification,
 /// the apparatus-dew-point and face-and-bypass coils, the heat-pipe wrap-around,
-/// the airside economizer, four terminal units and a DOAS block.
-pub const COMPONENT_COUNT: usize = 312;
+/// the airside economizer, four terminal units and a DOAS block. Twelve
+/// electrical teaching primitives followed (Phase J1, 2026-11-07): switches,
+/// sine and signal-controlled sources, an ideal transformer, an op-amp with
+/// rails, a Zener, a potentiometer, an NTC thermistor and a lamp.
+pub const COMPONENT_COUNT: usize = 324;
 
 /// The separator the Java appends after **every** file, including the last
 /// (`ComponentLibrary.loadSource`).
