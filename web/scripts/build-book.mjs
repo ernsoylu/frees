@@ -41,7 +41,8 @@ for (const p of book.REFERENCE_PAGES) {
 }
 
 // Gallery: graded models that solve without extra requests, at most
-// PER_CATEGORY per category, transient (plottable) models first.
+// PER_CATEGORY per category, transient (plottable) models first — except the
+// lessons (I5), which are all in, so the Book's lesson search reaches each.
 const graded = book.EXAMPLES.filter((e) => /\{\s*CHECK\s/.test(e.text))
 const byCat = new Map()
 for (const e of [...graded].sort((a, b) => Number(/^\s*DYNAMIC\b/m.test(b.text)) - Number(/^\s*DYNAMIC\b/m.test(a.text)))) {
@@ -53,7 +54,7 @@ const gallery = []
 for (const [, list] of [...byCat].sort((a, b) => a[0].localeCompare(b[0]))) {
   let taken = 0
   for (const e of list) {
-    if (taken === PER_CATEGORY) break
+    if (taken === PER_CATEGORY && e.category !== 'Lessons') break
     const r = JSON.parse(wasm.solve(e.text, '{}'))
     if (!r.success) continue
     gallery.push({ ex: e, result: r })
@@ -99,12 +100,17 @@ function toc(depth, current) {
     if (!items.length) continue
     html += `<h2>${esc(c.title)}</h2>` + items.map((it) => a(pathOf(it.id), it.label)).join('')
   }
+  html = html.replace('</a>', `</a>${a('search.html', 'Search the Book')}`)
   html += `<h2>Gallery</h2>${a('gallery/index.html', `Verified models (${gallery.length})`)}`
   html += `<h2>Reference</h2>${a('reference/index.html', `All ${book.REFERENCE_PAGES.length} pages`)}`
   html += refCats.map((c) => a(`reference/index.html#${fileOf(c.title.slice(12))}`, c.title.slice(12))).join('')
   return html
 }
 const pages = []
+// I5: one search entry per page, built from what the page shows.
+const searchIndex = []
+const plain = (html) => html.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&[#\w]+;/g, ' ').replace(/\s+/g, ' ').trim()
+const indexed = (entry, html) => searchIndex.push({ keywords: '', ...entry, text: plain(html).slice(0, 600) })
 function page(path, title, body) {
   const depth = path.split('/').length - 1
   const up = '../'.repeat(depth)
@@ -142,14 +148,20 @@ ${guideCats.map((c) => {
 for (const c of guideCats) for (const it of c.items) {
   if (!Object.hasOwn(book.DOCS_CATALOG, it.id)) continue
   const path = pathOf(it.id)
-  page(path, it.label, book.renderGuide(it.id, hrefFrom(1)))
+  const html = book.renderGuide(it.id, hrefFrom(1))
+  page(path, it.label, html)
+  indexed({ title: it.label, path, kind: 'guide', blurb: it.blurb ?? '', keywords: (it.keywords ?? []).join(' ') }, html)
 }
 
 page('reference/index.html', 'Reference', `<h1>Reference</h1>${refCats.map((c) => {
   const name = c.title.slice(12)
   return `<h2 id="${fileOf(name)}">${esc(name)}</h2><ul class="cols">${c.items.map((it) => `<li><a href="../${pathOf(it.id)}"><code>${esc(it.label)}</code></a></li>`).join('')}</ul>`
 }).join('')}`)
-for (const p of book.REFERENCE_PAGES) page(refPath.get(p.slug), p.name, book.renderReference(p.slug, hrefFrom(1)))
+for (const p of book.REFERENCE_PAGES) {
+  const html = book.renderReference(p.slug, hrefFrom(1))
+  page(refPath.get(p.slug), p.name, html)
+  indexed({ title: p.name, path: refPath.get(p.slug), kind: 'reference', blurb: p.summary, keywords: [p.category, ...p.tags].join(' ') }, html)
+}
 
 // ---- Gallery ------------------------------------------------------------
 function niceTicks(lo, hi, n = 5) {
@@ -197,10 +209,21 @@ for (const { ex, result } of gallery) {
   const table = (result.odeTables ?? []).find((o) => o.rows?.length > 1)
   const plot = table ? plotSvg(table) : ''
   if (plot) plots++
-  page(`gallery/${fileOf(ex.id)}.html`, ex.title, `<p class="crumb"><a href="index.html">Gallery</a> · ${esc(ex.category)}</p>
+  const lesson = book.LESSONS.find((l) => l.example === ex.id)
+  const pair = lesson?.pair && book.LESSONS.find((l) => l.example === lesson.pair)
+  const lessonHtml = lesson ? `<section class="lesson"><p><strong>Objective.</strong> ${esc(lesson.objective)}</p>
+<p><strong>Domain:</strong> ${esc(lesson.domain)} · <strong>Concepts:</strong> ${lesson.concepts.map(esc).join(', ')} · <strong>Before you start:</strong> ${lesson.prerequisites.map(esc).join(', ')}</p>
+<p><strong>Predict.</strong> ${esc(lesson.predict)} Then <em>${esc(lesson.change.label.toLowerCase())}</em> in the app and watch the ${esc(lesson.observe.label)}.</p>
+${pair ? `<p>The same idea in another domain: <a href="${fileOf(pair.example)}.html">${esc(pair.title)}</a>.</p>` : ''}
+<p class="sources">Sources: ${lesson.sources.map(esc).join('; ')}</p></section>` : ''
+  const galleryPath = `gallery/${fileOf(ex.id)}.html`
+  if (lesson) searchIndex.push({ title: lesson.title, path: galleryPath, kind: 'lesson', blurb: lesson.objective, keywords: lesson.trend, text: '', concepts: lesson.concepts, domains: [lesson.domain], prerequisites: lesson.prerequisites })
+  else searchIndex.push({ title: ex.title, path: galleryPath, kind: 'model', blurb: ex.description, keywords: ex.category, text: '' })
+  page(galleryPath, ex.title, `<p class="crumb"><a href="index.html">Gallery</a> · ${esc(ex.category)}</p>
 <h1>${esc(ex.title)}</h1>
 <p class="lede">${esc(ex.description)}</p>
 <p><a class="open" href="${esc(share ?? APP_URL)}">Open in frees</a></p>
+${lessonHtml}
 ${problem ? `<h2>Problem</h2><pre class="problem">${esc(problem)}</pre>` : ''}
 <h2>Results</h2>
 <table class="results"><thead><tr><th>Variable</th><th>Value</th><th>Units</th><th>Checked against</th></tr></thead><tbody>
@@ -212,6 +235,23 @@ ${plot ? `<h2>Plot</h2>${plot}` : ''}
 page('gallery/index.html', 'Gallery', `<h1>Gallery</h1>
 <p>${gallery.length} graded models, solved when this book was built; every CHECK in them passed. Each opens in the app.</p>
 ${[...new Set(gallery.map((g) => g.ex.category))].map((cat) => `<h2>${esc(cat)}</h2><ul>${gallery.filter((g) => g.ex.category === cat).map((g) => `<li><a href="${fileOf(g.ex.id)}.html">${esc(g.ex.title)}</a> — ${esc(g.ex.description)}</li>`).join('')}</ul>`).join('')}`)
+
+// ---- Search (I5) ---------------------------------------------------------
+for (const l of book.LESSONS) if (!gallery.some((g) => g.ex.id === l.example)) failures.push(`lesson ${l.example}: its example is not in the gallery`)
+const facet = (name, label) => `<label>${label} <select name="${name}"><option value="">Any</option></select></label>`
+const searchScript = readFileSync(join(WEB, 'src/book/search.js'), 'utf8').replace(/^export function/m, 'function')
+page('search.html', 'Search', `<h1>Search the Book</h1>
+<div id="book-search" class="search" role="search">
+<p><input type="search" aria-label="Search the Book" placeholder="Search guides, reference pages, models and lessons"></p>
+<p class="facets">${facet('concepts', 'Concept')} ${facet('domains', 'Domain')} ${facet('prerequisites', 'Prerequisite')}</p>
+<p aria-live="polite"></p>
+<ol class="hits"></ol>
+<noscript>Search needs JavaScript; the contents list works without it.</noscript>
+</div>
+<script id="search-index" type="application/json">${JSON.stringify(searchIndex).replace(/</g, '\\u003c')}</script>
+<script>${searchScript}</script>`)
+const indexedPaths = new Set(searchIndex.map((e) => e.path))
+for (const path of pages) if (!/^(index|search|gallery\/index|reference\/index)\.html$/.test(path) && !indexedPaths.has(path)) failures.push(`${path}: not in the search index`)
 
 // ---- Assets -------------------------------------------------------------
 mkdirSync(join(OUT, 'assets'), { recursive: true })

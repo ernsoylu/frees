@@ -31,6 +31,8 @@ describe('lesson manifests (I2)', () => {
     expect(lesson.change.to).toBeLessThanOrEqual(changed.max)
     if (lesson.pair) expect(LESSONS.find((l) => l.example === lesson.pair)?.pair).toBe(lesson.example)
     expect(lesson.sources.length).toBeGreaterThan(0)
+    expect(lesson.domain).not.toBe('')
+    expect(lesson.concepts.length).toBeGreaterThan(0)
   })
 
   it.each(LESSONS.map((l) => [l.example, l] as const))('%s: the change shows the promised direction and reset reproduces the baseline', (_, lesson) => {
