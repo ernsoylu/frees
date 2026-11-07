@@ -9,6 +9,7 @@ import { PlotFormat, PropertyConfig, PsychroConfig, XYConfig } from './types'
 import { StateTable, statesForAxes } from './stateTable'
 import { UnitChoice, resolveUnit } from './units'
 import { displayVar } from '../varDisplay'
+import { cursorFor, type PlaybackSample } from './playbackCursor'
 
 /**
  * Builds Plotly figures for every plot kind in one place so the on-screen
@@ -425,6 +426,65 @@ function stateTraces(
   return traces
 }
 
+/** H3: the playback cursor and its fading trail, from recorded samples only; gaps are named on the plot. */
+function playbackTraces(
+  playback: PlaybackSample | undefined,
+  xProperty: string,
+  yProperty: string,
+  fluid: string | null,
+  log: { x: boolean; y: boolean },
+  color: string,
+  xUnit: UnitChoice,
+  yUnit: UnitChoice,
+): { traces: PlotlyTrace[]; gaps: string[] } {
+  if (!playback) return { traces: [], gaps: [] }
+  const c = cursorFor(playback.connections, playback.table, playback.index, xProperty, yProperty, fluid, log)
+  const sx = (v: number | null) => (v === null ? null : v * xUnit.scale + xUnit.offset)
+  const sy = (v: number | null) => (v === null ? null : v * yUnit.scale + yUnit.offset)
+  const traces: PlotlyTrace[] = c.trail.map((t) => ({
+    type: 'scatter',
+    mode: 'lines+markers',
+    name: `${t.label} trail`,
+    uid: `trail_${t.label}`,
+    x: t.x.map(sx),
+    y: t.y.map(sy),
+    connectgaps: false,
+    line: { color, width: 1 },
+    opacity: 0.6,
+    marker: { color, size: 4, opacity: t.x.map((_, k) => (k + 1) / t.x.length) },
+    showlegend: false,
+    hoverinfo: 'skip',
+  }))
+  if (c.points.length > 0) {
+    traces.push({
+      type: 'scatter',
+      mode: 'markers+text',
+      name: 'Playback sample',
+      uid: 'playback_cursor',
+      x: c.points.map((p) => sx(p.x)),
+      y: c.points.map((p) => sy(p.y)),
+      text: c.points.map((p) => p.label),
+      textposition: 'bottom right',
+      textfont: { color },
+      marker: { color, size: 12, symbol: 'circle-open', line: { width: 3, color } },
+      showlegend: true,
+    })
+  }
+  return { traces, gaps: c.gaps }
+}
+
+function noteGaps(layout: PlotlyLayout, gaps: string[], color: string) {
+  if (gaps.length === 0) return
+  layout.annotations = [
+    ...(layout.annotations ?? []),
+    {
+      xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'top', showarrow: false, align: 'left',
+      text: gaps.slice(0, 4).join('<br>') + (gaps.length > 4 ? `<br>… ${gaps.length - 4} more` : ''),
+      font: { size: 10, color },
+    },
+  ]
+}
+
 export function buildPropertyFigure(
   diagram: DiagramResponse,
   config: PropertyConfig,
@@ -433,6 +493,7 @@ export function buildPropertyFigure(
   theme: PlotTheme,
   cyclePath?: Record<string, number>[],
   revision?: string | number,
+  playback?: PlaybackSample,
 ): PlotlyFigure {
   const colors = THEMES[theme]
   const xUnit = resolveUnit(diagram.xProperty, format.xUnit, format.celsius)
@@ -500,16 +561,20 @@ export function buildPropertyFigure(
     )
   }
 
+  const log = { x: format.xLog ?? diagram.xLog, y: format.yLog ?? diagram.yLog }
+  const cursor = playbackTraces(playback, diagram.xProperty, diagram.yProperty, diagram.fluid, log, format.lineColors?.['playback'] || '#e03131', xUnit, yUnit)
+  traces.push(...cursor.traces)
   const layout = baseLayout(
     format,
     axisTitle(diagram.xProperty, xUnit),
     axisTitle(diagram.yProperty, yUnit),
-    format.xLog ?? diagram.xLog,
-    format.yLog ?? diagram.yLog,
+    log.x,
+    log.y,
     theme,
     revision,
   )
   layout.title ??= { text: `${diagram.fluid}` }
+  noteGaps(layout, cursor.gaps, colors.font)
   return cleanPlotlyFigure({ data: traces, layout })
 }
 
@@ -521,6 +586,7 @@ export function buildPsychroFigure(
   theme: PlotTheme,
   cyclePath?: Record<string, number>[],
   revision?: string | number,
+  playback?: PlaybackSample,
 ): PlotlyFigure {
   const colors = THEMES[theme]
   const xUnit = resolveUnit('T', format.xUnit, format.celsius)
@@ -553,18 +619,22 @@ export function buildPsychroFigure(
       ),
     )
   }
+  const log = { x: format.xLog ?? false, y: format.yLog ?? false }
+  const cursor = playbackTraces(playback, 'T', 'w', null, log, format.lineColors?.['playback'] || '#e03131', xUnit, yUnit)
+  traces.push(...cursor.traces)
   const layout = baseLayout(
     format,
     `Dry-bulb temperature [${xUnit.label}]`,
     axisTitle('w', yUnit),
-    format.xLog ?? false,
-    format.yLog ?? false,
+    log.x,
+    log.y,
     theme,
     revision,
   )
   layout.title ??= {
     text: `Psychrometric chart — ${(chart.pressure / 1000).toFixed(2)} kPa`,
   }
+  noteGaps(layout, cursor.gaps, colors.font)
   return cleanPlotlyFigure({ data: traces, layout })
 }
 
