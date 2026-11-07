@@ -568,6 +568,10 @@ export default function App() {
   // lint tick (another keystroke follows) but wrong here — the displayed
   // solution would stop matching the handle. Remember it and drain on idle.
   const sliderPendingRef = useRef(false)
+  // Phase G: the next solve is a slider drag, which the engine answers from its
+  // prepared document and last answer. A release is a plain solve, so the
+  // settled value is exactly the plain solve's. Every solve clears it.
+  const sliderDragRef = useRef(false)
   // A Solve pressed while the live check is still running: run it once the
   // check lands instead of dropping the click.
   const solvePendingRef = useRef(false)
@@ -1899,9 +1903,12 @@ export default function App() {
     void onSolve()
   }
 
-  function scheduleSliderSolve(delayMs: number) {
+  function scheduleSliderSolve(delayMs: number, drag = false) {
     if (sliderTimer.current) clearTimeout(sliderTimer.current)
-    sliderTimer.current = setTimeout(() => sliderSolveRef.current(), delayMs)
+    sliderTimer.current = setTimeout(() => {
+      sliderDragRef.current = drag
+      sliderSolveRef.current()
+    }, delayMs)
   }
 
   /**
@@ -1935,7 +1942,7 @@ export default function App() {
     // Dragging re-solves on a short debounce so the solution tracks the handle;
     // the release commits promptly. Both go through the timer, so a fast drag
     // collapses into one solve rather than a queue of them.
-    scheduleSliderSolve(commit ? 30 : 220)
+    scheduleSliderSolve(commit ? 30 : 220, !commit)
   }
 
   function pinSlider(v: VariableResult) {
@@ -2164,6 +2171,8 @@ export default function App() {
     if (solving || !canRun) return false
     const solveRevision = modelRevisionRef.current.current
     const solveScenario = scenarios.active ?? DOCUMENT_INPUTS
+    const sliderDrag = sliderDragRef.current
+    sliderDragRef.current = false
     setSolving(true)
     setStopped(false)
     setSolveProgress(0)
@@ -2188,6 +2197,7 @@ export default function App() {
         // user runs `clear` in the terminal.
         solveOverrides(),
         reportSolveProgress,
+        sliderDrag,
       )
       if (!modelRevisionRef.current.isCurrent(solveRevision)) {
         return false

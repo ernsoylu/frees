@@ -59,6 +59,9 @@ pub struct PreparedDocument {
     pub ode_accessors: bool,
     pub unaugmented: Option<Vec<Equation>>,
     prep: Option<DocumentPrep>,
+    /// The pin equations of a [`Self::solve_with_literal_pins`] call, in pin
+    /// order; empty otherwise.
+    literal_pins: Vec<Equation>,
     prep_count: usize,
     solve_count: usize,
 }
@@ -70,9 +73,7 @@ impl PreparedDocument {
         pinned: &[(String, f64)],
     ) -> std::result::Result<Option<Self>, SolveFailure> {
         if pinned.is_empty()
-            || !(self.settings.complex_mode
-                || self.stepping_iterations > 0
-                || !self.doc.linearizes.is_empty()
+            || !(self.lowers_pins()
                 || pinned.iter().any(|(name, _)| {
                     name.is_empty()
                         || name.as_bytes()[0].is_ascii_digit()
@@ -90,6 +91,63 @@ impl PreparedDocument {
             &self.extra_tables,
         )
         .map(Some)
+    }
+
+    /// Whether a pin must enter the text before lowering (complex mode,
+    /// stepping, linearisation), which recompiles the document per solve.
+    fn lowers_pins(&self) -> bool {
+        self.settings.complex_mode
+            || self.stepping_iterations > 0
+            || !self.doc.linearizes.is_empty()
+    }
+
+    /// A literal assignment `name = <number> [unit]`, optionally negated, as
+    /// its pin: the lowercase name and the SI value.
+    pub fn literal_pin(equation: &Equation) -> Option<(String, f64)> {
+        let Expr::Var(name) = &equation.lhs else {
+            return None;
+        };
+        let value = match &equation.rhs {
+            Expr::Num {
+                value,
+                is_imaginary: false,
+                ..
+            } => *value,
+            Expr::Neg(inner) => match inner.as_ref() {
+                Expr::Num {
+                    value,
+                    is_imaginary: false,
+                    ..
+                } => -*value,
+                _ => return None,
+            },
+            _ => return None,
+        };
+        Some((name.clone(), value))
+    }
+
+    /// Solve with pins that stand for literal assignments struck from the
+    /// prepared text (`P = 250 [kPa]`, each satisfying [`Self::literal_pin`]).
+    /// Each pin keeps its unit and source text, so the units, block listing
+    /// and residuals are those of solving the text with the lines appended.
+    /// `None` when the document lowers its pins, which only that text solve
+    /// handles, or when a pin is not a literal.
+    pub fn solve_with_literal_pins(
+        &mut self,
+        pins: &[Equation],
+        warm_start: Option<&Scope>,
+    ) -> Option<std::result::Result<Solution, SolveFailure>> {
+        let values = pins
+            .iter()
+            .map(Self::literal_pin)
+            .collect::<Option<Vec<_>>>()?;
+        if values.is_empty() || self.lowers_pins() {
+            return None;
+        }
+        self.literal_pins = pins.to_vec();
+        let solved = self.solve_with_pins_and_warm(&values, None, warm_start);
+        self.literal_pins.clear();
+        Some(solved)
     }
 
     /// Prepare a base document: parses and runs stages 1 through 3e.
@@ -210,6 +268,7 @@ impl PreparedDocument {
             ode_accessors,
             unaugmented,
             prep: None,
+            literal_pins: Vec::new(),
             prep_count: 0,
             solve_count: 0,
         })
@@ -234,12 +293,15 @@ impl PreparedDocument {
                 Some(raw) if !pinned.is_empty() => raw.clone(),
                 _ => self.ordinary_equations.to_vec(),
             };
-            for (name, value) in pinned {
-                subsystem.push(Equation::new(
-                    Expr::var(name),
-                    Expr::num(*value),
-                    format!("{name} = {value}"),
-                ));
+            for (k, (name, value)) in pinned.iter().enumerate() {
+                subsystem.push(match self.literal_pins.get(k) {
+                    Some(literal) => literal.clone(),
+                    None => Equation::new(
+                        Expr::var(name),
+                        Expr::num(*value),
+                        format!("{name} = {value}"),
+                    ),
+                });
             }
             // A pinned decision (an optimizer's `Kp`) that only a DYNAMIC block
             // reads is absent from the text the accessors were linked against,
@@ -284,13 +346,30 @@ impl PreparedDocument {
                 None => (None, Vec::new()),
             };
             let mut names = self.doc.display_names.clone();
-            for (name, _) in pinned {
+            for (k, (name, _)) in pinned.iter().enumerate() {
+                // A literal pin is spelled as its line spells it.
+                let spelled = self.literal_pins.get(k).and_then(|literal| {
+                    literal
+                        .source_text
+                        .split('=')
+                        .next()
+                        .map(|s| s.trim().to_string())
+                });
                 names
                     .entry(name.to_ascii_lowercase())
-                    .or_insert_with(|| name.clone());
+                    .or_insert_with(|| spelled.unwrap_or_else(|| name.clone()));
             }
             let display_names = complete_display_names(&names, &subsystem);
-            let unit_equations = self.unaugmented.as_deref().unwrap_or(&subsystem);
+            // Literal pins carry units, which the text solve would infer from.
+            let with_literals;
+            let unit_equations = match self.unaugmented.as_deref() {
+                Some(raw) if !self.literal_pins.is_empty() => {
+                    with_literals = [raw, &self.literal_pins].concat();
+                    &with_literals
+                }
+                Some(raw) => raw,
+                None => &subsystem,
+            };
             let (declared, unit_report) = unit_check(
                 unit_equations,
                 &self.doc.dynamics,
@@ -320,6 +399,12 @@ impl PreparedDocument {
         let base = self.ordinary_equations.len();
         for (k, (name, value)) in pinned.iter().enumerate() {
             let pin = &mut prep.subsystem[base + k];
+            if let Some(literal) = self.literal_pins.get(k) {
+                if pin.source_text != literal.source_text {
+                    *pin = literal.clone();
+                }
+                continue;
+            }
             if let Expr::Num {
                 value: old,
                 unit: None,

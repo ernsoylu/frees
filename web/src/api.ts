@@ -445,6 +445,9 @@ export async function solve(
   // the caller can paint a bar. Optional and last, so no existing call site
   // changes; the engine only reports from `solve`/`solveTable`.
   onProgress?: ProgressListener,
+  // Phase G: a slider drag, which the engine answers from its prepared
+  // document, starting from the previous drag's answer.
+  sliderDrag = false,
 ): Promise<SolveResponse> {
   // The full former POST body (minus `text`, which travels as the source
   // argument). The wasm boundary honours variableInfo + stopCriteria today
@@ -459,6 +462,7 @@ export async function solve(
     functionTables,
     // REPL overrides ("eta = 0.75") take priority over the editor's value.
     overrides,
+    ...(sliderDrag ? { sliderSolve: 'drag' } : {}),
   })
 
   try {

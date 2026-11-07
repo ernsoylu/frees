@@ -155,6 +155,11 @@ struct SolveRequest {
     /// mean "none" rather than "Invalid request".
     overrides: Option<Vec<String>>,
     find_all_solutions: Option<bool>,
+    /// Phase G: `"drag"` while a slider handle moves. The literal overrides
+    /// are solved as pins on the prepared document the previous drag left
+    /// behind, starting Newton from its answer (see [`slider_solve`]). The
+    /// release is a plain solve, so the settled value is exactly that.
+    slider_solve: Option<String>,
 }
 
 /// `SolveDtos.FunctionTableDto` — one GUI Function Table in solver wire
@@ -620,6 +625,124 @@ fn now_ms() -> f64 {
 // POST /api/solve
 // ---------------------------------------------------------------------------
 
+/// Phase G: the prepared document a slider drag reuses, keyed by everything
+/// that shapes its compilation, and the last drag's values.
+struct SliderCache {
+    key: String,
+    prepared: frees_core::PreparedDocument,
+    warm: Option<frees_core::eval::Scope>,
+}
+
+thread_local! {
+    static SLIDER_CACHE: std::cell::RefCell<Option<SliderCache>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// A slider drag on a prepared document, or `None` for the plain path.
+///
+/// The answer is the same root reached from the previous drag's values, so it
+/// agrees with the plain solve to the solver's tolerance, not to round-off.
+///
+/// Applies when every override line sets a bare literal (`eta = 0.7`,
+/// `P = 250 [kPa]`; last line per name wins, as in [`apply_overrides`]). Those
+/// lines become pins on a base with their assignments struck, so the base
+/// does not change when only their values do. A failed prepared solve also
+/// returns `None`: the plain solve then reports the failure, so a failure
+/// envelope never depends on this path.
+fn slider_solve(
+    source: &str,
+    request: &SolveRequest,
+    request_json: &str,
+    settings: &SolverSettings,
+    overrides: &[VariableOverride],
+    extra_tables: &[frees_core::parser::defs::FunctionTableDef],
+) -> Option<Result<Solution, frees_core::SolveFailure>> {
+    if request.slider_solve.as_deref() != Some("drag") {
+        return None;
+    }
+    let (names, pins) = literal_pins(request.overrides.as_deref().unwrap_or_default())?;
+    let base = frees_core::analysis::montecarlo::strike_assignments(source, &names);
+    // A pin's unit shapes the prepared unit report, so it is part of the key.
+    let units: Vec<&str> = pins
+        .iter()
+        .map(|eq| match &eq.rhs {
+            frees_core::Expr::Num { unit, .. } => unit.as_deref().unwrap_or(""),
+            frees_core::Expr::Neg(inner) => match inner.as_ref() {
+                frees_core::Expr::Num { unit, .. } => unit.as_deref().unwrap_or(""),
+                _ => "",
+            },
+            _ => "",
+        })
+        .collect();
+    let key = format!(
+        "{base}\0{}\0{}\0{}",
+        names.join(","),
+        units.join(","),
+        request_key(request_json)?
+    );
+    SLIDER_CACHE.with(|cell| {
+        let mut cache = cell.borrow_mut();
+        if cache.as_ref().is_none_or(|c| c.key != key) {
+            *cache = None;
+            let prepared =
+                frees_core::PreparedDocument::new(&base, settings, overrides, extra_tables).ok()?;
+            *cache = Some(SliderCache {
+                key,
+                prepared,
+                warm: None,
+            });
+        }
+        let entry = cache.as_mut()?;
+        let start = entry.warm.as_ref();
+        let mut solved = entry.prepared.solve_with_literal_pins(&pins, start)?;
+        if solved.is_err() && start.is_some() {
+            solved = entry.prepared.solve_with_literal_pins(&pins, None)?;
+        }
+        let solution = solved.ok()?;
+        entry.warm = Some(
+            solution
+                .values
+                .iter()
+                .map(|(k, v)| (k.clone(), *v))
+                .collect(),
+        );
+        Some(Ok(solution))
+    })
+}
+
+/// The request with its overrides and slider mode removed: the part of the
+/// cache key that is not the base text.
+fn request_key(request_json: &str) -> Option<String> {
+    let mut value: Value = serde_json::from_str(request_json).ok()?;
+    let object = value.as_object_mut()?;
+    object.remove("overrides");
+    object.remove("sliderSolve");
+    Some(value.to_string())
+}
+
+/// The override lines as literal pins — lowercase names and the parsed
+/// equations, the last line per name winning in first-seen order — or `None`
+/// when a line is not a bare literal assignment.
+fn literal_pins(lines: &[String]) -> Option<(Vec<String>, Vec<frees_core::Equation>)> {
+    let mut names: Vec<String> = Vec::new();
+    let mut pins: Vec<frees_core::Equation> = Vec::new();
+    for line in lines {
+        let doc = frees_core::parse_document(line.trim()).ok()?;
+        let [frees_core::Statement::Eq(eq)] = doc.statements.as_slice() else {
+            return None;
+        };
+        let (name, _) = frees_core::PreparedDocument::literal_pin(eq)?;
+        match names.iter().position(|n| *n == name) {
+            Some(k) => pins[k] = eq.clone(),
+            None => {
+                names.push(name);
+                pins.push(eq.clone());
+            }
+        }
+    }
+    (!names.is_empty()).then_some((names, pins))
+}
+
 /// Solve a frees document. `request_json` is the `SolveRequest` body (subset
 /// honoured: `variableInfo`, `stopCriteria`; `""`/`"{}"` mean defaults).
 /// Returns a `SolveResponse` JSON string — success or failure, never a JS
@@ -657,6 +780,7 @@ fn solve_internal_mode(
     // preserved (a struck segment leaves its line behind), so `errorLine`
     // still points at the user's own text.
     let overridden = apply_overrides(source, request.overrides.as_deref().unwrap_or_default());
+    let original = source;
     let source = overridden.as_str();
 
     let system = unit_system_of(&request);
@@ -683,7 +807,17 @@ fn solve_internal_mode(
         if legacy {
             frees_core::solve_legacy_with_tables(source, &settings, &overrides, &extra_tables)
         } else {
-            frees_core::solve_with_tables(source, &settings, &overrides, &extra_tables)
+            slider_solve(
+                original,
+                &request,
+                request_json,
+                &settings,
+                &overrides,
+                &extra_tables,
+            )
+            .unwrap_or_else(|| {
+                frees_core::solve_with_tables(source, &settings, &overrides, &extra_tables)
+            })
         }
         .map(|s| vec![s])
     };
@@ -3368,5 +3502,44 @@ END\n\
         assert_eq!(v["success"], true, "{v}");
         let uq = variable(&v, "uq")["value"].as_f64().expect("uq");
         assert!((uq - 2000.0).abs() < 1e-6, "u(q) = {uq}");
+    }
+
+    /// Phase G: a drag prepares the model once; a new value reuses that
+    /// preparation, the release is the plain solve, and a changed model
+    /// prepares again.
+    #[test]
+    fn slider_solves_prepare_once_per_model() {
+        let text = "a = 2\nb = 3 [kPa]\nx^2 = a * b / 1 [kPa]\n";
+        let ask = |a: f64, mode: &str| {
+            let request =
+                format!(r#"{{"overrides":["a = {a}","b = 3 [kPa]"],"sliderSolve":"{mode}"}}"#);
+            let v = parsed(&solve(text, &request));
+            assert_eq!(v["success"], true, "{v}");
+            variable(&v, "x")["value"].as_f64().unwrap()
+        };
+        let prepared =
+            || super::SLIDER_CACHE.with(|c| c.borrow().as_ref().map(|c| c.prepared.prep_count()));
+        assert!((ask(2.0, "drag") - 6f64.sqrt()).abs() < 1e-9);
+        assert!((ask(2.5, "drag") - 7.5f64.sqrt()).abs() < 1e-9);
+        assert_eq!(ask(2.5, "release"), 7.5f64.sqrt());
+        assert_eq!(prepared(), Some(1));
+        let other = parsed(&solve(
+            "a = 2\nb = 3 [kPa]\nx = a * b / 1 [kPa]\n",
+            r#"{"overrides":["a = 4"],"sliderSolve":"drag"}"#,
+        ));
+        assert_eq!(variable(&other, "x")["value"].as_f64(), Some(12.0));
+        assert_eq!(prepared(), Some(1), "a changed model is a new preparation");
+        assert_eq!(
+            literal_pins_of(&["a = -2 [kPa]", "B = 1", "a = 3"]).as_deref(),
+            Some("a = 3 | B = 1")
+        );
+        assert_eq!(literal_pins_of(&["a = -2 [kPa]", "b = a + 1"]), None);
+    }
+
+    fn literal_pins_of(lines: &[&str]) -> Option<String> {
+        let lines: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+        let (_, pins) = super::literal_pins(&lines)?;
+        let texts: Vec<String> = pins.iter().map(|eq| eq.source_text.clone()).collect();
+        Some(texts.join(" | "))
     }
 }

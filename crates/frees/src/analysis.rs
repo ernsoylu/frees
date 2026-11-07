@@ -260,6 +260,7 @@ fn solve_table_inner(
         fill_missing: None,
         function_tables: None,
         find_all_solutions: None,
+        slider_solve: None,
         // No analysis request carries the terminal's override lines; these
         // routines build their own (`analysis::montecarlo`, `paramfit`) and
         // apply them per candidate.
@@ -616,6 +617,7 @@ fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> 
         fill_missing: None,
         function_tables: None,
         find_all_solutions: None,
+        slider_solve: None,
         // No analysis request carries the terminal's override lines; these
         // routines build their own (`analysis::montecarlo`, `paramfit`) and
         // apply them per candidate.
@@ -861,6 +863,7 @@ fn sensitivity_inner(source: &str, request_json: &str) -> Result<Value, String> 
         fill_missing: None,
         function_tables: None,
         find_all_solutions: None,
+        slider_solve: None,
         overrides: None,
     };
     let extra_tables = function_table_defs_of(&request.function_tables);
@@ -1327,6 +1330,7 @@ fn optimize_inner(source: &str, request_json: &str) -> Result<Value, String> {
         fill_missing: None,
         function_tables: request.function_tables,
         find_all_solutions: None,
+        slider_solve: None,
         // No analysis request carries the terminal's override lines; these
         // routines build their own (`analysis::montecarlo`, `paramfit`) and
         // apply them per candidate.
@@ -1465,6 +1469,7 @@ fn optimize_multi_inner(source: &str, request_json: &str) -> Result<Value, Strin
         fill_missing: None,
         function_tables: request.function_tables,
         find_all_solutions: None,
+        slider_solve: None,
         // No analysis request carries the terminal's override lines; these
         // routines build their own (`analysis::montecarlo`, `paramfit`) and
         // apply them per candidate.
@@ -1644,6 +1649,7 @@ fn parameter_fit_inner(request_json: &str) -> Result<Value, String> {
         fill_missing: None,
         function_tables: None,
         find_all_solutions: None,
+        slider_solve: None,
         // No analysis request carries the terminal's override lines; these
         // routines build their own (`analysis::montecarlo`, `paramfit`) and
         // apply them per candidate.

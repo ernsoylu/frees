@@ -562,6 +562,18 @@ pub fn apply_overrides(clean_text: &str, overrides: &[String]) -> String {
         return clean_text.to_string();
     }
 
+    let mut out = strike_assignments(clean_text, &names);
+    for name in &names {
+        out.push_str(&by_name[name]);
+        out.push('\n');
+    }
+    out
+}
+
+/// The striking half of [`apply_overrides`]: every `;`-separated segment that
+/// reads `<name> = …` for one of the lowercase `names` is deleted, and every
+/// line is kept, so line numbers still point at the user's text.
+pub fn strike_assignments(clean_text: &str, names: &[String]) -> String {
     let mut out = String::with_capacity(clean_text.len() + 64);
     // `cleanText.split("\n", -1)` — trailing empty lines are kept.
     for line in clean_text.split('\n') {
@@ -570,10 +582,6 @@ pub fn apply_overrides(clean_text: &str, overrides: &[String]) -> String {
             .filter(|seg| !names.iter().any(|n| is_assignment_to(seg, n)))
             .collect();
         out.push_str(&kept.join(";"));
-        out.push('\n');
-    }
-    for name in &names {
-        out.push_str(&by_name[name]);
         out.push('\n');
     }
     out
