@@ -455,6 +455,17 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     variants: [],
   },
   {
+    type: `IdealTransformer`,
+    library: `electrical`,
+    summary: `Ideal transformer, turns ratio N = N1/N2: v1 = N·v2 and N·i1 + i2 = 0.`,
+    tags: [`idealtransformer`, `component`, `electrical`, `acausal`],
+    ports: [`p1`, `n1`, `p2`, `n2`],
+    params: [
+      { name: `N`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Turns ratio N1/N2, primary to secondary [-].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
     type: `Inductor`,
     library: `electrical`,
     summary: `An inductor storing magnetic energy, with V = L di/dt.`,
@@ -485,6 +496,23 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     variants: [],
   },
   {
+    type: `Lamp`,
+    library: `electrical`,
+    summary: `Incandescent lamp: a filament whose resistance rises with its temperature, heated by its current and cooled by radiation.`,
+    tags: [`lamp`, `component`, `electrical`, `acausal`],
+    ports: [`p`, `n`],
+    params: [
+      { name: `R0`, isString: false, isSelector: false, isMap: false, unit: `ohm`, description: `Filament resistance at T0 [ohm].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `T0`, isString: false, isSelector: false, isMap: false, unit: `K`, description: `Reference temperature of R0 [K].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `kexp`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Resistance–temperature exponent [-].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `C_th`, isString: false, isSelector: false, isMap: false, unit: `J/K`, description: `Filament heat capacity [J/K].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `epsA`, isString: false, isSelector: false, isMap: false, unit: `m^2`, description: `Emissivity × radiating area [m^2].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `Tamb`, isString: false, isSelector: false, isMap: false, unit: `K`, description: `Temperature of the surroundings [K].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `Tf0`, isString: false, isSelector: false, isMap: false, unit: `K`, description: `Initial filament temperature [K].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
     type: `MotorMap`,
     library: `electrical`,
     summary: `Map-efficiency e-machine: torque command on the signal port u [N·m], losses from a 2-D efficiency map eff$(ω, τ).`,
@@ -508,6 +536,19 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     variants: [],
   },
   {
+    type: `OpAmp`,
+    library: `electrical`,
+    summary: `Ideal operational amplifier with rails: no input current, open-loop gain A, output saturating at Vneg and Vpos.`,
+    tags: [`opamp`, `component`, `electrical`, `acausal`],
+    ports: [`inp`, `inn`, `out`],
+    params: [
+      { name: `A`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Open-loop voltage gain [-].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `Vpos`, isString: false, isSelector: false, isMap: false, unit: `V`, description: `Positive output rail [V].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `Vneg`, isString: false, isSelector: false, isMap: false, unit: `V`, description: `Negative output rail [V].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
     type: `PMSM`,
     library: `electrical`,
     summary: `A permanent-magnet synchronous motor.`,
@@ -517,6 +558,18 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       { name: `Rs`, isString: false, isSelector: false, isMap: false, unit: `ohm`, description: `Series resistance [Ω].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `lambda_pm`, isString: false, isSelector: false, isMap: false, unit: `Wb`, description: `PM flux linkage [Wb].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `poles`, isString: false, isSelector: false, isMap: false, unit: ``, description: `Number of magnetic pole pairs.`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
+    type: `Potentiometer`,
+    library: `electrical`,
+    summary: `Potentiometer: a track resistance R between a and b, with the wiper w at fraction pos from a.`,
+    tags: [`potentiometer`, `component`, `electrical`, `acausal`],
+    ports: [`a`, `b`, `w`],
+    params: [
+      { name: `R`, isString: false, isSelector: false, isMap: false, unit: `ohm`, description: `Total track resistance [ohm].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `pos`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Wiper position, 0 at a and 1 at b [-].`, required: true, values: [], variants: [], defaultValue: `` }
     ],
     variants: [],
   },
@@ -549,6 +602,56 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     variants: [],
   },
   {
+    type: `SignalCurrentSource`,
+    library: `electrical`,
+    summary: `Signal-controlled current source: i = k·in, driven out of p.`,
+    tags: [`signalcurrentsource`, `component`, `electrical`, `acausal`],
+    ports: [`p`, `n`, `in`],
+    params: [
+      { name: `k`, isString: false, isSelector: false, isMap: false, unit: `A`, description: `Amperes per unit of the input signal [A].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
+    type: `SignalVoltageSource`,
+    library: `electrical`,
+    summary: `Signal-controlled voltage source: v = k·in.`,
+    tags: [`signalvoltagesource`, `component`, `electrical`, `acausal`],
+    ports: [`p`, `n`, `in`],
+    params: [
+      { name: `k`, isString: false, isSelector: false, isMap: false, unit: `V`, description: `Volts per unit of the input signal [V].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
+    type: `SineCurrentSource`,
+    library: `electrical`,
+    summary: `Sinusoidal current source: i = Ioff + Iamp·sin(2π·freq·t + phase), driven out of p.`,
+    tags: [`sinecurrentsource`, `component`, `electrical`, `acausal`],
+    ports: [`p`, `n`],
+    params: [
+      { name: `Iamp`, isString: false, isSelector: false, isMap: false, unit: `A`, description: `Amplitude [A].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `freq`, isString: false, isSelector: false, isMap: false, unit: `Hz`, description: `Frequency [Hz].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `phase`, isString: false, isSelector: false, isMap: false, unit: `rad`, description: `Phase at t = 0 [rad].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `Ioff`, isString: false, isSelector: false, isMap: false, unit: `A`, description: `DC offset [A].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
+    type: `SineVoltageSource`,
+    library: `electrical`,
+    summary: `Sinusoidal voltage source: v = Voff + Vamp·sin(2π·freq·t + phase).`,
+    tags: [`sinevoltagesource`, `component`, `electrical`, `acausal`],
+    ports: [`p`, `n`],
+    params: [
+      { name: `Vamp`, isString: false, isSelector: false, isMap: false, unit: `V`, description: `Amplitude [V].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `freq`, isString: false, isSelector: false, isMap: false, unit: `Hz`, description: `Frequency [Hz].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `phase`, isString: false, isSelector: false, isMap: false, unit: `rad`, description: `Phase at t = 0 [rad].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `Voff`, isString: false, isSelector: false, isMap: false, unit: `V`, description: `DC offset [V].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
     type: `SolarArray`,
     library: `electrical`,
     summary: `Solar array: photocurrent proportional to the irradiance signal G [W/m²], with a smooth open-circuit clamp at Voc — the constant-current PV rung.`,
@@ -576,6 +679,34 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     variants: [],
   },
   {
+    type: `Switch`,
+    library: `electrical`,
+    summary: `Signal-driven switch: a conductance that moves from 1/Roff to 1/Ron as its control signal passes a threshold.`,
+    tags: [`switch`, `component`, `electrical`, `acausal`],
+    ports: [`p`, `n`, `ctrl`],
+    params: [
+      { name: `Ron`, isString: false, isSelector: false, isMap: false, unit: `ohm`, description: `Closed resistance [ohm].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `Roff`, isString: false, isSelector: false, isMap: false, unit: `ohm`, description: `Open resistance [ohm] (leakage).`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `thresh`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Control level at which the switch is half closed [-].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Width of the transition in control units [-].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
+    type: `SwitchSPDT`,
+    library: `electrical`,
+    summary: `Signal-driven changeover switch (SPDT): the common terminal joins a while the control is above the threshold, b below it.`,
+    tags: [`switchspdt`, `component`, `electrical`, `acausal`],
+    ports: [`com`, `a`, `b`, `ctrl`],
+    params: [
+      { name: `Ron`, isString: false, isSelector: false, isMap: false, unit: `ohm`, description: `Closed contact resistance [ohm].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `Roff`, isString: false, isSelector: false, isMap: false, unit: `ohm`, description: `Open contact resistance [ohm] (leakage).`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `thresh`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Control level of the changeover [-].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `-`, description: `Width of the transition in control units [-].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
     type: `ThermalFuse`,
     library: `electrical`,
     summary: `Thermal fuse: the element resistance multiplies by (1 + kR) once |I| exceeds the blow rating (tanh, width epsI) — a continuous overcurrent trip.`,
@@ -590,6 +721,19 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     variants: [],
   },
   {
+    type: `Thermistor`,
+    library: `electrical`,
+    summary: `NTC thermistor, beta model R = R0·exp(B·(1/T − 1/T0)) at its heat-port temperature, with self-heating through that port.`,
+    tags: [`thermistor`, `component`, `electrical`, `acausal`],
+    ports: [`p`, `n`, `heat`],
+    params: [
+      { name: `R0`, isString: false, isSelector: false, isMap: false, unit: `ohm`, description: `Resistance at the reference temperature [ohm].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `B`, isString: false, isSelector: false, isMap: false, unit: `K`, description: `Beta constant [K].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `T0`, isString: false, isSelector: false, isMap: false, unit: `K`, description: `Reference temperature [K].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
     type: `VoltageSource`,
     library: `electrical`,
     summary: `An ideal voltage source.`,
@@ -597,6 +741,19 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
     ports: [`p`, `n`],
     params: [
       { name: `E`, isString: false, isSelector: false, isMap: false, unit: `V`, description: `EMF / voltage [V].`, required: true, values: [], variants: [], defaultValue: `` }
+    ],
+    variants: [],
+  },
+  {
+    type: `Zener`,
+    library: `electrical`,
+    summary: `Zener diode (p = anode): forward conduction above 0 V and reverse breakdown below −Vz, each a smooth conductance ramp.`,
+    tags: [`zener`, `component`, `electrical`, `acausal`],
+    ports: [`p`, `n`],
+    params: [
+      { name: `Vz`, isString: false, isSelector: false, isMap: false, unit: `V`, description: `Reverse breakdown voltage [V].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `Gon`, isString: false, isSelector: false, isMap: false, unit: `siemens`, description: `Conductance in either conducting region [siemens].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `eps`, isString: false, isSelector: false, isMap: false, unit: `V`, description: `Smoothing width of each knee [V].`, required: true, values: [], variants: [], defaultValue: `` }
     ],
     variants: [],
   },
