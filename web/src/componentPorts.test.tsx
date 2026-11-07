@@ -59,6 +59,11 @@ it('keeps electrical, fluid and mechanical devices distinct', () => {
     ThermalMass: 'thermal-capacitance', PCMMass: 'thermal-capacitance', Conduction: 'thermal-resistance',
     Convection: 'thermal-resistance', ContactResistance: 'thermal-resistance', MassGen: 'block', WallRC: 'block', DCDCConverter: 'block',
     PneumaticValve52: 'block', CounterbalanceValve: 'block', Engine: 'block',
+    // Phase J1: verified forms where one exists, else an explicit functional block.
+    Zener: 'diode', Thermistor: 'resistor', Potentiometer: 'resistor',
+    SineVoltageSource: 'voltage-source', SignalVoltageSource: 'voltage-source',
+    SineCurrentSource: 'current-source', SignalCurrentSource: 'current-source',
+    Switch: 'block', SwitchSPDT: 'block', IdealTransformer: 'block', OpAmp: 'block', Lamp: 'block',
   }
   for (const [type, shape] of Object.entries(cases)) expect(symbolOf(type).shape, type).toBe(shape)
 })

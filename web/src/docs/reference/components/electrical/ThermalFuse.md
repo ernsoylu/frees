@@ -12,6 +12,10 @@ references: []
 
 Thermal fuse: the element resistance multiplies by (1 + kR) once |I| exceeds the blow rating (tanh, width epsI) — a continuous overcurrent trip.
 
+## What it models
+
+A **current-threshold resistance**, nothing more. The resistance depends only on the present current: it rises smoothly by the factor (1 + kR) once |I| passes `Iblow`, and falls back the moment the current drops below it. The block has **no thermal state** (no I²t heating, no time to blow), and **no irreversible trip**: it never stays open, and it cannot tell a brief surge from a sustained overload. It is not an I²t fuse; that needs a latched discrete state, which the library does not have yet. To see a filament heat up under current, use `Lamp` (resistance against its own temperature) or `HeatingResistor` with a `ThermalMass`.
+
 Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
 > **Generated** from the component library (`crates/frees-core/src/components/library-data/electrical.frees`). The ports, parameters, and constitutive equations are taken verbatim from the component definition; a worked example and prose discussion are added as the page is curated.

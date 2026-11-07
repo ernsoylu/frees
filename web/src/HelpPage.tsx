@@ -703,7 +703,7 @@ const CATEGORIES: NavCategory[] = [
     title: 'System Modeling with Components',
     overview: 'components-overview',
     items: [
-      { id: 'components-overview', label: 'Overview', blurb: 'Acausal, multi-domain system modeling with a 312-component library.', keywords: ['components', 'system modeling', 'overview', 'acausal', 'network', 'bond graph'] },
+      { id: 'components-overview', label: 'Overview', blurb: 'Acausal, multi-domain system modeling with a 324-component library.', keywords: ['components', 'system modeling', 'overview', 'acausal', 'network', 'bond graph'] },
       { id: 'comp-first-network', label: 'Your First Component Network', blurb: 'Instantiate, connect, probe — a pipe run solved as a network.', keywords: ['component', 'network', 'instantiate', 'first', 'source', 'pipe', 'sink', 'probe', 'port'] },
       { id: 'comp-connections', label: 'Connections & Junctions', blurb: 'connect statements vs shared streams; junction rules and boundary conditions.', keywords: ['connect', 'junction', 'node', 'stream', 'shared name', 'branch', 'split', 'mixer', 'boundary condition'] },
       { id: 'comp-schematic', label: 'Reading the Schematic', blurb: 'The auto-drawn circuit: per-fluid lines, symbols, and results on hover.', keywords: ['schematic', 'diagram', 'drawing', 'circuit', 'canvas', 'visualise', 'visualize', 'draw', 'symbol', 'band', 'legend', 'hover', 'drag', 'zoom', 'pan', 'export svg', 'svg', 'layout', 'topology'] },

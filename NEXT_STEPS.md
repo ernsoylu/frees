@@ -591,6 +591,12 @@ entry here is checked off with evidence when it closes.
     - **Evidence.** `embed.test.ts` (parsing, whitelist, bounds, the full-app URL); `embed.spec.ts`: the RC lesson embedded as a light-theme plot kiosk with one slider, solved, changed through the lesson (6.3212 → 3.9347 V), Reset to unsolved, and the seeded `frees.project` byte-identical afterwards; `?example=lesson-diode` in the full app.
     - **Found and fixed:** a Solve pressed before the embed's idle check fired was solved, then wiped by that check, because `onCheck` clears the result. The kiosk journey failed on a cold first run. The idle check now skips a revision that has already been checked. That covers the full app too: an F2 inside the 700 ms lint debounce no longer loses its solution. A Solve whose check is superseded by a newer revision now re-runs, rather than doing nothing.
     - **Found:** a fresh visit's welcome document counts as unsaved, so opening any example (gallery, `?example=`) asks to save first. Left as is: the prompt is the guard that protects real work.
+  - **I5 done 2026-11-07 (`i5-book-search`).**
+    - **One search page for the whole Book** (`search.html`, linked from the contents): guides, reference pages and gallery models are indexed by title, blurb, keywords and text. The index and the script are inlined in the page: no server and no extra fetch.
+    - **Filters come from the lessons.** Every lesson manifest now names a `domain` and its `concepts`. The Concept, Domain and Prerequisite selects list exactly the values the lessons use, and every chosen filter must match. A bare page lists the lessons in course order. A title hit ranks first and a lesson breaks ties. `?q=` pre-fills the query.
+    - **Lesson pages in the gallery** show the objective, domain, concepts, prerequisites, the prediction asked, the paired lesson and the sources. Lessons are exempt from the per-category gallery cap.
+    - **Gates in `build-book`.** The build fails if a lesson is missing from the gallery or a built page is missing from the index. Results are built with DOM text nodes, never markup.
+    - **Evidence.** `search.test.ts` covers matching, facets and ranking. `searchPage.test.ts` drives the installed page in jsdom (filters, `?q=`, the live count). The built `search.html?q=capacitor` gives 9 results in Chromium, with the capacitor-sharing lesson first. `build-book` builds 903 pages, 54 of them in the gallery; `check-docs` is green.
   1. **Insight cards.** τ = RC, thermal τ = mC/UA, ω_n and ζ, Carnot and actual COP, NTU-ε and glide, each computed from solved values and attached to blocks or areas (VIEW-09).
   2. **A lesson manifest beside a gallery example.** It holds:
      - the objective, prerequisites and the governing equation;
@@ -617,6 +623,26 @@ entry here is checked off with evidence when it closes.
     - Keyboard and reduced-motion journeys pass.
     - `check-docs`, `check-examples` and `build-book` are green.
 - **J. Library additions for teaching (independent laws, each with a reference page and a CHECKed example).**
+  - **J1 done 2026-11-07 (`j1-electrical`): twelve electrical teaching primitives** in `electrical.frees` (library 312 → 324).
+    - **Components.** `Switch` and `SwitchSPDT` (signal-driven), `SineVoltageSource` and `SineCurrentSource`, `SignalVoltageSource` and `SignalCurrentSource`, `IdealTransformer`, `OpAmp` (rails, finite gain, tanh saturation), `Zener`, `Potentiometer`, the NTC `Thermistor` (beta model, heat port, self-heating) and the electrothermal `Lamp` (R ∝ (T/T0)^k, heat capacity and radiation in one block).
+    - **Switching goes through a signal input or a smooth law,** never a change of the circuit, so the equation set is the same open or closed.
+    - **Each has a reference page** with a CHECKed example graded against an analytic value:
+      - the switched RC against τ = (R + Ron)·C (3e-6 relative), with the open-switch leakage matching Roff;
+      - the RC low-pass at its corner against the closed-form sine response;
+      - the transformer's N²·R_L and power balance;
+      - the inverting amplifier at −Rf/Rin·vin and at the rail;
+      - the Zener regulator's Vz + (E − Vz)/(1 + R·Gon);
+      - the loaded divider's Thevenin value;
+      - the thermistor against the beta equation;
+      - the lamp's inrush V/R0 and its radiative steady state (2802.18 K, solved independently).
+    - **`ThermalFuse`'s page now states what it models:** a current-threshold resistance with no thermal state and no irreversible trip, which makes it not an I²t fuse.
+    - **Symbols use existing verified forms:** Zener uses the diode; the thermistor and the potentiometer use the resistor; the sine and signal sources use the voltage and current sources. `Switch`, `SwitchSPDT`, `IdealTransformer`, `OpAmp` and `Lamp` are explicit functional blocks.
+    - **Not done:** dedicated switch, transformer, op-amp and lamp symbols. They need Figma masters (`web/public/component-symbols/README.md`), which this change could not produce.
+    - **Evidence.**
+      - `check-docs` 766/766.
+      - `check-examples` 821/821 blocks with 2,936 assertions, through a rebuilt WASM module.
+      - `component_families`, `component_library`, `u5_components` and the `components` unit tests (pinned counts 43 and 324).
+      - `componentPorts.test.tsx` pins the new symbol mapping.
   1. **Electrical primitives** (scope as decided in F):
      - an event- or signal-driven `Switch` (and an SPDT);
      - sine and signal-controlled voltage and current sources;
