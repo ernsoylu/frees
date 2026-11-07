@@ -196,6 +196,8 @@ export interface CheckResponse {
   /** Connection topology of the component network (domain + instance.port
    *  endpoints per node) — the rendered schematic's data layer. */
   connections?: ConnectionDto[]
+  /** H4: each DYNAMIC event with the top-level blocks its crossing reads. */
+  events?: { table: string; name: string; owners: string[] }[]
   /** Every instance port, wired or not, with its domain. Empty when the
    *  component layer did not expand. */
   ports?: PortDto[]
@@ -387,6 +389,7 @@ export async function check(
       ports: data.ports ?? [],
       instances: data.instances ?? [],
       definitions: data.definitions ?? [],
+      events: data.events ?? [],
     }
   } catch (e) {
     // Only infrastructure can land here (worker died, wasm failed to load) —

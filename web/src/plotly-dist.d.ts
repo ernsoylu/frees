@@ -13,6 +13,7 @@ declare module 'plotly.js/lib/core' {
     color?: string
     size?: number | number[]
     symbol?: string
+    opacity?: number | number[]
     line?: { width?: number; color?: string }
   }
 

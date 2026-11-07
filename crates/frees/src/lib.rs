@@ -1665,6 +1665,11 @@ fn check_response(report: &CheckReport, source: Option<&str>) -> String {
             }))
             .collect::<Vec<_>>(),
         "connections": connection_defs(&report.connections, source),
+        "events": report
+            .events
+            .iter()
+            .map(|e| json!({ "table": e.table, "name": e.name, "owners": e.owners }))
+            .collect::<Vec<_>>(),
         "ports": report
             .ports
             .iter()
@@ -3595,6 +3600,24 @@ END\n\
     /// Phase H: the two-phase streams of an ideal R134a cycle, classified at
     /// the solved state — superheated after the compressor, inside the dome
     /// after the throttle.
+    /// H4: Check names the blocks each `DYNAMIC` event reads, for the playback flash.
+    #[test]
+    fn check_reports_the_blocks_an_event_reads() {
+        let model = "ThermalMass   M(C=5000 [J/K], T0=400 [K])\n\
+                     ThermalSource amb(T=300 [K])\n\
+                     Conduction    wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])\n\
+                     connect(M.port, wall.a)\n\
+                     connect(wall.b, amb.port)\n\
+                     DYNAMIC cool (method = ida, time = 0 .. 1000, points = 11)\n\
+                       EVENT warm: M.port.T = 350 | falling -> record\n\
+                     END\n";
+        let v = parsed(&check(model, "{}"));
+        assert_eq!(
+            v["events"],
+            serde_json::json!([{ "table": "cool", "name": "warm", "owners": ["m"] }])
+        );
+    }
+
     #[test]
     fn two_phase_streams_report_their_phase() {
         let text = "P_L = 0.14 [MPa]\nP_H = 0.8 [MPa]\nCompressor comp(eta=1, fluid$=R134a)\n\

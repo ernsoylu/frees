@@ -298,3 +298,22 @@ export function badgeFor(node: SchematicNode, readout: NodeReadout): Reading | n
   }
   return null
 }
+
+/** Stream members first in this order on a hover summary; the rest follow by name. */
+const SUMMARY_ORDER = ['p', 't', 'h', 'x', 'mdot', 's', 'w', 'rh']
+
+/**
+ * H4: the hover summary of a stream or port (`cook.vent`) — every member the
+ * solve (or the playback sample) has a value for, `P = 2.03e5 Pa`, one per
+ * line. Empty when it has none.
+ */
+export function streamSummary(stream: string, values: ReadonlyMap<string, VariableResult>): string {
+  const prefix = `${stream.toLowerCase()}.`
+  const rows = [...values].filter(([name]) => name.startsWith(prefix) && !name.slice(prefix.length).includes('.'))
+  const rank = (m: string) => (SUMMARY_ORDER.includes(m) ? SUMMARY_ORDER.indexOf(m) : SUMMARY_ORDER.length)
+  return rows
+    .map(([name, v]) => ({ member: name.slice(prefix.length), v }))
+    .sort((a, b) => rank(a.member) - rank(b.member) || a.member.localeCompare(b.member))
+    .map(({ v }) => `${v.name.slice(prefix.length)} = ${formatCompact(v.value)}${v.units ? ` ${v.units}` : ''}`)
+    .join('\n')
+}

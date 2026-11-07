@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ConnectionDto, OdeTableDto } from '../api'
-import { cursorFor, TRAIL } from './playbackCursor'
+import { cursorFor, TRAIL, xyTrail } from './playbackCursor'
 
 const table = (rows: (number | null)[][]): OdeTableDto => ({
   name: 'run',
@@ -57,5 +57,16 @@ describe('playback cursor (H3)', () => {
     const t: OdeTableDto = { ...table([[0, 0, 0, 0, 0, 0]]), vars: ['time', 'ahu$out$t', 'ahu$out$w'], rows: [[0, 295, 0.008]] }
     expect(cursorFor(air, t, 0, 'T', 'w', null).points).toEqual([{ label: 'ahu.out', x: 295, y: 0.008 }])
     expect(cursorFor(water, t, 0, 'T', 'w', null).points).toEqual([])
+  })
+})
+
+describe('X-Y playback trail (H4)', () => {
+  it('follows recorded samples of a phase portrait up to the current one, with gaps', () => {
+    const t: OdeTableDto = { ...table([]), vars: ['time', 'x', 'osc$v'], rows: [[0, 1, 0], [1, 0, -1], [2, -1, null], [3, 0, 1]] }
+    expect(xyTrail(t, 2, 'x', ['osc.v', 'missing'])).toEqual([{ label: 'osc.v', x: [1, 0, null], y: [0, -1, null] }])
+    const long: OdeTableDto = { ...t, rows: Array.from({ length: TRAIL + 5 }, (_, k) => [k, k, -k]) }
+    const [trail] = xyTrail(long, TRAIL + 4, 'x', ['osc.v'])
+    expect(trail.x).toHaveLength(TRAIL)
+    expect(trail.x.at(-1)).toBe(TRAIL + 4)
   })
 })

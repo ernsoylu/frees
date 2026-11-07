@@ -93,7 +93,7 @@ import {
 } from './sourceEdit'
 import { componentFile, editInterface, extractSubsystem, importComponents, movePresentation, type Extraction, type InterfaceChange } from './encapsulation'
 import { canDiverge, CARRIES, DIVERGING_STOPS, divergingColor, edgeReadings, flowAlong, overlayMetrics, PARTICLE_GAP, particlePeriods, PHASE_COLORS, PHASE_METRIC, phaseColor, phaseReadings, rampColor, RAMP_STOPS, type ScaleSetting } from './overlay'
-import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, type NodeReadout, type Reading } from './readouts'
+import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, streamSummary, type NodeReadout, type Reading } from './readouts'
 import { wasmUnitConversions } from '../wasm/engineClient'
 import { COMPONENT_CATALOG, type ComponentSpec } from '../componentCatalog'
 import { searchModel, type SearchHit } from './search'
@@ -251,6 +251,8 @@ interface Props {
   recorded?: readonly string[]
   /** Phase H: the engine's phase of each real-fluid stream at the solved state (none during playback). */
   phases?: Record<string, StreamPhase>
+  /** H4: the blocks an event recorded at the playback sample reads; they flash. */
+  flash?: readonly string[]
 }
 
 export type SchematicHandoff = 'plot' | 'table' | 'state' | 'sensitivity'
@@ -379,6 +381,7 @@ export default function SchematicTab({
   paused = false,
   recorded,
   phases,
+  flash,
   text,
   onRevealLine,
   onSelectLine,
@@ -1126,6 +1129,11 @@ export default function SchematicTab({
     const kept = new Set(recorded.map((n) => n.replaceAll('$', '.').toLowerCase()))
     return new Map([...values].filter(([name]) => kept.has(name)))
   }, [values, recorded])
+  const flashIds = useMemo(() => new Set((flash ?? []).map((id) => id.toLowerCase())), [flash])
+  const summaryOf = (stream?: string) => {
+    const text = stream ? streamSummary(stream, values) : ''
+    return text ? `\n${text}` : ''
+  }
   const particles = useMemo(
     () => (overlaySet.particles && !reducedMotion ? particlePeriods(layout.edges, flowValues) : null),
     [overlaySet.particles, reducedMotion, layout.edges, flowValues],
@@ -3386,6 +3394,7 @@ export default function SchematicTab({
                     {edgeTitle(e)}
                     {reading?.value !== undefined && metric ? ` — ${metric.label} ${formatCompact(reading.value)} ${metric.units}${reading.clipped ? ` (beyond the fixed range, drawn at its ${reading.clipped === 'high' ? 'top' : 'bottom'})` : ''}` : ''}
                     {phase ? ` — ${phase.phase}${phase.x !== undefined ? `, x = ${formatCompact(phase.x)}` : ''}` : phase === null ? ' — phase unknown' : ''}
+                    {summaryOf(e.fromStream ?? e.toStream)}
                   </title>
                 </path>
                 {flow && !out ? <FlowArrow pts={pts} dir={flow} fill={ink.text} /> : null}
@@ -3557,6 +3566,8 @@ export default function SchematicTab({
                   wiring={Boolean(onEmitStatement)}
                   pendingPort={pendingPort}
                   highlighted={highlightIds.includes(n.id) || selected.has(n.id)}
+                  flash={flashIds.has(n.id)}
+                  summary={(port) => streamSummary(`${n.id}.${port}`, values)}
                   onPointerDown={(e) => {
                     takeControl()
                     // Dragging a selected block carries the whole selection; locked blocks stay.
@@ -4081,6 +4092,10 @@ interface BlockProps {
   onPortDrag?: (port: string, e: React.PointerEvent) => void
   /** While a wire is drawn: whether each port may take it. */
   compat?: (port: string) => 'allowed' | 'prohibited' | 'unknown' | undefined
+  /** H4: an event recorded at the playback sample reads this block. */
+  flash?: boolean
+  /** H4: a port's hover summary (every member with a value). */
+  summary?: (port: string) => string
 }
 
 const reactAttr = (name: string) => name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
@@ -4116,6 +4131,8 @@ function NodeBlock({
   custom,
   onPortDrag,
   compat,
+  flash = false,
+  summary,
 }: Readonly<BlockProps>) {
   // COMP-08: a missing project symbol falls back to a labelled block.
   const shape = custom === null ? 'block' : (look?.shape ?? node.shape)
@@ -4161,17 +4178,19 @@ function NodeBlock({
       aria-label={`${node.type ?? 'component'} ${node.label}`}
       aria-description={locked ? 'position locked' : undefined}
       data-locked={locked || undefined}
+      data-flash={flash || undefined}
       style={{ cursor: locked ? 'default' : 'move' }}
     >
-      <title>{`${node.type ?? ''} ${node.label} — ${symbolLabel}`}</title>
+      <title>{`${node.type ?? ''} ${node.label} — ${symbolLabel}${flash ? ' — event at this sample' : ''}${portSummaries(node, summary)}`}</title>
       <rect
         width={node.w}
         height={node.h}
         rx={node.terminal ? 3 : 7}
         fill={active ? ink.blockActive : ink.block}
         data-plain={look?.accent ?? (node.terminal ? ink.borderTerminal : ink.border)}
-        stroke={highlighted ? ink.highlight : active ? ink.active : (look?.accent ?? (node.terminal ? ink.borderTerminal : ink.border))}
-        strokeWidth={highlighted || active ? 2.2 : 1.2}
+        className={flash ? 'event-flash' : undefined}
+        stroke={flash ? EVENT_FLASH : highlighted ? ink.highlight : active ? ink.active : (look?.accent ?? (node.terminal ? ink.borderTerminal : ink.border))}
+        strokeWidth={flash ? 3 : highlighted || active ? 2.2 : 1.2}
         strokeDasharray={node.terminal ? '4 2' : undefined}
       />
       {chip && (
@@ -4274,7 +4293,7 @@ function NodeBlock({
             }}
             style={{ cursor: wiring ? 'crosshair' : 'move' }}
           >
-            <title>{`${node.label}.${p.port}`}</title>
+            <title>{`${node.label}.${p.port}${summary?.(p.port) ? `\n${summary(p.port)}` : ''}`}</title>
             {wiring && (
               // CFG-09: a finger needs about 22 px on screen whatever the zoom, but
               // never over a neighbouring port's centre, or that port is lost.
@@ -5615,6 +5634,15 @@ function ClipMark({ pts, stroke }: Readonly<{ pts: readonly { x: number; y: numb
   for (let i = 2; i < pts.length; i++) if (Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y) > Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y)) k = i
   const [mx, my] = [(pts[k - 1].x + pts[k].x) / 2, (pts[k - 1].y + pts[k].y) / 2]
   return <path data-clip-mark d={`M ${mx} ${my - 6} L ${mx + 6} ${my} L ${mx} ${my + 6} L ${mx - 6} ${my} Z`} fill="none" stroke={stroke} strokeWidth={1.5} pointerEvents="none" />
+}
+
+/** H4: the colour a block flashes when an event it reads was recorded at the playback sample. */
+const EVENT_FLASH = '#fd7e14'
+
+/** H4: each port's members under the block's hover title. */
+function portSummaries(node: SchematicNode, summary?: (port: string) => string): string {
+  if (!summary) return ''
+  return node.ports.map((p) => ({ port: p.port, text: summary(p.port) })).filter((p) => p.text).map((p) => `\n${p.port}:\n  ${p.text.replaceAll('\n', '\n  ')}`).join('')
 }
 
 function edgeTitle(e: SchematicEdge): string {

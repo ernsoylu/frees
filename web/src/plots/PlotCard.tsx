@@ -50,7 +50,7 @@ import {
 } from './figure'
 import { EXPORT_FORMATS, exportPlot } from './exportPlot'
 import PlotlyChart, { type PlotPointClickEvent } from './PlotlyChart'
-import type { PlaybackSample } from './playbackCursor'
+import { xyTrail, type PlaybackSample } from './playbackCursor'
 
 export interface PlotCursor {
   traceIndex: number
@@ -671,11 +671,33 @@ export default function PlotCard({
   const playheadX = playhead && spec.source?.kind === 'table' && spec.source.tableId === playhead.tableId && spec.xy.xVar?.toLowerCase() === playhead.xVar.toLowerCase()
     ? playhead.x
     : null
+  // H4: a plot of the played-back table against something other than time (a
+  // phase portrait, a hysteresis loop) draws a fading trail to the sample.
+  const portrait = playhead?.sample && spec.kind === 'xy' && spec.source?.kind === 'table' && spec.source.tableId === playhead.tableId && spec.xy.xVar && spec.xy.xVar.toLowerCase() !== playhead.xVar.toLowerCase()
+    ? { y: xyTrail(playhead.sample.table, playhead.sample.index, spec.xy.xVar, spec.xy.yVars), y2: xyTrail(playhead.sample.table, playhead.sample.index, spec.xy.xVar, spec.xy.y2Vars ?? []) }
+    : null
   const displayedFigure = useMemo(() => {
     if (!figure) return null
-    if (!cursor1 && !cursor2 && playheadX === null) return figure
+    if (!cursor1 && !cursor2 && playheadX === null && !portrait) return figure
     const shapes = [...(figure.layout.shapes ?? [])]
     const annotations = [...(figure.layout.annotations ?? [])]
+    const data = [...figure.data]
+    if (portrait) {
+      for (const [axis, trails] of [['y', portrait.y], ['y2', portrait.y2]] as const) {
+        for (const t of trails) {
+          data.push({
+            type: 'scatter', mode: 'lines+markers', uid: `trail_${t.label}`, name: `${t.label} trail`, x: t.x, y: t.y, yaxis: axis,
+            connectgaps: false, line: { color: '#e03131', width: 1.5 }, opacity: 0.7,
+            marker: { color: '#e03131', size: 5, opacity: t.x.map((_, k) => (k + 1) / t.x.length) },
+            showlegend: false, hoverinfo: 'skip',
+          })
+          const [x, y] = [t.x.at(-1), t.y.at(-1)]
+          if (x !== null && x !== undefined && y !== null && y !== undefined) {
+            data.push({ type: 'scatter', mode: 'markers', uid: `playback_${t.label}`, name: `${t.label} at the sample`, x: [x], y: [y], yaxis: axis, marker: { color: '#e03131', size: 11, symbol: 'circle-open', line: { width: 3, color: '#e03131' } }, showlegend: false })
+          }
+        }
+      }
+    }
     if (playheadX !== null) {
       shapes.push({ type: 'line', x0: playheadX, x1: playheadX, y0: 0, y1: 1, yref: 'paper', line: { color: '#e03131', width: 2 } })
     }
@@ -730,13 +752,14 @@ export default function PlotCard({
 
     return {
       ...figure,
+      data,
       layout: {
         ...figure.layout,
         shapes,
         annotations,
       },
     }
-  }, [figure, cursor1, cursor2, playheadX])
+  }, [figure, cursor1, cursor2, playheadX, portrait])
 
   async function onExport(format: (typeof EXPORT_FORMATS)[number]['value']) {
     const theme: PlotTheme = publicationStyle ? 'light' : 'dark'

@@ -80,3 +80,30 @@ export function cursorFor(
   }
   return out
 }
+
+/**
+ * H4: an X-Y trail for a phase portrait or a hysteresis loop — a plot of the
+ * played-back table whose x is not its time column. Per y column, the last
+ * {@link TRAIL} recorded samples up to `index`, the newest last; a missing or
+ * non-finite value is a gap. Columns the table did not record give no trail.
+ */
+export function xyTrail(table: OdeTableDto, index: number, xVar: string, yVars: readonly string[]): { label: string; x: (number | null)[]; y: (number | null)[] }[] {
+  const col = (name: string) => table.vars.findIndex((v) => v.replaceAll('$', '.').toLowerCase() === name.replaceAll('$', '.').toLowerCase())
+  const jx = col(xVar)
+  if (jx < 0) return []
+  const first = Math.max(0, index - TRAIL + 1)
+  const ok = (v: number | null | undefined): v is number => typeof v === 'number' && Number.isFinite(v)
+  return yVars.flatMap((label) => {
+    const jy = col(label)
+    if (jy < 0) return []
+    const x: (number | null)[] = []
+    const y: (number | null)[] = []
+    for (let k = first; k <= index; k++) {
+      const row = table.rows[k] ?? []
+      const both = ok(row[jx]) && ok(row[jy])
+      x.push(both ? row[jx] : null)
+      y.push(both ? row[jy] : null)
+    }
+    return [{ label, x, y }]
+  })
+}

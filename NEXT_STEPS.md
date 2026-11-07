@@ -457,6 +457,25 @@ entry here is checked off with evidence when it closes.
         - The trail grows with each step and ends exactly at the cursor.
         - At 1200 s the cooker sits at 195–215 kPa, with a 30-sample trail.
         - No `solve` or `check` runs.
+  - **H4 done 2026-11-07 (`h4-playback-views`).**
+    - **X-Y trail.** An X-Y plot of the played-back table whose x is not its time column (a phase portrait or a hysteresis loop) gets a fading trail. It covers the last 30 recorded samples, each y column on its own axis, and ends in a marker at the sample (`xyTrail`, `plots/playbackCursor.ts`). A missing value is a gap.
+    - **Event flash.** Check reports each `DYNAMIC` event with the top-level instances its crossing equation reads (`EventWatch`, `engine.rs`; `events` in the check response).
+      - At the sample an event recorded at, those blocks pulse orange three times and their title says so.
+      - Reduced motion keeps the orange outline without the pulse.
+      - An event that reads no block flashes nothing; ownership is never guessed from names.
+    - **Hover summary.** A wire's and a port's native tooltip lists every member of the stream with a value (`streamSummary`, `schematic/readouts.ts`), P, T, h, x, ṁ and s first. A block's tooltip lists each port's members.
+      - During playback these are the recorded values at the sample.
+    - **Evidence.**
+      - `check_reports_the_blocks_an_event_reads` (bridge).
+      - `readouts.test.ts` (summary order, nested names excluded).
+      - `playbackCursor.test.ts` (X-Y trail bounds and gaps).
+      - `playback-views.spec.ts`:
+        - The portrait trail reaches the event's sample, and its cursor is the recorded pair (Q̇/(T − 300 K) = 20 W/K).
+        - `M` flashes and `wall` does not.
+        - Wire and block titles read 344.93 K, then 330.12 K one step later.
+        - Reduced motion stops the pulse.
+        - No `solve` or `check` runs.
+      - The shared journey steps live in `e2e/journey.ts`.
   1. **Explicit port-flow metadata.** The engine reports each port's role and measured-flow sign per domain (fluid, liquid, two-phase, moist air, heat, electrical, mechanical, translational). This replaces `flowAlong`'s in/out naming. Where a direction is not known, it stays unknown; it is never inferred from drawing order or a pressure gradient.
   2. **Flow particles.**
     - Particles move along the routed wire paths. Speed follows the log of the flow magnitude, normalised per domain; direction comes from (1).
