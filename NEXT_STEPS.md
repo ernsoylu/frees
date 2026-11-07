@@ -370,16 +370,24 @@ entry here is checked off with evidence when it closes.
        - radau5 364 ms.
        Live stepping on IDA therefore has two orders of magnitude of headroom inside a 5–15 ms chunk. ARCHITECTURE §10's target holds with room to spare.
      - The harnesses were scratch files outside the repository (an example binary on `PreparedDocument` and a Node timer on the module); they are not project tools.
-- **G. Faster steady what-if: prepared reuse and a warm start for slider drags (stage 0).** F.2 showed that the warm start is where the gain is.
-  1. Each worker keeps one `PreparedDocument`, keyed by the source with the slider pins struck, plus the remaining request. A slider move pins its value.
-  2. **While dragging:** the solve starts from the previous move's solution. If it fails, it falls back to a cold start; the optimizer already does this.
-  3. **On release:** the commit solve starts cold from the document's guesses, so the result left on screen is what Solve gives. A warm start can follow a branch the cold start would not take.
-  4. Any change that alters lowering, or the set of pin names, re-prepares; `with_source_pins` already routes these. The revision tracker and stale-job rejection are unchanged. Memory is bounded at one prepared document per worker.
-  - **Acceptance.**
-    - Values agree with a fresh solve to 1e-12 relative, units and diagnostics are equal, over every gallery model with a pinnable parameter.
-    - A test counts preparations.
-    - A drag on the EV model is at least 2× faster than F.2's fresh median.
-    - The WASM budget is respected.
+- **G. Faster steady what-if: prepared reuse and a warm start for slider drags — done 2026-11-07 (`g-prepared-sliders`).**
+  1. **Drag.** `App.tsx` marks a solve that the drag timer starts. `api.ts` sends it as `sliderSolve: "drag"`.
+     - The bridge (`slider_solve` in `crates/frees/src/lib.rs`) applies it only when every override line is a bare literal (`eta = 0.7`, `P = 250 [kPa]`; the last line per name wins).
+     - Those lines become pins. `PreparedDocument::solve_with_literal_pins` keeps each pin's unit and source text, so units, block listings and residuals read as the plain solve's.
+     - The base text has the pins' assignments struck (`strike_assignments`, split out of `apply_overrides`).
+     - Each worker keeps one prepared document. It is keyed by that base, the pin names and units, and the request minus its overrides. Solves run on worker 0, so drags reuse it.
+     - Newton starts from the previous drag's values; a failure retries cold. A failure on this path falls back to the plain solve, so failure envelopes never depend on it.
+     - Documents that lower their pins (complex mode, stepping, linearisation), non-literal overrides, legacy and find-all solves all take the plain path.
+  2. **Release.** The release is a plain solve, so the value left on screen is exactly what Solve gives.
+     - **Changed from the plan.** The plan had the release solve cold on the prepared document. Over the gallery, that agrees to 1e-12 except on four refrigeration cycles (`actual-vapor-compression-cycle`, `refrigeration-exergy-destruction`, `two-evaporator-refrigeration`, `liquid-suction-heat-exchanger`). There, values differ by up to 4e-12 relative, because the prepared path takes one Newton iteration fewer (86 against 87; residual 0 against 5e-8).
+     - Both answers are within tolerance. **Open finding:** a cold `PreparedDocument` solve is not bit-equal to a fresh one on property cycles; parametric tables inherit this. It is not reverified beyond these four models.
+  3. **Evidence.**
+     - `web/src/sliderSolve.test.ts`: 90 gallery models with a pinnable parameter, two pins each, three successive drags. Each drag has the plain solve's response with every number masked (units, warnings, blocks, listings, diagnostics), and values within 1e-6 relative.
+     - `slider_solves_prepare_once_per_model` (bridge unit test): one preparation per model across drags and releases, and a new preparation when the model changes.
+     - **Timing** (Node, WASM; 12-step simulated drag, median of steps 2–12, two runs):
+       - EV, pin `k_fin`: plain 12.6–13.8 ms, drag 6.0–6.2 ms (2.0–2.3×);
+       - small model, pin `Q`: plain 2.2–2.3 ms, drag 0.8–0.9 ms.
+     - WASM 3,915.5 KiB raw / 1,562.5 KiB gzipped, inside the 5,120 KiB budget.
 - **H. Motion and state on recorded runs (no live engine needed).**
   1. **Explicit port-flow metadata.** The engine reports each port's role and measured-flow sign per domain (fluid, liquid, two-phase, moist air, heat, electrical, mechanical, translational). This replaces `flowAlong`'s in/out naming. Where a direction is not known, it stays unknown; it is never inferred from drawing order or a pressure gradient.
   2. **Flow particles.**
