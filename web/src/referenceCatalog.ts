@@ -5256,6 +5256,102 @@ Instantiated in the verified example below:
 [Run: pressure-cooker]`,
   },
   {
+    name: `IdealTransformer`,
+    slug: `idealtransformer`,
+    category: `Component (electrical)`,
+    summary: `Ideal transformer, turns ratio N = N1/N2: v1 = N·v2 and N·i1 + i2 = 0.`,
+    related: [`Resistor`],
+    examples: [],
+    tags: [`idealtransformer`, `component`, `electrical`, `acausal`],
+    references: [`J. W. Nilsson and S. A. Riedel`, `Electric Circuits`, `11th ed.`, `Pearson`, `2019 (the ideal transformer)`],
+    guides: [],
+    body: `Ideal transformer, turns ratio N = N1/N2: v1 = N·v2 and N·i1 + i2 = 0.
+
+## What it models
+
+A lossless, leakage-free transformer with no magnetizing current: the voltages scale by \`N\` and the currents by \`1/N\`, so it stores and dissipates nothing and the power in equals the power out. Because it passes DC as readily as AC, each winding needs its own reference (a \`Ground\` on each side). It does not saturate.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`p1\`, \`n1\`, \`p2\`, \`n2\`
+
+## Usage
+
+\`\`\`
+IdealTransformer inst(N)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`N\` | Number | Turns ratio N1/N2, primary to secondary [-]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+p1.v - n1.v &= n\\cdot \\left(p2.v - n2.v\\right) \\\\
+p2.i &= -n\\cdot p1.i \\\\
+p1.i + n1.i &= 0 \\\\
+p2.i + n2.i &= 0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — step 120 V down to 12 V
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A 10:1 transformer steps 120 V down to 12 V across 12 Ω. The load draws
+  1 A, the primary 0.1 A: the primary sees N²·R_L = 1200 Ω, and the power is
+  12 W on both sides. Each winding has its own ground reference. }
+VoltageSource    VS(E=120 [V])
+IdealTransformer TR(N=10)
+Resistor         RL(R=12 [ohm])
+Ground           G1()
+Ground           G2()
+connect(VS.p, TR.p1)
+connect(VS.n, TR.n1, G1.port)
+connect(TR.p2, RL.a)
+connect(RL.b, TR.n2, G2.port)
+v_2  = TR.p2.V - TR.n2.V
+i_1  = TR.p1.I
+P_1  = (TR.p1.V - TR.n1.V) * TR.p1.I
+P_2  = v_2 * RL.a.I
+R_in = (TR.p1.V - TR.n1.V) / TR.p1.I
+
+{ CHECK v_2 12 1e-09 }
+{ CHECK i_1 0.1 1e-12 }
+{ CHECK p_1 12 1e-09 }
+{ CHECK p_2 12 1e-09 }
+{ CHECK r_in 1200 1e-06 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+v_2 = 12
+i_1 = 0.1
+p_1 = 12
+p_2 = 12
+r_in = 1200
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `Inductor`,
     slug: `inductor`,
     category: `Component (electrical)`,
@@ -5483,6 +5579,109 @@ Expected output (selected solution values; numerical rounding may vary):
 bus.n.i = 13.88888889
 bus.n.v = 0
 bus.p.i = -13.88888889
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `Lamp`,
+    slug: `lamp`,
+    category: `Component (electrical)`,
+    summary: `Incandescent lamp: a filament whose resistance rises with its temperature, heated by its current and cooled by radiation.`,
+    related: [`HeatingResistor`, `ThermalMass`, `Radiation`],
+    examples: [],
+    tags: [`lamp`, `component`, `electrical`, `acausal`],
+    references: [`T. L. Bergman`, `A. S. Lavine`, `F. P. Incropera and D. P. DeWitt`, `Fundamentals of Heat and Mass Transfer`, `8th ed.`, `Wiley`, `2017 (radiation exchange)`, `J. R. Rumble (ed.)`, `CRC Handbook of Chemistry and Physics`, `CRC Press (electrical resistivity of tungsten)`],
+    guides: [],
+    body: `Incandescent lamp: a filament whose resistance rises with its temperature, heated by its current and cooled by radiation.
+
+## What it models
+
+An electrothermal filament: the resistance of \`HeatingResistor\`, the heat capacity of \`ThermalMass\` and \`Radiation\` to the surroundings, in one block. R = R0·(Tf/T0)^kexp (tungsten: kexp ≈ 1.2), C_th·dTf/dt = v·i − εA·σ·(Tf⁴ − Tamb⁴). A cold filament draws an inrush current many times its running current until it heats up. In a steady solve, der(Tf) = 0 gives the operating temperature. Conduction to the leads and the gas fill are not modelled.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`p\`, \`n\`
+
+## Usage
+
+\`\`\`
+Lamp inst(R0, T0, kexp, C_th, epsA, Tamb, Tf0)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`R0\` | Number | Filament resistance at T0 [ohm]. |
+| \`T0\` | Number | Reference temperature of R0 [K]. |
+| \`kexp\` | Number | Resistance–temperature exponent [-]. |
+| \`C_th\` | Number | Filament heat capacity [J/K]. |
+| \`epsA\` | Number | Emissivity × radiating area [m^2]. |
+| \`Tamb\` | Number | Temperature of the surroundings [K]. |
+| \`Tf0\` | Number | Initial filament temperature [K]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+r &= r0\\cdot \\left(\\frac{tf}{t0}\\right)^{kexp} \\\\
+p.v - n.v &= r\\cdot p.i \\\\
+p.i + n.i &= 0 \\\\
+pel &= \\left(p.v - n.v\\right)\\cdot p.i \\\\
+prad &= epsa\\cdot 5.670374419E-8\\,\\left[W/m^2-K^4\\right]\\cdot \\left(tf^{4} - tamb^{4}\\right) \\\\
+\\text{der}\\left(tf\\right) &= \\frac{pel - prad}{c_{th}} \\\\
+\\text{init}\\left(tf\\right) &= tf0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — inrush current of a lamp switched on cold
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A 120 V lamp switched on cold. Its tungsten filament is 16.4 Ω at 300 K
+  and rises as (T/300 K)^1.2, so the first current is 120/16.4 = 7.32 A. The
+  filament heats until the electrical power equals what it radiates,
+  V²/R(T) = εA·σ·(T⁴ − Tamb⁴): about 2802 K, 0.501 A and 60 W, an inrush of
+  roughly fourteen times the running current. }
+VoltageSource VS(E=120 [V])
+Lamp          L(R0=16.4 [ohm], T0=300 [K], kexp=1.2, C_th=0.0027 [J/K], epsA=1.72e-5 [m^2], Tamb=300 [K], Tf0=300 [K])
+Ground        G()
+connect(VS.p, L.p)
+connect(L.n, VS.n, G.port)
+
+DYNAMIC switch_on (method = ida, time = 0 .. 2, points = 2001)
+END
+i_cold = ODEValue('l.p.i', 0) * 1 [A]
+i_hot  = ODEValue('l.p.i', 2) * 1 [A]
+T_hot  = ODEValue('l.tf', 2) * 1 [K]
+P_hot  = ODEValue('l.pel', 2) * 1 [W]
+
+{ CHECK i_cold 7.317073170731707 1e-09 }
+{ CHECK t_hot 2802.1820753282605 0.01 }
+{ CHECK i_hot 0.5010571719247913 1e-06 }
+{ CHECK p_hot 60.12686063097496 0.001 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+i_cold = 7.317073170731707
+t_hot = 2802.1820753282605
+i_hot = 0.5010571719247913
+p_hot = 60.12686063097496
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -5726,6 +5925,107 @@ hold.n.i = -5.999977974
 <!-- verified-reference-example:end -->`,
   },
   {
+    name: `OpAmp`,
+    slug: `opamp`,
+    category: `Component (electrical)`,
+    summary: `Ideal operational amplifier with rails: no input current, open-loop gain A, output saturating at Vneg and Vpos.`,
+    related: [`Resistor`],
+    examples: [],
+    tags: [`opamp`, `component`, `electrical`, `acausal`],
+    references: [`P. Horowitz and W. Hill`, `The Art of Electronics`, `3rd ed.`, `Cambridge University Press`, `2015 (op-amp golden rules)`, `A. S. Sedra and K. C. Smith`, `Microelectronic Circuits`, `7th ed.`, `Oxford University Press`, `2014 (the inverting amplifier with finite open-loop gain)`],
+    guides: [],
+    body: `Ideal operational amplifier with rails: no input current, open-loop gain A, output saturating at Vneg and Vpos.
+
+## What it models
+
+An op-amp with infinite input impedance, zero output impedance and a finite open-loop gain \`A\`. The output voltage, referred to ground, follows A·(v+ − v−) and saturates smoothly (tanh) at the rails, so feedback circuits reach their textbook gain and stop at the supply. The supply current is not modelled; the output port sources or sinks whatever current the circuit needs. There is no slew-rate, bandwidth or offset model.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`inp\`, \`inn\`, \`out\`
+
+## Usage
+
+\`\`\`
+OpAmp inst(A, Vpos, Vneg)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`A\` | Number | Open-loop voltage gain [-]. |
+| \`Vpos\` | Number | Positive output rail [V]. |
+| \`Vneg\` | Number | Negative output rail [V]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+inp.i &= 0 \\\\
+inn.i &= 0 \\\\
+vmid &= 0.5\\,\\left(vpos + vneg\\right) \\\\
+vhalf &= 0.5\\,\\left(vpos - vneg\\right) \\\\
+out.v &= vmid + vhalf\\cdot \\tanh\\left(\\frac{a\\cdot \\left(inp.v - inn.v\\right)}{vhalf}\\right)
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — an inverting amplifier, linear and at the rail
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ Inverting amplifiers, Rf/Rin = 10 with ±12 V rails. With 0.5 V in the
+  output is −Rf/Rin·vin = −5 V, short of it only by the finite open-loop gain
+  (about 11/A of the output). With 2 V in, −20 V is past the rail and the
+  output stops at −12 V. }
+VoltageSource VA(E=0.5 [V])
+Resistor      RinA(R=1000 [ohm])
+Resistor      RfA(R=10000 [ohm])
+OpAmp         OA(A=1e5, Vpos=12 [V], Vneg=-12 [V])
+Ground        GA()
+connect(VA.p, RinA.a)
+connect(RinA.b, RfA.a, OA.inn)
+connect(RfA.b, OA.out)
+connect(OA.inp, VA.n, GA.port)
+v_lin = OA.out.V
+
+VoltageSource VB(E=2 [V])
+Resistor      RinB(R=1000 [ohm])
+Resistor      RfB(R=10000 [ohm])
+OpAmp         OB(A=1e5, Vpos=12 [V], Vneg=-12 [V])
+Ground        GB()
+connect(VB.p, RinB.a)
+connect(RinB.b, RfB.a, OB.inn)
+connect(RfB.b, OB.out)
+connect(OB.inp, VB.n, GB.port)
+v_sat = OB.out.V
+
+{ CHECK v_lin -5 0.001 }
+{ CHECK v_sat -12 1e-06 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+v_lin = -5
+v_sat = -12
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `PMSM`,
     slug: `pmsm`,
     category: `Component (electrical)`,
@@ -5803,6 +6103,89 @@ Expected output (selected solution values; numerical rounding may vary):
 g.port.i = 0
 g.port.v = 0
 load.a.tau = 3.74025974
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `Potentiometer`,
+    slug: `potentiometer`,
+    category: `Component (electrical)`,
+    summary: `Potentiometer: a track resistance R between a and b, with the wiper w at fraction pos from a.`,
+    related: [`Resistor`],
+    examples: [],
+    tags: [`potentiometer`, `component`, `electrical`, `acausal`],
+    references: [`J. W. Nilsson and S. A. Riedel`, `Electric Circuits`, `11th ed.`, `Pearson`, `2019 (voltage dividers and Thevenin equivalents)`],
+    guides: [],
+    body: `Potentiometer: a track resistance R between a and b, with the wiper w at fraction pos from a.
+
+## What it models
+
+A three-terminal variable resistor. The wiper divides the track into R·pos (to \`a\`) and R·(1 − pos) (to \`b\`), with \`pos\` clamped to 0…1. It is a natural slider: pin \`pos\` to turn the knob. Track taper, wiper contact resistance and the power rating are not modelled.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`a\`, \`b\`, \`w\`
+
+## Usage
+
+\`\`\`
+Potentiometer inst(R, pos)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`R\` | Number | Total track resistance [ohm]. |
+| \`pos\` | Number | Wiper position, 0 at a and 1 at b [-]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+x &= \\text{min}\\left(1, \\text{max}\\left(0, pos\\right)\\right) \\\\
+a.v - w.v &= r\\cdot x\\cdot a.i \\\\
+w.v - b.v &= -r\\cdot \\left(1 - x\\right)\\cdot b.i \\\\
+a.i + b.i + w.i &= 0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — a loaded voltage divider
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A 10 kΩ potentiometer at mid-travel divides 10 V. Unloaded the wiper sits
+  at 5 V; a 10 kΩ load pulls it to Vth·RL/(Rth + RL) = 5·10/12.5 = 4 V, since
+  the wiper's Thevenin resistance is 5k ∥ 5k = 2.5 kΩ. }
+VoltageSource VS(E=10 [V])
+Potentiometer P(R=10000 [ohm], pos=0.5)
+Resistor      RL(R=10000 [ohm])
+Ground        G()
+connect(VS.p, P.a)
+connect(P.w, RL.a)
+connect(P.b, RL.b, VS.n, G.port)
+v_w = P.w.V
+
+{ CHECK v_w 4 1e-09 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+v_w = 4
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -5980,6 +6363,333 @@ Expected output (selected solution values; numerical rounding may vary):
 b.n.i = 5.714285714
 b.n.v = 0
 b.p.i = -5.714285714
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `SignalCurrentSource`,
+    slug: `signalcurrentsource`,
+    category: `Component (electrical)`,
+    summary: `Signal-controlled current source: i = k·in, driven out of p.`,
+    related: [`SignalVoltageSource`, `SigConstant`],
+    examples: [],
+    tags: [`signalcurrentsource`, `component`, `electrical`, `acausal`],
+    references: [`A. S. Sedra and K. C. Smith`, `Microelectronic Circuits`, `7th ed.`, `Oxford University Press`, `2014 (dependent sources)`],
+    guides: [],
+    body: `Signal-controlled current source: i = k·in, driven out of p.
+
+## What it models
+
+A dependent (controlled) current source whose current follows a signal wire, scaled by \`k\` amperes per unit.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`p\`, \`n\`, \`in\`
+
+## Usage
+
+\`\`\`
+SignalCurrentSource inst(k)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`k\` | Number | Amperes per unit of the input signal [A]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+p.i &= -k\\cdot in.sig \\\\
+p.i + n.i &= 0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — a commanded current through a resistor
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A command of 2 sets 0.25 A per unit, 0.5 A through 8 Ω. }
+SigConstant         CMD(k=2)
+SignalCurrentSource IS(k=0.25 [A])
+Resistor            R(R=8 [ohm])
+Ground              G()
+connect(CMD.out, IS.in)
+connect(IS.p, R.a)
+connect(R.b, IS.n, G.port)
+v_R = R.a.V - R.b.V
+
+{ CHECK v_r 4 1e-12 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+v_r = 4
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `SignalVoltageSource`,
+    slug: `signalvoltagesource`,
+    category: `Component (electrical)`,
+    summary: `Signal-controlled voltage source: v = k·in.`,
+    related: [`SignalCurrentSource`, `SigConstant`],
+    examples: [],
+    tags: [`signalvoltagesource`, `component`, `electrical`, `acausal`],
+    references: [`A. S. Sedra and K. C. Smith`, `Microelectronic Circuits`, `7th ed.`, `Oxford University Press`, `2014 (dependent sources)`],
+    guides: [],
+    body: `Signal-controlled voltage source: v = k·in.
+
+## What it models
+
+A dependent (controlled) voltage source whose voltage follows a signal wire, scaled by \`k\` volts per unit. Connect a controller, a table or any signal block to \`in\` to command a voltage.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`p\`, \`n\`, \`in\`
+
+## Usage
+
+\`\`\`
+SignalVoltageSource inst(k)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`k\` | Number | Volts per unit of the input signal [V]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+p.v - n.v &= k\\cdot in.sig \\\\
+p.i + n.i &= 0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — a commanded voltage across a resistor
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A command of 2 sets 1.5 V per unit, 3 V across 3 Ω. }
+SigConstant         CMD(k=2)
+SignalVoltageSource VS(k=1.5 [V])
+Resistor            R(R=3 [ohm])
+Ground              G()
+connect(CMD.out, VS.in)
+connect(VS.p, R.a)
+connect(R.b, VS.n, G.port)
+i_R = R.a.I
+
+{ CHECK i_r 1 1e-12 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+i_r = 1
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `SineCurrentSource`,
+    slug: `sinecurrentsource`,
+    category: `Component (electrical)`,
+    summary: `Sinusoidal current source: i = Ioff + Iamp·sin(2π·freq·t + phase), driven out of p.`,
+    related: [`SineVoltageSource`, `CurrentSource`],
+    examples: [],
+    tags: [`sinecurrentsource`, `component`, `electrical`, `acausal`],
+    references: [`J. W. Nilsson and S. A. Riedel`, `Electric Circuits`, `11th ed.`, `Pearson`, `2019 (sinusoidal sources)`],
+    guides: [],
+    body: `Sinusoidal current source: i = Ioff + Iamp·sin(2π·freq·t + phase), driven out of p.
+
+## What it models
+
+An ideal AC current source. It forces the sinusoidal current out of \`p\`, through the external circuit and back into \`n\`, whatever voltage that takes.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`p\`, \`n\`
+
+## Usage
+
+\`\`\`
+SineCurrentSource inst(Iamp, freq, phase, Ioff)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Iamp\` | Number | Amplitude [A]. |
+| \`freq\` | Number | Frequency [Hz]. |
+| \`phase\` | Number | Phase at t = 0 [rad]. |
+| \`Ioff\` | Number | DC offset [A]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+p.i &= -\\left(ioff + iamp\\cdot \\sin\\left(2\\,3.141592653589793\\cdot freq\\cdot time + phase\\right)\\right) \\\\
+p.i + n.i &= 0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — a sine current through a resistor at one instant
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A 2 A, 50 Hz sine current through 5 Ω, evaluated at the instant t = 2.5 ms
+  (an eighth of a period): v = R·Iamp·sin(2π·f·t) = 10·sin(π/4) = 7.0711 V.
+  In a DYNAMIC block the same source drives a transient. }
+time = 0.0025 [s]
+SineCurrentSource IS(Iamp=2 [A], freq=50 [Hz], phase=0 [rad], Ioff=0 [A])
+Resistor          R(R=5 [ohm])
+Ground            G()
+connect(IS.p, R.a)
+connect(R.b, IS.n, G.port)
+v_R = R.a.V - R.b.V
+
+{ CHECK v_r 7.0710678118654755 1e-09 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+v_r = 7.0710678118654755
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `SineVoltageSource`,
+    slug: `sinevoltagesource`,
+    category: `Component (electrical)`,
+    summary: `Sinusoidal voltage source: v = Voff + Vamp·sin(2π·freq·t + phase).`,
+    related: [`SineCurrentSource`, `VoltageSource`, `Capacitor`],
+    examples: [],
+    tags: [`sinevoltagesource`, `component`, `electrical`, `acausal`],
+    references: [`J. W. Nilsson and S. A. Riedel`, `Electric Circuits`, `11th ed.`, `Pearson`, `2019 (sinusoidal sources and the RC frequency response)`],
+    guides: [],
+    body: `Sinusoidal voltage source: v = Voff + Vamp·sin(2π·freq·t + phase).
+
+## What it models
+
+An ideal AC voltage source. It holds the terminal voltage to the sinusoid whatever current flows, with no internal impedance. In a steady solve it takes the value at the document's \`time\`; in a \`DYNAMIC\` block it drives the transient.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`p\`, \`n\`
+
+## Usage
+
+\`\`\`
+SineVoltageSource inst(Vamp, freq, phase, Voff)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Vamp\` | Number | Amplitude [V]. |
+| \`freq\` | Number | Frequency [Hz]. |
+| \`phase\` | Number | Phase at t = 0 [rad]. |
+| \`Voff\` | Number | DC offset [V]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+p.v - n.v &= voff + vamp\\cdot \\sin\\left(2\\,3.141592653589793\\cdot freq\\cdot time + phase\\right) \\\\
+p.i + n.i &= 0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — an RC low-pass driven at its corner frequency
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A 10 V, 159.155 Hz sine drives an RC low-pass (1 kΩ, 1 µF) at its corner
+  frequency, ωτ = 1. The exact response from rest is
+  v_C = A/(1+(ωτ)²)·(sin ωt − ωτ·cos ωt) + A·ωτ/(1+(ωτ)²)·e^(−t/τ). }
+SineVoltageSource VS(Vamp=10 [V], freq=159.1549430918953 [Hz], phase=0 [rad], Voff=0 [V])
+Resistor          R(R=1000 [ohm])
+Capacitor         CAP(C=1e-6 [farad], V0=0 [V])
+Ground            G()
+connect(VS.p, R.a)
+connect(R.b, CAP.p)
+connect(CAP.n, VS.n, G.port)
+
+DYNAMIC drive (method = ida, time = 0 .. 0.02, points = 2001)
+END
+v_5ms  = ODEValue('cap.vc', 0.005) * 1 [V]
+v_20ms = ODEValue('cap.vc', 0.02) * 1 [V]
+
+{ CHECK v_5ms -6.179242565636392 1e-05 }
+{ CHECK v_20ms 2.524315954876901 0.0001 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+v_5ms = -6.179242565636392
+v_20ms = 2.524315954876901
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -6198,6 +6908,193 @@ i = 0 [A]
 <!-- verified-reference-example:end -->`,
   },
   {
+    name: `Switch`,
+    slug: `switch`,
+    category: `Component (electrical)`,
+    summary: `Signal-driven switch: a conductance that moves from 1/Roff to 1/Ron as its control signal passes a threshold.`,
+    related: [`SwitchSPDT`, `SigStep`, `Capacitor`],
+    examples: [],
+    tags: [`switch`, `component`, `electrical`, `acausal`],
+    references: [`J. W. Nilsson and S. A. Riedel`, `Electric Circuits`, `11th ed.`, `Pearson`, `2019 (the step response of RC circuits)`],
+    guides: [],
+    body: `Signal-driven switch: a conductance that moves from 1/Roff to 1/Ron as its control signal passes a threshold.
+
+## What it models
+
+An on/off switch between \`p\` and \`n\`, closed while \`ctrl\` is above \`thresh\` and open below it. The change is a smooth blend of conductance (tanh, width \`eps\` in control units), not a change of the circuit: the equations are the same open or closed, so a transient runs straight through the switching instant. Drive \`ctrl\` from a step, pulse, table or controller output. The open switch keeps the small leakage \`1/Roff\`; there is no arc, bounce or contact wear.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`p\`, \`n\`, \`ctrl\`
+
+## Usage
+
+\`\`\`
+Switch inst(Ron, Roff, thresh, eps)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Ron\` | Number | Closed resistance [ohm]. |
+| \`Roff\` | Number | Open resistance [ohm] (leakage). |
+| \`thresh\` | Number | Control level at which the switch is half closed [-]. |
+| \`eps\` | Number | Width of the transition in control units [-]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+w &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{ctrl.sig - thresh}{eps}\\right)\\right) \\\\
+g &= \\frac{w}{ron} + \\frac{1 - w}{roff} \\\\
+p.i &= g\\cdot \\left(p.v - n.v\\right) \\\\
+p.i + n.i &= 0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — a switch closes onto an RC circuit
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A switch closes at t = 1 ms, when its control steps from 0 to 1, and a
+  10 V source starts charging 1 µF through 1 kΩ. One time constant later the
+  capacitor has covered 63.2 % of the step: v = E·(1 − e^(−1)), with
+  τ = (R + Ron)·C. }
+VoltageSource VS(E=10 [V])
+SigStep       CMD(t0=0.001, before=0, after=1, eps=1e-9)
+Switch        SW(Ron=0.01 [ohm], Roff=1e9 [ohm], thresh=0.5, eps=0.01)
+Resistor      R(R=1000 [ohm])
+Capacitor     CAP(C=1e-6 [farad], V0=0 [V])
+Ground        G()
+connect(CMD.out, SW.ctrl)
+connect(VS.p, SW.p)
+connect(SW.n, R.a)
+connect(R.b, CAP.p)
+connect(CAP.n, VS.n, G.port)
+
+DYNAMIC charge (method = ida, time = 0 .. 0.004, points = 401)
+END
+v_open = ODEValue('cap.vc', 0.0009) * 1 [V]    { still open: no charge yet }
+v_tau  = ODEValue('cap.vc', 0.002) * 1 [V]    { one time constant after closing }
+
+{ CHECK v_open 8.99999595e-06 1e-07 }
+{ CHECK v_tau 6.321168800525399 0.0001 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+v_open = 8.99999595e-06
+v_tau = 6.321168800525399
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
+    name: `SwitchSPDT`,
+    slug: `switchspdt`,
+    category: `Component (electrical)`,
+    summary: `Signal-driven changeover switch (SPDT): the common terminal joins a while the control is above the threshold, b below it.`,
+    related: [`Switch`],
+    examples: [],
+    tags: [`switchspdt`, `component`, `electrical`, `acausal`],
+    references: [`P. Horowitz and W. Hill`, `The Art of Electronics`, `3rd ed.`, `Cambridge University Press`, `2015 (switches)`],
+    guides: [],
+    body: `Signal-driven changeover switch (SPDT): the common terminal joins a while the control is above the threshold, b below it.
+
+## What it models
+
+A single-pole double-throw switch. \`com\` connects to \`a\` while \`ctrl\` is above \`thresh\` and to \`b\` below it, each contact blending between \`Ron\` and \`Roff\` (tanh, width \`eps\`). Both contacts change together, with no break-before-make interval.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`com\`, \`a\`, \`b\`, \`ctrl\`
+
+## Usage
+
+\`\`\`
+SwitchSPDT inst(Ron, Roff, thresh, eps)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Ron\` | Number | Closed contact resistance [ohm]. |
+| \`Roff\` | Number | Open contact resistance [ohm] (leakage). |
+| \`thresh\` | Number | Control level of the changeover [-]. |
+| \`eps\` | Number | Width of the transition in control units [-]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+w &= 0.5\\,\\left(1 + \\tanh\\left(\\frac{ctrl.sig - thresh}{eps}\\right)\\right) \\\\
+a.i &= \\left(\\frac{w}{ron} + \\frac{1 - w}{roff}\\right)\\cdot \\left(a.v - com.v\\right) \\\\
+b.i &= \\left(\\frac{1 - w}{ron} + \\frac{w}{roff}\\right)\\cdot \\left(b.v - com.v\\right) \\\\
+com.i + a.i + b.i &= 0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — route a source to one of two loads
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A changeover switch routes a 10 V source to load A (100 Ω) while its
+  control is 1; load B (200 Ω) sees only the open-contact leakage. }
+VoltageSource VS(E=10 [V])
+SigConstant   CMD(k=1)
+SwitchSPDT    SW(Ron=0.01 [ohm], Roff=1e9 [ohm], thresh=0.5, eps=0.01)
+Resistor      RA(R=100 [ohm])
+Resistor      RB(R=200 [ohm])
+Ground        G()
+connect(CMD.out, SW.ctrl)
+connect(VS.p, SW.com)
+connect(SW.a, RA.a)
+connect(SW.b, RB.a)
+connect(RA.b, RB.b, VS.n, G.port)
+i_A = RA.a.I
+i_B = RB.a.I
+
+{ CHECK i_a 0.0999900009999 1e-09 }
+{ CHECK i_b 9.999998e-09 1e-12 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+i_a = 0.0999900009999
+i_b = 9.999998e-09
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `ThermalFuse`,
     slug: `thermalfuse`,
     category: `Component (electrical)`,
@@ -6208,6 +7105,10 @@ i = 0 [A]
     references: [],
     guides: [],
     body: `Thermal fuse: the element resistance multiplies by (1 + kR) once |I| exceeds the blow rating (tanh, width epsI) — a continuous overcurrent trip.
+
+## What it models
+
+A **current-threshold resistance**, nothing more. The resistance depends only on the present current: it rises smoothly by the factor (1 + kR) once |I| passes \`Iblow\`, and falls back the moment the current drops below it. The block has **no thermal state** (no I²t heating, no time to blow), and **no irreversible trip**: it never stays open, and it cannot tell a brief surge from a sustained overload. It is not an I²t fuse; that needs a latched discrete state, which the library does not have yet. To see a filament heat up under current, use \`Lamp\` (resistance against its own temperature) or \`HeatingResistor\` with a \`ThermalMass\`.
 
 Reusable acausal **electrical-domain** component: instantiate it and connect its ports; the constitutive equations below expand into the global system.
 
@@ -6327,6 +7228,99 @@ bt.p.i = 10
 <!-- verified-reference-example:end -->`,
   },
   {
+    name: `Thermistor`,
+    slug: `thermistor`,
+    category: `Component (electrical)`,
+    summary: `NTC thermistor, beta model R = R0·exp(B·(1/T − 1/T0)) at its heat-port temperature, with self-heating through that port.`,
+    related: [`ThermalSource`, `Convection`, `ThermalMass`],
+    examples: [],
+    tags: [`thermistor`, `component`, `electrical`, `acausal`],
+    references: [`J. Fraden`, `Handbook of Modern Sensors`, `5th ed.`, `Springer`, `2016 (NTC thermistors`, `the beta model and self-heating)`],
+    guides: [],
+    body: `NTC thermistor, beta model R = R0·exp(B·(1/T − 1/T0)) at its heat-port temperature, with self-heating through that port.
+
+## What it models
+
+A negative-temperature-coefficient thermistor. Its resistance follows the beta equation at the temperature of its \`heat\` port, and its Joule heat I²R leaves through that port. Connect the port to a fixed temperature to use it as a sensor, or to a thermal mass and a convection path to see self-heating. The beta model is a two-point fit; the Steinhart–Hart equation is not used.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`p\`, \`n\`, \`heat\`
+
+## Usage
+
+\`\`\`
+Thermistor inst(R0, B, T0)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`R0\` | Number | Resistance at the reference temperature [ohm]. |
+| \`B\` | Number | Beta constant [K]. |
+| \`T0\` | Number | Reference temperature [K]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+r &= r0\\cdot e^{b\\cdot \\left(\\frac{1}{heat.t} - \\frac{1}{t0}\\right)} \\\\
+p.v - n.v &= r\\cdot p.i \\\\
+p.i + n.i &= 0 \\\\
+heat.qdot &= -\\left(p.v - n.v\\right)\\cdot p.i
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — a thermistor divider at 50 °C
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A 10 kΩ, B = 3950 K NTC thermistor held at 50 °C sits below a 10 kΩ
+  resistor across 5 V. Its resistance is R0·exp(B·(1/T − 1/T0)) = 3588.18 Ω,
+  so the divider reads 5·R/(R + 10k) = 1.32033 V; the 0.486 mW it dissipates
+  leaves through its heat port into the 50 °C block. }
+VoltageSource VS(E=5 [V])
+Resistor      RT(R=10000 [ohm])
+Thermistor    TH(R0=10000 [ohm], B=3950 [K], T0=298.15 [K])
+ThermalSource BLOCK(T=323.15 [K])
+Ground        G()
+connect(VS.p, RT.a)
+connect(RT.b, TH.p)
+connect(TH.n, VS.n, G.port)
+connect(TH.heat, BLOCK.port)
+R_ntc = TH.R
+v_ntc = TH.p.V - TH.n.V
+Q_ntc = BLOCK.port.Qdot
+
+{ CHECK r_ntc 3588.182581929083 1e-06 }
+{ CHECK v_ntc 1.3203320459871526 1e-09 }
+{ CHECK q_ntc 0.0004858383518275142 1e-12 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+r_ntc = 3588.182581929083
+v_ntc = 1.3203320459871526
+q_ntc = 0.0004858383518275142
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
+  },
+  {
     name: `VoltageSource`,
     slug: `voltagesource`,
     category: `Component (electrical)`,
@@ -6405,6 +7399,93 @@ r1.a.i = 2
 Instantiated in the verified example below:
 
 [Run: pressure-cooker]`,
+  },
+  {
+    name: `Zener`,
+    slug: `zener`,
+    category: `Component (electrical)`,
+    summary: `Zener diode (p = anode): forward conduction above 0 V and reverse breakdown below −Vz, each a smooth conductance ramp.`,
+    related: [`Diode`],
+    examples: [],
+    tags: [`zener`, `component`, `electrical`, `acausal`],
+    references: [`A. S. Sedra and K. C. Smith`, `Microelectronic Circuits`, `7th ed.`, `Oxford University Press`, `2014 (the Zener shunt regulator)`],
+    guides: [],
+    body: `Zener diode (p = anode): forward conduction above 0 V and reverse breakdown below −Vz, each a smooth conductance ramp.
+
+## What it models
+
+A Zener diode as two piecewise-linear branches, each smoothed by a tanh of width \`eps\`: forward, it conducts like a diode with conductance \`Gon\`; reversed past \`Vz\`, it breaks down and holds the voltage near \`Vz\` with a slope resistance of \`1/Gon\`. Wire the cathode (\`n\`) to the regulated node. There is no temperature coefficient or power limit.
+
+## Domain
+
+A reusable **acausal electrical-domain** component — its electrical ports carry potential \`V\` and current \`I\`; a node enforces equal \`V\` and \`ΣI = 0\` (Kirchhoff). Instantiate it and connect its ports; the constitutive equations below expand into the global scalar system.
+
+## Ports
+
+\`p\`, \`n\`
+
+## Usage
+
+\`\`\`
+Zener inst(Vz, Gon, eps)
+\`\`\`
+
+## Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| \`Vz\` | Number | Reverse breakdown voltage [V]. |
+| \`Gon\` | Number | Conductance in either conducting region [siemens]. |
+| \`eps\` | Number | Smoothing width of each knee [V]. |
+
+## Constitutive Equations
+
+Instantiating the component expands these acausal equations (over its port members and parameters) into scalar equations solved by the standard Newton/Tarjan pipeline:
+
+$$
+\\begin{aligned}
+vd &= p.v - n.v \\\\
+vr &= -vd - vz \\\\
+p.i &= gon\\cdot \\left(vd\\cdot 0.5\\cdot \\left(1 + \\tanh\\left(\\frac{vd}{eps}\\right)\\right) - vr\\cdot 0.5\\cdot \\left(1 + \\tanh\\left(\\frac{vr}{eps}\\right)\\right)\\right) \\\\
+p.i + n.i &= 0
+\\end{aligned}
+$$
+
+## Examples
+
+<!-- verified-reference-example:start -->
+
+### Verified example — a Zener shunt regulator
+
+Paste this complete document into the editor and select **Solve**. The \`CHECK\` comments verify the selected results against the analytic values in the comment; they do not change the calculation.
+
+\`\`\`frees
+// frees-language: 2
+{ A shunt regulator: 12 V through 100 Ω into a 5.1 V Zener (cathode at the
+  output). In breakdown the Zener is Vz in series with 1/Gon, so the output
+  is Vz + (12 − Vz)/(1 + R·Gon) = 5.10069 V. }
+VoltageSource VS(E=12 [V])
+Resistor      R(R=100 [ohm])
+Zener         Z(Vz=5.1 [V], Gon=100 [siemens], eps=1e-4 [V])
+Ground        G()
+connect(VS.p, R.a)
+connect(R.b, Z.n)
+connect(Z.p, VS.n, G.port)
+v_out = Z.n.V - Z.p.V
+i_z   = Z.n.I
+
+{ CHECK v_out 5.100689931006899 1e-06 }
+{ CHECK i_z 0.06899310068993102 1e-06 }
+\`\`\`
+
+Expected output (selected solution values; numerical rounding may vary):
+
+\`\`\`text
+v_out = 5.100689931006899
+i_z = 0.06899310068993102
+\`\`\`
+
+<!-- verified-reference-example:end -->`,
   },
   {
     name: `Accumulator`,

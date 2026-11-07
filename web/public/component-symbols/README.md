@@ -55,7 +55,7 @@ capacitor, and a thermal mass cannot become a tank.
 The editor supplies exact catalog port names. Reference arrows are used only for
 explicit inlet/outlet names; other connections remain undirected. These are port
 maps, not physical connection layouts, solved flow directions or construction
-drawings. All 312 catalog entries retain an illustration, including explicit
+drawings. Every catalog entry retains an illustration, including explicit
 functional-block fallbacks where a symbol has not been verified.
 
 When changing a form, update the shared geometry and its Figma master together,
