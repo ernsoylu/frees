@@ -11,6 +11,7 @@ import '@mantine/spotlight/styles.css'
 // in the app. KaTeX only ever renders inside <Latex>, which only the (lazy)
 // Help page mounts.
 import { Center, Loader, MantineProvider } from '@mantine/core'
+import { EMBED } from './embed'
 import { theme } from './theme'
 import { Notifications } from '@mantine/notifications'
 import ErrorBoundary from './ErrorBoundary'
@@ -51,7 +52,7 @@ setupPwa()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="dark">
+    <MantineProvider theme={theme} defaultColorScheme="dark" forceColorScheme={EMBED.theme ?? undefined}>
       <Notifications position="bottom-right" />
       <ErrorBoundary>
         <Suspense

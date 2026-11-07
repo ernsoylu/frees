@@ -171,6 +171,7 @@ const GettingStartedModal = lazy(() => import('./GettingStartedModal'))
 import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
 import type { Example } from './examples'
 import { lessonFor, LESSONS, type Lesson } from './lessons'
+import { clearExampleParam, EMBED, fullAppUrl } from './embed'
 import type { EquationEditorHandle } from './EquationEditor'
 const EquationEditor = lazy(() => import('./EquationEditor'))
 import {
@@ -349,7 +350,8 @@ function replOverrideEquation(v: VariableResult): string {
 const SHARED_BOOT: { text: string; conflicts: boolean } | null = (() => {
   const shared = extractSharedText(globalThis.location.hash)
   if (shared === null) return null
-  const saved = loadProjectLocal()
+  // I4: an embed never reads the visitor's own workspace, so it never conflicts.
+  const saved = EMBED.embed ? null : loadProjectLocal()
   return { text: shared, conflicts: saved?.text != null && saved.text !== shared }
 })()
 
@@ -381,7 +383,7 @@ export default function App() {
   )
 
   const bootRef = useRef<FreesProject | null | undefined>(undefined)
-  if (bootRef.current === undefined) bootRef.current = sharedBoot !== null ? null : loadProjectLocal()
+  if (bootRef.current === undefined) bootRef.current = sharedBoot !== null || EMBED.embed ? null : loadProjectLocal()
   const boot = bootRef.current
 
   const [projectName, setProjectName] = useState('untitled')
@@ -655,6 +657,7 @@ export default function App() {
   const [showGettingStarted, setShowGettingStarted] = useState(false)
   useEffect(() => {
     if (isMobile === false && sharedBoot === null && RAW_DOCUMENT_URL === null
+        && !EMBED.embed && EMBED.example === null
         && localStorage.getItem(GETTING_STARTED_KEY) !== 'true') {
       setShowGettingStarted(true)
     }
@@ -907,6 +910,7 @@ export default function App() {
   // silently stop succeeding once the workspace grows — the
   // mirror is the durable copy that keeps updating past that point.
   useEffect(() => {
+    if (EMBED.embed) return // I4: a frame on another site must not overwrite the visitor's work
     const id = setTimeout(() => {
       const project = buildProject(currentSlices())
       saveProjectLocal(project)
@@ -1635,11 +1639,8 @@ export default function App() {
     idleCheckTimer.current = setTimeout(() => idleCheckRef.current(), 700)
   }
 
-  // Load a curated example into the editor, replacing the current document and
-  // invalidating any stale check/solve so the user can immediately re-Solve.
-  function actuallyLoadExample(example: Example) {
-    suppressDirtyRef.current = true
-    isDirtyRef.current = false
+  /** Replaces the stored workspace with a just-opened example (not in an embed). */
+  function persistLoadedExample(example: Example) {
     clearProjectLocal()
     void clearAutosaveMirror()
     writeBridgedKeys({
@@ -1658,6 +1659,15 @@ export default function App() {
       digitizer: null,
       dockLayout: null,
     })
+  }
+
+  // Load a curated example into the editor, replacing the current document and
+  // invalidating any stale check/solve so the user can immediately re-Solve.
+  function actuallyLoadExample(example: Example) {
+    suppressDirtyRef.current = true
+    isDirtyRef.current = false
+    // I4: an embed leaves the visitor's stored workspace exactly as it was.
+    if (!EMBED.embed) persistLoadedExample(example)
     applyText(example.text)
     setVarDrafts({})
     setStateUnitIds({})
@@ -1696,6 +1706,35 @@ export default function App() {
     })
     notifications.show({ color: 'teal', title: 'Opened shared document', message: 'Loaded from the link.' })
   }
+
+  // I4: `?example=<id>` opens a gallery example (and its lesson) at boot. A
+  // share link takes precedence. Outside an embed it goes through the usual
+  // unsaved-changes prompt and the parameter is dropped, so a refresh returns
+  // to the visitor's own work; an embed keeps it, and Reset returns to it.
+  // Nothing solves until Solve runs the check, as for any opened document.
+  // An embed shows nothing until its example is in: a Solve pressed on the
+  // placeholder document would be cleared by the example arriving.
+  const [embedReady, setEmbedReady] = useState(!EMBED.embed || !EMBED.example || sharedBoot !== null)
+  const [embedOrigin, setEmbedOrigin] = useState<Example>(() => ({ id: 'embed', title: 'Embedded model', description: '', category: 'Embed', text: textRef.current }))
+  useEffect(() => {
+    if (!EMBED.example || sharedBoot !== null) return
+    void import('./examples').then((m) => {
+      const example = m.EXAMPLES.find((e) => e.id === EMBED.example)
+      setEmbedReady(true)
+      if (!example) {
+        notifications.show({ color: 'yellow', title: 'Example not found', message: `The gallery has no example "${EMBED.example}".` })
+        return
+      }
+      setEmbedOrigin(example)
+      if (EMBED.embed) actuallyLoadExample(example)
+      else {
+        clearExampleParam()
+        loadExample(example)
+      }
+    })
+    // Boot only: the parameter is read once per page load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const receiveRawDocument = useEffectEvent((loaded: string, initialText: string, initialEpoch: number) => {
     if (loaded === textRef.current) return
@@ -2654,6 +2693,29 @@ export default function App() {
     requestAnimationFrame(() => dockRef.current?.openInstance(`plot:${first.id}`, 'plot', first.name))
   }, [lesson, codePlots])
 
+  // I4: an embed mounts no editor, whose edits schedule the idle check; check
+  // each document it opens instead (a check, never a solve), so its sliders
+  // and Solve know the model before anyone presses Solve.
+  useEffect(() => {
+    if (!EMBED.embed) return
+    const id = setTimeout(() => idleCheckRef.current(), 300)
+    return () => clearTimeout(id)
+  }, [text])
+
+  // I4: `sliders=a,b` pins the named literals once a solve has given them
+  // values (a lesson has pinned its own already); only those are shown.
+  const embedPinned = useRef(false)
+  useEffect(() => {
+    if (!EMBED.sliders || embedPinned.current || !result?.success) return
+    embedPinned.current = true
+    for (const name of EMBED.sliders) {
+      const v = result.variables.find((x) => x.name.toLowerCase() === name.toLowerCase())
+      if (v && pinnableNames.has(v.name.toLowerCase())) pinSlider(v)
+    }
+    // pinSlider and pinnableNames are read at the solve that lands.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result])
+
   // Auto-close dock windows whose backing instance no longer exists — e.g. a
   // plot removed from its card, a deleted table, or a stale window
   // restored from a saved layout. Without this they'd render as blank panels.
@@ -3039,8 +3101,8 @@ export default function App() {
             text={textRef.current}
             onRevealLine={goToLine}
             onSelectLine={selectLine}
-            onEmitStatement={emitFromSchematic}
-            onSourceEdit={(changes, expected) => editorRef.current?.applyEdit(changes, expected) ?? false}
+            onEmitStatement={EMBED.embed ? undefined : emitFromSchematic}
+            onSourceEdit={EMBED.embed ? undefined : (changes, expected) => editorRef.current?.applyEdit(changes, expected) ?? false}
             presentation={schematic}
             onPresentationChange={setSchematic}
             handoff={{ reason: handoffReason, run: handoff }}
@@ -3414,9 +3476,56 @@ export default function App() {
     )
   }
 
+  // I4: the kiosk embed — one view, the approved sliders, Solve, Reset and a
+  // way out to the full application, nothing else.
+  const embedView = EMBED.view ?? (lesson?.view === 'plots' ? 'plot' : 'schematic')
+  const embedPlot = codePlots[0] ?? mergedPlots[0]
+  const embedSliders = EMBED.sliders
+  const embedPins = embedSliders ? pinnedSliders.filter((p) => embedSliders.some((n) => n.toLowerCase() === p.name.toLowerCase())) : pinnedSliders
+  const fullHref = fullAppUrl(globalThis.location.href)
+  const embedFullUrl = embedOrigin.id === 'embed' ? (buildShareUrl(embedOrigin.text, fullHref.split('#')[0]) ?? fullHref) : fullHref
+  const embedLayout = !embedReady ? (
+    <Center h="100vh"><Loader color="teal" /></Center>
+  ) : (
+    <Flex direction="column" h="100vh" p="xs" gap="xs" style={{ overflow: 'hidden' }} data-testid="embed">
+      <Group justify="space-between" wrap="nowrap" gap="xs">
+        <Text size="sm" fw={600} truncate>{projectName}</Text>
+        <Group gap={6} wrap="nowrap">
+          <Text size="xs" c="dimmed" aria-live="polite">
+            {solving || checking ? 'Solving…' : result?.success ? 'Solved' : result ? 'Not solved' : ''}
+          </Text>
+          <Button size="xs" loading={solving || checking} onClick={() => void checkThenSolve()}>Solve</Button>
+          <Button size="xs" variant="default" onClick={() => actuallyLoadExample(embedOrigin)}>Reset</Button>
+          <Button size="xs" variant="subtle" component="a" href={embedFullUrl} target="_blank" rel="noopener noreferrer">
+            Open in full frees
+          </Button>
+        </Group>
+      </Group>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {embedView === 'schematic' && panelContent.schematic}
+        {embedView === 'plot' && embedPlot && panelContent[`plot:${embedPlot.id}`]}
+        {embedView === 'plot' && !embedPlot && (
+          <Center flex={1}><Text size="sm" c="dimmed">Solve to draw the plot.</Text></Center>
+        )}
+      </div>
+      {embedPins.length > 0 && (
+        <Suspense fallback={null}>
+          <SliderStrip
+            pins={embedPins}
+            inertNames={embedPins.filter((p) => !pinnableNames.has(p.name.toLowerCase())).map((p) => p.name)}
+            onChange={(name, v) => setSliderValue(name, v, false)}
+            onCommit={(name, v) => setSliderValue(name, v, true)}
+            solving={solving}
+            stale={slidersStale}
+          />
+        </Suspense>
+      )}
+    </Flex>
+  )
+
   return (
     <>
-      {isMobile === undefined ? null : isMobile ? (
+      {EMBED.embed ? embedLayout : isMobile === undefined ? null : isMobile ? (
         <Suspense fallback={lazyTabFallback}>
           <MobileLayout
             panelContent={panelContent}
@@ -3716,7 +3825,7 @@ export default function App() {
       {lesson && (
         <Suspense fallback={null}>
           <LessonPanel
-            key={lesson.example}
+            key={`${lesson.example}-${workspaceEpoch}`}
             lesson={lesson}
             value={(name) => result?.variables.find((v) => v.name.toLowerCase() === name.toLowerCase())?.value}
             solving={solving}
