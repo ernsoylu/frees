@@ -10,6 +10,7 @@ import {
   Group,
   Kbd,
   Menu,
+  NumberInput,
   Modal,
   Paper,
   Popover,
@@ -40,7 +41,7 @@ import {
   IconZoomIn,
   IconZoomOut,
 } from '@tabler/icons-react'
-import { check as checkText, type BlockResult, type CheckResponse, type ComponentResult, type ConnectionDto, type InstanceIdentityDto, type VariableResult } from '../api'
+import { check as checkText, type BlockResult, type CheckResponse, type ComponentResult, type ConnectionDto, type InstanceIdentityDto, type StreamPhase, type VariableResult } from '../api'
 import {
   declarationLine,
   declarationLineFromCheck,
@@ -91,7 +92,7 @@ import {
   type SourceEdit,
 } from './sourceEdit'
 import { componentFile, editInterface, extractSubsystem, importComponents, movePresentation, type Extraction, type InterfaceChange } from './encapsulation'
-import { CARRIES, edgeReadings, flowAlong, overlayMetrics, PARTICLE_GAP, particlePeriods, rampColor, RAMP_STOPS } from './overlay'
+import { canDiverge, CARRIES, DIVERGING_STOPS, divergingColor, edgeReadings, flowAlong, overlayMetrics, PARTICLE_GAP, particlePeriods, PHASE_COLORS, PHASE_METRIC, phaseColor, phaseReadings, rampColor, RAMP_STOPS, type ScaleSetting } from './overlay'
 import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, type NodeReadout, type Reading } from './readouts'
 import { wasmUnitConversions } from '../wasm/engineClient'
 import { COMPONENT_CATALOG, type ComponentSpec } from '../componentCatalog'
@@ -248,6 +249,8 @@ interface Props {
   paused?: boolean
   /** Phase H: during playback, the recorded columns (`m$port$t`); motion reads only these. */
   recorded?: readonly string[]
+  /** Phase H: the engine's phase of each real-fluid stream at the solved state (none during playback). */
+  phases?: Record<string, StreamPhase>
 }
 
 export type SchematicHandoff = 'plot' | 'table' | 'state' | 'sensitivity'
@@ -375,6 +378,7 @@ export default function SchematicTab({
   sample,
   paused = false,
   recorded,
+  phases,
   text,
   onRevealLine,
   onSelectLine,
@@ -1097,9 +1101,21 @@ export default function SchematicTab({
     }, 'Change display format')
   // RUN-04/WIRE-10: wires coloured by one solved metric, and measured-flow arrows.
   const overlaySet = pres.overlay ?? { metric: '', arrows: false }
-  const metrics = useMemo(() => overlayMetrics(layout.edges, values), [layout.edges, values])
+  const phaseRead = useMemo(() => phaseReadings(layout.edges, values, phases), [layout.edges, values, phases])
+  const metrics = useMemo(
+    () => [...overlayMetrics(layout.edges, values), ...([...phaseRead.values()].some(Boolean) ? [PHASE_METRIC] : [])],
+    [layout.edges, values, phaseRead],
+  )
   const metric = metrics.find((m) => m.key === overlaySet.metric) ?? null
-  const overlayRead = useMemo(() => (metric ? edgeReadings(layout.edges, values, metric) : null), [metric, layout.edges, values])
+  const byPhase = metric?.key === PHASE_METRIC.key
+  const scaleSet: ScaleSetting = (metric && overlaySet.scales?.[metric.key]) || {}
+  const overlayRead = useMemo(
+    () => (metric && !byPhase ? edgeReadings(layout.edges, values, metric, scaleSet) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [metric, byPhase, layout.edges, values, JSON.stringify(scaleSet)],
+  )
+  const setScale = (next: ScaleSetting) =>
+    metric && setOverlay({ scales: { ...overlaySet.scales, [metric.key]: next } })
   // Phase H: flow particles follow whatever `values` are (the end of the run or
   // the playback sample). Reduced motion shows colour and arrows only.
   const reducedMotion = useReducedMotion()
@@ -2748,6 +2764,33 @@ export default function SchematicTab({
                   onChange={(v) => setOverlay({ metric: v ?? '' })}
                   comboboxProps={{ withinPortal: false }}
                 />
+                {metric && !byPhase && canDiverge(metric) && (
+                  <NumberInput
+                    size="xs"
+                    label={`Reference [${metric.units || '-'}]`}
+                    description={overlayRead?.reference === null ? 'None for this unit: a plain range' : 'The neutral middle of the scale'}
+                    value={scaleSet.reference ?? overlayRead?.reference ?? ''}
+                    onChange={(v) => setScale({ ...scaleSet, reference: typeof v === 'number' ? v : undefined })}
+                  />
+                )}
+                {metric && !byPhase && (
+                  <Switch
+                    size="xs"
+                    label="Fixed range"
+                    checked={scaleSet.min !== undefined}
+                    onChange={(e) => {
+                      const { min: _min, max: _max, ...rest } = scaleSet
+                      const [lo, hi] = [overlayRead?.min, overlayRead?.max]
+                      setScale(e.currentTarget.checked && Number.isFinite(lo) && Number.isFinite(hi) && lo! < hi! ? { ...rest, min: lo, max: hi } : rest)
+                    }}
+                  />
+                )}
+                {metric && !byPhase && scaleSet.min !== undefined && (
+                  <Group gap={6} grow>
+                    <NumberInput size="xs" label="From" value={scaleSet.min} onChange={(v) => typeof v === 'number' && v < scaleSet.max! && setScale({ ...scaleSet, min: v })} />
+                    <NumberInput size="xs" label="To" value={scaleSet.max} onChange={(v) => typeof v === 'number' && v > scaleSet.min! && setScale({ ...scaleSet, max: v })} />
+                  </Group>
+                )}
                 <Switch size="xs" label="Measured flow arrows" checked={overlaySet.arrows} onChange={(e) => setOverlay({ arrows: e.currentTarget.checked })} />
                 <Switch size="xs" label="Flow particles" checked={overlaySet.particles === true} onChange={(e) => setOverlay({ particles: e.currentTarget.checked })} />
                 {overlaySet.particles && (
@@ -3316,6 +3359,9 @@ export default function SchematicTab({
               const openCard = () => setWireCard({ index, check: drawnCheck })
               const reading = overlayRead?.byEdge.get(e.id)
               const valued = reading?.state === 'value'
+              const phase = byPhase ? phaseRead.get(e.id) : undefined
+              const diverging = overlayRead?.reference !== null && overlayRead?.reference !== undefined
+              const weight = valued ? (diverging ? Math.abs(2 * reading.t! - 1) : reading.t!) : 0
               const flow = overlaySet.arrows ? flowAlong(e, flowValues) : undefined
               const particle = particles?.get(e.id)
               return (
@@ -3324,23 +3370,26 @@ export default function SchematicTab({
                   data-net={netOf(e)}
                   data-route={routeKey(e)}
                   data-conflict={routeConflicts.has(e.id) || undefined}
-                  data-overlay={reading?.state}
+                  data-overlay={byPhase ? (phase ? phase.phase : phase === null ? 'missing' : undefined) : reading?.state}
+                  data-clipped={reading?.clipped}
                   data-flow={flow === undefined ? undefined : flow === null ? 'unknown' : flow === 0 ? 'zero' : flow > 0 ? 'forward' : 'reverse'}
                   d={pathOf(pts, hops.get(e.id))}
                   fill="none"
-                  stroke={valued ? rampColor(reading.t!) : reading?.state === 'nonfinite' ? '#e03131' : reading ? ink.subtext : style.color}
-                  strokeWidth={(valued ? 1.5 + 3.5 * reading.t! : style.width) + (lit ? 1.2 : 0)}
-                  strokeDasharray={reading && !valued ? OVERLAY_DASH[reading.state] : style.dash}
+                  stroke={phase ? phaseColor(phase) : phase === null ? ink.subtext : valued ? (diverging ? divergingColor(reading.t!) : rampColor(reading.t!)) : reading?.state === 'nonfinite' ? '#e03131' : reading ? ink.subtext : style.color}
+                  strokeWidth={(phase ? style.width + 1.5 : valued ? 1.5 + 3.5 * weight : style.width) + (lit ? 1.2 : 0)}
+                  strokeDasharray={phase === null ? OVERLAY_DASH.missing : reading && !valued ? OVERLAY_DASH[reading.state] : style.dash}
                   strokeLinecap={style.cap}
                   strokeLinejoin="round"
-                  strokeOpacity={out ? 0.15 : overlayRead && !reading ? 0.3 : 0.95}
+                  strokeOpacity={out ? 0.15 : (overlayRead && !reading) || (byPhase && phase === undefined) ? 0.3 : 0.95}
                 >
                   <title>
                     {edgeTitle(e)}
-                    {reading?.value !== undefined && metric ? ` — ${metric.label} ${formatCompact(reading.value)} ${metric.units}` : ''}
+                    {reading?.value !== undefined && metric ? ` — ${metric.label} ${formatCompact(reading.value)} ${metric.units}${reading.clipped ? ` (beyond the fixed range, drawn at its ${reading.clipped === 'high' ? 'top' : 'bottom'})` : ''}` : ''}
+                    {phase ? ` — ${phase.phase}${phase.x !== undefined ? `, x = ${formatCompact(phase.x)}` : ''}` : phase === null ? ' — phase unknown' : ''}
                   </title>
                 </path>
                 {flow && !out ? <FlowArrow pts={pts} dir={flow} fill={ink.text} /> : null}
+                {reading?.clipped && !out ? <ClipMark pts={pts} stroke={ink.text} /> : null}
                 {particle && !out ? (
                   <path
                     className="flow-particles"
@@ -3706,20 +3755,41 @@ export default function SchematicTab({
       <div role="status" aria-live="polite" data-testid="canvas-announcer" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>
         {announcement}
       </div>
-      {(overlayRead || overlaySet.arrows || overlaySet.particles) && (
+      {(overlayRead || byPhase || overlaySet.arrows || overlaySet.particles) && (
         <Paper withBorder shadow="sm" p="xs" role="region" aria-label="Overlay legend" data-testid="overlay-legend" style={{ position: 'absolute', right: 8, top: 44, width: 230, zIndex: 4 }}>
           {metric && overlayRead && (
             <Stack gap={2}>
               <Text size="xs" fw={600}>
                 {metric.label} [{metric.units || '-'}]
               </Text>
-              <div style={{ height: 8, borderRadius: 2, background: `linear-gradient(to right, ${RAMP_STOPS.join(', ')})` }} />
+              <div style={{ height: 8, borderRadius: 2, background: `linear-gradient(to right, ${(overlayRead.reference !== null ? DIVERGING_STOPS : RAMP_STOPS).join(', ')})` }} />
               <Group justify="space-between" data-testid="overlay-scale">
                 <Text size="10px">{Number.isFinite(overlayRead.min) ? formatCompact(overlayRead.min) : '—'}</Text>
+                {overlayRead.reference !== null && <Text size="10px" data-testid="overlay-reference">{formatCompact(overlayRead.reference)}</Text>}
                 <Text size="10px">{Number.isFinite(overlayRead.max) ? formatCompact(overlayRead.max) : '—'}</Text>
               </Group>
               <Text size="10px" c="dimmed">
-                Width and colour grow with the value. Dashed: no {metric.label} in the solve · dotted red: not finite · dash-dot: another unit. Faded: other domains.
+                {overlayRead.reference !== null
+                  ? `Diverging about ${formatCompact(overlayRead.reference)} ${metric.units}: blue below, red above; width grows with the distance.`
+                  : 'Width and colour grow with the value.'}{' '}
+                {overlayRead.fixed ? '◇ marks a wire beyond the fixed range, drawn at its end. ' : ''}
+                Dashed: no {metric.label} in the solve · dotted red: not finite · dash-dot: another unit. Faded: other domains.
+              </Text>
+            </Stack>
+          )}
+          {byPhase && (
+            <Stack gap={2} data-testid="phase-legend">
+              <Text size="xs" fw={600}>fluid phase</Text>
+              <Group gap={6}>
+                {(['subcooled', 'two-phase', 'superheated', 'supercritical'] as const).map((ph) => (
+                  <Group key={ph} gap={3}>
+                    <div style={{ width: 14, height: 6, borderRadius: 2, background: ph === 'two-phase' ? `linear-gradient(to right, ${PHASE_COLORS.dome.join(', ')})` : PHASE_COLORS[ph] }} />
+                    <Text size="10px">{ph}</Text>
+                  </Group>
+                ))}
+              </Group>
+              <Text size="10px" c="dimmed">
+                Inside the dome the colour runs with quality x from 0 to 1. Dashed: phase unknown — during playback only a recorded x inside the dome is shown; x = −1 says single phase, not which.
               </Text>
             </Stack>
           )}
@@ -5537,6 +5607,14 @@ function FlowArrow({ pts, dir, fill }: Readonly<{ pts: readonly { x: number; y: 
   const [mx, my] = [(a.x + b.x) / 2, (a.y + b.y) / 2]
   const d = `M ${mx + ux * 5} ${my + uy * 5} L ${mx - ux * 4 - uy * 4} ${my - uy * 4 + ux * 4} L ${mx - ux * 4 + uy * 4} ${my - uy * 4 - ux * 4} Z`
   return <path data-arrow={dir > 0 ? 'forward' : 'reverse'} d={d} fill={fill} pointerEvents="none" />
+}
+
+/** Phase H: a hollow diamond at the wire's middle — its value is beyond the fixed range. */
+function ClipMark({ pts, stroke }: Readonly<{ pts: readonly { x: number; y: number }[]; stroke: string }>) {
+  let k = 1
+  for (let i = 2; i < pts.length; i++) if (Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y) > Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y)) k = i
+  const [mx, my] = [(pts[k - 1].x + pts[k].x) / 2, (pts[k - 1].y + pts[k].y) / 2]
+  return <path data-clip-mark d={`M ${mx} ${my - 6} L ${mx + 6} ${my} L ${mx} ${my + 6} L ${mx - 6} ${my} Z`} fill="none" stroke={stroke} strokeWidth={1.5} pointerEvents="none" />
 }
 
 function edgeTitle(e: SchematicEdge): string {

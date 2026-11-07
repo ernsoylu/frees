@@ -759,6 +759,47 @@ pub fn props_si(
     Ok(value)
 }
 
+/// Phase H: where a pure-fluid state at pressure `p` and enthalpy `h` (SI)
+/// sits against the saturation dome.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PhaseClass {
+    Subcooled,
+    /// Inside the dome, with its quality.
+    TwoPhase(f64),
+    Superheated,
+    /// At or above the critical pressure, where no dome separates the phases.
+    Supercritical,
+}
+
+/// The [`PhaseClass`] of `fluid` (as written: `r134a`, `Water`) at `(p, h)`,
+/// from the saturated-liquid and saturated-vapour enthalpies at `p`, with a
+/// round-off band at the dome's edges; `None` when the backend cannot say
+/// (an unknown fluid, a pressure off its tables, a non-finite input).
+pub fn phase_at(fluid: &str, p: f64, h: f64) -> Option<PhaseClass> {
+    if !p.is_finite() || !h.is_finite() {
+        return None;
+    }
+    let resolved = resolve_fluid(fluid).ok()?;
+    let fluid = resolved.as_str();
+    let p_crit = props1_si(fluid, "Pcrit").ok()?;
+    if p >= p_crit {
+        return Some(PhaseClass::Supercritical);
+    }
+    let h_l = props_si("H", "P", p, "Q", 0.0, fluid).ok()?;
+    let h_v = props_si("H", "P", p, "Q", 1.0, fluid).ok()?;
+    // A state set on the dome (`Enthalpy(…, x=0)`) is saturated, and round-off
+    // must not flip it to single phase: a band of 1e-6 of the latent heat
+    // either side reads as x = 0 or 1.
+    let band = 1e-6 * (h_v - h_l);
+    Some(if h < h_l - band {
+        PhaseClass::Subcooled
+    } else if h > h_v + band {
+        PhaseClass::Superheated
+    } else {
+        PhaseClass::TwoPhase(((h - h_l) / (h_v - h_l)).clamp(0.0, 1.0))
+    })
+}
+
 /// Port of `CoolProp.propsSIOrNaN` — the diagram sweeps' entry point.
 pub fn props_si_or_nan(
     output: &str,
@@ -2133,6 +2174,33 @@ pub(crate) fn test_with_rustprop<T>(body: impl FnOnce() -> T) -> T {
 
 #[cfg(test)]
 mod tests {
+
+    /// Phase H: water at 1 atm either side of the dome, inside it, and above
+    /// the critical pressure.
+    #[cfg(feature = "rustprop-backend")]
+    #[test]
+    fn phase_at_classifies_against_the_dome() {
+        test_with_rustprop(|| {
+            let p = 101_325.0;
+            let h_l = props_si("H", "P", p, "Q", 0.0, "Water").unwrap();
+            let h_v = props_si("H", "P", p, "Q", 1.0, "Water").unwrap();
+            assert_eq!(phase_at("Water", p, h_l - 1e4), Some(PhaseClass::Subcooled));
+            assert_eq!(
+                phase_at("Water", p, h_v + 1e4),
+                Some(PhaseClass::Superheated)
+            );
+            let Some(PhaseClass::TwoPhase(x)) = phase_at("Water", p, 0.25 * h_l + 0.75 * h_v)
+            else {
+                panic!("inside the dome")
+            };
+            assert!((x - 0.75).abs() < 1e-9, "x = {x}");
+            assert_eq!(
+                phase_at("Water", 25e6, 2e6),
+                Some(PhaseClass::Supercritical)
+            );
+            assert_eq!(phase_at("Water", f64::NAN, 2e6), None);
+        });
+    }
     use super::*;
 
     /// The `INCOMP::MEG[0.50]` spelling is the only one that reaches a backend,

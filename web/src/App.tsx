@@ -2992,6 +2992,7 @@ export default function App() {
             sample={playSample && currentRun ? `run ${currentRun.revision} · ${playSample}` : undefined}
             paused={playIndex !== null && !playback.playing}
             recorded={playIndex !== null ? playTable?.vars : undefined}
+            phases={playIndex === null ? result?.phases : undefined}
             blocks={result?.blocks}
             text={textRef.current}
             onRevealLine={goToLine}
