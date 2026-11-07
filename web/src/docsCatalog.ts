@@ -337,7 +337,38 @@ npm run build
 
 The output in \`web/dist/\` contains all assets needed for deployment. Serve the directory with any web server configured with standard MIME types (specifically \`application/wasm\` for \`.wasm\` files).
 
-[Related: deploy-docker, deploy-health]`,
+[Related: deploy-docker, deploy-health, embed-kiosk]`,
+  "embed-kiosk": `# Embedding a Model (Kiosk Mode)
+
+A gallery example, or a model in a share link, can sit in another page as a
+small kiosk: one view, the sliders you choose, **Solve**, **Reset** and
+**Open in full frees**. Put the address in an \`iframe\`:
+
+\`\`\`html
+<iframe src="https://frees.softncon.com/?embed=1&example=lesson-rc-charging&view=plot&sliders=R_s&theme=light"
+        width="800" height="520" title="RC charging in frees"></iframe>
+\`\`\`
+
+| Parameter | Values | Effect |
+| --- | --- | --- |
+| \`embed\` | \`1\` | Kiosk layout: no editor, sidebar or toolbars. |
+| \`example\` | a gallery id, such as \`lesson-rc-charging\` | Opens that example and its lesson. Works without \`embed\` too; the full app then asks before replacing unsaved work. |
+| \`view\` | \`schematic\` or \`plot\` | The one view shown. Default: the lesson's view, else the schematic. \`plot\` shows the example's first \`PLOT\`. |
+| \`sliders\` | names, comma-separated (at most 8) | Pins those literals as sliders and shows only them. Names must be literals the document assigns. |
+| \`theme\` | \`light\` or \`dark\` | Forces the colour scheme. |
+| \`readonly\` | — | Accepted for clarity: an embed is always read-only, because no editor is mounted. Sliders still work. |
+
+Unknown values are ignored. A share link (\`#share=…\`) works in place of
+\`example\`.
+
+**What an embed never does.** It neither reads nor writes the visitor's own
+saved workspace, so a frame on another site cannot show their work or
+overwrite it. It also never runs a model by itself: **Solve** checks the
+model first, as it does for any document you open. **Reset** returns to the
+model as it opened. **Open in full frees** opens the same model in a new tab,
+without the kiosk parameters.
+
+[Related: deploy-railway]`,
   "deploy-health": `# Worker Lifecycle & Deadlines
 
 Because frees executes in the user's browser, execution boundaries and resource safety are handled cooperatively:

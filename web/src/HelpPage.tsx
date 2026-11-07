@@ -781,6 +781,7 @@ const CATEGORIES: NavCategory[] = [
       { id: 'arch-api', label: 'Worker & CLI Interface', blurb: 'Drive frees from scripts with frees-cli and the JSON request/response envelope.', keywords: ['api', 'cli', 'frees-cli', 'json', 'request', 'response', 'solve', 'check', 'integration', 'script'] },
       { id: 'deploy-docker', label: 'Local Development', blurb: 'Build the WebAssembly engine, run the Vite dev server, and run the test suites.', keywords: ['local', 'development', 'install', 'run', 'wasm-pack', 'vite', 'npm', 'localhost', 'tests'] },
       { id: 'deploy-railway', label: 'Static Deployment', blurb: 'Build the production bundle and host it on any static web server.', keywords: ['deploy', 'production', 'static', 'hosting', 'build', 'pwa', 'cdn'] },
+      { id: 'embed-kiosk', label: 'Embedding a Model', blurb: 'Put a gallery example or shared model in another page: one view, chosen sliders, Solve and Reset.', keywords: ['embed', 'iframe', 'kiosk', 'example', 'share', 'sliders', 'readonly', 'theme', 'lesson'] },
       { id: 'deploy-health', label: 'Worker Lifecycle & Deadlines', blurb: 'Worker pool limits, cooperative deadlines, and memory and bundle budgets.', keywords: ['workers', 'worker pool', 'deadline', 'timeout', 'memory', 'bundle', 'budget', 'stop'] },
     ]
   },

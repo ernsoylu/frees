@@ -15,6 +15,7 @@ export const DOCS_TOPICS: { id: string; label: string }[] = [
   { id: `arch-api`, label: `The Web Worker & CLI Interface` },
   { id: `deploy-docker`, label: `Local Development` },
   { id: `deploy-railway`, label: `Browser Deployment & Static Hosting` },
+  { id: `embed-kiosk`, label: `Embedding a Model (Kiosk Mode)` },
   { id: `deploy-health`, label: `Worker Lifecycle & Deadlines` },
   { id: `comp-first-network`, label: `Your First Component Network` },
   { id: `comp-connections`, label: `Connections & Junctions` },
