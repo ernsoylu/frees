@@ -1042,6 +1042,17 @@ Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` 
   - Schematic spec: 52 passed, 1 skipped (visual, CI-only). The visual baseline passes unchanged in the CI Playwright image (v1.62.1), within its 1 % tolerance; no snapshot was re-recorded.
 - **Not changed:** spokes of one net can still share a lane past the dot (RAD1 and RAD2 run together up to the radiator row) and branch there without a second dot. That is drawn as one connection.
 
+**Found and fixed 2026-11-07 (`pwa-update-on-load`): the "Reload to update" prompt appeared only after many solves.** The owner's report: the update check should run as soon as the first code loads.
+- **Root cause** (`web/src/pwa.tsx`): `setupPwa()` already ran at the top of `main.tsx`, but nothing in the app ever checked for a new `sw.js`.
+  - `registerSW` was called without `immediate`, so Workbox waited for window `load` before registering (`Workbox.register`).
+  - Nothing called `registration.update()`. The only check was the browser's own soft update after the navigation. It runs on the browser's schedule, once per navigation, and never again in a tab left open.
+  - Workbox attaches its `updatefound` listener after registering, and only reports a worker that is already `waiting` at that point. An update the browser had already started installing finished silently and waited for the next visit.
+- **Fix:**
+  - A controlled page registers with `immediate: true`. A first visit still waits for `load`, because its install downloads the whole precache.
+  - `watchForUpdates` calls `registration.update()` as soon as the registration exists and again on every `visibilitychange` to visible. A failed check (offline) is ignored; the next one retries.
+  - A worker already installing when the page registers raises the same notification when it reaches `installed`. Its button posts `SKIP_WAITING` and reloads on `controllerchange`.
+- **Evidence:** `src/pwa.test.tsx` checks that a controlled page registers immediately and checks for an update as soon as it is registered, that a first visit waits for `load`, that the check repeats when the tab becomes visible, and that an install already in progress raises the prompt. `tsc -b` clean, lint 0 errors, `npm run build` passes, and the built `sw.js` handles `SKIP_WAITING`.
+
 ---
 
 ## 3. Deferred Candidates
