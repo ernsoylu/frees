@@ -744,6 +744,27 @@ entry here is checked off with evidence when it closes.
     - **Past `tf`.** The horizon moves on one span each time it is reached; the step limits keep the document span's values, and the step guard restarts per lap. At a lap's end a row at the horizon is sampled from the last interval, as the batch sampler does.
     - **Stop events.** A stopped batch explicit run rescales its grid to end on the stop; a live run cannot know the stop in advance, so it ends with a row at the stop time instead. The events are the batch events.
     - **Evidence.** `tests/live_session.rs`, now 13 tests: ode45, ode23s and rk4 bouncing balls chunked three ways against batch (states bitwise, events equal); a stop event; the run past `tf` (bounces continue) and reset replaying bit for bit; accepted steps one at a time giving the batch states. The parity corpus is unchanged, with the batch explicit path now running through `ExplicitStepper`.
+  - **K2 done 2026-11-07 (`k2-live-bridge`): the live boundary and its worker.**
+    - **Bridge** (`crates/frees/src/live.rs`).
+      - Exports: `live_open(source, request, block)` (the solve request: tolerances, overrides, Function Tables), `live_advance(session, t_target, budget_ms)`, `live_step(session, kind, max_rows)`, `live_reset` and `live_dispose`.
+      - A chunk is a JSON header (rows, columns, events, stopped/finished, the accepted-step state, the integrator clock, an error) plus its rows as one row-major `Float64Array`, the batch `odeBuffers` layout. The open header carries the batch table's name, vars, units and method, so a finished run can become an ordinary ODE Table.
+      - The budget is wall clock, capped at 50 ms, checked between rows after the first.
+      - Each open replaces the session and gets a new id. A call for any other id answers `{"gone": true}` and touches nothing.
+      - The JSON halves are plain functions, so the native tests run what the browser runs.
+      - There is no `live_set`: inputs are L1. There is no `live_pause`: pausing is not pulling.
+    - **Worker and client.**
+      - `engine.worker.ts` serves the five calls.
+      - `liveClient.ts` runs that worker as an instance of its own, outside the sweep pool, so a pool stop or trap never ends a live run, and the reverse.
+      - The pull model has at most one advance in flight: a second answers `null` without sending. Other commands queue behind it in the worker, so they are served within one chunk.
+      - Every request is tagged with the open's generation. A reply after a newer open, a dispose or a worker death answers `null`, and `gone` closes the session.
+      - Chunks carry a sequence that is monotonic per open.
+      - A trap or `onerror` rejects what is in flight, reports it through `onFailure`, and the next open respawns the worker.
+      - Buffer recycling is deferred (a `ponytail` note): each chunk arrives in a fresh transferred buffer.
+    - **Evidence.**
+      - `crates/frees/tests/live.rs`, 4 tests: chunks at a zero budget reassemble the core's batch rows bit for bit and match the envelope's vars, units and events; stale and disposed ids are `gone` and leave the open session untouched; steps and reset; an explicit block running live with the batch states (the refusal it first asserted went with K1b).
+      - `liveClient.test.ts`, 7 tests: the pull discipline, the generation guard, `gone`, death by fatal reply and by `onerror`, respawn, reset.
+      - `live.wasm.test.ts`: through the compiled module, chunks equal `solve_zerocopy`'s ODE buffer.
+      - WASM 3,955.6 KiB raw, within the 5,120 KiB gate.
 - **L. Live inputs and instruments (stage 3).**
   1. **Input classes, applied at accepted-time boundaries and logged as events:**
      - **Presentation:** immediate, no revision.
