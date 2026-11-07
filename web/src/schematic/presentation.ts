@@ -220,11 +220,7 @@ export interface SchematicPresentation extends SheetState {
    * RUN-04/WIRE-10: the metric the wires are coloured by (`domain:member`, '' for none) and measured-flow arrows.
    * Phase H: flow particles, and their schematic speed (a multiplier, not a physical velocity).
    */
-<<<<<<< HEAD
   overlay: { metric: string; arrows: boolean; particles?: boolean; speed?: number; scales?: Record<string, ScaleSetting> }
-=======
-  overlay: { metric: string; arrows: boolean; particles?: boolean; speed?: number }
->>>>>>> origin/main
   /** VIEW-08: named views saved with the project. */
   views: SavedView[]
   /** VIEW-09: notes, callouts, variable cards and legends, each drawn in one scope. */
@@ -479,7 +475,6 @@ function viewOf(v: unknown): { view: ViewSettings; bad: number } {
   return { view, bad }
 }
 
-<<<<<<< HEAD
 /** Phase H: a metric's reference and fixed range; a range needs both ends, min below max. */
 function scaleOf(v: unknown): ScaleSetting | null {
   const raw = record(v)
@@ -491,13 +486,10 @@ function scaleOf(v: unknown): ScaleSetting | null {
   return { ...(reference !== undefined ? { reference } : {}), ...(min !== undefined ? { min, max } : {}) }
 }
 
-=======
->>>>>>> origin/main
 /** Phase H: the schematic-speed multipliers the overlay offers. */
 export const PARTICLE_SPEEDS = [0.25, 0.5, 1, 2, 4]
 
 function overlayOf(v: unknown): { overlay: SchematicPresentation['overlay']; bad: number } {
-<<<<<<< HEAD
   const { metric, arrows, particles, speed, scales } = record(v) ?? {}
   const overlay: SchematicPresentation['overlay'] = { metric: typeof metric === 'string' && /^([a-z]+:[a-z]+)?$/.test(metric) ? metric : '', arrows: arrows === true }
   if (particles === true) overlay.particles = true
@@ -509,13 +501,6 @@ function overlayOf(v: unknown): { overlay: SchematicPresentation['overlay']; bad
     else badScales++
   }
   const bad = overlay.metric !== metric || overlay.arrows !== arrows || (particles !== undefined && particles !== overlay.particles && particles !== false) || (speed !== undefined && speed !== overlay.speed) || badScales > 0 || (scales !== undefined && record(scales) === undefined)
-=======
-  const { metric, arrows, particles, speed } = record(v) ?? {}
-  const overlay: SchematicPresentation['overlay'] = { metric: typeof metric === 'string' && /^([a-z]+:[a-z]+)?$/.test(metric) ? metric : '', arrows: arrows === true }
-  if (particles === true) overlay.particles = true
-  if (typeof speed === 'number' && PARTICLE_SPEEDS.includes(speed)) overlay.speed = speed
-  const bad = overlay.metric !== metric || overlay.arrows !== arrows || (particles !== undefined && particles !== overlay.particles && particles !== false) || (speed !== undefined && speed !== overlay.speed)
->>>>>>> origin/main
   return { overlay, bad: v !== undefined && bad ? 1 : 0 }
 }
 

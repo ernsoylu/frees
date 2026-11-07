@@ -92,11 +92,7 @@ import {
   type SourceEdit,
 } from './sourceEdit'
 import { componentFile, editInterface, extractSubsystem, importComponents, movePresentation, type Extraction, type InterfaceChange } from './encapsulation'
-<<<<<<< HEAD
 import { canDiverge, CARRIES, DIVERGING_STOPS, divergingColor, edgeReadings, flowAlong, overlayMetrics, PARTICLE_GAP, particlePeriods, PHASE_COLORS, PHASE_METRIC, phaseColor, phaseReadings, rampColor, RAMP_STOPS, type ScaleSetting } from './overlay'
-=======
-import { CARRIES, edgeReadings, flowAlong, overlayMetrics, PARTICLE_GAP, particlePeriods, rampColor, RAMP_STOPS } from './overlay'
->>>>>>> origin/main
 import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, type NodeReadout, type Reading } from './readouts'
 import { wasmUnitConversions } from '../wasm/engineClient'
 import { COMPONENT_CATALOG, type ComponentSpec } from '../componentCatalog'
@@ -253,11 +249,8 @@ interface Props {
   paused?: boolean
   /** Phase H: during playback, the recorded columns (`m$port$t`); motion reads only these. */
   recorded?: readonly string[]
-<<<<<<< HEAD
   /** Phase H: the engine's phase of each real-fluid stream at the solved state (none during playback). */
   phases?: Record<string, StreamPhase>
-=======
->>>>>>> origin/main
 }
 
 export type SchematicHandoff = 'plot' | 'table' | 'state' | 'sensitivity'
@@ -385,10 +378,7 @@ export default function SchematicTab({
   sample,
   paused = false,
   recorded,
-<<<<<<< HEAD
   phases,
-=======
->>>>>>> origin/main
   text,
   onRevealLine,
   onSelectLine,
@@ -1117,7 +1107,6 @@ export default function SchematicTab({
     [layout.edges, values, phaseRead],
   )
   const metric = metrics.find((m) => m.key === overlaySet.metric) ?? null
-<<<<<<< HEAD
   const byPhase = metric?.key === PHASE_METRIC.key
   const scaleSet: ScaleSetting = (metric && overlaySet.scales?.[metric.key]) || {}
   const overlayRead = useMemo(
@@ -1127,9 +1116,6 @@ export default function SchematicTab({
   )
   const setScale = (next: ScaleSetting) =>
     metric && setOverlay({ scales: { ...overlaySet.scales, [metric.key]: next } })
-=======
-  const overlayRead = useMemo(() => (metric ? edgeReadings(layout.edges, values, metric) : null), [metric, layout.edges, values])
->>>>>>> origin/main
   // Phase H: flow particles follow whatever `values` are (the end of the run or
   // the playback sample). Reduced motion shows colour and arrows only.
   const reducedMotion = useReducedMotion()
@@ -3373,12 +3359,9 @@ export default function SchematicTab({
               const openCard = () => setWireCard({ index, check: drawnCheck })
               const reading = overlayRead?.byEdge.get(e.id)
               const valued = reading?.state === 'value'
-<<<<<<< HEAD
               const phase = byPhase ? phaseRead.get(e.id) : undefined
               const diverging = overlayRead?.reference !== null && overlayRead?.reference !== undefined
               const weight = valued ? (diverging ? Math.abs(2 * reading.t! - 1) : reading.t!) : 0
-=======
->>>>>>> origin/main
               const flow = overlaySet.arrows ? flowAlong(e, flowValues) : undefined
               const particle = particles?.get(e.id)
               return (
@@ -3406,10 +3389,7 @@ export default function SchematicTab({
                   </title>
                 </path>
                 {flow && !out ? <FlowArrow pts={pts} dir={flow} fill={ink.text} /> : null}
-<<<<<<< HEAD
                 {reading?.clipped && !out ? <ClipMark pts={pts} stroke={ink.text} /> : null}
-=======
->>>>>>> origin/main
                 {particle && !out ? (
                   <path
                     className="flow-particles"
@@ -3775,11 +3755,7 @@ export default function SchematicTab({
       <div role="status" aria-live="polite" data-testid="canvas-announcer" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>
         {announcement}
       </div>
-<<<<<<< HEAD
       {(overlayRead || byPhase || overlaySet.arrows || overlaySet.particles) && (
-=======
-      {(overlayRead || overlaySet.arrows || overlaySet.particles) && (
->>>>>>> origin/main
         <Paper withBorder shadow="sm" p="xs" role="region" aria-label="Overlay legend" data-testid="overlay-legend" style={{ position: 'absolute', right: 8, top: 44, width: 230, zIndex: 4 }}>
           {metric && overlayRead && (
             <Stack gap={2}>

@@ -418,7 +418,6 @@ entry here is checked off with evidence when it closes.
       - The visual baseline is unchanged, since particles are off by default.
     - **Not done in H1.** The refrigeration journey and the P-h cursor belong to H3.
     - **Found:** at "end of run" an ODE-only model's schematic shows no values, because the solve has no ordinary variables; the recorded samples do. This is RUN-05 behaviour, not reverified beyond this model.
-<<<<<<< HEAD
   - **H2 done 2026-11-07 (`h2-colour-scales`).**
     - **Diverging scales.** Temperature, pressure and signed flows (ṁ, Q̇, I, τ, F) diverge about a reference (`edgeReadings`, `schematic/overlay.ts`):
       - Ambient 293.15 K or atmospheric pressure in the result's own unit (K, °C, °F, R; Pa, kPa, MPa, bar, psi, atm); zero for flows; or a value the user sets.
@@ -443,8 +442,6 @@ entry here is checked off with evidence when it closes.
         - A fixed range from 200 kPa clips and marks exactly the two low-side wires.
         - No `solve` or `check` runs.
     - **Found and fixed on the way:** the phase of a saturated EV stream flipped between a slider drag and a plain solve under round-off. `sliderSolve.test.ts` caught it, and the band above fixes it.
-=======
->>>>>>> origin/main
   1. **Explicit port-flow metadata.** The engine reports each port's role and measured-flow sign per domain (fluid, liquid, two-phase, moist air, heat, electrical, mechanical, translational). This replaces `flowAlong`'s in/out naming. Where a direction is not known, it stays unknown; it is never inferred from drawing order or a pressure gradient.
   2. **Flow particles.**
     - Particles move along the routed wire paths. Speed follows the log of the flow magnitude, normalised per domain; direction comes from (1).
