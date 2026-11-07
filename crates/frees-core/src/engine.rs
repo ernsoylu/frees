@@ -400,6 +400,51 @@ pub struct CheckReport {
     pub instances: Vec<InstanceIdentity>,
     /// User `COMPONENT` definitions (local) with source lines.
     pub definitions: Vec<DefinitionIdentity>,
+    /// Each `DYNAMIC` event with the top-level instances its crossing reads.
+    pub events: Vec<EventWatch>,
+}
+
+/// A `DYNAMIC` event and the blocks that own it: the top-level instances whose
+/// variables its crossing equation reads (`M.port.T = 350` → `M`). Playback
+/// flashes them when it reaches the sample the event recorded at.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EventWatch {
+    pub table: String,
+    pub name: String,
+    pub owners: Vec<String>,
+}
+
+fn event_watches(doc: &crate::parser::Document, instances: &[InstanceIdentity]) -> Vec<EventWatch> {
+    let top: Vec<&str> = instances
+        .iter()
+        .filter(|i| i.defined_in.is_none())
+        .map(|i| i.name.as_str())
+        .collect();
+    let mut out = Vec::new();
+    for system in &doc.dynamics {
+        for event in &system.events {
+            let mut owners: Vec<String> = Vec::new();
+            for var in event
+                .lhs
+                .variables()
+                .into_iter()
+                .chain(event.rhs.variables())
+            {
+                let head = var.split(['.', '$']).next().unwrap_or("");
+                if let Some(name) = top.iter().find(|n| n.eq_ignore_ascii_case(head)) {
+                    if !owners.iter().any(|o| o == name) {
+                        owners.push((*name).to_string());
+                    }
+                }
+            }
+            out.push(EventWatch {
+                table: system.name.clone(),
+                name: event.name.clone(),
+                owners,
+            });
+        }
+    }
+    out
 }
 
 /// One component instance as Check reports it for navigation and completion.
@@ -1830,6 +1875,7 @@ pub fn check_with_tables_complex(
     // path; the closure below works on a clone of the document, so the names
     // the CALL flattener generates are collected out here.
     let identities = component_identities(&doc, source);
+    let events = event_watches(&doc, &identities.0);
     let mut parsed_names = doc.display_names.clone();
     let mut check_diagnostics = doc.diagnostics.clone();
     check_diagnostics.extend(identity_advisories(&doc, source));
@@ -1915,6 +1961,7 @@ pub fn check_with_tables_complex(
                 ports: layer_ports,
                 instances: identities.0.clone(),
                 definitions: identities.1.clone(),
+                events: events.clone(),
             });
         }
     };
@@ -1951,6 +1998,7 @@ pub fn check_with_tables_complex(
             ports: layer_ports.clone(),
             instances: identities.0.clone(),
             definitions: identities.1.clone(),
+            events: events.clone(),
         });
     }
 
@@ -2005,6 +2053,7 @@ pub fn check_with_tables_complex(
         ports: layer_ports,
         instances: identities.0,
         definitions: identities.1,
+        events,
     };
 
     match block_system(&equations, &knowns) {
@@ -2877,6 +2926,7 @@ fn syntax_failure_report(source: &str, err: &FreesError) -> CheckReport {
         connections: Vec::new(),
         instances: Vec::new(),
         definitions: Vec::new(),
+        events: Vec::new(),
     }
 }
 

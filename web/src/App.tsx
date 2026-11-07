@@ -2517,6 +2517,12 @@ export default function App() {
   const playIndex = timeline && playback.of === result && playback.index !== null && playback.index < timeline.times.length ? playback.index : null
   const playTable = timeline && playIndex !== null ? result?.odeTables?.find((t) => t.name === timeline.table) : undefined
   // H3: the recorded sample for the property-diagram cursor (memoised so a figure rebuilds only when it moves).
+  // H4: the blocks an event recorded at this sample reads flash on the schematic.
+  const flashOwners = useMemo(() => {
+    if (!timeline || playIndex === null) return undefined
+    const here = new Set(timeline.events.filter((e) => e.index === playIndex).map((e) => e.name))
+    return (checkResult?.events ?? []).filter((w) => w.table.toLowerCase() === timeline.table.toLowerCase() && here.has(w.name)).flatMap((w) => w.owners)
+  }, [timeline, playIndex, checkResult?.events])
   const playSampleOf = useMemo(
     () => (playTable && playIndex !== null ? { table: playTable, index: playIndex, connections: checkResult?.connections ?? [] } : undefined),
     [playTable, playIndex, checkResult?.connections],
@@ -2998,6 +3004,7 @@ export default function App() {
             paused={playIndex !== null && !playback.playing}
             recorded={playIndex !== null ? playTable?.vars : undefined}
             phases={playIndex === null ? result?.phases : undefined}
+            flash={flashOwners}
             blocks={result?.blocks}
             text={textRef.current}
             onRevealLine={goToLine}

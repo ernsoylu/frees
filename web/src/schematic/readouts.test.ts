@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor } from './readouts'
+import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, streamSummary } from './readouts'
 import { layoutSchematic, type Connection } from './layout'
 import type { VariableResult } from '../api'
 
@@ -159,5 +159,20 @@ describe('formatReading (RUN-03)', () => {
     expect(formatReading({ value: 100, units: 'C' }, c)).toEqual({ text: '212', units: 'F', stale: false })
     expect(formatReading({ value: 373.16, units: 'K' }, c)).toEqual({ text: '373.2', units: 'K', stale: true })
     expect(formatReading({ value: 1.23456, units: 'kW' }, { digits: 3 })).toEqual({ text: '1.23', units: 'kW', stale: false })
+  })
+})
+
+describe('stream hover summary (H4)', () => {
+  it('lists every member of the stream, state first, and nothing from a nested name', () => {
+    const values = indexVariables([
+      { name: 'cook.vent.mdot', value: 0.001, units: 'kg/s' },
+      { name: 'cook.vent.P', value: 202600, units: 'Pa' },
+      { name: 'cook.vent.h', value: 2.7e6, units: 'J/kg' },
+      { name: 'cook.vent.zeta', value: 2, units: '' },
+      { name: 'cook.vent.sub.p', value: 1, units: 'Pa' },
+      { name: 'cook.ventx.p', value: 1, units: 'Pa' },
+    ])
+    expect(streamSummary('Cook.vent', values)).toBe('P = 202600 Pa\nh = 2.700e+6 J/kg\nmdot = 0.001 kg/s\nzeta = 2')
+    expect(streamSummary('prv.out', values)).toBe('')
   })
 })

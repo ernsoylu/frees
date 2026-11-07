@@ -2453,7 +2453,7 @@ test('COMP-07: rotate, mirror, detail and name placement per block; ports keep t
   await page.getByRole('button', { name: 'Solve', exact: true }).click()
   await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 120_000 })
   // R1's card is still pinned: its current reads as before the transforms.
-  await expect(page.getByText('0.66667 A').first()).toBeVisible()
+  await expect(page.getByText('0.66667 A').filter({ visible: true }).first()).toBeVisible()
   await testInfo.attach('comp07.png', { body: await svg.screenshot(), contentType: 'image/png' })
   await record(testInfo, 'evidence', { before, turned })
 })
