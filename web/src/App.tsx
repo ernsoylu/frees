@@ -2516,6 +2516,11 @@ export default function App() {
   // Playback belongs to the result it started on: a new result shows its end until played.
   const playIndex = timeline && playback.of === result && playback.index !== null && playback.index < timeline.times.length ? playback.index : null
   const playTable = timeline && playIndex !== null ? result?.odeTables?.find((t) => t.name === timeline.table) : undefined
+  // H3: the recorded sample for the property-diagram cursor (memoised so a figure rebuilds only when it moves).
+  const playSampleOf = useMemo(
+    () => (playTable && playIndex !== null ? { table: playTable, index: playIndex, connections: checkResult?.connections ?? [] } : undefined),
+    [playTable, playIndex, checkResult?.connections],
+  )
   const playSample = timeline && playIndex !== null ? `${timeLabel(timeline, playIndex)} (sample ${playIndex + 1} of ${timeline.times.length})` : null
   const changePlayIndex = useCallback((index: number) => setPlayback((p) => ({ ...p, of: result, index })), [result])
   const changePlaying = useCallback(
@@ -3277,7 +3282,7 @@ export default function App() {
           activePlotId={pl.id}
           onActivePlotIdChange={setActivePlotId}
           onSelectRow={handleSelectTableRow}
-          playhead={timeline && playIndex !== null ? { tableId: `code-ode-${timeline.table.toLowerCase()}`, xVar: timeline.timeVar, x: timeline.times[playIndex] } : null}
+          playhead={timeline && playIndex !== null ? { tableId: `code-ode-${timeline.table.toLowerCase()}`, xVar: timeline.timeVar, x: timeline.times[playIndex], sample: playSampleOf } : null}
         />
         </Suspense>
       </div>

@@ -442,6 +442,21 @@ entry here is checked off with evidence when it closes.
         - A fixed range from 200 kPa clips and marks exactly the two low-side wires.
         - No `solve` or `check` runs.
     - **Found and fixed on the way:** the phase of a saturated EV stream flipped between a slider drag and a plain solve under round-off. `sliderSolve.test.ts` caught it, and the band above fixes it.
+  - **H3 done 2026-11-07 (`h3-diagram-cursor`).**
+    - **Cursor.** During playback, a property diagram (P-h, T-s, P-v, T-v, h-s, P-T) draws each node carrying its fluid at the RUN-05 sample. The psychrometric chart draws the moist-air nodes (`cursorFor`, `plots/playbackCursor.ts`).
+      - A node is drawn from the first of its streams whose recorded columns hold both axis members. The values are the recorded SI values at that sample; they are never interpolated and never the end-of-run value.
+      - Outside playback there is no cursor.
+    - **Trail.** The last 30 recorded samples, up to and including the current one, fade toward the past.
+    - **Gaps.** A sample that is missing, not finite, or not positive on a log axis breaks the trail. At the cursor it is named on the plot with its reason, as is a node whose state the run did not record.
+    - The diagram background is fetched by the plot's own spec (fluid, diagram, ranges). Moving the cursor rebuilds only the overlay traces and calls no engine.
+    - **Evidence.**
+      - `playbackCursor.test.ts`: recorded columns only, unrecorded nodes as gaps, trail bounds, log-axis gaps, moist-air nodes.
+      - `diagram-cursor.spec.ts` (pressure cooker, P-h):
+        - No cursor at end of run.
+        - At sample 1, both water nodes are drawn with a one-sample trail.
+        - The trail grows with each step and ends exactly at the cursor.
+        - At 1200 s the cooker sits at 195–215 kPa, with a 30-sample trail.
+        - No `solve` or `check` runs.
   1. **Explicit port-flow metadata.** The engine reports each port's role and measured-flow sign per domain (fluid, liquid, two-phase, moist air, heat, electrical, mechanical, translational). This replaces `flowAlong`'s in/out naming. Where a direction is not known, it stays unknown; it is never inferred from drawing order or a pressure gradient.
   2. **Flow particles.**
     - Particles move along the routed wire paths. Speed follows the log of the flow magnitude, normalised per domain; direction comes from (1).

@@ -50,6 +50,7 @@ import {
 } from './figure'
 import { EXPORT_FORMATS, exportPlot } from './exportPlot'
 import PlotlyChart, { type PlotPointClickEvent } from './PlotlyChart'
+import type { PlaybackSample } from './playbackCursor'
 
 export interface PlotCursor {
   traceIndex: number
@@ -155,6 +156,8 @@ export interface Playhead {
   tableId: string
   xVar: string
   x: number
+  /** H3: the recorded sample, for the cursor on property and psychrometric diagrams. */
+  sample?: PlaybackSample
 }
 
 function lookupVariableValue(
@@ -333,6 +336,7 @@ export interface FigureInputs {
   stateTableDefs?: StateTableDto[]
   theme: PlotTheme
   revision?: string | number
+  playback?: PlaybackSample
 }
 
 function getArrayValues(variables: VariableResult[], base: string | null): number[] {
@@ -372,7 +376,7 @@ function getMatrixValues(variables: VariableResult[], base: string | null): numb
 }
 
 export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure | null {
-  const { states, cyclePath, variables = [], diagram, psychart, stateTableDefs, theme, revision } = inputs
+  const { states, cyclePath, variables = [], diagram, psychart, stateTableDefs, theme, revision, playback } = inputs
   // When the plot targets one declared STATE TABLE circuit, overlay only that
   // circuit's states (else all detected states). If the named circuit is missing,
   // do not fall back silently to all detected states across circuits.
@@ -389,10 +393,10 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
       ? (!selectedCircuit.fluid || selectedCircuit.fluid.toLowerCase() === spec.property.fluid.toLowerCase())
       : (!stateTableDefs || stateTableDefs.length <= 1 || stateTableDefs.every((s) => !s.fluid || s.fluid.toLowerCase() === spec.property.fluid.toLowerCase()))
     const effectiveCyclePath = fluidMatches ? cyclePath : undefined
-    return buildPropertyFigure(diagram, spec.property, spec.format, overlayStates(spec.property.stateTable), theme, effectiveCyclePath, revision)
+    return buildPropertyFigure(diagram, spec.property, spec.format, overlayStates(spec.property.stateTable), theme, effectiveCyclePath, revision, playback)
   }
   if (spec.kind === 'psychro' && psychart) {
-    return buildPsychroFigure(psychart, spec.psychro, spec.format, overlayStates(spec.psychro.stateTable), theme, undefined, revision)
+    return buildPsychroFigure(psychart, spec.psychro, spec.format, overlayStates(spec.psychro.stateTable), theme, undefined, revision, playback)
   }
   if (spec.kind === 'xy' && !spec.source) return null
   const isNoXNeeded =
@@ -592,8 +596,9 @@ export default function PlotCard({
         stateTableDefs,
         theme: 'dark',
         revision: viewResetKey,
+        playback: playhead?.sample,
       }),
-    [spec, states, cyclePath, tableRows, tableResults, variables, tableUnits, diagram, psychart, stateTableDefs, viewResetKey],
+    [spec, states, cyclePath, tableRows, tableResults, variables, tableUnits, diagram, psychart, stateTableDefs, viewResetKey, playhead?.sample],
   )
 
   const handlePointClick = (event: PlotPointClickEvent) => {
@@ -747,6 +752,7 @@ export default function PlotCard({
       stateTableDefs,
       theme,
       revision: viewResetKey,
+      playback: playhead?.sample,
     })
     if (!exportFigure) return
     setExporting(true)
