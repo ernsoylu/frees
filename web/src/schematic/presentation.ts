@@ -11,6 +11,7 @@ import type { ScaleSetting } from './overlay'
 import type { ConnectionDto } from '../api'
 import { renameId } from './sourceEdit'
 import { LINE_KINDS } from './palette'
+import { INSIGHT_KINDS } from './insights'
 import { EMPTY_SHEETS, netKeyOf, sanitizeSheets, type SheetState } from './sheets'
 import { SHAPE_LABELS, type Shape } from './symbols'
 import { sanitizeSvg } from './symbolSvg'
@@ -240,11 +241,11 @@ export interface ProjectSymbol {
 /** VIEW-09: an annotation; callouts and cards link to a block or variable by its id, so a rename moves the link. */
 export interface Annotation {
   id: string
-  kind: 'note' | 'callout' | 'card' | 'legend'
+  kind: 'note' | 'callout' | 'card' | 'legend' | 'insight'
   scope: string
   at: { x: number; y: number }
   text: string
-  /** callout: the block it points at; card: the variable it shows; '' otherwise. */
+  /** callout: the block it points at; card: the variable it shows; insight: `kind:block,block` (I1); '' otherwise. */
   target: string
 }
 
@@ -274,7 +275,7 @@ export function renamePresentation(p: SchematicPresentation, renames: ReadonlyMa
     watch: (p.watch ?? []).map(id),
     formats: move(p.formats ?? {}),
     views: (p.views ?? []).map((v) => ({ ...v, scope: id(v.scope), badges: badges(v.badges), focus: v.focus && { ...v.focus, id: id(v.focus.id) } })),
-    annotations: (p.annotations ?? []).map((a) => ({ ...a, scope: id(a.scope), target: id(a.target) })),
+    annotations: (p.annotations ?? []).map((a) => ({ ...a, scope: id(a.scope), target: a.kind === 'insight' ? insightTarget(a.target, id) : id(a.target) })),
     sheets: (p.sheets ?? []).map((sh) => ({ ...sh, members: sh.members.map(id), positions: move(sh.positions) })),
     offMain: (p.offMain ?? []).map(id),
     // A net is keyed by its first endpoint in sorted order, which a rename can change.
@@ -540,7 +541,21 @@ function savedViewOf(v: unknown): SavedView | null {
   }
 }
 
-const ANNOTATION_KINDS = ['note', 'callout', 'card', 'legend']
+const ANNOTATION_KINDS = ['note', 'callout', 'card', 'legend', 'insight']
+
+/** I1: an insight's `kind:block,block` target with each block renamed. */
+function insightTarget(target: string, id: (k: string) => string): string {
+  const [kind, blocks = ''] = target.split(':')
+  return `${kind}:${blocks.split(',').map(id).join(',')}`
+}
+
+/** I1: a known insight kind and one to eight block references. */
+function insightRef(v: unknown): boolean {
+  if (typeof v !== 'string') return false
+  const [kind, blocks, extra] = v.split(':')
+  const list = (blocks ?? '').split(',')
+  return extra === undefined && INSIGHT_KINDS.includes(kind) && list.length >= 1 && list.length <= 8 && list.every(ref)
+}
 
 function annotationOf(v: unknown): Annotation | null {
   const raw = record(v)
@@ -548,7 +563,7 @@ function annotationOf(v: unknown): Annotation | null {
   if (!raw || typeof raw.id !== 'string' || !/^n\d{1,6}$/.test(raw.id) || !ANNOTATION_KINDS.includes(raw.kind as string)) return null
   if (!(raw.scope === '' || ref(raw.scope)) || !at || !coord(at.x) || !coord(at.y) || typeof raw.text !== 'string' || raw.text.length > 2000) return null
   const kind = raw.kind as Annotation['kind']
-  const linked = kind === 'callout' ? ref(raw.target) : kind === 'card' ? variable(raw.target) : raw.target === ''
+  const linked = kind === 'callout' ? ref(raw.target) : kind === 'card' ? variable(raw.target) : kind === 'insight' ? insightRef(raw.target) : raw.target === ''
   return linked ? { id: raw.id, kind, scope: raw.scope as string, at: { x: at.x, y: at.y }, text: raw.text, target: raw.target as string } : null
 }
 

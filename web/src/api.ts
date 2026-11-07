@@ -410,6 +410,9 @@ export async function check(
 export interface StreamPhase {
   phase: 'subcooled' | 'two-phase' | 'superheated' | 'supercritical'
   x?: number
+  /** Phase I: the bubble and dew temperatures at the stream's pressure (K), when subcritical. */
+  tBubble?: number
+  tDew?: number
 }
 
 /** The empty solve response returned on any infrastructure failure. */
