@@ -57,6 +57,7 @@ import {
   DEFAULT_STOP_CRITERIA,
   getFluids,
   solve,
+  solveRequest,
   stopSolve,
   replClear,
   solveTable,
@@ -141,6 +142,7 @@ const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const SliderStrip = lazy(() => import('./SliderStrip'))
 const RunsPanel = lazy(() => import('./RunsPanel'))
 const PlaybackBar = lazy(() => import('./PlaybackBar'))
+const LiveBar = lazy(() => import('./LiveBar'))
 const PlotConfigModal = lazy(() => import('./plots/PlotConfigModal'))
 const MonteCarloModal = lazy(() => import('./MonteCarloModal'))
 const SensitivityModal = lazy(() => import('./SensitivityModal'))
@@ -2620,6 +2622,8 @@ export default function App() {
   // RUN-05: the dynamic run's recorded timelines and the sample playback shows, if any.
   const timelines = useMemo(() => (result?.odeTables ?? []).map(timelineOf).filter((t): t is Timeline => t !== null), [result])
   const timeline = timelines.find((t) => t.table === playback.table) ?? timelines[0] ?? null
+  // Phase K3: the solved document's DYNAMIC blocks, in order, are what Live can open.
+  const liveBlocks = useMemo(() => (result?.odeTables ?? []).map((t) => t.name), [result])
   // Playback belongs to the result it started on: a new result shows its end until played.
   const playIndex = timeline && playback.of === result && playback.index !== null && playback.index < timeline.times.length ? playback.index : null
   const playTable = timeline && playIndex !== null ? result?.odeTables?.find((t) => t.name === timeline.table) : undefined
@@ -3308,6 +3312,21 @@ export default function App() {
                       onSpeed={setPlaySpeed}
                       onExit={() => setPlayback((p) => ({ ...p, index: null, playing: false }))}
                       onExport={exportPlayback}
+                    />
+                  </Suspense>
+                )}
+                {liveBlocks.length > 0 && (
+                  <Suspense fallback={null}>
+                    <LiveBar
+                      blocks={liveBlocks}
+                      tracker={modelRevisionRef.current}
+                      buildOpen={() => {
+                        flushTableEdits()
+                        return {
+                          source: effectiveText(),
+                          request: solveRequest({ ...stopCriteria, complexMode }, buildVariableInfo(), false, unitSystem, false, functionTableDtos(), solveOverrides()),
+                        }
+                      }}
                     />
                   </Suspense>
                 )}

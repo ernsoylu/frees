@@ -28,13 +28,27 @@ export class ModelRevisionTracker {
     return this.rev
   }
 
+  private readonly listeners = new Set<() => void>()
+
   /** Advances the model revision when inputs change (text, tables, overrides, complex mode, project load). */
   bump(): number {
     this.rev += 1
     if (this.inFlight) {
       this.invalidatedWhileInFlight = true
     }
+    for (const listener of this.listeners) listener()
     return this.rev
+  }
+
+  /**
+   * Call `listener` after every bump, for state that lives outside React's
+   * render (an open live session, Phase K3). Returns the unsubscribe.
+   */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
   }
 
   /**

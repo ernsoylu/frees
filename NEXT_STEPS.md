@@ -758,6 +758,14 @@ entry here is checked off with evidence when it closes.
       - `liveClient.test.ts`, 7 tests: the pull discipline, the generation guard, `gone`, death by fatal reply and by `onerror`, respawn, reset.
       - `live.wasm.test.ts`: through the compiled module, chunks equal `solve_zerocopy`'s ODE buffer.
       - WASM 3,955.6 KiB raw, within the 5,120 KiB gate.
+  - **K3 done 2026-11-07 (`k3-live-bar`): the Live bar.**
+    - **Where.** `web/src/LiveBar.tsx`, in the slider strip under Playback, shown once a solve has produced ODE Tables. It is labelled **Live** and names the block (a picker when there are several).
+    - **Controls.** Run/Pause; Next sample, Next event and One step (the engine's three step kinds, run while paused, opening the session first if needed); Reset; Close. Speed is a log-scale slider from 0.01 to 1,000 sim-seconds per wall-second.
+    - **Readouts.** Sim time in the time column's unit, the integrator's step size, the row count, the last event, and "×0.30 of requested" when the engine falls behind (otherwise "at requested speed").
+    - **Pull loop.** Each animation frame asks for `t + speed·Δt_wall` with a 10 ms engine budget and waits for that chunk before the next frame's request. Once the row spacing is known, the request stays within max(¼ s of sim time at the current speed, two rows) of the rows, so a slow model does not build a backlog. "Behind" means that clamp held the request back in the last second. Before the spacing is known nothing is clamped: an early clamp below one row spacing stopped a 5 s-grid model at `t0`, found in the browser on `pressure-cooker`.
+    - **Revisions.** `ModelRevisionTracker.subscribe` tells the bar about every bump; any model edit disposes the session and says so. An edit that clears the result unmounts the bar, which disposes the session too. Value edits (sliders) close it as well until L applies inputs live.
+    - **The open request** is the Solve button's (`solveRequest` in `api.ts`, now shared), built in the click handler, so a table that fails validation is reported in the bar.
+    - **Evidence.** `LiveBar.test.tsx`, 5 tests: running to a stop event with exactly one advance in flight; an edit closing the session and stopping the loop; a step opening a closed session, and reset; an open that fails and a request that cannot be built; a failed chunk stopping the run and keeping its rows. In the browser on `pressure-cooker` (IDA, 5 s grid): 1 s/s advances a row every 5 s; at 1,000 s/s the run keeps up ("at requested speed", about 100 rows per 0.5 s) and continues past `tf` = 1,200 s; a keystroke in the editor closes it.
 - **L. Live inputs and instruments (stage 3).**
   1. **Input classes, applied at accepted-time boundaries and logged as events:**
      - **Presentation:** immediate, no revision.
