@@ -3792,6 +3792,438 @@ PLOT 'Block temperature'
   x = time
   y = 'M.port.T'
 END`,
+  },
+  {
+    id: 'lesson-rlc-ringing',
+    title: 'Lesson — a ringing RLC circuit',
+    description: 'Predict, change one input, observe: doubling R doubles ζ and cuts the overshoot from 53 % to 25 %. Pairs with the mass-spring-damper lesson. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — a series RLC circuit rings. Pairs with the mass-spring-damper lesson.
+
+  A 1 V step drives L, R and C in series. The capacitor voltage obeys
+  L·C·v'' + R·C·v' + v = E, a second-order system with natural frequency
+  ω_n = 1/sqrt(L·C) and damping ratio ζ = (R/2)·sqrt(C/L). Below ζ = 1 it
+  overshoots E by exp(−π·ζ/sqrt(1 − ζ²)) before settling.
+
+  Source: J. W. Nilsson and S. A. Riedel, Electric Circuits, 11th ed.,
+  Pearson, 2019, §8.4 (the step response of a series RLC circuit). }
+
+R_s = 4 [ohm]
+L_s = 0.001 [H]
+C_s = 1e-5 [farad]
+E_s = 1 [V]
+VoltageSource VS(E=E_s)
+Inductor      L1(L=L_s, I0=0 [A])
+Resistor      R(R=R_s)
+Capacitor     CAP(C=C_s, V0=0 [V])
+Ground        G()
+connect(VS.p, L1.p)
+connect(L1.n, R.a)
+connect(R.b, CAP.p)
+connect(CAP.n, VS.n, G.port)
+DYNAMIC ring (method = ode45, time = 0 .. 0.005, points = 2001, rtol = 1e-9)
+END
+zeta      = R_s / 2 * sqrt(C_s / L_s)
+omega_n   = 1 / sqrt(L_s * C_s)
+overshoot = MaxValue('cap.vc') * 1 [V] / E_s - 1
+OS_theory = exp(-pi# * zeta / sqrt(1 - zeta^2))
+
+{ CHECK zeta 0.2 1e-12 }
+{ CHECK omega_n 10000 1e-6 }
+{ CHECK OS_theory 0.526620599330303 1e-9 }
+{ CHECK overshoot 0.52661 2e-5 }
+PLOT 'Capacitor voltage'
+  kind = xy
+  x = time
+  y = 'cap.vc'
+END`,
+  },
+  {
+    id: 'lesson-mass-spring-damper',
+    title: 'Lesson — a mass on a spring and damper',
+    description: 'Predict, change one input, observe: doubling c doubles ζ and cuts the overshoot from 53 % to 25 %. The same equation as the ringing RLC circuit. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — a mass on a spring and damper. Pairs with the RLC lesson.
+
+  A 10 N step force pushes a 1 kg mass held by a spring k and a damper c.
+  Its displacement obeys m·x'' + c·x' + k·x = F: the RLC equation with m in
+  place of L, c in place of R and 1/k in place of C. So ω_n = sqrt(k/m),
+  ζ = c/(2·sqrt(k·m)), and the overshoot past F/k is exp(−π·ζ/sqrt(1 − ζ²)).
+
+  Source: K. Ogata, System Dynamics, 4th ed., Pearson, 2004 (the transient
+  response of second-order mechanical systems). }
+
+c_d = 4 [N-s/m]
+k_s = 100 [N/m]
+m_b = 1 [kg]
+F_s = 10 [N]
+ForceSource FS(F=F_s)
+TransMass   M(m=m_b, v0=0 [m/s])
+TransSpring SP(k=k_s, x0=0 [m])
+TransDamper D(c=c_d)
+TransGround G1()
+TransGround G2()
+TransGround G3()
+connect(FS.a, M.port, SP.a, D.a)
+connect(FS.b, G1.port)
+connect(SP.b, G2.port)
+connect(D.b, G3.port)
+DYNAMIC ring (method = ode45, time = 0 .. 5, points = 2001, rtol = 1e-9)
+END
+zeta      = c_d / (2 * sqrt(k_s * m_b))
+x_static  = F_s / k_s
+overshoot = MaxValue('sp.x') * 1 [m] / x_static - 1
+OS_theory = exp(-pi# * zeta / sqrt(1 - zeta^2))
+
+{ CHECK zeta 0.2 1e-12 }
+{ CHECK x_static 0.1 1e-12 }
+{ CHECK OS_theory 0.526620599330303 1e-9 }
+{ CHECK overshoot 0.52661 2e-5 }
+PLOT 'Spring displacement'
+  kind = xy
+  x = time
+  y = 'sp.x'
+END`,
+  },
+  {
+    id: 'lesson-diode',
+    title: 'Lesson — a diode lets current one way',
+    description: 'Predict, change one input, observe: reversing the source stops the current. Pairs with the check-valve lesson. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — a diode conducts one way. Pairs with the check-valve lesson.
+
+  A 5 V source drives a diode and a 1 Ω resistor. Forward-biased, the diode
+  conducts like a small resistance (1/Gon = 0.1 Ω here): I = E/(R + 0.1 Ω).
+  Reverse the source and the diode blocks: the current is zero, not
+  negative, whatever the voltage.
+
+  Source: A. S. Sedra and K. C. Smith, Microelectronic Circuits, 7th ed.,
+  Oxford University Press, 2015, Ch. 4 (diodes). }
+
+E_s = 5 [V]
+R_s = 1 [ohm]
+VoltageSource VS(E=E_s)
+Diode         D(Gon=10 [siemens], eps=0.001 [V])
+Resistor      R(R=R_s)
+Ground        G()
+connect(VS.p, D.p)
+connect(D.n, R.a)
+connect(R.b, VS.n, G.port)
+I_d = D.p.i
+
+{ CHECK I_d 4.54545454545455 1e-9 }
+`,
+  },
+  {
+    id: 'lesson-check-valve',
+    title: 'Lesson — a check valve lets flow one way',
+    description: 'Predict, change one input, observe: dropping the inlet below the outlet pressure stops the flow. The same one-way rule as a diode. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — a check valve passes flow one way. Pairs with the diode lesson.
+
+  Water at 3 bar flows through a check valve to 1 bar. Open, the valve is a
+  square-law orifice: ṁ = CdA·sqrt(2·ρ·ΔP). Drop the inlet below the outlet
+  and it closes: the flow is zero, not reversed. Pressure difference plays
+  the part of voltage and mass flow the part of current.
+
+  Source: F. M. White, Fluid Mechanics, 7th ed., McGraw-Hill, 2011, §6.9
+  (minor losses: valves and fittings). }
+
+function [out] = PressureInlet(fluid$, P, T, domain$ = liquid)
+port(out)
+  out.P = P
+  out.h = Enthalpy(fluid$, P=P, T=T)
+end
+function [in] = PressureOutlet(P, domain$ = liquid)
+port(in)
+  in.P = P
+end
+P_up   = 300000 [Pa]
+P_down = 100000 [Pa]
+PressureInlet    up(fluid$=Water, P=P_up, T=300 [K])
+LiquidCheckValve CV(CdA=1e-5 [m^2], rho=997 [kg/m^3], eps=100 [Pa])
+PressureOutlet   down(P=P_down)
+connect(up.out, CV.in)
+connect(CV.out, down.in)
+mdot   = CV.in.mdot
+
+{ CHECK mdot 0.199699774661866 1e-9 }
+`,
+  },
+  {
+    id: 'lesson-capacitor-sharing',
+    title: 'Lesson — two capacitors share their charge',
+    description: 'Predict, change one input, observe: a larger second capacitor lowers the shared voltage. Pairs with the gas-receivers lesson. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — two capacitors share a charge. Pairs with the gas-receivers lesson.
+
+  C1 holds 10 V; C2 is empty. Joined through R, current flows until both
+  read the same voltage. Charge is conserved, so the end voltage is
+  V = C1·V1/(C1 + C2), whatever R is: R only sets how fast.
+
+  Source: J. W. Nilsson and S. A. Riedel, Electric Circuits, 11th ed.,
+  Pearson, 2019, Ch. 6 (capacitance and stored charge). }
+
+C_1 = 1e-5 [farad]
+C_2 = 1e-5 [farad]
+V_1 = 10 [V]
+R_s = 1000 [ohm]
+Capacitor C1(C=C_1, V0=V_1)
+Resistor  R(R=R_s)
+Capacitor C2(C=C_2, V0=0 [V])
+Ground    G()
+connect(C1.p, R.a)
+connect(R.b, C2.p)
+connect(C1.n, C2.n, G.port)
+DYNAMIC share (method = ode45, time = 0 .. 0.1, points = 201, rtol = 1e-9)
+END
+V_final = FinalValue('c2.vc') * 1 [V]
+V_theory = C_1 * V_1 / (C_1 + C_2)
+
+{ CHECK V_theory 5 1e-12 }
+{ CHECK V_final 5 1e-6 }
+PLOT 'Second capacitor voltage'
+  kind = xy
+  x = time
+  y = 'c2.vc'
+END`,
+  },
+  {
+    id: 'lesson-gas-receivers',
+    title: 'Lesson — two air receivers equalize',
+    description: 'Predict, change one input, observe: a larger second receiver lowers the shared pressure. The same conservation as two capacitors. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — two air receivers equalize. Pairs with the capacitor-sharing lesson.
+
+  A 20 L receiver at 10 barA empties through an orifice into a second at
+  1 barA, all at 293.15 K. At one temperature P·V is the gas held (m·R·T),
+  so mass conservation fixes the end pressure: P = ΣP·V / ΣV. Volume plays
+  the part of capacitance and pressure the part of voltage.
+
+  Source: Y. A. Cengel and M. A. Boles, Thermodynamics: An Engineering
+  Approach, 9th ed., McGraw-Hill, 2019, Ch. 5 (conservation of mass). }
+
+function [port] = ClosedEnd(T [K], domain$ = gas)
+port(port)
+  port.mdot = 0
+  port.h    = Enthalpy(Air, P=port.P, T=T)
+end
+function [port] = GasCap(domain$ = gas)
+port(port)
+  port.mdot = 0
+end
+V_1 = 0.02 [m^3]
+V_2 = 0.02 [m^3]
+P_1 = 1000000 [Pa]
+ClosedEnd        head(T=293.15 [K])
+PneumaticVolume  tank1(V=V_1, T=293.15 [K], R=287 [J/kg-K], P0=P_1)
+PneumaticOrifice pipe(fluid$=Air, C=1e-7 [m^3/s-Pa], b=0.5)
+PneumaticVolume  tank2(V=V_2, T=293.15 [K], R=287 [J/kg-K], P0=100000 [Pa])
+GasCap           tail()
+connect(head.port, tank1.in)
+connect(tank1.out, pipe.in)
+connect(pipe.out, tank2.in)
+connect(tank2.out, tail.port)
+DYNAMIC equalize (method = ode23s, time = 0 .. 300, points = 301)
+END
+P_final  = FinalValue('tank2.in.P') * 1 [Pa]
+P_theory = (P_1 * V_1 + 100000 [Pa] * V_2) / (V_1 + V_2)
+
+{ CHECK P_theory 550000 1e-6 }
+{ CHECK P_final 550000 1 }
+PLOT 'Second receiver pressure'
+  kind = xy
+  x = time
+  y = 'tank2.in.P'
+END`,
+  },
+  {
+    id: 'lesson-throttling',
+    title: 'Lesson — throttling on the P-h chart',
+    description: 'Predict, change one input, observe: a higher evaporator pressure flashes less liquid to vapour. Solve (F2), then read the P-h chart.',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — throttling a refrigerant, on the P-h chart.
+
+  Saturated liquid R-134a at 0.8 MPa is throttled to the evaporator
+  pressure. A throttle does no work and exchanges no heat, so h2 = h1: the
+  state drops straight down the P-h chart into the dome, and the exit
+  quality is x2 = (h1 − hf)/(hg − hf) at the low pressure.
+
+  Source: Y. A. Cengel and M. A. Boles, Thermodynamics: An Engineering
+  Approach, 9th ed., McGraw-Hill, 2019, §5-4 and Example 5-8. }
+
+P_1 = 0.8 [MPa]
+P_2 = 0.12 [MPa]
+TwoPhaseSource inlet(fluid$=R134a, mdot=1 [kg/s], P=P_1, x=0)
+TwoPhaseExpansionValve tube(fluid$=R134a, Cv=Cv)
+TwoPhaseSensor exit(fluid$=R134a)
+TwoPhasePressureSink evap(P=P_2)
+connect(inlet.out, tube.in)
+connect(tube.out, exit.in)
+connect(exit.out, evap.in)
+x_2 = exit.x
+T_2 = exit.T
+h_1 = Enthalpy(R134a, P=P_1, x=0)
+h_f2 = Enthalpy(R134a, P=P_2, x=0)
+h_g2 = Enthalpy(R134a, P=P_2, x=1)
+x_theory = (h_1 - h_f2) / (h_g2 - h_f2)
+
+{ CHECK x_2 0.340343737221829 3e-7 }
+{ CHECK x_theory 0.340343737221829 3e-7 }
+PLOT 'Throttling on P-h'
+  kind = property
+  fluid = R134a
+  diagram = 'P-h'
+  overlaystates = true
+  connectstates = true
+END`,
+  },
+  {
+    id: 'lesson-air-mixing',
+    title: 'Lesson — mixing two air streams',
+    description: 'Predict, change one input, observe: more cool air pulls the mix down its straight line on the psychrometric chart. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — adiabatic mixing on the psychrometric chart.
+
+  1.0 m3/s of warm air (38 °C DB, 24 °C WB) mixes with cool air (16 °C DB,
+  10 °C WB). Dry air, water and enthalpy are conserved, so the mixed state
+  lies on the straight line between the two, at the dry-air mass-weighted
+  point: W3 = (m1·W1 + m2·W2)/(m1 + m2).
+
+  Source: Y. A. Cengel and M. A. Boles, Thermodynamics: An Engineering
+  Approach, 9th ed., McGraw-Hill, 2019, §14-7 (adiabatic mixing of
+  airstreams). }
+
+P = 101325 [Pa]
+Vdot_1 = 1.000 [m^3/s]
+T_1 = 38 [C]
+Twb_1 = 24 [C]
+Vdot_2 = 0.500 [m^3/s]
+T_2 = 16 [C]
+Twb_2 = 10 [C]
+W_1 = HumRat(AirH2O, T=T_1, P=P, B=Twb_1)
+W_2 = HumRat(AirH2O, T=T_2, P=P, B=Twb_2)
+v_1 = Volume(AirH2O, T=T_1, P=P, W=W_1)
+v_2 = Volume(AirH2O, T=T_2, P=P, W=W_2)
+MoistAirSource hot(P=P, T=T_1, W=W_1, mdot=Vdot_1 / v_1)
+MoistAirSource cool(P=P, T=T_2, W=W_2, mdot=Vdot_2 / v_2)
+MixingBox      box()
+MoistAirSink   supply()
+connect(hot.out, box.in1)
+connect(cool.out, box.in2)
+connect(box.out, supply.in)
+W_3 = box.out.W
+h_3 = box.out.h
+T_3 = Temperature(AirH2O, H=h_3, P=P, W=W_3)
+m_1 = Vdot_1 / v_1
+m_2 = Vdot_2 / v_2
+W_lever = (m_1 * W_1 + m_2 * W_2) / (m_1 + m_2)
+
+{ CHECK W_3 0.0102845692818076 1e-8 }
+{ CHECK W_lever 0.0102845692818076 1e-8 }
+{ CHECK T_3 303.464657436987 1e-4 }
+PLOT 'Mixing on the psychrometric chart'
+  kind = psychro
+  overlaystates = true
+  connectstates = true
+END`,
+  },
+  {
+    id: 'lesson-cooling-coil',
+    title: 'Lesson — a coil that cools and dries air',
+    description: 'Predict, change one input, observe: a colder supply condenses more water. Solve (F2), then read the psychrometric chart.',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — cooling with dehumidification on the psychrometric chart.
+
+  1.5 kg/s of room air at 28 °C / 50 % leaves a cooling coil at 90 %
+  relative humidity. Below the inlet dew point the coil condenses water;
+  the condensate is ṁ·(W_in − W_out), and a colder leaving temperature
+  holds less water at the same relative humidity.
+
+  Source: Y. A. Cengel and M. A. Boles, Thermodynamics: An Engineering
+  Approach, 9th ed., McGraw-Hill, 2019, §14-7 (cooling with
+  dehumidification). }
+
+P = 101325 [Pa]
+mdot = 1.5 [kg/s]
+T_in = 28 [C]
+RH_in = 0.50
+T_out = 13 [C]
+RH_out = 0.90
+W_in = HumRat(AirH2O, T=T_in, P=P, R=RH_in)
+MoistAirSource        room(P=P, T=T_in, W=W_in, mdot=mdot)
+ApparatusDewPointCoil coil(T_adp=T_adp, BF=BF)
+MoistAirSink          supply()
+connect(room.out, coil.in)
+connect(coil.out, supply.in)
+coil.T_out = T_out
+RelHum(AirH2O, T=T_out, P=P, W=coil.out.W) = RH_out
+GUESS T_adp = 283.6
+GUESS BF = 0.1
+condensate = coil.mdot_w
+W_out = coil.out.W
+check_w = mdot * (W_in - W_out)
+
+{ CHECK condensate 0.00519166771651502 1e-8 }
+{ CHECK check_w 0.00519166771651502 1e-8 }
+{ CHECK T_adp 283.396143144343 1e-4 }
+PLOT 'Coil on the psychrometric chart'
+  kind = psychro
+  overlaystates = true
+  connectstates = true
+END`,
+  },
+  {
+    id: 'lesson-sensor-lag',
+    title: 'Lesson — a slow sensor in a speed loop',
+    description: 'Predict, change one input, observe: a slower speed sensor makes the cruise controller overshoot. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — from sensor to controller: a slow sensor in a speed loop.
+
+  A PI controller drives a 1000 kg car to 20 m/s, but it sees the speed only
+  through a sensor with a first-order lag τ_s. The lag delays what the
+  controller knows, so it keeps pushing after the car has reached the set
+  speed: the slower the sensor, the larger the overshoot.
+
+  Source: K. J. Åström and R. M. Murray, Feedback Systems, 2nd ed.,
+  Princeton University Press, 2021 (the cruise-control example). }
+
+m_car  = 1000 [kg]
+c_drag = 50 [N-s/m]
+Kp     = 800 [N-s/m]
+Ki     = 40 [N/m]
+v_set  = 20 [m/s]
+tau_s  = 0.5 [s]
+DYNAMIC cruise (method = ode45, time = 0 .. 60, points = 1201, rtol = 1e-9)
+  F = Kp * (v_set - v_m) + Ki * z
+  der(v)   = (F - c_drag * v) / m_car
+  der(v_m) = (v - v_m) / tau_s
+  der(z)   = v_set - v_m
+  v(0)   = 0 [m/s]
+  v_m(0) = 0 [m/s]
+  z(0)   = 0 [m]
+END
+overshoot = MaxValue('v') * 1 [m/s] / v_set - 1
+v_end     = FinalValue('v') * 1 [m/s]
+
+{ CHECK overshoot 0.0256527818045122 1e-6 }
+{ CHECK v_end 20 1e-6 }
+PLOT 'Speed and measured speed'
+  kind = xy
+  x = time
+  y = v
+  y = v_m
+END`,
   }
 ]
 
