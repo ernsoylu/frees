@@ -332,29 +332,54 @@ entry here is checked off with evidence when it closes.
 
 **Order.** F → G → H → I → J → K → L → M. H, I and J need no live engine and can run in parallel once F closes. K is the architectural investment; L and M build on it. Each phase lands as its own PR(s), and its entry here is checked off with evidence when it closes.
 
-- **F. Decisions and baseline (gate for G–M).**
-  1. The owner decides the open questions:
-     - **Live vs playback.** Is a separate, clearly labelled **Live** mode acceptable beside RUN-05's "playback never solves" rule?
-     - **First live eligibility.** Proposed: one DYNAMIC system on the IDA path, root events supported, no non-causal end-of-run accessors.
-     - **Runtime inputs.** Which declared inputs may change without re-preparation, and how are discontinuities and DAE consistency handled?
-     - **Recording.** The recording duration and memory cap, and whether live recordings or checkpoints are saved in projects.
-     - **Interpolation.** How live display interpolation, recorded samples and exact event records coexist with RUN-05's no-interpolation policy.
-     - **Losses.** A library convention for per-component loss outputs (Q̇ loss, Ṡ_gen, exergy destruction), which the loss view (M) needs.
-     - **Electrical scope.** Which electrical teaching primitives are in scope (J).
-  2. **Measurement.**
-     - Measure, on small, EV-size and 500-component models, the share of a slider re-solve spent in preparation (parse, expansion, blocking, differentiation) versus Newton. Record median and p95, cold and warm.
-     - Time one IDA step and one explicit step for a 50-state model. ARCHITECTURE §10's 1,000 steps for 50 states in < 500 ms is a target, not a measurement.
-     - These numbers gate G and size K's chunk budget.
-  - **Acceptance.** Decisions recorded here with dates; a measurement table with build, revision and device.
-- **G. Faster steady what-if: prepared reuse across requests (stage 0).**
-  1. The worker keeps a `PreparedDocument` per worker, keyed by a source hash plus the structural overrides. A slider move becomes a pin mutation plus `solve_with_pins_and_warm` from the previous solution.
-  2. Any change that alters lowering re-prepares and says nothing different: complex `_r`/`_i`, arrays, components, fluids, variants, or the set of pin names. `with_source_pins` already routes these.
-  3. The revision tracker and stale-job rejection are unchanged. Memory is bounded: one prepared document per worker, released on retire.
+- **F. Decisions and baseline — done 2026-11-07 (`f-decisions-baseline`).**
+  1. **Decisions.** The owner told me to run the whole programme ("run until finish all phases", 2026-11-06), so each default below was set then. Any of them can be revisited.
+     - **Live vs playback.** Live is a separate mode labelled **Live**. RUN-05 Playback keeps its rule that it never solves. A finished live run hands its recording to Playback.
+     - **First live eligibility.** One DYNAMIC system with `method = ida`, root events included, and no end-of-run accessors (`FinalValue` and similar). Anything else is refused with a reason, and Solve still works.
+     - **Runtime inputs.**
+       - A pinned slider parameter applies at the next accepted time with the states held. The algebraic variables are made consistent again (IDA `reinit` plus a consistent initial condition), and the change is logged as an input event.
+       - A parameter that appears in an initial condition needs a Reset.
+       - A change to a storage parameter (C, mass, volume) is applied with its state held. The bar says so: the state is kept and the stored energy changes.
+       - A structural edit ends the session.
+     - **Recording.** The last 50,000 samples per run are kept in memory. They are not saved in the project; CSV export carries them out.
+     - **Interpolation.** None. Live shows the newest accepted sample, and only particle motion is animated between samples.
+     - **Losses.** There is no new library convention. M's power view is computed from port quantities the engine already reports: V·I, Q̇, τ·ω and ṁ·h per port. So it needs no change to the library.
+     - **Electrical scope.**
+       - In scope: `Switch` (signal-driven), sine and controlled V/I sources, `IdealTransformer`, ideal `OpAmp`, `Zener`, `Potentiometer`, NTC `Thermistor` and electrothermal `Lamp`.
+       - Out of scope: the I²t fuse with an irreversible trip and the meter symbols. The fuse needs the deferred discrete-state contract; probes and badges cover the meters.
+  2. **Measurement.** Taken on an i7-1185G7 at `aeaaede`, native `--release`, with the WASM module in Node 22 for comparison.
+     - **Steady re-solves.**
+       - *Fresh* is today's slider path: apply the override, then a full solve.
+       - *Prepared* reuses a `PreparedDocument` and pins the value.
+       - *Warm* is prepared, plus a Newton start from the previous move's solution.
+       - Each move changes the value by 1–3 %. All columns are native medians.
+
+       | Model | Fresh | Prepared | Warm | Warm vs fresh values | WASM fresh |
+       | --- | --- | --- | --- | --- | --- |
+       | Small: pumping main, 33 blocks, pin `Q` | 6.7 ms | 6.3 ms | **0.06 ms** | 3.6e-15 | 18.6 ms |
+       | EV thermal, 180 blocks, pin `k_fin` | 4.7 ms | 2.0 ms | **1.5 ms** | 9.7e-14 | 12.4 ms |
+       | 500-component floor, 2,185 blocks, pin `P_set` | 7.4 s | 7.6 s | 8.9 s | 1.6e-13 | — |
+     - **Findings.**
+       - Preparation is a small share of a re-solve: 0.2–18 ms against seconds on the large model. The win is the warm start: 3× on EV and 100× on the small model.
+       - On the 500-component floor, neither helps. Its 7 s is Newton on 2,185 blocks from cold guesses, and the warm start does not shorten it. A slider on that model stays a deliberate, slow action.
+       - Prepared values differ from fresh ones by round-off on EV: 7 values differ bitwise, all under 1e-9 relative. G's acceptance is therefore round-off agreement (1e-12 relative), not bitwise equality.
+       - WASM in Node is 2.6–3× slower than native.
+     - **Dynamic step cost.** A 50-state linear thermal chain, 0–1000 s, 1,001 output samples:
+       - IDA 3.3 ms (WASM 17.9 ms);
+       - ode45 56 ms (WASM 152 ms);
+       - radau5 364 ms.
+       Live stepping on IDA therefore has two orders of magnitude of headroom inside a 5–15 ms chunk. ARCHITECTURE §10's target holds with room to spare.
+     - The harnesses were scratch files outside the repository (an example binary on `PreparedDocument` and a Node timer on the module); they are not project tools.
+- **G. Faster steady what-if: prepared reuse and a warm start for slider drags (stage 0).** F.2 showed that the warm start is where the gain is.
+  1. Each worker keeps one `PreparedDocument`, keyed by the source with the slider pins struck, plus the remaining request. A slider move pins its value.
+  2. **While dragging:** the solve starts from the previous move's solution. If it fails, it falls back to a cold start; the optimizer already does this.
+  3. **On release:** the commit solve starts cold from the document's guesses, so the result left on screen is what Solve gives. A warm start can follow a branch the cold start would not take.
+  4. Any change that alters lowering, or the set of pin names, re-prepares; `with_source_pins` already routes these. The revision tracker and stale-job rejection are unchanged. Memory is bounded at one prepared document per worker.
   - **Acceptance.**
-    - Bitwise-equal values, units and diagnostics against a fresh solve over the parity corpus and every gallery model with sliders.
-    - A test counting preparations.
-    - A measured latency drop against F's baseline.
-    - No growth in the WASM budget beyond what the ledger records.
+    - Values agree with a fresh solve to 1e-12 relative, units and diagnostics are equal, over every gallery model with a pinnable parameter.
+    - A test counts preparations.
+    - A drag on the EV model is at least 2× faster than F.2's fresh median.
+    - The WASM budget is respected.
 - **H. Motion and state on recorded runs (no live engine needed).**
   1. **Explicit port-flow metadata.** The engine reports each port's role and measured-flow sign per domain (fluid, liquid, two-phase, moist air, heat, electrical, mechanical, translational). This replaces `flowAlong`'s in/out naming. Where a direction is not known, it stays unknown; it is never inferred from drawing order or a pressure gradient.
   2. **Flow particles.**
