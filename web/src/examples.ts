@@ -3707,6 +3707,92 @@ H_velocity = U^2 / (2 * g#)
 { CHECK dP_valve 7482.82667280448 0.007 }
 { CHECK H_exit 1.52607193543248 2e-06 }`,
   },
+  {
+    id: 'lesson-rc-charging',
+    title: 'Lesson — RC charging',
+    description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — RC charging. Pairs with the thermal-mass lesson.
+
+  A 10 V step charges a capacitor C through a resistor R. The capacitor
+  voltage rises as v(t) = E·(1 − exp(−t/τ)) with τ = R·C: after one time
+  constant it has covered 63.2 % of the step, whatever R and C are.
+
+  Source: J. W. Nilsson and S. A. Riedel, Electric Circuits, 11th ed.,
+  Pearson, 2019, §7.4 (the step response of RC circuits). }
+
+R_s = 1000 [ohm]       { series resistance: the lesson's slider }
+C_s = 1e-6 [farad]     { capacitance }
+E_s = 10 [V]           { step voltage }
+
+VoltageSource VS(E=E_s)
+Resistor      R(R=R_s)
+Capacitor     CAP(C=C_s, V0=0 [V])
+Ground        G()
+connect(VS.p, R.a)
+connect(R.b, CAP.p)
+connect(CAP.n, VS.n, G.port)
+
+DYNAMIC charge (method = ode45, time = 0 .. 0.01, points = 201)
+END
+
+tau   = R_s * C_s                                { time constant }
+v_1ms = ODEValue('cap.vc', 0.001) * 1 [V]        { capacitor voltage at 1 ms }
+share = v_1ms / E_s                              { fraction of the step covered }
+
+{ CHECK tau 0.001 1e-12 }
+{ CHECK v_1ms 6.32120558828558 1e-6 }
+{ CHECK share 0.632120558828558 1e-7 }
+PLOT 'Capacitor voltage'
+  kind = xy
+  x = time
+  y = 'cap.vc'
+END`,
+  },
+  {
+    id: 'lesson-thermal-mass',
+    title: 'Lesson — a cooling thermal mass',
+    description: 'Predict, change one input, observe: doubling h halves τ = C/(hA). The same exponential as RC charging, in heat. Solve (F2).',
+    category: 'Lessons',
+    text: `// frees-language: 2
+{ Lesson — a lumped thermal mass. Pairs with the RC-charging lesson.
+
+  A block of heat capacity C = m·c at 400 K loses heat by convection
+  (h·A) to surroundings at 300 K. With a uniform temperature (Bi < 0.1) it
+  cools as T − T∞ = (T0 − T∞)·exp(−t/τ) with τ = C/(h·A): after one time
+  constant 63.2 % of the excess temperature is gone.
+
+  Source: F. P. Incropera, D. P. DeWitt, T. L. Bergman and A. S. Lavine,
+  Fundamentals of Heat and Mass Transfer, 7th ed., Wiley, 2011, §5.1–5.2
+  (the lumped capacitance method). }
+
+C_th = 5000 [J/K]        { heat capacity m·c }
+h_c  = 20 [W/m^2-K]      { convection coefficient: the lesson's slider }
+A_s  = 1 [m^2]           { exposed area }
+
+ThermalMass   M(C=C_th, T0=400 [K])
+ThermalSource amb(T=300 [K])
+Convection    film(htc=h_c, area=A_s)
+connect(M.port, film.a)
+connect(film.b, amb.port)
+
+DYNAMIC cool (method = ida, time = 0 .. 2000, points = 201)
+END
+
+tau    = C_th / (h_c * A_s)                       { time constant }
+T_250  = ODEValue('m.port.t', 250) * 1 [K]        { block temperature at 250 s }
+share  = (400 [K] - T_250) / (400 [K] - 300 [K])  { fraction of the excess lost }
+
+{ CHECK tau 250 1e-9 }
+{ CHECK T_250 336.787944117144 1e-3 }
+{ CHECK share 0.632120558828558 1e-5 }
+PLOT 'Block temperature'
+  kind = xy
+  x = time
+  y = 'M.port.T'
+END`,
+  }
 ]
 
 /** The document new/blank workspaces start from. */

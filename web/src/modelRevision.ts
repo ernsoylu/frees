@@ -37,6 +37,19 @@ export class ModelRevisionTracker {
     return this.rev
   }
 
+  /**
+   * Advances the revision for an input that changes values but never the
+   * model's structure — a slider pinned to a literal the document assigns.
+   * An in-flight solve is still discarded, but a passing check carries over,
+   * so the re-solve the change asks for is not refused for want of a check.
+   */
+  bumpValues(): number {
+    const carried = this.lastCheckedRev === this.rev && !this.inFlight
+    this.bump()
+    if (carried) this.lastCheckedRev = this.rev
+    return this.rev
+  }
+
   /** Checks if a given revision is still the current active model revision. */
   isCurrent(revision: number): boolean {
     return revision === this.rev

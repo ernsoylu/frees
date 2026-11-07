@@ -561,6 +561,15 @@ entry here is checked off with evidence when it closes.
         - The ideal R134a cycle reads COP ≈ 3.97 (Cengel Example 11-1) and Carnot ≈ 5.08.
         - No `solve` or `check` runs.
       - VIEW-09's journey now waits for the Annotate menu to finish closing. With the insight section it is tall enough to cover the note the test then drags.
+  - **I2 done 2026-11-07 (`i2-lesson-manifest`).**
+    - **Manifest.** `web/src/lessons.ts` gives each lesson its gallery example id, objective, prerequisites, LaTeX equation, approved sliders (value, units, range), initial view, expected trend, the one change, the observed variable with the direction the model must show, the explanation, a cross-domain pair and sources. The example's own CHECKs stay the grade.
+    - **Panel.** Opening the example (`Lesson — RC charging`, `Lesson — A cooling thermal mass`, category Lessons) pins the approved sliders and opens the lesson's view. `LessonPanel` steps through predict → change → observe → explain → check on the model's own solves; the check also flags a model that fails to show the promised trend. Reset restores the baseline sliders and solves; the pair opens from the panel.
+    - **Found and fixed:** since #5, any pinned-slider change bumped the model revision and `onSolve` then refused to run for want of a current check, so a slider never re-solved by itself. `ModelRevisionTracker.bumpValues()` advances the revision (an in-flight solve is still discarded) but carries a passing check over; it is used only where a pinned slider's value moves (drag/commit, range narrowing, lesson reset). A pin applies only to a literal the document assigns, so the structure the check validated is unchanged.
+    - **Evidence.**
+      - `lessons.test.ts`: every slider is a literal its example assigns, within range; the change stays in range; pairs are reciprocal; through the WASM engine the change shows the promised direction, Reset reproduces the baseline and the plain document equals it.
+      - `modelRevision.test.ts`: a value-only bump keeps a passing check, never revives an invalidated one.
+      - `lessons.spec.ts`: RC lesson by mouse (6.3212 → 3.9347 V, ✓, Reset back to 6.3212); the paired thermal lesson by keyboard (336.79 → 313.5 K, ✓).
+    - Not done here: reduced motion has no bearing (the panel does not animate).
   1. **Insight cards.** τ = RC, thermal τ = mC/UA, ω_n and ζ, Carnot and actual COP, NTU-ε and glide, each computed from solved values and attached to blocks or areas (VIEW-09).
   2. **A lesson manifest beside a gallery example.** It holds:
      - the objective, prerequisites and the governing equation;
