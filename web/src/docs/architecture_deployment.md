@@ -155,6 +155,28 @@ model first, as it does for any document you open. **Reset** returns to the
 model as it opened. **Open in full frees** opens the same model in a new tab,
 without the kiosk parameters.
 
+## Share links
+
+**File → Copy Share Link** puts the whole document in the address fragment
+(`#share=…`). The fragment is never sent to a server, and there is no
+shortener. When a lesson is open or sliders are pinned, the link also carries
+the lesson and each slider's value and range, so the person opening it lands
+on the same step. Tables, plots and the schematic layout stay in the `.frees`
+project file, and the copy notice lists what was left out.
+
+- **Versioned.** A link without lesson settings keeps the original format, so
+  every version of frees opens it. A link with them is marked as format 2. A
+  link from a newer frees says so and asks you to reload, rather than opening
+  nothing.
+- **Bounded.** Opening a link keeps only well-formed settings. A slider needs a
+  plain variable name and a finite range that brackets its value, which is
+  clamped into it. At most 16 sliders are read, and a lesson that does not
+  exist is ignored.
+- **The 16,000-character cap.** A link longer than this would not survive chat
+  apps and proxies, so frees refuses it and says so. Save the project and send
+  the file instead. If the document alone fits, **Copy a link to the document
+  alone** copies a link without the lesson settings.
+
 [Related: deploy-railway]
 
 [Topic: deploy-health]

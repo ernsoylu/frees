@@ -97,3 +97,47 @@ test('I3: a wrong prediction is marked, and the throttling lesson opens on its P
   await expect(lesson.getByTestId('lesson-observe')).toHaveText(/^The exit quality went from 0\.3403\d* to 0\.2508\d*: it falls\.$/, { timeout: 60_000 })
   await expect(lesson.getByTestId('lesson-check')).toHaveText('✗ You predicted it rises; the model shows it falls.')
 })
+
+test('I6 acceptance: under reduced motion a chart lesson still predicts, changes and resets', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const lesson = await openLesson(page, 'Lesson — a slow sensor in a speed loop', 'A slow sensor in a speed loop')
+  await expect(page.locator('.js-plotly-plot').first()).toBeVisible({ timeout: 60_000 })
+  const before = await lesson.getByTestId('lesson-observe').innerText()
+  await lesson.getByText('rises', { exact: true }).click()
+  await lesson.getByRole('button', { name: 'Slow the sensor to τ = 2 s' }).click()
+  await expect(lesson.getByTestId('lesson-check')).toHaveText('✓ You predicted it rises.', { timeout: 60_000 })
+  await lesson.getByRole('button', { name: 'Reset lesson' }).click()
+  await expect(lesson.getByTestId('lesson-observe')).toHaveText(before, { timeout: 60_000 })
+})
+
+test('I6: a share link carries the open lesson and its sliders; past the cap the fallback is explicit', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  const panel = await openLesson(page, 'Lesson — RC charging', 'RC charging')
+  await predictAndChange(panel, 'falls', 'Double the resistance to 2000 Ω', /went from 6\.3212 to 3\.9347/)
+  await runCommand(page, 'Copy Share Link')
+  await expect(page.getByText('Share link copied')).toBeVisible()
+  const url = await page.evaluate(() => navigator.clipboard.readText())
+  expect(url).toContain('#share=2.')
+
+  // Opened elsewhere, the link brings the lesson back with the changed slider.
+  const other = await context.newPage()
+  await other.goto(url)
+  const ask = other.getByRole('button', { name: 'Open shared document' })
+  await ask.waitFor({ timeout: 5000 }).then(() => ask.click(), () => {})
+  const opened = await solvedLesson(other, 'RC charging')
+  await expect(opened.getByTestId('lesson-observe')).toHaveText('Watch the capacitor voltage at 1 ms, now 3.9347.')
+  await expect(other.getByRole('slider', { name: 'R_s value' })).toHaveAttribute('aria-valuenow', '2000')
+  await expect.poll(() => other.evaluate(() => location.hash)).toBe('')
+  await other.close()
+
+  // A document whose link would pass the cap is refused with the way out named.
+  let seed = 7
+  const junk = Array.from({ length: 30_000 }, () => String.fromCharCode(48 + ((seed = (seed * 48271) % 2147483647) % 74))).join('').replace(/[{}[\]]/g, 'x')
+  await page.route('https://raw.example/big.frees', (route) => route.fulfill({ contentType: 'text/plain', body: `{ ${junk} }\nx = 1\n` }))
+  await page.goto('/?url=' + encodeURIComponent('https://raw.example/big.frees'))
+  await page.getByRole('button', { name: 'Open shared document' }).click()
+  await expect(page.locator('.cm-content')).toContainText('x = 1', { timeout: 30_000 })
+  await runCommand(page, 'Copy Share Link')
+  await expect(page.getByText('Too large to share by URL')).toBeVisible()
+  await expect(page.getByText(/longer than 16,000 characters.*send the \.frees file instead/)).toBeVisible()
+})
