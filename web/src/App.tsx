@@ -64,6 +64,7 @@ import {
   runMonteCarlo,
   runSensitivity,
   extractPlant,
+  OdeTableDto,
   SolveResponse,
   StopCriteria,
   UnitSystem,
@@ -2622,6 +2623,16 @@ export default function App() {
   // RUN-05: the dynamic run's recorded timelines and the sample playback shows, if any.
   const timelines = useMemo(() => (result?.odeTables ?? []).map(timelineOf).filter((t): t is Timeline => t !== null), [result])
   const timeline = timelines.find((t) => t.table === playback.table) ?? timelines[0] ?? null
+  // Phase K4: a live run's rows so far replace its block's ODE Table, so
+  // Playback, the Tables tab and CSV export read it as they read a batch run.
+  // The solve's other results stand: live mode integrates the same model.
+  const publishLiveTable = (table: OdeTableDto) => {
+    if (!result) return
+    const odeTables = (result.odeTables ?? []).map((t) => (t.name === table.name ? table : t))
+    setResult({ ...result, odeTables })
+    setPlayback({ of: null, table: table.name, index: null, playing: false })
+    writeTables((all) => mergeCodeTables(all, result.codeTables, result.parametricTables, odeTables))
+  }
   // Phase K3: the solved document's DYNAMIC blocks, in order, are what Live can open.
   const liveBlocks = useMemo(() => (result?.odeTables ?? []).map((t) => t.name), [result])
   // Playback belongs to the result it started on: a new result shows its end until played.
@@ -3327,6 +3338,7 @@ export default function App() {
                           request: solveRequest({ ...stopCriteria, complexMode }, buildVariableInfo(), false, unitSystem, false, functionTableDtos(), solveOverrides()),
                         }
                       }}
+                      onTable={publishLiveTable}
                     />
                   </Suspense>
                 )}

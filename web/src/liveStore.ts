@@ -1,0 +1,101 @@
+// Phase K4: the rows of a live run, in a bounded ring.
+//
+// A live run has no end, so its history cannot grow without limit: the store
+// keeps the newest rows up to a fixed number of values (about 32 MB) and
+// counts what it dropped. On a pause or a stop it becomes an ordinary ODE
+// Table DTO, so Playback, run comparison and CSV export read it as they read a
+// batch run.
+
+import type { OdeTableDto } from './api'
+import type { LiveEvent, LiveTable } from './wasm/liveClient'
+
+/** The most values (rows × columns) a store keeps. */
+export const MAX_VALUES = 4_000_000
+const FIRST_ROWS = 1024
+
+export class LiveStore {
+  private buf: Float64Array
+  /** Index (in rows) of the oldest kept row within `buf`. */
+  private start = 0
+  private count = 0
+  /** Rows pushed out of the ring by newer ones. */
+  dropped = 0
+  private events: LiveEvent[] = []
+  readonly capacity: number
+
+  constructor(readonly numCols: number, maxValues = MAX_VALUES) {
+    this.capacity = Math.max(2, Math.floor(maxValues / Math.max(1, numCols)))
+    this.buf = new Float64Array(Math.min(this.capacity, FIRST_ROWS) * numCols)
+  }
+
+  get size(): number {
+    return this.count
+  }
+
+  private rowsAllocated(): number {
+    return this.buf.length / this.numCols
+  }
+
+  /** Grow (doubling, up to the capacity) before the ring has to wrap. */
+  private grow(): void {
+    const rows = Math.min(this.capacity, this.rowsAllocated() * 2)
+    const next = new Float64Array(rows * this.numCols)
+    for (let i = 0; i < this.count; i++) next.set(this.rowAt(i), i * this.numCols)
+    this.buf = next
+    this.start = 0
+  }
+
+  private rowAt(i: number): Float64Array {
+    const slot = (this.start + i) % this.rowsAllocated()
+    return this.buf.subarray(slot * this.numCols, (slot + 1) * this.numCols)
+  }
+
+  /** Append `numRows` row-major rows. */
+  push(rows: Float64Array, numRows: number, events: readonly LiveEvent[] = []): void {
+    for (let r = 0; r < numRows; r++) {
+      if (this.count === this.rowsAllocated() && this.count < this.capacity) this.grow()
+      const row = rows.subarray(r * this.numCols, (r + 1) * this.numCols)
+      if (this.count < this.rowsAllocated()) {
+        this.buf.set(row, ((this.start + this.count) % this.rowsAllocated()) * this.numCols)
+        this.count += 1
+      } else {
+        this.buf.set(row, this.start * this.numCols)
+        this.start = (this.start + 1) % this.rowsAllocated()
+        this.dropped += 1
+      }
+    }
+    this.events.push(...events)
+  }
+
+  /** Row `i`, oldest first. */
+  row(i: number): number[] {
+    return Array.from(this.rowAt(i))
+  }
+
+  clear(): void {
+    this.start = 0
+    this.count = 0
+    this.dropped = 0
+    this.events = []
+  }
+
+  /**
+   * The kept rows as an ODE Table: the events the kept rows cover, and the run
+   * ended where its newest row is (a stop event's time, when one ended it).
+   */
+  toTable(header: LiveTable, stopped: boolean): OdeTableDto {
+    const rows = Array.from({ length: this.count }, (_, i) => this.row(i))
+    const first = rows[0]?.[0] ?? Number.NEGATIVE_INFINITY
+    const endTime = rows.at(-1)?.[0] ?? first
+    return {
+      name: header.name,
+      vars: header.vars,
+      units: header.units,
+      rows,
+      events: this.events.filter((e) => e.time >= first),
+      method: header.method,
+      stopped,
+      endTime,
+    }
+  }
+}

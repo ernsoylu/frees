@@ -551,9 +551,10 @@ impl<'a> DynamicSolver<'a> {
     }
 
     /// One live explicit chunk (Phase K1b): integrate, emit the grid rows the
-    /// knots cover up to row `last`, and stop when `more` says so (after at
-    /// least one row), on a stop event, or — with `one_step` — after one pass
-    /// of the time loop, whose end state goes in [`Chunk::state`].
+    /// knots cover up to row `last`, and stop when `more` says so (asked
+    /// between internal steps, after at least one), on a stop event, or —
+    /// with `one_step` — after one pass of the time loop, whose end state goes
+    /// in [`Chunk::state`]. A chunk can therefore end with no rows.
     ///
     /// `self` steps; `sampler` is a second solver on the same block that
     /// solves the output rows' auxiliaries. The rows' solves then never touch
@@ -619,7 +620,11 @@ impl<'a> DynamicSolver<'a> {
             if st.next > last || (one_step && stepped) {
                 break;
             }
-            if !one_step && !chunk.rows.is_empty() && !more(chunk) {
+            // Asked between internal steps, not only between rows: a row can
+            // take many steps of an expensive model (24 ms each on the EV
+            // pack), and the chunk's state is the stepper's either way, so
+            // ending between them changes no row. One step is always taken.
+            if !one_step && stepped && !more(chunk) {
                 break;
             }
             if stepper.done(&p) {

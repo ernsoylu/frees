@@ -3,6 +3,8 @@ import { ActionIcon, Badge, Button, Group, Paper, Select, Slider, Stack, Text, T
 import { IconPlayerPause, IconPlayerPlay, IconX } from '@tabler/icons-react'
 import { LiveClient, type LiveChunk, type LiveEvent, type LiveStepKind, type LiveTable } from './wasm/liveClient'
 import type { ModelRevisionTracker } from './modelRevision'
+import type { OdeTableDto } from './api'
+import { LiveStore } from './liveStore'
 
 /** What the bar needs of a live client; tests pass a fake. */
 export type LiveDriver = Pick<LiveClient, 'open' | 'advance' | 'step' | 'reset' | 'dispose' | 'isOpen'>
@@ -14,6 +16,8 @@ interface Props {
   /** The source and solve request to open with; may throw (a table that does not validate). */
   buildOpen: () => { source: string; request: string }
   driver?: LiveDriver
+  /** The run so far as an ODE Table, on each pause, step, stop and failure (K4). */
+  onTable?: (table: OdeTableDto) => void
 }
 
 type Status = 'closed' | 'opening' | 'paused' | 'running' | 'finished' | 'failed'
@@ -37,7 +41,7 @@ const speedOf = (exponent: number) => 10 ** exponent
  * the revision tracker), so a live run never shows a model that is not the
  * one in the editor.
  */
-export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: Readonly<Props>) {
+export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onTable }: Readonly<Props>) {
   const driver = given ?? defaultDriver()
   const [block, setBlock] = useState(blocks[0] ?? '')
   const [status, setStatus] = useState<Status>('closed')
@@ -49,14 +53,32 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
   const [lastEvent, setLastEvent] = useState<LiveEvent | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [exponent, setExponent] = useState(0)
+  const [kept, setKept] = useState<{ size: number; dropped: number } | null>(null)
+  const [retryStep, setRetryStep] = useState<number | null>(null)
 
   const statusRef = useRef<Status>('closed')
   const simRef = useRef<number | null>(null)
   const spacingRef = useRef<number | null>(null)
   const speedRef = useRef(speedOf(exponent))
+  const stepRef = useRef<number | null>(null)
+  const storeRef = useRef<LiveStore | null>(null)
+  const headerRef = useRef<LiveTable | null>(null)
+  const onTableRef = useRef(onTable)
   useEffect(() => {
     speedRef.current = speedOf(exponent)
   }, [exponent])
+  useEffect(() => {
+    onTableRef.current = onTable
+  }, [onTable])
+
+  /** Hand the run so far to the app as an ODE Table. */
+  const publish = (stopped: boolean) => {
+    const store = storeRef.current
+    const header = headerRef.current
+    if (!store || !header || store.size === 0) return
+    setKept({ size: store.size, dropped: store.dropped })
+    onTableRef.current?.(store.toTable(header, stopped))
+  }
   const go = (next: Status) => {
     statusRef.current = next
     setStatus(next)
@@ -65,6 +87,10 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
   const clear = () => {
     simRef.current = null
     spacingRef.current = null
+    stepRef.current = null
+    storeRef.current?.clear()
+    setKept(null)
+    setRetryStep(null)
     setSimT(null)
     setStep(null)
     setRows(0)
@@ -73,6 +99,7 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
   }
 
   const apply = (chunk: LiveChunk) => {
+    storeRef.current?.push(chunk.rows, chunk.numRows, chunk.events)
     if (chunk.numRows > 0) {
       const timeAt = (r: number) => chunk.rows[r * chunk.numCols]
       const t = timeAt(chunk.numRows - 1)
@@ -86,14 +113,23 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
       simRef.current = chunk.state[0]
       setSimT(chunk.state[0])
     }
-    if (chunk.clock && chunk.clock.h > 0) setStep(chunk.clock.h)
+    if (chunk.clock && chunk.clock.h > 0) {
+      stepRef.current = chunk.clock.h
+      setStep(chunk.clock.h)
+    }
     if (chunk.events.length) setLastEvent(chunk.events[chunk.events.length - 1])
     if (chunk.error) {
+      // Paused at the last accepted row, which is what the store holds: the
+      // failed step never produced one, so nothing non-finite is published.
       setNotice(chunk.error)
+      const h = stepRef.current ?? spacingRef.current
+      setRetryStep(h !== null && h > 0 ? h / 4 : null)
       go('failed')
+      publish(false)
     } else if (chunk.finished) {
       setNotice(chunk.stopped && simRef.current !== null ? `A stop event ended the run at t = ${fmt(simRef.current)}.` : 'The run has ended.')
       go('finished')
+      publish(chunk.stopped)
     }
   }
 
@@ -159,13 +195,15 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
   }, [status, driver])
 
   /** Open the chosen block at `t0`; true once it is open. */
-  const open = async (): Promise<boolean> => {
+  const open = async (maxStep?: number): Promise<boolean> => {
     go('opening')
     setNotice(null)
     clear()
     let built: { source: string; request: string }
     try {
       built = buildOpen()
+      // A retry after a failure caps the integrator's step for this run only.
+      if (maxStep !== undefined) built = { ...built, request: JSON.stringify({ ...JSON.parse(built.request), liveMaxStep: maxStep }) }
     } catch (error) {
       go('closed')
       setNotice(error instanceof Error ? error.message : String(error))
@@ -187,6 +225,8 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
       return false
     }
     setTable(result.table)
+    headerRef.current = result.table
+    storeRef.current = new LiveStore(result.table.vars.length)
     go('paused')
     return true
   }
@@ -194,6 +234,16 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
   const run = async () => {
     if (status === 'closed' && !(await open())) return
     go('running')
+  }
+
+  const pause = () => {
+    go('paused')
+    publish(false)
+  }
+
+  const retry = async (maxStep: number) => {
+    driver.dispose()
+    if (await open(maxStep)) go('running')
   }
 
   const stepBy = async (kind: LiveStepKind) => {
@@ -204,7 +254,10 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
       go('failed')
       return null
     })
-    if (chunk) apply(chunk)
+    if (chunk) {
+      apply(chunk)
+      if (statusRef.current === 'paused') publish(false)
+    }
   }
 
   const reset = async () => {
@@ -245,13 +298,16 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
             </Text>
           )}
           {rows > 0 && <Text size="xs" c="dimmed">{rows} rows</Text>}
+          {kept && kept.dropped > 0 && (
+            <Text size="xs" c="dimmed" data-testid="live-kept">keeping the newest {kept.size} rows</Text>
+          )}
           {lastEvent && (
             <Badge size="xs" color="orange" variant="light" data-testid="live-event">event {lastEvent.name} · t = {fmt(lastEvent.time)}</Badge>
           )}
         </Group>
         <Group gap={4} wrap="wrap">
           {status === 'running' ? (
-            <ActionIcon size="sm" variant="light" aria-label="Pause" onClick={() => go('paused')}><IconPlayerPause size={14} /></ActionIcon>
+            <ActionIcon size="sm" variant="light" aria-label="Pause" onClick={pause}><IconPlayerPause size={14} /></ActionIcon>
           ) : (
             <Tooltip label={ended ? 'The run has ended: Reset to run it again' : 'Integrate live'}>
               <ActionIcon size="sm" variant="light" aria-label="Run live" disabled={busy || ended} onClick={() => void run()}><IconPlayerPlay size={14} /></ActionIcon>
@@ -279,6 +335,12 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given }: R
           )}
         </Group>
         {notice && <Text size="xs" c={status === 'failed' ? 'red' : 'orange'} data-testid="live-notice">{notice}</Text>}
+        {status === 'failed' && retryStep !== null && (
+          <Group gap={6}>
+            <Text size="xs" c="dimmed">The rows up to the failure are kept.</Text>
+            <Button size="compact-xs" variant="light" onClick={() => void retry(retryStep)}>Retry from the start with max step {fmt(retryStep)} {unit}</Button>
+          </Group>
+        )}
       </Stack>
     </Paper>
   )

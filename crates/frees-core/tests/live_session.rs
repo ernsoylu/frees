@@ -51,7 +51,9 @@ fn batch(src: &str) -> frees_core::ode::problem::OdeTableResult {
 fn open(src: &str) -> LiveSession {
     let mut doc = PreparedDocument::new(src, &SolverSettings::default(), &[], &[])
         .unwrap_or_else(|e| panic!("{}", e.error));
-    doc.open_live(0).unwrap_or_else(|e| panic!("{}", e.error)).1
+    doc.open_live(0, None)
+        .unwrap_or_else(|e| panic!("{}", e.error))
+        .1
 }
 
 fn bits(rows: &[Vec<f64>]) -> Vec<Vec<u64>> {
@@ -69,14 +71,11 @@ fn run(session: &mut LiveSession, end: f64, dt: f64, per: usize) -> Chunk {
     while !session.finished() && t < end {
         t = (t + dt).min(end);
         loop {
-            let mut left = per;
-            let mut chunk = session.advance(t, &mut |_| {
-                left -= 1;
-                left > 0
-            });
+            let mut chunk = session.advance(t, &mut |c| c.rows.len() < per);
             assert!(chunk.error.is_none(), "{:?}", chunk.error);
+            // A stop adds its own row; an explicit step can cross two rows.
             assert!(
-                chunk.rows.len() <= per.max(2),
+                chunk.rows.len() <= per.max(2) + usize::from(chunk.stopped),
                 "the budget held: {}",
                 chunk.rows.len()
             );
@@ -279,7 +278,12 @@ fn explicit_accepted_steps_move_forward() {
 fn a_block_that_does_not_exist_is_refused() {
     let mut doc = PreparedDocument::new(BOUNCE, &SolverSettings::default(), &[], &[])
         .unwrap_or_else(|e| panic!("{}", e.error));
-    let message = doc.open_live(3).err().expect("refused").error.to_string();
+    let message = doc
+        .open_live(3, None)
+        .err()
+        .expect("refused")
+        .error
+        .to_string();
     assert!(message.contains("no block 4"), "{message}");
 }
 
@@ -331,4 +335,36 @@ fn accepted_steps_walk_the_trajectory_within_tolerance() {
         }
     }
     assert_eq!(events.len(), table.events.len());
+}
+
+/// K4: a retry caps the step for the session (both paths), and the capped run
+/// still reaches the batch trajectory within the integrator's tolerance.
+#[test]
+fn a_capped_session_never_steps_past_its_cap() {
+    for method in ["ida", "ode45"] {
+        let src = BOUNCE.replace("method = ida", &format!("method = {method}"));
+        let table = batch(&src);
+        let mut doc = PreparedDocument::new(&src, &SolverSettings::default(), &[], &[])
+            .unwrap_or_else(|e| panic!("{}", e.error));
+        let mut session = doc
+            .open_live(0, Some(0.004))
+            .unwrap_or_else(|e| panic!("{}", e.error))
+            .1;
+        let mut largest: f64 = 0.0;
+        let mut rows = Vec::new();
+        while rows.len() < table.rows.len() {
+            let mut chunk = session.step_accepted();
+            assert!(chunk.error.is_none(), "{method}: {:?}", chunk.error);
+            largest = largest.max(session.clock().unwrap().1);
+            rows.append(&mut chunk.rows);
+        }
+        assert!(largest <= 0.004 * (1.0 + 1e-12), "{method}: step {largest}");
+        for (live, batch) in rows.iter().zip(&table.rows) {
+            assert!(
+                (live[1] - batch[1]).abs() <= 1e-3 * (1.0 + batch[1].abs()),
+                "{method} t = {}",
+                batch[0]
+            );
+        }
+    }
 }
