@@ -576,6 +576,8 @@ test('presentation: flow, spacing, frames, background, snap, guides, labels', as
   const svg = await openSolved(page, EV_THERMAL_EXAMPLE_TEXT)
   const choose = async (...labels: string[]) => {
     await page.getByRole('button', { name: 'View settings' }).click()
+    // count() does not wait: let the menu finish opening before choosing.
+    await expect(page.getByRole('switch', { name: 'Alignment guides', exact: true })).toBeVisible()
     for (const l of labels) {
       // A switch's input sits over its label; segment labels take the click.
       const toggle = page.getByRole('switch', { name: l, exact: true })
