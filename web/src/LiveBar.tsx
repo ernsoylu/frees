@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { ActionIcon, Badge, Button, Group, Paper, Select, Slider, Stack, Text, Tooltip } from '@mantine/core'
 import { IconPlayerPause, IconPlayerPlay, IconX } from '@tabler/icons-react'
-import { LiveClient, type LiveChunk, type LiveEvent, type LiveStepKind, type LiveTable } from './wasm/liveClient'
+import { LiveClient, type LiveChunk, type LiveEvent, type LiveInputChange, type LiveStepKind, type LiveTable } from './wasm/liveClient'
 import type { ModelRevisionTracker } from './modelRevision'
 import type { OdeTableDto } from './api'
 import { LiveStore } from './liveStore'
 
 /** What the bar needs of a live client; tests pass a fake. */
-export type LiveDriver = Pick<LiveClient, 'open' | 'advance' | 'step' | 'reset' | 'dispose' | 'isOpen'>
+export type LiveDriver = Pick<LiveClient, 'open' | 'advance' | 'step' | 'reset' | 'setInputs' | 'dispose' | 'isOpen'>
 
 interface Props {
   /** The document's DYNAMIC blocks, in order (their ODE Table names). */
@@ -18,6 +18,16 @@ interface Props {
   driver?: LiveDriver
   /** The run so far as an ODE Table, on each pause, step, stop and failure (K4). */
   onTable?: (table: OdeTableDto) => void
+  /**
+   * Phase L1: while a run is open the bar sets this to the function that
+   * changes inputs live (literal assignments, `Q = 50 [W]`), and to `null`
+   * otherwise, so the sliders drive the run instead of closing it.
+   */
+  inputRef?: { current: ((lines: string[]) => void) | null }
+  /** A reset returned the run to the inputs it opened with. */
+  onInputsReset?: () => void
+  /** The engine applied `lines` (`true`) or refused them, leaving the run as it was (`false`). */
+  onInputsSettled?: (lines: string[], applied: boolean) => void
 }
 
 type Status = 'closed' | 'opening' | 'paused' | 'running' | 'finished' | 'failed'
@@ -41,7 +51,7 @@ const speedOf = (exponent: number) => 10 ** exponent
  * the revision tracker), so a live run never shows a model that is not the
  * one in the editor.
  */
-export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onTable }: Readonly<Props>) {
+export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onTable, inputRef, onInputsReset, onInputsSettled }: Readonly<Props>) {
   const driver = given ?? defaultDriver()
   const [block, setBlock] = useState(blocks[0] ?? '')
   const [status, setStatus] = useState<Status>('closed')
@@ -55,6 +65,7 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   const [exponent, setExponent] = useState(0)
   const [kept, setKept] = useState<{ size: number; dropped: number } | null>(null)
   const [retryStep, setRetryStep] = useState<number | null>(null)
+  const [lastInput, setLastInput] = useState<LiveInputChange | null>(null)
 
   const statusRef = useRef<Status>('closed')
   const simRef = useRef<number | null>(null)
@@ -64,12 +75,17 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   const storeRef = useRef<LiveStore | null>(null)
   const headerRef = useRef<LiveTable | null>(null)
   const onTableRef = useRef(onTable)
+  const onSettledRef = useRef(onInputsSettled)
+  const inputLogRef = useRef<LiveInputChange[]>([])
+  /** Input lines waiting for the change in flight, newest per name. */
+  const queuedRef = useRef<Map<string, string> | null>(null)
   useEffect(() => {
     speedRef.current = speedOf(exponent)
   }, [exponent])
   useEffect(() => {
     onTableRef.current = onTable
-  }, [onTable])
+    onSettledRef.current = onInputsSettled
+  }, [onTable, onInputsSettled])
 
   /** Hand the run so far to the app as an ODE Table. */
   const publish = (stopped: boolean) => {
@@ -77,7 +93,9 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     const header = headerRef.current
     if (!store || !header || store.size === 0) return
     setKept({ size: store.size, dropped: store.dropped })
-    onTableRef.current?.(store.toTable(header, stopped))
+    const table = store.toTable(header, stopped)
+    const log = inputLogRef.current
+    onTableRef.current?.(log.length ? { ...table, inputLog: log } : table)
   }
   const go = (next: Status) => {
     statusRef.current = next
@@ -96,7 +114,54 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     setRows(0)
     setAchieved(null)
     setLastEvent(null)
+    inputLogRef.current = []
+    queuedRef.current = null
+    setLastInput(null)
   }
+
+  /**
+   * Change inputs live. One change is in flight at a time; lines that arrive
+   * meanwhile wait, the newest per name, so a slider drag never queues a
+   * steady solve per pixel.
+   */
+  const setInputs = (lines: string[]) => {
+    const byName = (all: Map<string, string>, line: string) => all.set(line.split('=')[0].trim().toLowerCase(), line)
+    if (queuedRef.current) {
+      for (const line of lines) byName(queuedRef.current, line)
+      return
+    }
+    queuedRef.current = new Map()
+    void driver
+      .setInputs(lines)
+      .then((reply) => {
+        if (!reply) return
+        if ('error' in reply) {
+          setNotice(`The input change was refused, and the run is unchanged: ${reply.error}`)
+          onSettledRef.current?.(lines, false)
+          return
+        }
+        onSettledRef.current?.(lines, true)
+        inputLogRef.current = reply.log
+        setLastInput(reply.log.at(-1) ?? null)
+        setNotice(null)
+      })
+      .catch((error: unknown) => setNotice(error instanceof Error ? error.message : String(error)))
+      .finally(() => {
+        const queued = queuedRef.current
+        queuedRef.current = null
+        if (queued?.size && statusRef.current !== 'closed') setInputs([...queued.values()])
+      })
+  }
+  const live = status === 'paused' || status === 'running'
+  useEffect(() => {
+    if (!inputRef) return
+    inputRef.current = live ? setInputs : null
+    return () => {
+      inputRef.current = null
+    }
+    // `setInputs` reads refs and the driver only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputRef, live, driver])
 
   const apply = (chunk: LiveChunk) => {
     storeRef.current?.push(chunk.rows, chunk.numRows, chunk.events)
@@ -261,10 +326,12 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   }
 
   const reset = async () => {
+    const changed = inputLogRef.current.length > 0
     go('paused')
     setNotice(null)
     clear()
     if (!(await driver.reset())) go('closed')
+    else if (changed) onInputsReset?.()
   }
 
   const close = () => {
@@ -300,6 +367,9 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
           {rows > 0 && <Text size="xs" c="dimmed">{rows} rows</Text>}
           {kept && kept.dropped > 0 && (
             <Text size="xs" c="dimmed" data-testid="live-kept">keeping the newest {kept.size} rows</Text>
+          )}
+          {lastInput && (
+            <Badge size="xs" color="blue" variant="light" data-testid="live-input">{lastInput.name} = {fmt(lastInput.value)} from t = {fmt(lastInput.time)}</Badge>
           )}
           {lastEvent && (
             <Badge size="xs" color="orange" variant="light" data-testid="live-event">event {lastEvent.name} · t = {fmt(lastEvent.time)}</Badge>

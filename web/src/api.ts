@@ -326,6 +326,8 @@ export interface OdeTableDto {
   method: string
   stopped: boolean
   endTime: number
+  /** A live run's input changes (Phase L1): the run time each took effect at, the value in SI. */
+  inputLog?: { time: number; name: string; value: number }[]
 }
 
 export interface VariableInfo {

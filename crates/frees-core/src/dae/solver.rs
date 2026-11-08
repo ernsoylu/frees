@@ -1086,7 +1086,12 @@ impl<'a> IdaDaeSolver<'a> {
     /// The interpolated `(y, y')` at `t` from the current history, changing
     /// nothing: valid over the last step, `[tn − h, tn]`. This is the value
     /// [`Self::step`] hands out for a `tout` the integrator has already passed.
+    /// Before the first step there is no history, only the initial condition
+    /// at `tn`, which it answers.
     pub fn interpolate(&self, t: f64) -> (Vec<f64>, Vec<f64>) {
+        if self.nst == 0 {
+            return (self.yy.clone(), self.yp.clone());
+        }
         self.get_solution(t)
     }
 

@@ -724,7 +724,7 @@ fn request_key(request_json: &str) -> Option<String> {
 /// The override lines as literal pins — lowercase names and the parsed
 /// equations, the last line per name winning in first-seen order — or `None`
 /// when a line is not a bare literal assignment.
-fn literal_pins(lines: &[String]) -> Option<(Vec<String>, Vec<frees_core::Equation>)> {
+pub(crate) fn literal_pins(lines: &[String]) -> Option<(Vec<String>, Vec<frees_core::Equation>)> {
     let mut names: Vec<String> = Vec::new();
     let mut pins: Vec<frees_core::Equation> = Vec::new();
     for line in lines {

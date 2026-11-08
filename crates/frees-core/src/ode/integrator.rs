@@ -369,6 +369,22 @@ impl ExplicitStepper {
         self.steps = 0;
     }
 
+    /// Carry on from the current state under a changed right-hand side (a live
+    /// input, Phase L1): the derivative and the event functions are evaluated
+    /// afresh, and a knot at the current time with the new derivative starts
+    /// the trajectory's next piece, as a set event's post-set knot does.
+    pub fn restart_here(&mut self, p: &OdeProblem<'_>, knots: &mut Knots) -> Result<()> {
+        let f = p.rhs.eval(self.t, &self.y)?;
+        check_finite(&f, self.t, "derivative after an input change")?;
+        let g = eval_events(p, self.t, &self.y)?;
+        self.f = f;
+        self.g_prev = g;
+        self.consecutive_sets = 0;
+        self.window_start_t = self.t;
+        knots.push(self.t, self.y.clone(), self.f.clone());
+        Ok(())
+    }
+
     /// Where a stop event ended the run, if one did.
     pub fn stopped_at(&self) -> Option<f64> {
         self.stopped.then_some(self.end_time)

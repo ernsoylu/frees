@@ -763,6 +763,10 @@ pub(crate) struct LiveCapture {
     pub(crate) block: usize,
     /// A step cap for this session (K4), over the document's own.
     pub(crate) max_step: Option<f64>,
+    /// Phase L1: only collect the block's base values (into [`Self::base`]),
+    /// for a live input change; no session is built.
+    pub(crate) want_base: bool,
+    pub(crate) base: Option<Scope>,
     pub(crate) session: Option<crate::ode::live::LiveSession>,
 }
 
@@ -799,6 +803,10 @@ fn solve_dynamic_systems(
                 capture.block + 1
             ))
         })?;
+        if capture.want_base {
+            capture.base = Some(base_values.clone());
+            return Ok(Vec::new());
+        }
         let capped;
         let system = match capture.max_step {
             Some(h) if h > 0.0 && h.is_finite() => {

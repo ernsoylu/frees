@@ -2,7 +2,7 @@
 //! call names its session, so a stale one is answered `gone`, never acted on.
 
 use frees::live::{
-    live_advance_json, live_dispose, live_open_json, live_reset_json, live_step_json,
+    live_advance_json, live_dispose, live_open_json, live_reset_json, live_set_json, live_step_json,
 };
 use serde_json::Value;
 
@@ -130,4 +130,38 @@ fn an_explicit_block_runs_live_with_the_batch_states() {
         assert_eq!(bits(live), bits(batch), "t = {}", batch[0]);
     }
     live_dispose(id);
+}
+
+#[test]
+fn inputs_change_live_in_document_units_and_are_logged() {
+    let src = "P = 2 [kW]\nDYNAMIC heat (method = ida, time = 0 .. 10, points = 11)\n  \
+  der(T) = (P/1000 - 0.5*(T - 20))/2\n  \
+  T(0) = 20\n\
+END\n";
+    let (id, _) = open(src);
+    let to = |t: f64| live_advance_json(id, t, 50.0);
+    let rows = to(4.0).1;
+    assert_eq!(rows.len(), 5 * 2);
+    let set: Value = serde_json::from_str(&live_set_json(id, r#"["P = 3 [kW]"]"#)).unwrap();
+    assert_eq!(set["time"], 4.0, "{set}");
+    assert_eq!(set["log"][0]["name"], "p");
+    assert_eq!(set["log"][0]["value"], 3000.0, "SI value: {set}");
+    // T∞ = 20 + 2·3 = 26 from t = 4 on.
+    let t10 = to(10.0).1[11];
+    let t4 = rows[9];
+    let exact = 26.0 + (t4 - 26.0) * (-6.0f64 / 4.0).exp();
+    assert!((t10 - exact).abs() < 1e-4, "{t10} vs {exact}");
+
+    let refused: Value = serde_json::from_str(&live_set_json(id, r#"["nope = 1"]"#)).unwrap();
+    assert!(
+        refused["error"].as_str().unwrap().contains("`nope`"),
+        "{refused}"
+    );
+    let not_literal: Value = serde_json::from_str(&live_set_json(id, r#"["P = 2*x"]"#)).unwrap();
+    assert!(not_literal["error"].is_string(), "{not_literal}");
+    live_dispose(id);
+    assert_eq!(
+        serde_json::from_str::<Value>(&live_set_json(id, r#"["P = 1"]"#)).unwrap()["gone"],
+        true
+    );
 }

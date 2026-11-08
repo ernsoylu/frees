@@ -100,6 +100,15 @@ pub struct IdaRun {
     failed: bool,
     /// A live session's step cap ([`Self::cap_step`]); `None` in a batch run.
     hmax: Option<f64>,
+    /// The analytic values the run opened with, which a reset restores.
+    original: Scope,
+    /// A live input change waiting for the next chunk (Phase L1): the time
+    /// it applies at and the interpolated state there, to reinitialize from.
+    pending: Option<(f64, Vec<f64>, Vec<f64>)>,
+    /// The last restart applied, while the solver has not stepped since: a
+    /// further change there restarts from the same state, so a replay that
+    /// reaches the row in between reproduces the run.
+    applied: Option<(f64, Vec<f64>, Vec<f64>)>,
 }
 
 impl IdaRun {
@@ -115,6 +124,9 @@ impl IdaRun {
     ) -> IdaRun {
         IdaRun {
             name: spec.block_name.clone(),
+            original: spec.analytic_values.clone(),
+            pending: None,
+            applied: None,
             spec: spec.detached(),
             bindings,
             method,
@@ -130,6 +142,32 @@ impl IdaRun {
             failed: false,
             hmax: None,
         }
+    }
+
+    /// Run on under new analytic values from the last row on (Phase L1). The
+    /// state there is interpolated now and the integrator reinitialized from it
+    /// at the next chunk, against the residual rebuilt from the new values, so
+    /// the states are kept and the algebraic variables made consistent again.
+    /// Answers the time the change applies at.
+    pub(crate) fn retarget(&mut self, base: Scope) -> Result<f64> {
+        let t = match &self.solver {
+            None => self.t0,
+            Some(s) => {
+                let t = self.time_of(self.index);
+                let unstepped = self
+                    .applied
+                    .take()
+                    .filter(|a| a.0 == t && s.last_step() == 0.0);
+                let state = self.pending.take().or(unstepped).unwrap_or_else(|| {
+                    let (y, yp) = s.interpolate(t);
+                    (t, y, yp)
+                });
+                self.pending = Some(state);
+                t
+            }
+        };
+        self.spec.analytic_values = base;
+        Ok(t)
     }
 
     /// Cap the integrator's step size from the next initialization on.
@@ -172,6 +210,9 @@ impl IdaRun {
 
     /// Back to `t0`, with nothing integrated.
     pub fn restart(&mut self) {
+        self.spec.analytic_values = self.original.clone();
+        self.pending = None;
+        self.applied = None;
         self.solver = None;
         self.index = 0;
         self.end = None;
@@ -228,7 +269,20 @@ impl IdaRun {
             Err(e) => return self.fail(chunk, e, false),
         };
         let mut s = match self.solver.take() {
-            Some(parked) => parked.rebind(dae.residual.as_ref(), dae.root_fn.as_deref()),
+            Some(parked) => {
+                let mut s = parked.rebind(dae.residual.as_ref(), dae.root_fn.as_deref());
+                if let Some((t, y, yp)) = self.pending.take() {
+                    if let Err(e) = s.reinit(t, &y, &yp) {
+                        return self.fail(chunk, e, true);
+                    }
+                    // As after a set event: the hint must lie beyond `t`, and a
+                    // failure is absorbed by the first BDF step.
+                    let hint = t + f64::max(1e-9, 1e-6 * t.abs());
+                    let _ = s.calc_consistent_ic(IDA_YA_YDP_INIT, hint);
+                    self.applied = Some((t, y, yp));
+                }
+                s
+            }
             None => {
                 let mut s = match IdaDaeSolver::for_assembly(&dae, self.rtol, self.atol) {
                     Ok(s) => s,
@@ -558,6 +612,8 @@ pub struct ExplicitRun {
     parked: Option<(ParkedDynamic, ParkedDynamic)>,
     live: ExplicitLive,
     failed: bool,
+    /// The base values the run opened with, which a reset restores.
+    original: Scope,
 }
 
 impl ExplicitRun {
@@ -581,6 +637,7 @@ impl ExplicitRun {
             parked: None,
             live: ExplicitLive::default(),
             failed: false,
+            original: base.clone(),
         };
         let (stepping, sampling) = run.block.prepared(defs)?;
         run.columns = stepping.columns();
@@ -668,8 +725,42 @@ impl ExplicitRun {
     }
 
     fn restart(&mut self) {
+        self.block.base = self.original.clone();
         self.parked = None;
         self.restart_grid();
+    }
+
+    /// Run on under new base values from the stepper's current time (Phase
+    /// L1): the derivative is evaluated afresh there. If that fails the old
+    /// values stand and the run is as it was.
+    fn retarget(&mut self, defs: &Definitions, base: Scope) -> Result<f64> {
+        let old = std::mem::replace(&mut self.block.base, base);
+        let t = self
+            .live
+            .stepper
+            .as_ref()
+            .map_or(self.live.t0, |s| s.clock().0);
+        let Some((a, b)) = self.parked.take() else {
+            // Reset and not yet run: the next chunk prepares on the new values.
+            return Ok(t);
+        };
+        let (mut stepping, mut sampling) = (self.block.solver(defs), self.block.solver(defs));
+        stepping.resume(a);
+        sampling.resume(b);
+        stepping.forget_pins();
+        sampling.forget_pins();
+        let out = stepping.restart_explicit(&mut self.live);
+        let parked = (stepping.park(), sampling.park());
+        self.parked = Some(parked);
+        match out {
+            Ok(()) => Ok(t),
+            Err(e) => {
+                // `restart_here` changes nothing until it has succeeded, and the
+                // forgotten pins rebuild from the old values on the next step.
+                self.block.base = old;
+                Err(e)
+            }
+        }
     }
 
     fn table(&self, rows: Vec<Vec<f64>>, events: Vec<TableEventHit>) -> OdeTableResult {
@@ -729,21 +820,106 @@ enum Run {
 pub struct LiveSession {
     defs: Definitions,
     run: Run,
+    /// The prepared document the session was opened from, which re-solves the
+    /// steady part when an input changes (Phase L1); `None` only while
+    /// [`PreparedDocument::open_live`](crate::engine::prepared::PreparedDocument::open_live)
+    /// is still building it.
+    doc: Option<Box<crate::engine::prepared::PreparedDocument>>,
+    /// `doc` with the current inputs' assignments struck, and their names.
+    struck: Option<(Vec<String>, Box<crate::engine::prepared::PreparedDocument>)>,
+    block: usize,
+    /// The inputs changed since the open, newest value per name.
+    pins: Vec<(String, f64)>,
+    log: Vec<InputChange>,
+}
+
+fn pins_names(pins: &[(String, f64)]) -> Vec<String> {
+    pins.iter().map(|(n, _)| n.clone()).collect()
+}
+
+/// One applied live input change (Phase L1): the run's time it took effect
+/// at, after the row or step there, and the new value.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InputChange {
+    pub time: f64,
+    pub name: String,
+    pub value: f64,
 }
 
 impl LiveSession {
     pub(crate) fn new(defs: Definitions, run: IdaRun) -> LiveSession {
-        LiveSession {
-            defs,
-            run: Run::Ida(Box::new(run)),
-        }
+        LiveSession::of(defs, Run::Ida(Box::new(run)))
     }
 
     pub(crate) fn explicit(defs: Definitions, run: ExplicitRun) -> LiveSession {
+        LiveSession::of(defs, Run::Explicit(Box::new(run)))
+    }
+
+    fn of(defs: Definitions, run: Run) -> LiveSession {
         LiveSession {
             defs,
-            run: Run::Explicit(Box::new(run)),
+            run,
+            doc: None,
+            struck: None,
+            block: 0,
+            pins: Vec::new(),
+            log: Vec::new(),
         }
+    }
+
+    pub(crate) fn attach(&mut self, doc: crate::engine::prepared::PreparedDocument, block: usize) {
+        self.doc = Some(Box::new(doc));
+        self.block = block;
+    }
+
+    /// Change inputs live (Phase L1): document values the steady solve reads,
+    /// such as a heater power or a boundary temperature. The steady part is
+    /// solved again with them, and the run carries on from where it stands:
+    /// an IDA run from its last row, its algebraic variables made consistent
+    /// again; an explicit run from its current step. The states are kept. A
+    /// change the steady solve or the new derivative refuses leaves the run
+    /// as it was. Answers the time the change applies at; each change is
+    /// logged, and replaying the log at those times reproduces the run.
+    pub fn set_inputs(&mut self, changes: &[(String, f64)]) -> Result<f64> {
+        if self.finished() {
+            return Err(FreesError::solver(
+                "Live mode: the run has ended, so an input cannot change it. Reset to run again.",
+            ));
+        }
+        let mut pins = self.pins.clone();
+        for (name, value) in changes {
+            let name = name.to_ascii_lowercase();
+            match pins.iter_mut().find(|(n, _)| *n == name) {
+                Some(pin) => pin.1 = *value,
+                None => pins.push((name, *value)),
+            }
+        }
+        let names: Vec<String> = pins.iter().map(|(n, _)| n.clone()).collect();
+        if self.struck.as_ref().is_none_or(|(n, _)| *n != names) {
+            let doc = self.doc.as_ref().ok_or_else(|| {
+                FreesError::solver("Live mode: this session cannot change inputs.")
+            })?;
+            self.struck = Some((names, Box::new(doc.struck(&pins_names(&pins))?)));
+        }
+        let (_, doc) = self.struck.as_mut().expect("struck above");
+        let base = doc.live_base(self.block, &pins)?;
+        let time = match &mut self.run {
+            Run::Ida(run) => run.retarget(base)?,
+            Run::Explicit(run) => run.retarget(&self.defs, base)?,
+        };
+        self.pins = pins;
+        self.log
+            .extend(changes.iter().map(|(name, value)| InputChange {
+                time,
+                name: name.clone(),
+                value: *value,
+            }));
+        Ok(time)
+    }
+
+    /// The input changes applied since the open (or the last reset), in order.
+    pub fn input_log(&self) -> &[InputChange] {
+        &self.log
     }
 
     fn rows(&mut self, last: usize, more: &mut dyn FnMut(&Chunk) -> bool) -> Chunk {
@@ -795,8 +971,11 @@ impl LiveSession {
         }
     }
 
-    /// Back to `t0`, with nothing integrated.
+    /// Back to `t0`, with nothing integrated and the inputs the run opened
+    /// with; the input log starts again.
     pub fn reset(&mut self) {
+        self.pins.clear();
+        self.log.clear();
         match &mut self.run {
             Run::Ida(run) => run.restart(),
             Run::Explicit(run) => run.restart(),

@@ -397,6 +397,12 @@ impl<'a> DynamicSolver<'a> {
         }
     }
 
+    /// Forget the pins built from the analytic values, which a live input
+    /// change has replaced (Phase L1); the next step rebuilds them.
+    pub(crate) fn forget_pins(&mut self) {
+        *self.pin_template.get_mut() = None;
+    }
+
     /// This solver's owned state, for a live run to keep between chunks.
     pub fn park(self) -> ParkedDynamic {
         ParkedDynamic {
@@ -548,6 +554,17 @@ impl<'a> DynamicSolver<'a> {
         self.classify()?;
         self.offer_watch();
         Ok(())
+    }
+
+    /// Restart a live explicit run's stepper where it stands, under this
+    /// solver's (changed) inputs (Phase L1).
+    pub(crate) fn restart_explicit(&self, st: &mut crate::ode::live::ExplicitLive) -> Result<()> {
+        let rhs = |t: f64, y: &[f64]| self.rhs(t, y);
+        let p = self.explicit_problem(&rhs, st.horizon);
+        match st.stepper.as_mut() {
+            Some(stepper) => stepper.restart_here(&p, &mut st.knots),
+            None => Ok(()),
+        }
     }
 
     /// One live explicit chunk (Phase K1b): integrate, emit the grid rows the

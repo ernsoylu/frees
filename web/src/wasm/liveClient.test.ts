@@ -138,6 +138,23 @@ describe('LiveClient', () => {
     expect(live.isOpen).toBe(false)
   })
 
+  it('sends input lines for the open session and reads its reply, a refusal, and gone', async () => {
+    const { live, w } = await opened()
+    const set = live.setInputs(['Q = 50 [W]'])
+    expect(w.posted.at(-1)).toMatchObject({ method: 'liveSet', args: ['3', '["Q = 50 [W]"]'] })
+    const log = [{ time: 2, name: 'q', value: 50 }]
+    w.reply('liveSet', { time: 2, log })
+    await expect(set).resolves.toEqual({ time: 2, log })
+    const refused = live.setInputs(['nope = 1'])
+    w.reply('liveSet', { error: 'refused' })
+    await expect(refused).resolves.toEqual({ error: 'refused' })
+    const gone = live.setInputs(['Q = 1'])
+    w.reply('liveSet', { gone: true })
+    await expect(gone).resolves.toBeNull()
+    expect(live.isOpen).toBe(false)
+    await expect(live.setInputs(['Q = 2'])).resolves.toBeNull()
+  })
+
   it('reset keeps the session and the sequence', async () => {
     const { live, w } = await opened()
     const a = live.advance(1, 8)
