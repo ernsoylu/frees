@@ -33,6 +33,8 @@ function fakeDriver(end = 1) {
   let next = 0
   let inFlight = 0
   let maxInFlight = 0
+  const release: Array<() => void> = []
+  const log: { time: number; name: string; value: number }[] = []
   // Like the engine, a target before t0 still produces the t0 row.
   const rowsTo = (t: number) => {
     const times: number[] = []
@@ -61,11 +63,22 @@ function fakeDriver(end = 1) {
       next = 0
       return true
     }),
+    // Phase L1: each change waits for `release` so a test sees what queues behind it.
+    setInputs: vi.fn(
+      (lines: string[]) =>
+        new Promise<{ time: number; log: { time: number; name: string; value: number }[] } | { error: string }>((resolve) => {
+          release.push(() => {
+            if (lines.some((l) => l.startsWith('bad'))) return resolve({ error: '`bad` is not given a value' })
+            for (const line of lines) log.push({ time: next / 10, name: line.split('=')[0].trim().toLowerCase(), value: Number(line.split('=')[1]) })
+            resolve({ time: next / 10, log: [...log] })
+          })
+        }),
+    ),
     dispose: vi.fn(() => {
       open = false
     }),
   }
-  return { driver: driver as unknown as LiveDriver, spy: driver, maxInFlight: () => maxInFlight }
+  return { driver: driver as unknown as LiveDriver, spy: driver, maxInFlight: () => maxInFlight, release }
 }
 
 function mount(driver: LiveDriver, tracker = new ModelRevisionTracker(), buildOpen = () => ({ source: 'src', request: '{}' }), onTable?: (t: OdeTableDto) => void) {
@@ -176,4 +189,47 @@ it('a failure keeps the accepted rows and offers a retry with a smaller max step
   await waitFor(() => expect(spy.open).toHaveBeenCalledTimes(2))
   expect(JSON.parse(spy.open.mock.calls[1][1])).toEqual({ stopCriteria: {}, liveMaxStep: 0.005 })
   await waitFor(() => expect(screen.getByLabelText('Pause')).toBeInTheDocument())
+})
+
+it('takes slider values as live inputs, one change in flight, and a reset restores them', async () => {
+  const { driver, spy, release } = fakeDriver(1000)
+  const inputRef: { current: ((lines: string[]) => void) | null } = { current: null }
+  const tables: OdeTableDto[] = []
+  const onInputsReset = vi.fn()
+  const onInputsSettled = vi.fn()
+  render(
+    <MantineProvider>
+      <LiveBar blocks={['tank']} tracker={new ModelRevisionTracker()} buildOpen={() => ({ source: 'src', request: '{}' })} driver={driver} onTable={(t) => tables.push(t)} inputRef={inputRef} onInputsReset={onInputsReset} onInputsSettled={onInputsSettled} />
+    </MantineProvider>,
+  )
+  expect(inputRef.current).toBeNull()
+  fireEvent.click(screen.getByText('Next sample'))
+  await waitFor(() => expect(inputRef.current).not.toBeNull())
+  act(() => {
+    inputRef.current?.(['Q = 50'])
+    inputRef.current?.(['Q = 60'])
+    inputRef.current?.(['R = 1'])
+  })
+  expect(spy.setInputs).toHaveBeenCalledTimes(1)
+  await act(async () => release.shift()?.())
+  // The changes that arrived meanwhile go together, the newest per name.
+  await waitFor(() => expect(spy.setInputs).toHaveBeenCalledTimes(2))
+  expect(spy.setInputs.mock.calls[1][0]).toEqual(['Q = 60', 'R = 1'])
+  await act(async () => release.shift()?.())
+  await waitFor(() => expect(screen.getByTestId('live-input').textContent).toBe('r = 1 from t = 0.2'))
+
+  act(() => inputRef.current?.(['bad = 1']))
+  await act(async () => release.shift()?.())
+  await waitFor(() => expect(screen.getByTestId('live-notice').textContent).toContain('refused, and the run is unchanged'))
+  expect(onInputsSettled.mock.calls).toEqual([[['Q = 50'], true], [['Q = 60', 'R = 1'], true], [['bad = 1'], false]])
+
+  fireEvent.click(screen.getByText('Next sample'))
+  await waitFor(() => expect(tables.length).toBeGreaterThan(1))
+  expect(tables.at(-1)?.inputLog?.map((c) => [c.name, c.value])).toEqual([['q', 50], ['q', 60], ['r', 1]])
+
+  fireEvent.click(screen.getByText('Reset'))
+  await waitFor(() => expect(onInputsReset).toHaveBeenCalledTimes(1))
+  expect(screen.queryByTestId('live-input')).toBeNull()
+  fireEvent.click(screen.getByLabelText('Close live run'))
+  await waitFor(() => expect(inputRef.current).toBeNull())
 })

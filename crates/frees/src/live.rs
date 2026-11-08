@@ -18,7 +18,9 @@ use serde_json::{json, Value};
 use wasm_bindgen::prelude::*;
 
 use crate::settings_of;
-use crate::{apply_overrides, function_table_defs_of, now_ms, overrides_of, parse_request};
+use crate::{
+    apply_overrides, function_table_defs_of, literal_pins, now_ms, overrides_of, parse_request,
+};
 
 std::thread_local! {
     static LIVE: RefCell<Option<(u32, LiveSession)>> = const { RefCell::new(None) };
@@ -48,7 +50,7 @@ pub fn live_open_json(source: &str, request_json: &str, block: u32) -> String {
         .ok()
         .and_then(|v| v.get("liveMaxStep").and_then(serde_json::Value::as_f64));
     let opened = PreparedDocument::new(&source, &settings, &overrides, &tables)
-        .and_then(|mut doc| doc.open_live(block as usize, max_step));
+        .and_then(|doc| doc.open_live(block as usize, max_step));
     let (solution, session) = match opened {
         Ok(opened) => opened,
         Err(failure) => {
@@ -164,6 +166,44 @@ pub fn live_reset_json(id: u32) -> String {
     .0
 }
 
+/// Phase L1: change inputs of session `id` live. `lines_json` is a JSON array
+/// of literal assignments as the sliders write them (`"Q = 50 [W]"`). Answers
+/// `{time, log: [{time, name, value}]}` (the time the change applied at and
+/// every change since the open or reset, values in SI), `{error}` with the
+/// run left as it was, or `gone`.
+pub fn live_set_json(id: u32, lines_json: &str) -> String {
+    let refuse = |message: &str| json!({ "error": message }).to_string();
+    let Ok(lines) = serde_json::from_str::<Vec<String>>(lines_json) else {
+        return refuse("Live mode: the input changes must be a list of assignments.");
+    };
+    let Some((names, pins)) = literal_pins(&lines) else {
+        return refuse("Live mode: an input change must assign a number, such as `Q = 50 [W]`.");
+    };
+    let changes: Vec<(String, f64)> = names
+        .into_iter()
+        .zip(&pins)
+        .filter_map(|(name, eq)| Some((name, PreparedDocument::literal_pin(eq)?.1)))
+        .collect();
+    LIVE.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        let Some((_, session)) = slot.as_mut().filter(|(open, _)| *open == id) else {
+            return json!({ "gone": true }).to_string();
+        };
+        match session.set_inputs(&changes) {
+            Ok(time) => json!({
+                "time": time,
+                "log": session
+                    .input_log()
+                    .iter()
+                    .map(|c| json!({ "time": c.time, "name": c.name, "value": c.value }))
+                    .collect::<Vec<Value>>(),
+            })
+            .to_string(),
+            Err(e) => refuse(&e.to_string()),
+        }
+    })
+}
+
 /// Drop session `id` if it is the open one.
 #[wasm_bindgen]
 pub fn live_dispose(id: u32) {
@@ -208,4 +248,9 @@ pub fn live_step(id: u32, kind: &str, max_rows: u32) -> Result<JsValue, JsValue>
 #[wasm_bindgen]
 pub fn live_reset(id: u32) -> String {
     live_reset_json(id)
+}
+
+#[wasm_bindgen]
+pub fn live_set(id: u32, lines_json: &str) -> String {
+    live_set_json(id, lines_json)
 }

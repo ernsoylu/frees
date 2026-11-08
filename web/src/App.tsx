@@ -605,6 +605,12 @@ export default function App() {
   const [playSpeed, setPlaySpeed] = useState(1)
   const sliderTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sliderSolveRef = useRef<() => void>(() => {})
+  /** Phase L1: set by the Live bar while a run is open; the sliders feed it. */
+  const liveInputRef = useRef<((lines: string[]) => void) | null>(null)
+  /** The sliders a live run opened with, which a Live reset restores. */
+  const liveOpenSlidersRef = useRef<PinnedSlider[]>([])
+  /** The slider values the live run is using, by lowercase name: a refused change puts its slider back. */
+  const liveAppliedRef = useRef(new Map<string, number>())
   // A release that lands while a solve is in flight must not be dropped: the
   // app's policy elsewhere is "skip rather than queue", which is right for a
   // lint tick (another keystroke follows) but wrong here — the displayed
@@ -2040,6 +2046,16 @@ export default function App() {
   }
 
   function setSliderValue(name: string, value: number, commit: boolean) {
+    // Phase L1: an open live run takes the value as a live input instead of
+    // closing; the steady result is stale until the next solve.
+    const live = liveInputRef.current
+    const pin = findPin(pinnedSliders, name)
+    if (live && pin) {
+      setSlidersStale(true)
+      setPinnedSliders((prev) => prev.map((p) => (p.name === name ? { ...p, value } : p)))
+      live([sliderOverrideEquation({ ...pin, value })])
+      return
+    }
     modelRevisionRef.current.bumpValues()
     setSlidersStale(true)
     setPinnedSliders((prev) => prev.map((p) => (p.name === name ? { ...p, value } : p)))
@@ -3333,12 +3349,30 @@ export default function App() {
                       tracker={modelRevisionRef.current}
                       buildOpen={() => {
                         flushTableEdits()
+                        liveOpenSlidersRef.current = pinnedSliders
+                        liveAppliedRef.current = new Map(pinnedSliders.map((p) => [p.name.toLowerCase(), p.value]))
                         return {
                           source: effectiveText(),
                           request: solveRequest({ ...stopCriteria, complexMode }, buildVariableInfo(), false, unitSystem, false, functionTableDtos(), solveOverrides()),
                         }
                       }}
                       onTable={publishLiveTable}
+                      inputRef={liveInputRef}
+                      onInputsReset={() => {
+                        liveAppliedRef.current = new Map(liveOpenSlidersRef.current.map((p) => [p.name.toLowerCase(), p.value]))
+                        setPinnedSliders(liveOpenSlidersRef.current)
+                      }}
+                      onInputsSettled={(lines, applied) => {
+                        const names = lines.map((l) => l.split('=')[0].trim().toLowerCase())
+                        if (applied) {
+                          lines.forEach((l, i) => liveAppliedRef.current.set(names[i], Number.parseFloat(l.split('=')[1])))
+                          return
+                        }
+                        setPinnedSliders((prev) => prev.map((p) => {
+                          const value = liveAppliedRef.current.get(p.name.toLowerCase())
+                          return names.includes(p.name.toLowerCase()) && value !== undefined ? { ...p, value } : p
+                        }))
+                      }}
                     />
                   </Suspense>
                 )}

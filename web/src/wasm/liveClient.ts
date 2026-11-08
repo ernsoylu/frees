@@ -51,6 +51,15 @@ export interface LiveChunk {
   error: string | null
 }
 
+/** One applied live input change: the run time it took effect at, the value in SI. */
+export interface LiveInputChange {
+  time: number
+  name: string
+  value: number
+}
+
+export type LiveInputResult = { time: number; log: LiveInputChange[] } | { error: string }
+
 export type LiveStepKind = 'sample' | 'event' | 'accepted'
 
 export type LiveOpenResult =
@@ -195,6 +204,24 @@ export class LiveClient {
     const gone = (JSON.parse(result) as { gone?: boolean }).gone === true
     if (gone) this.session = 0
     return !gone
+  }
+
+  /**
+   * Phase L1: change inputs live — literal assignments as the sliders write
+   * them (`Q = 50 [W]`). The run carries on from the time the change applies
+   * at; a refused change leaves it as it was. `null` when the session moved on.
+   */
+  async setInputs(lines: string[]): Promise<LiveInputResult | null> {
+    if (!this.session) return null
+    const generation = this.generation
+    const { result } = await this.call('liveSet', [String(this.session), JSON.stringify(lines)])
+    if (generation !== this.generation) return null
+    const reply = JSON.parse(result) as LiveInputResult & { gone?: boolean }
+    if (reply.gone) {
+      this.session = 0
+      return null
+    }
+    return reply
   }
 
   /** Close the session; replies still in flight for it answer `null`. */

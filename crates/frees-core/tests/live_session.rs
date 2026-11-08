@@ -49,7 +49,7 @@ fn batch(src: &str) -> frees_core::ode::problem::OdeTableResult {
 }
 
 fn open(src: &str) -> LiveSession {
-    let mut doc = PreparedDocument::new(src, &SolverSettings::default(), &[], &[])
+    let doc = PreparedDocument::new(src, &SolverSettings::default(), &[], &[])
         .unwrap_or_else(|e| panic!("{}", e.error));
     doc.open_live(0, None)
         .unwrap_or_else(|e| panic!("{}", e.error))
@@ -276,7 +276,7 @@ fn explicit_accepted_steps_move_forward() {
 
 #[test]
 fn a_block_that_does_not_exist_is_refused() {
-    let mut doc = PreparedDocument::new(BOUNCE, &SolverSettings::default(), &[], &[])
+    let doc = PreparedDocument::new(BOUNCE, &SolverSettings::default(), &[], &[])
         .unwrap_or_else(|e| panic!("{}", e.error));
     let message = doc
         .open_live(3, None)
@@ -344,7 +344,7 @@ fn a_capped_session_never_steps_past_its_cap() {
     for method in ["ida", "ode45"] {
         let src = BOUNCE.replace("method = ida", &format!("method = {method}"));
         let table = batch(&src);
-        let mut doc = PreparedDocument::new(&src, &SolverSettings::default(), &[], &[])
+        let doc = PreparedDocument::new(&src, &SolverSettings::default(), &[], &[])
             .unwrap_or_else(|e| panic!("{}", e.error));
         let mut session = doc
             .open_live(0, Some(0.004))
@@ -366,5 +366,120 @@ fn a_capped_session_never_steps_past_its_cap() {
                 batch[0]
             );
         }
+    }
+}
+
+/// Phase L1: a heater with a first-order lag, `T∞ = 20 + 2Q`, `τ = 4 s`.
+const HEATER: &str = "Q = 10\n\
+DYNAMIC heat (method = ida, time = 0 .. 10, points = 101)\n  \
+  der(T) = (Q - 0.5*(T - 20))/2\n  \
+  T(0) = 20\n\
+END\n";
+
+fn heater(method: &str) -> String {
+    HEATER.replace("method = ida", &format!("method = {method}"))
+}
+
+/// Advance to the logged time `time` exactly: an IDA change applies at a
+/// row, an explicit one at an internal step.
+fn reach(session: &mut LiveSession, method: &str, time: f64) -> Vec<Vec<f64>> {
+    let mut rows = Vec::new();
+    if method == "ida" {
+        rows.append(&mut session.advance(time, &mut |_| true).rows);
+    } else {
+        while session.clock().is_none_or(|(t, _)| t < time) {
+            let mut chunk = session.step_accepted();
+            assert!(chunk.error.is_none(), "{:?}", chunk.error);
+            rows.append(&mut chunk.rows);
+        }
+    }
+    assert!(
+        method == "ida" || session.clock().map(|(t, _)| t.to_bits()) == Some(time.to_bits()),
+        "the replay reached the logged time"
+    );
+    rows
+}
+
+#[test]
+fn an_input_change_follows_the_piecewise_solution() {
+    for method in ["ida", "ode45", "rk4"] {
+        let mut session = open(&heater(method));
+        let mut rows = run(&mut session, 3.0, 0.7, 1000).rows;
+        let t1 = session.set_inputs(&[("Q".into(), 50.0)]).unwrap();
+        assert!((2.0..=3.5).contains(&t1), "{method}: applied at {t1}");
+        rows.extend(run(&mut session, 10.0, 0.7, 1000).rows);
+        assert_eq!(rows.len(), 101, "{method}");
+        let before = |t: f64| 20.0 + 20.0 * (1.0 - (-t / 4.0).exp());
+        let after = |t: f64| 120.0 + (before(t1) - 120.0) * (-(t - t1) / 4.0).exp();
+        for row in &rows {
+            let (t, temp) = (row[0], row[1]);
+            let exact = if t <= t1 { before(t) } else { after(t) };
+            assert!(
+                (temp - exact).abs() < 2e-4,
+                "{method}, t = {t}: {temp} vs {exact}"
+            );
+        }
+        assert_eq!(session.input_log().len(), 1);
+        assert_eq!(session.input_log()[0].time, t1);
+    }
+}
+
+#[test]
+fn replaying_the_input_log_reproduces_the_run_bitwise() {
+    for method in ["ida", "ode45"] {
+        let src = heater(method);
+        let mut first = open(&src);
+        let mut rows = run(&mut first, 2.0, 0.5, 7).rows;
+        first.set_inputs(&[("Q".into(), 50.0)]).unwrap();
+        rows.extend(run(&mut first, 5.0, 0.5, 7).rows);
+        first.set_inputs(&[("q".into(), 5.0)]).unwrap();
+        first.set_inputs(&[("Q".into(), 0.0)]).unwrap();
+        rows.extend(run(&mut first, 10.0, 0.5, 7).rows);
+        let log = first.input_log().to_vec();
+        assert_eq!(log.len(), 3);
+
+        let mut second = open(&src);
+        let mut replayed = Vec::new();
+        for change in &log {
+            replayed.extend(reach(&mut second, method, change.time));
+            let at = second
+                .set_inputs(&[(change.name.clone(), change.value)])
+                .unwrap();
+            assert_eq!(at.to_bits(), change.time.to_bits(), "{method}");
+        }
+        replayed.extend(run(&mut second, 10.0, 0.5, 1000).rows);
+        assert_eq!(bits(&replayed), bits(&rows), "{method}");
+        assert_eq!(second.input_log(), log.as_slice());
+    }
+}
+
+#[test]
+fn a_refused_input_change_leaves_the_run_unchanged() {
+    for method in ["ida", "ode45"] {
+        let src = heater(method);
+        let table = batch(&src);
+        let mut session = open(&src);
+        let mut rows = run(&mut session, 4.0, 0.5, 1000).rows;
+        let refused = session.set_inputs(&[("Q".into(), f64::NAN)]);
+        assert!(refused.is_err(), "{method}: {refused:?}");
+        assert!(session.input_log().is_empty());
+        rows.extend(run(&mut session, 10.0, 0.5, 1000).rows);
+        assert_eq!(bits(&rows), bits(&table.rows), "{method}");
+    }
+}
+
+#[test]
+fn reset_restores_the_opening_inputs() {
+    for method in ["ida", "ode45"] {
+        let src = heater(method);
+        let table = batch(&src);
+        let mut session = open(&src);
+        run(&mut session, 4.0, 0.5, 1000);
+        session.set_inputs(&[("Q".into(), 50.0)]).unwrap();
+        run(&mut session, 6.0, 0.5, 1000);
+        session.reset();
+        assert!(session.input_log().is_empty());
+        let rows = run(&mut session, 10.0, 0.5, 1000).rows;
+        assert_eq!(bits(&rows), bits(&table.rows), "{method}");
     }
 }

@@ -441,24 +441,74 @@ impl PreparedDocument {
     /// `max_step` caps the integrator's step for this session only (K4's
     /// retry after a failure); the document's block is unchanged.
     pub fn open_live(
-        &mut self,
+        mut self,
         block: usize,
         max_step: Option<f64>,
     ) -> std::result::Result<(Solution, crate::ode::live::LiveSession), SolveFailure> {
         self.live = Some(super::LiveCapture {
             block,
             max_step,
+            want_base: false,
+            base: None,
             session: None,
         });
         let solved = self.solve_with_pins(&[], None);
         let session = self.live.take().and_then(|c| c.session);
         let solution = solved?;
-        let session = session.ok_or_else(|| SolveFailure {
+        let mut session = session.ok_or_else(|| SolveFailure {
             error: FreesError::solver("Live mode: the document has no DYNAMIC block to run."),
             failed_block_index: None,
             partial: None,
         })?;
+        // The session keeps the document, which re-solves the steady part
+        // when a live input changes (Phase L1).
+        session.attach(self, block);
         Ok((solution, session))
+    }
+
+    /// This document with the assignments to `names` (lowercase) struck, so
+    /// they can be pinned: the base a live input change solves (Phase L1),
+    /// as a slider drag's is. Each name must be assigned in the text.
+    pub(crate) fn struck(&self, names: &[String]) -> crate::diag::Result<PreparedDocument> {
+        use crate::analysis::montecarlo::strike_assignments;
+        let plain = strike_assignments(&self.source, &[]);
+        for name in names {
+            if strike_assignments(&self.source, std::slice::from_ref(name)) == plain {
+                return Err(FreesError::solver(format!(
+                    "Live mode: `{name}` is not given a value in the document, so it cannot be a live input."
+                )));
+            }
+        }
+        Self::new(
+            &strike_assignments(&self.source, names),
+            &self.settings,
+            &self.overrides,
+            &self.extra_tables,
+        )
+        .map_err(|failure| failure.error)
+    }
+
+    /// The base values block `block` integrates on, with `pins` applied: the
+    /// steady solve a live input change runs (Phase L1), on a [`Self::struck`]
+    /// document.
+    pub(crate) fn live_base(
+        &mut self,
+        block: usize,
+        pins: &[(String, f64)],
+    ) -> crate::diag::Result<Scope> {
+        self.live = Some(super::LiveCapture {
+            block,
+            max_step: None,
+            want_base: true,
+            base: None,
+            session: None,
+        });
+        let solved = self.solve_with_pins(pins, None);
+        let base = self.live.take().and_then(|c| c.base);
+        solved.map_err(|failure| failure.error)?;
+        base.ok_or_else(|| {
+            FreesError::solver("Live mode: the steady solve gave the block no values.")
+        })
     }
 
     /// Solve with a given set of pinned variable values, optional parametric accessors, and optional warm-start scope.

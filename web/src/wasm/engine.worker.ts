@@ -16,7 +16,7 @@
 //                     'monteCarlo' | 'optimize' | 'optimizeMulti' |
 //                     'curveFit' | 'parameterFit' | 'pidTune' |
 //                     'extractPlant' | 'liveOpen' | 'liveAdvance' |
-//                     'liveStep' | 'liveReset' | 'liveDispose',
+//                     'liveStep' | 'liveReset' | 'liveSet' | 'liveDispose',
 //             args: string[]}
 //   response {id, ok: true, result: string} | {id, ok: false, fatal?: boolean, error: string}
 //
@@ -58,6 +58,7 @@ import init, {
   live_dispose,
   live_open,
   live_reset,
+  live_set,
   live_step,
   fluids_used,
   fluid_available,
@@ -248,6 +249,7 @@ export interface EngineRequest {
     | 'liveAdvance'
     | 'liveStep'
     | 'liveReset'
+    | 'liveSet'
     | 'liveDispose'
   args: string[]
 }
@@ -359,6 +361,9 @@ const handle = async (event: MessageEvent<EngineRequest>) => {
       }
       case 'liveReset':
         result = live_reset(Number(args[0]))
+        break
+      case 'liveSet':
+        result = live_set(Number(args[0]), args[1] ?? '[]')
         break
       case 'liveDispose':
         live_dispose(Number(args[0]))
