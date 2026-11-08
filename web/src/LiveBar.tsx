@@ -28,6 +28,8 @@ interface Props {
   onInputsReset?: () => void
   /** The engine applied `lines` (`true`) or refused them, leaving the run as it was (`false`). */
   onInputsSettled?: (lines: string[], applied: boolean) => void
+  /** Whether a run is open to inputs (paused or running), on each change (L2: the canvas controls). */
+  onOpenChange?: (open: boolean) => void
 }
 
 type Status = 'closed' | 'opening' | 'paused' | 'running' | 'finished' | 'failed'
@@ -51,7 +53,7 @@ const speedOf = (exponent: number) => 10 ** exponent
  * the revision tracker), so a live run never shows a model that is not the
  * one in the editor.
  */
-export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onTable, inputRef, onInputsReset, onInputsSettled }: Readonly<Props>) {
+export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onTable, inputRef, onInputsReset, onInputsSettled, onOpenChange }: Readonly<Props>) {
   const driver = given ?? defaultDriver()
   const [block, setBlock] = useState(blocks[0] ?? '')
   const [status, setStatus] = useState<Status>('closed')
@@ -153,6 +155,9 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
       })
   }
   const live = status === 'paused' || status === 'running'
+  useEffect(() => {
+    onOpenChange?.(live)
+  }, [live, onOpenChange])
   useEffect(() => {
     if (!inputRef) return
     inputRef.current = live ? setInputs : null

@@ -72,6 +72,8 @@ import {
   VariableResult,
 } from './api'
 import { ModelRevisionTracker } from './modelRevision'
+import { canvasInputLine, liftCanvasInputs, type CanvasInput } from './liveCanvas'
+import type { LiveControl } from './schematic/LiveControls'
 import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, withSliderBounds, type PinnedSlider } from './sliders'
 import { compareRuns, describeRun, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
 import { playbackVariables, timeLabel, timelineOf, type Timeline } from './playback'
@@ -611,6 +613,24 @@ export default function App() {
   const liveOpenSlidersRef = useRef<PinnedSlider[]>([])
   /** The slider values the live run is using, by lowercase name: a refused change puts its slider back. */
   const liveAppliedRef = useRef(new Map<string, number>())
+  /** Phase L2: the canvas inputs the open live run lifted, their values, and whether a run is open to them. */
+  const [liveCanvas, setLiveCanvas] = useState<{ inputs: CanvasInput[]; values: Record<string, number> }>({ inputs: [], values: {} })
+  const [liveOpen, setLiveOpen] = useState(false)
+  const setCanvasInput = useCallback((input: CanvasInput, value: number) => {
+    const live = liveInputRef.current
+    if (!live) return
+    setLiveCanvas((c) => ({ ...c, values: { ...c.values, [input.variable.toLowerCase()]: value } }))
+    live([canvasInputLine(input, value)])
+  }, [])
+  const liveControls = useMemo(() => {
+    if (!liveOpen || !liveCanvas.inputs.length) return null
+    const controls = new Map<string, LiveControl[]>()
+    for (const input of liveCanvas.inputs) {
+      const block = input.block.toLowerCase()
+      controls.set(block, [...(controls.get(block) ?? []), { input, value: liveCanvas.values[input.variable.toLowerCase()] ?? input.value }])
+    }
+    return { controls, set: setCanvasInput }
+  }, [liveOpen, liveCanvas, setCanvasInput])
   // A release that lands while a solve is in flight must not be dropped: the
   // app's policy elsewhere is "skip rather than queue", which is right for a
   // lint tick (another keystroke follows) but wrong here — the displayed
@@ -3187,6 +3207,7 @@ export default function App() {
             onPresentationChange={setSchematic}
             handoff={{ reason: handoffReason, run: handoff }}
             highlightIds={[...withEnclosing(diagnosisOwners(checkResult?.diagnosis, checkResult?.instances ?? []).map((o) => o.instance)), ...(cursorInstance ? [cursorInstance] : [])]}
+            live={liveControls}
           />
         </Suspense>
       </div>
@@ -3350,18 +3371,27 @@ export default function App() {
                       buildOpen={() => {
                         flushTableEdits()
                         liveOpenSlidersRef.current = pinnedSliders
-                        liveAppliedRef.current = new Map(pinnedSliders.map((p) => [p.name.toLowerCase(), p.value]))
+                        // L2: a valid check's instances locate the canvas inputs in this text.
+                        const lifted = modelRevisionRef.current.isCheckValidAndSolvable()
+                          ? liftCanvasInputs(effectiveText(), checkResult?.instances ?? [])
+                          : { source: effectiveText(), inputs: [] }
+                        const opening = Object.fromEntries(lifted.inputs.map((i) => [i.variable.toLowerCase(), i.value]))
+                        setLiveCanvas({ inputs: lifted.inputs, values: opening })
+                        liveAppliedRef.current = new Map([...pinnedSliders.map((p) => [p.name.toLowerCase(), p.value] as const), ...Object.entries(opening)])
                         return {
-                          source: effectiveText(),
+                          source: lifted.source,
                           request: solveRequest({ ...stopCriteria, complexMode }, buildVariableInfo(), false, unitSystem, false, functionTableDtos(), solveOverrides()),
                         }
                       }}
                       onTable={publishLiveTable}
                       inputRef={liveInputRef}
                       onInputsReset={() => {
-                        liveAppliedRef.current = new Map(liveOpenSlidersRef.current.map((p) => [p.name.toLowerCase(), p.value]))
+                        const opening = Object.fromEntries(liveCanvas.inputs.map((i) => [i.variable.toLowerCase(), i.value]))
+                        liveAppliedRef.current = new Map([...liveOpenSlidersRef.current.map((p) => [p.name.toLowerCase(), p.value] as const), ...Object.entries(opening)])
                         setPinnedSliders(liveOpenSlidersRef.current)
+                        setLiveCanvas((c) => ({ ...c, values: opening }))
                       }}
+                      onOpenChange={setLiveOpen}
                       onInputsSettled={(lines, applied) => {
                         const names = lines.map((l) => l.split('=')[0].trim().toLowerCase())
                         if (applied) {
@@ -3371,6 +3401,10 @@ export default function App() {
                         setPinnedSliders((prev) => prev.map((p) => {
                           const value = liveAppliedRef.current.get(p.name.toLowerCase())
                           return names.includes(p.name.toLowerCase()) && value !== undefined ? { ...p, value } : p
+                        }))
+                        setLiveCanvas((c) => ({
+                          ...c,
+                          values: { ...c.values, ...Object.fromEntries(names.flatMap((n) => (n in c.values ? [[n, liveAppliedRef.current.get(n) ?? c.values[n]]] : []))) },
                         }))
                       }}
                     />

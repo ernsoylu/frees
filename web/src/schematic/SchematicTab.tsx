@@ -101,6 +101,8 @@ import { searchModel, type SearchHit } from './search'
 import { blockDependencies, lineOfEquation, type BlockLink } from './dependencies'
 import { formatParamValue, paramValueError, suggestInstanceName } from '../componentText'
 import { QuickAdd } from './QuickAdd'
+import LiveControls, { type LiveControl } from './LiveControls'
+import type { CanvasInput } from '../liveCanvas'
 import { CANVAS_COMMANDS, canvasHandlers, canvasKeys, keyProblem, REMAPPABLE, saveCanvasKeys, type CanvasCommand, type Remappable } from './commands'
 import { copyFragment, deleteImpact, loadFragment, pasteFragment, storeFragment, withoutBlocks, type DeleteImpact, type Fragment, type PasteResult } from './clipboard'
 import { boxAround, contains, frameBox, visibleBox, zoomAbout, type Box, type View } from './viewport'
@@ -254,6 +256,8 @@ interface Props {
   phases?: Record<string, StreamPhase>
   /** H4: the blocks an event recorded at the playback sample reads; they flash. */
   flash?: readonly string[]
+  /** Phase L2: while a live run is open, each block's live inputs (by lowercase block name) and how to set one. */
+  live?: { controls: ReadonlyMap<string, readonly LiveControl[]>; set: (input: CanvasInput, value: number) => void } | null
 }
 
 export type SchematicHandoff = 'plot' | 'table' | 'state' | 'sensitivity'
@@ -393,6 +397,7 @@ export default function SchematicTab({
   highlightIds = [],
   handoff,
   blocks,
+  live,
 }: Readonly<Props>) {
   const svgRef = useRef<SVGSVGElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -3605,6 +3610,8 @@ export default function SchematicTab({
                   flash={flashIds.has(n.id)}
                   summary={(port) => streamSummary(`${n.id}.${port}`, values)}
                   valueOf={(member) => flowValues.get(`${n.id}.${member}`.toLowerCase())?.value}
+                  controls={live?.controls.get(n.id.toLowerCase())}
+                  onControl={live?.set}
                   onPointerDown={(e) => {
                     takeControl()
                     // Dragging a selected block carries the whole selection; locked blocks stay.
@@ -4135,6 +4142,9 @@ interface BlockProps {
   summary?: (port: string) => string
   /** H5: the value of one of the block's own members (`opening`, `shaft.phi`), for a bound symbol part. */
   valueOf?: (member: string) => number | undefined
+  /** Phase L2: the block's live inputs, drawn above it, and how to set one. */
+  controls?: readonly LiveControl[]
+  onControl?: (input: CanvasInput, value: number) => void
 }
 
 const reactAttr = (name: string) => name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
@@ -4181,6 +4191,8 @@ function NodeBlock({
   flash = false,
   summary,
   valueOf,
+  controls,
+  onControl,
 }: Readonly<BlockProps>) {
   // COMP-08: a missing project symbol falls back to a labelled block.
   const shape = custom === null ? 'block' : (look?.shape ?? node.shape)
@@ -4305,6 +4317,7 @@ function NodeBlock({
         </text>
       )}
       {locked && <IconLock x={node.w - 13} y={2} size={11} color={ink.subtext} aria-hidden />}
+      {controls?.length && onControl ? <LiveControls controls={controls} width={node.w} ink={ink} onSet={onControl} /> : null}
       {node.ports.map((p) => {
         const armed = pendingPort?.instance === node.id && pendingPort?.port === p.port
         const color = p.lineId ? styleOf(p.lineId).color : ink.portIdle
