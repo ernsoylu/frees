@@ -854,7 +854,7 @@ entry here is checked off with evidence when it closes.
       - WASM 3,994.9 KiB raw, within the 5,120 KiB gate.
   - **L5 done 2026-11-11 (`l5-recorder`): the recorder.**
     - **What it keeps** (`web/src/liveRecorder.ts`). Every accepted row of the run, from the row the run stands at when Record is pressed (or from the first row, when Record opens a closed run), in a buffer of its own. The Live bar's display ring drops its oldest rows on a long run; the recorder never drops one. A recording ends in one of three ways:
-      - **Finite duration.** "Record for" ends it at the first row at or past start + duration, within a rounding of the grid time. The run goes on afterwards.
+      - **Finite duration.** "Record for" ends it at the first row at or past start + duration, within a rounding of the grid time, so it covers the whole duration even on rows coarser than it. The run goes on afterwards.
       - **Explicit export.** With no duration, "Stop and export" ends it.
       - **Size limit.** A recording that reaches the store's 4,000,000-value limit ends there; it is never truncated silently.
     - **Status.** Each recording ends `complete`, `partial` or `failed`, with a stated reason:
@@ -877,6 +877,8 @@ entry here is checked off with evidence when it closes.
       - `LiveBar.test.tsx` +2: Record opens a closed run and records a 0.5 s duration of it, while the run goes on; the export carries the settings and provenance. A reset ends a recording partial, and Stop and export ends one with no duration as complete.
       - `crates/frees/tests/live.rs` +1: IDA's settings with no cap; an `rk4` block's fixed step with a retry's cap; a property call's fluid.
       - `live.wasm.test.ts`: the same fields through the compiled engine.
+      - **Found in the browser.** On `newton-cooling-transient` (ode45, rows every 1.5075 s), the first cut ended a 1 s recording before its second row, keeping only t = 0. The row that crosses the end now closes the recording. A 5 s recording kept 5 rows, from 0 to 6.0302 s, completed. Its file named ode45 at rtol 1e-8 over 200 points and "rustprop (CoolProp 8.0.0)", and carried each value unrounded.
+      - WASM 3,997.4 KiB raw, within the 5,120 KiB gate.
   - **Acceptance.**
     - RC and thermal load steps, a pressure command and a PID gain change each match a reference batch run with piecewise inputs.
     - A rejected edit rolls back and keeps a consistent DAE state.
