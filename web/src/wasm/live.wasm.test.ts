@@ -57,3 +57,13 @@ it('the scope spectrum of resampled uneven rows peaks at the signal frequency (L
   expect(Math.abs(sp.freq[k] - 3)).toBeLessThan(1 / dt / 256)
   expect(JSON.parse(live_spectrum(new Float64Array([1]), 10, false))).toHaveProperty('error')
 })
+
+it('a pause condition in the open request ends the chunk it crosses in (L4)', () => {
+  const open = JSON.parse(live_open(BALL, JSON.stringify({ liveWatches: ['h < 50 [cm]'] }), 0))
+  expect(open.ok).toBe(true)
+  const header = JSON.parse((live_advance(open.session, 2, 1e9) as { header: string }).header)
+  live_dispose(open.session)
+  expect(header.paused).toBe('h < 50 [cm]')
+  const hit = header.events.find((e: { name: string }) => e.name === 'h < 50 [cm]')
+  expect(Math.abs(hit.time - Math.sqrt(0.5 / 9.81 * 2))).toBeLessThan(1e-4)
+})

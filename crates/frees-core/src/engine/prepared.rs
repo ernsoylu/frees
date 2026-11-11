@@ -441,9 +441,21 @@ impl PreparedDocument {
     /// `max_step` caps the integrator's step for this session only (K4's
     /// retry after a failure); the document's block is unchanged.
     pub fn open_live(
+        self,
+        block: usize,
+        max_step: Option<f64>,
+    ) -> std::result::Result<(Solution, crate::ode::live::LiveSession), SolveFailure> {
+        self.open_live_watching(block, max_step, &[])
+    }
+
+    /// [`Self::open_live`], pausing where any of `watches` crosses (Phase L4):
+    /// `column > value` or `column < value` against the block's table, as
+    /// [`Watch::parse`](crate::ode::live::Watch::parse) reads them.
+    pub fn open_live_watching(
         mut self,
         block: usize,
         max_step: Option<f64>,
+        watches: &[String],
     ) -> std::result::Result<(Solution, crate::ode::live::LiveSession), SolveFailure> {
         self.live = Some(super::LiveCapture {
             block,
@@ -451,6 +463,7 @@ impl PreparedDocument {
             want_base: false,
             base: None,
             session: None,
+            watches: watches.to_vec(),
         });
         let solved = self.solve_with_pins(&[], None);
         let session = self.live.take().and_then(|c| c.session);
@@ -502,6 +515,7 @@ impl PreparedDocument {
             want_base: true,
             base: None,
             session: None,
+            watches: Vec::new(),
         });
         let solved = self.solve_with_pins(pins, None);
         let base = self.live.take().and_then(|c| c.base);

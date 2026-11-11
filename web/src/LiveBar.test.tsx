@@ -258,3 +258,30 @@ it('hands the open run’s rows to the canvas until it closes (L3b)', async () =
   again.unmount()
   expect(onRows.mock.lastCall?.[0]).toBeNull()
 })
+
+it('sends the pause conditions with the open and pauses where one crosses (L4)', async () => {
+  const { driver, spy } = fakeDriver(1000)
+  let calls = 0
+  const plain = spy.advance.getMockImplementation()!
+  spy.advance.mockImplementation(async (t: number) => {
+    const c = await plain(t)
+    // The engine ends the chunk the condition crosses in, and names it.
+    return ++calls === 2 ? { ...c, paused: 'L > 0.15 [m]', events: [{ name: 'L > 0.15 [m]', time: 0.15 }] } : c
+  })
+  const onTable = vi.fn()
+  mount(driver, undefined, undefined, onTable)
+  fireEvent.change(screen.getByLabelText('Pause when'), { target: { value: ' L > 0.15 [m] ;  ; t > 9 ' } })
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(screen.getByTestId('live-notice').textContent).toBe('Paused: L > 0.15 [m] at t = 0.15 s.'))
+  expect(JSON.parse(spy.open.mock.calls[0][1])).toEqual({ liveWatches: ['L > 0.15 [m]', 't > 9'] })
+  expect(screen.getByLabelText('Run live')).toBeEnabled()
+  expect(screen.getByLabelText('Pause when')).toBeDisabled()
+  expect(onTable).toHaveBeenCalled()
+  const advances = spy.advance.mock.calls.length
+  await new Promise((r) => setTimeout(r, 50))
+  expect(spy.advance.mock.calls.length).toBe(advances)
+  // Resuming clears the pause notice.
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(spy.advance.mock.calls.length).toBeGreaterThan(advances))
+  expect(screen.queryByTestId('live-notice')).toBeNull()
+})

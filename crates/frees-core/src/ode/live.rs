@@ -77,6 +77,111 @@ pub struct Chunk {
     /// The integration failed after [`Self::rows`]; the run is over. The rows
     /// before it are accepted output and stay valid.
     pub error: Option<FreesError>,
+    /// Phase L4: the watch that crossed in this chunk and ended it, as written.
+    pub paused: Option<String>,
+}
+
+/// Phase L4: a condition that pauses a live run where it crosses — a column of
+/// the block's table against a value, `body.port.T > 60 [C]`. It is located
+/// by root finding, not by reading rows: IDA's own root search (the watch is a
+/// session-only `record` event of the block), and on an explicit method a
+/// bisection on the accepted step's interpolant, outside the stepper. Neither
+/// changes a step, so the run's rows are the batch rows; the watch only ends
+/// the chunk it crosses in.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Watch {
+    /// As written; the pause and its event carry it.
+    pub name: String,
+    /// The column of the block's table (0 is time).
+    pub column: usize,
+    /// In SI, as the table's values are.
+    pub threshold: f64,
+    /// `+1` for `>` (crossing upward), `−1` for `<` (downward). A run that
+    /// starts beyond the value has not crossed it.
+    pub direction: i32,
+}
+
+impl Watch {
+    /// Parse `column > value` or `column < value` against the block's columns.
+    /// The column is written as a variable (`body.port.T`) and matched without
+    /// case; the value is a literal, its unit converted to SI as in a document.
+    pub fn parse(text: &str, columns: &[String]) -> Result<Watch> {
+        let text = text.trim();
+        let fail = |why: String| {
+            FreesError::solver(format!("Live mode: the pause condition `{text}` {why}"))
+        };
+        let at = text
+            .find(['>', '<'])
+            .ok_or_else(|| fail("needs `>` or `<`, as in `T > 60 [C]`.".into()))?;
+        let direction = if text[at..].starts_with('>') { 1 } else { -1 };
+        let left = text[..at].trim();
+        let right = text[at + 1..]
+            .strip_prefix('=')
+            .unwrap_or(&text[at + 1..])
+            .trim();
+        let key = |s: &str| s.to_lowercase().replace('$', ".");
+        let column = columns
+            .iter()
+            .position(|c| key(c) == key(left))
+            .ok_or_else(|| {
+                fail(format!(
+                    "names `{left}`, which is not a column of the block's table."
+                ))
+            })?;
+        let threshold = literal(right).ok_or_else(|| {
+            fail(format!("compares with `{right}`; the right side must be a number, with a known unit if it has one."))
+        })?;
+        Ok(Watch {
+            name: text.to_string(),
+            column,
+            threshold,
+            direction,
+        })
+    }
+
+    /// Whether `g = value − threshold` went from `before` to `after` across
+    /// the value in the watch's direction.
+    pub(crate) fn crossed(&self, before: f64, after: f64) -> bool {
+        if self.direction > 0 {
+            before < 0.0 && after >= 0.0
+        } else {
+            before > 0.0 && after <= 0.0
+        }
+    }
+}
+
+/// A number literal, its unit converted to SI; `None` for anything else, an
+/// unknown unit included.
+fn literal(src: &str) -> Option<f64> {
+    use crate::ast::Expr;
+    let tokens = crate::lexer::tokenize(src).ok()?;
+    let mut cursor = crate::parser::Cursor::new(&tokens, src);
+    let expr = crate::parser::parse_expr(&mut cursor).ok()?;
+    cursor.skip_newlines();
+    if !cursor.is_eof() {
+        return None;
+    }
+    let (negate, expr) = match expr {
+        Expr::Neg(inner) => (true, *inner),
+        e => (false, e),
+    };
+    // The parser keeps an unknown unit's raw value (a document only warns),
+    // which a pause threshold must not do.
+    let unit_known = match (src.find('['), src.rfind(']')) {
+        (Some(a), Some(b)) if a < b => {
+            crate::units::UnitRegistry::parse_with_offset(src[a + 1..b].trim()).is_ok()
+        }
+        (None, None) => true,
+        _ => false,
+    };
+    match expr {
+        Expr::Num {
+            value,
+            is_imaginary: false,
+            ..
+        } if unit_known => Some(if negate { -value } else { value }),
+        _ => None,
+    }
 }
 
 /// The resumable IDA output loop of one `DYNAMIC` block.
@@ -109,6 +214,9 @@ pub struct IdaRun {
     /// further change there restarts from the same state, so a replay that
     /// reaches the row in between reproduces the run.
     applied: Option<(f64, Vec<f64>, Vec<f64>)>,
+    /// Phase L4: the names of the session-only `record` bindings that are a
+    /// live session's watches, which a set event's reset can cross.
+    watches: Vec<String>,
 }
 
 impl IdaRun {
@@ -141,7 +249,13 @@ impl IdaRun {
             end: None,
             failed: false,
             hmax: None,
+            watches: Vec::new(),
         }
+    }
+
+    /// Phase L4: these bindings are watches ([`IdaRun::apply_set_event`]).
+    pub(crate) fn watch(&mut self, names: Vec<String>) {
+        self.watches = names;
     }
 
     /// Run on under new analytic values from the last row on (Phase L1). The
@@ -462,7 +576,7 @@ impl IdaRun {
             }
         }
         if let Some(r) = set_event {
-            return self.apply_set_event(s, defs, step, tout, r);
+            return self.apply_set_event(s, defs, step, tout, r, hits);
         }
         Ok(if step.t >= tout {
             RootOutcome::Report(step)
@@ -474,6 +588,10 @@ impl IdaRun {
     /// Port of `DynamicSolver.applySetEvent`: overwrite the state at the
     /// crossing, re-initialize IDA there, and let IDACalcIC re-derive the
     /// algebraic variables consistent with the modified state.
+    ///
+    /// A reset is a jump, not a root: IDA's root search never sees a watch
+    /// it crosses, so each watch is compared across it here and a crossing
+    /// recorded at the event time. A batch run has no watches.
     fn apply_set_event(
         &self,
         s: &mut IdaDaeSolver<'_>,
@@ -481,6 +599,7 @@ impl IdaRun {
         step: Step,
         tout: f64,
         r: usize,
+        hits: &mut Vec<TableEventHit>,
     ) -> Result<RootOutcome> {
         let binding = &self.bindings[r];
         let mut y = step.y.clone();
@@ -506,6 +625,39 @@ impl IdaRun {
         // is absorbed by the first BDF step — the same fallback as at t0.
         let hint = step.t + f64::max(1e-9, 1e-6 * step.t.abs());
         let _ = s.calc_consistent_ic(IDA_YA_YDP_INIT, f64::max(tout, hint));
+        if !self.watches.is_empty() {
+            let after = dae_values(
+                &self.spec.analytic_values,
+                &self.spec.time_var,
+                &self.spec.states,
+                &self.spec.aux,
+                step.t,
+                &s.current_state(),
+                &s.current_derivative(),
+            );
+            let g = |b: &EventBinding, at: &Scope| -> Result<f64> {
+                Ok(eval_with(&b.lhs, at, EvalContext::with_defs(defs))?
+                    - eval_with(&b.rhs, at, EvalContext::with_defs(defs))?)
+            };
+            for b in self
+                .bindings
+                .iter()
+                .filter(|b| self.watches.contains(&b.name))
+            {
+                let (before, after) = (g(b, &scope)?, g(b, &after)?);
+                let crossed = if b.direction > 0 {
+                    before < 0.0 && after >= 0.0
+                } else {
+                    before > 0.0 && after <= 0.0
+                };
+                if crossed && !hits.iter().any(|h| h.name == b.name && h.time == step.t) {
+                    hits.push(TableEventHit {
+                        name: b.name.clone(),
+                        time: step.t,
+                    });
+                }
+            }
+        }
         if step.t >= tout {
             // The crossing coincided with the requested sample: report the
             // post-set state rather than asking IDA for tout == t.
@@ -586,6 +738,10 @@ pub(crate) struct ExplicitLive {
     /// How many of the stepper's recorded events are already in a chunk.
     pub(crate) events_sent: usize,
     pub(crate) end: Option<f64>,
+    /// Phase L4: the watches, and `(t, value − threshold)` for each at the
+    /// end of the last accepted step.
+    pub(crate) watches: Vec<Watch>,
+    pub(crate) watch_prev: Option<(f64, Vec<f64>)>,
     t0: f64,
     tf: f64,
     points: usize,
@@ -614,6 +770,8 @@ pub struct ExplicitRun {
     failed: bool,
     /// The base values the run opened with, which a reset restores.
     original: Scope,
+    /// Phase L4: kept here, as a reset starts the live state afresh.
+    watches: Vec<Watch>,
 }
 
 impl ExplicitRun {
@@ -638,6 +796,7 @@ impl ExplicitRun {
             live: ExplicitLive::default(),
             failed: false,
             original: base.clone(),
+            watches: Vec::new(),
         };
         let (stepping, sampling) = run.block.prepared(defs)?;
         run.columns = stepping.columns();
@@ -657,9 +816,21 @@ impl ExplicitRun {
             t0: options.t0,
             tf: options.tf,
             points,
+            watches: self.watches.clone(),
             ..ExplicitLive::default()
         };
         self.failed = false;
+    }
+
+    /// The block's table columns, which a watch names.
+    pub(crate) fn columns(&self) -> &[String] {
+        &self.columns
+    }
+
+    /// Phase L4: pause where these cross, from the open on.
+    pub(crate) fn watch(&mut self, watches: Vec<Watch>) {
+        self.watches = watches.clone();
+        self.live.watches = watches;
     }
 
     fn run(
@@ -831,6 +1002,11 @@ pub struct LiveSession {
     /// The inputs changed since the open, newest value per name.
     pins: Vec<(String, f64)>,
     log: Vec<InputChange>,
+    /// Phase L4: the names of the session's watches, whose crossing ends a chunk.
+    watches: Vec<String>,
+    /// Watch crossings later than the one a chunk paused at, in time order:
+    /// each pauses its own resume.
+    held: Vec<TableEventHit>,
 }
 
 fn pins_names(pins: &[(String, f64)]) -> Vec<String> {
@@ -864,7 +1040,54 @@ impl LiveSession {
             block: 0,
             pins: Vec::new(),
             log: Vec::new(),
+            watches: Vec::new(),
+            held: Vec::new(),
         }
+    }
+
+    /// Phase L4: pause at these watches' crossings (their names, as the run's
+    /// events carry them).
+    pub(crate) fn watch(&mut self, names: Vec<String>) {
+        self.held.retain(|e| names.contains(&e.name));
+        self.watches = names;
+    }
+
+    /// Name the earliest watch a chunk crossed, if any, and hold the watch
+    /// crossings after it for the next chunks, so a step that crosses two
+    /// conditions pauses at each in turn.
+    fn mark(&mut self, mut chunk: Chunk) -> Chunk {
+        let watched = |e: &TableEventHit| self.watches.contains(&e.name);
+        let Some(first) = chunk
+            .events
+            .iter()
+            .filter(|e| watched(e))
+            .min_by(|a, b| a.time.total_cmp(&b.time))
+            .cloned()
+        else {
+            return chunk;
+        };
+        let (mut later, kept): (Vec<TableEventHit>, Vec<TableEventHit>) =
+            std::mem::take(&mut chunk.events)
+                .into_iter()
+                .partition(|e| watched(e) && e.time > first.time);
+        later.sort_by(|a, b| a.time.total_cmp(&b.time));
+        self.held = later;
+        chunk.events = kept;
+        chunk.paused = Some(first.name);
+        chunk
+    }
+
+    /// The next held crossing, as a chunk with no rows that pauses there.
+    fn release(&mut self) -> Option<Chunk> {
+        if self.held.is_empty() {
+            return None;
+        }
+        let hit = self.held.remove(0);
+        Some(Chunk {
+            paused: Some(hit.name.clone()),
+            events: vec![hit],
+            ..Chunk::default()
+        })
     }
 
     pub(crate) fn attach(&mut self, doc: crate::engine::prepared::PreparedDocument, block: usize) {
@@ -922,11 +1145,18 @@ impl LiveSession {
         &self.log
     }
 
+    /// Rows up to `last`, ending the chunk early where a watch crosses.
     fn rows(&mut self, last: usize, more: &mut dyn FnMut(&Chunk) -> bool) -> Chunk {
-        match &mut self.run {
-            Run::Ida(run) => run.advance(&self.defs, last, more, None),
-            Run::Explicit(run) => run.run(&self.defs, last, more, false),
+        if let Some(chunk) = self.release() {
+            return chunk;
         }
+        let watches = &self.watches;
+        let mut more = |c: &Chunk| !c.events.iter().any(|e| watches.contains(&e.name)) && more(c);
+        let chunk = match &mut self.run {
+            Run::Ida(run) => run.advance(&self.defs, last, &mut more, None),
+            Run::Explicit(run) => run.run(&self.defs, last, &mut more, false),
+        };
+        self.mark(chunk)
     }
 
     fn index(&self) -> usize {
@@ -965,10 +1195,14 @@ impl LiveSession {
 
     /// Take one internal integrator step; see [`IdaRun::step_accepted`].
     pub fn step_accepted(&mut self) -> Chunk {
-        match &mut self.run {
+        if let Some(chunk) = self.release() {
+            return chunk;
+        }
+        let chunk = match &mut self.run {
             Run::Ida(run) => run.step_accepted(&self.defs),
             Run::Explicit(run) => run.run(&self.defs, ROW_CAP, &mut |_| true, true),
-        }
+        };
+        self.mark(chunk)
     }
 
     /// Back to `t0`, with nothing integrated and the inputs the run opened
@@ -976,6 +1210,7 @@ impl LiveSession {
     pub fn reset(&mut self) {
         self.pins.clear();
         self.log.clear();
+        self.held.clear();
         match &mut self.run {
             Run::Ida(run) => run.restart(),
             Run::Explicit(run) => run.restart(),

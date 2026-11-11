@@ -461,6 +461,12 @@ impl<'a> DynamicSolver<'a> {
     }
 
     /// The ODE table's column headers, `[timeVar, states…, auxiliaries…]`.
+    /// [`Self::columns`] once the block is classified (Phase L4: what a watch names).
+    pub(crate) fn classified_columns(&mut self) -> Result<Vec<String>> {
+        self.classify()?;
+        Ok(self.columns())
+    }
+
     pub fn columns(&self) -> Vec<String> {
         let mut columns = Vec::with_capacity(1 + self.states.len() + self.aux_names.len());
         columns.push(self.time_var.clone());
@@ -596,6 +602,8 @@ impl<'a> DynamicSolver<'a> {
                 &p,
                 &mut st.knots,
             )?);
+            st.watch_prev = None;
+            sampler.watch_crossings(st, chunk)?;
         }
         let grid = st.grid();
         let time_of = |i: usize| crate::ode::live::grid_time(grid, i);
@@ -651,11 +659,127 @@ impl<'a> DynamicSolver<'a> {
             }
             stepper.step(&p, &mut st.knots)?;
             stepped = true;
+            if !st.watches.is_empty() {
+                // The stepper is borrowed from `st`; the watches read only
+                // the knots and the sampler, never the stepper's chain.
+                // A set event ends its step at the crossing, the knot there
+                // holding the state after the reset.
+                let jump = stepper.recorded()[st.events_sent..]
+                    .last()
+                    .filter(|hit| hit.time == st.knots.last_time());
+                let mut watch_st = WatchState {
+                    knots: &st.knots,
+                    watches: &st.watches,
+                    prev: &mut st.watch_prev,
+                    jump,
+                };
+                sampler.watch_step(&mut watch_st, chunk)?;
+            }
         }
         if one_step {
             let (t, y) = stepper.state();
             chunk.state = Some(sampler.table_row(t, y)?);
         }
+        Ok(())
+    }
+
+    /// Phase L4: [`Self::watch_step`] on the run's own state.
+    fn watch_crossings(
+        &self,
+        st: &mut crate::ode::live::ExplicitLive,
+        chunk: &mut crate::ode::live::Chunk,
+    ) -> Result<()> {
+        if st.watches.is_empty() {
+            return Ok(());
+        }
+        let mut watch_st = WatchState {
+            knots: &st.knots,
+            watches: &st.watches,
+            prev: &mut st.watch_prev,
+            jump: None,
+        };
+        self.watch_step(&mut watch_st, chunk)
+    }
+
+    /// Phase L4: the watches that crossed in the accepted step ending at the
+    /// knots' last time, each located by bisection on the step's interpolant
+    /// and recorded as an event. `self` is the sampler, so the stepper's warm
+    /// chain is untouched: the states and times stay the batch run's. A watch
+    /// on an auxiliary is evaluated by the sampler's own algebraic solve,
+    /// whose warm start the next row then follows, so that row's auxiliaries
+    /// agree with batch to the solve's tolerance rather than bit for bit.
+    ///
+    /// A step that ended on a set event is two parts: the continuous one up to
+    /// the crossing, which ends in the state before the reset and is bisected
+    /// on its own interpolant, and the jump, which crosses at the event time.
+    /// The knots' interpolant joins the state before the step to the state
+    /// after the reset, a curve the run never followed.
+    fn watch_step(
+        &self,
+        st: &mut WatchState<'_>,
+        chunk: &mut crate::ode::live::Chunk,
+    ) -> Result<()> {
+        let states = self.states.len();
+        let g = |t: f64, y: &[f64], w: &crate::ode::live::Watch| -> Result<f64> {
+            let value = match w.column {
+                0 => t,
+                c if c <= states => y[c - 1],
+                c => self.table_row(t, y)?[c],
+            };
+            Ok(value - w.threshold)
+        };
+        let t1 = st.knots.last_time();
+        let y1 = st.knots.sample(t1);
+        let now = st
+            .watches
+            .iter()
+            .map(|w| g(t1, &y1, w))
+            .collect::<Result<Vec<f64>>>()?;
+        if let Some((t0, before)) = st.prev.take() {
+            // The continuous part, and the value each watch ends it on.
+            let continuous;
+            let part = match st.jump {
+                Some(hit) => {
+                    let k = st.knots.t.len() - 2;
+                    continuous = crate::ode::integrator::Knots {
+                        t: vec![st.knots.t[k], hit.time],
+                        y: vec![st.knots.y[k].clone(), hit.state.clone()],
+                        f: vec![st.knots.f[k].clone(), self.rhs(hit.time, &hit.state)?],
+                    };
+                    &continuous
+                }
+                None => st.knots,
+            };
+            let t_end = part.last_time();
+            let y_end = part.sample(t_end);
+            for (i, w) in st.watches.iter().enumerate() {
+                let end = g(t_end, &y_end, w)?;
+                let time = if t_end > t0 && w.crossed(before[i], end) {
+                    let (mut lo, mut hi) = (t0, t_end);
+                    for _ in 0..200 {
+                        let mid = 0.5 * (lo + hi);
+                        if mid <= lo || mid >= hi {
+                            break;
+                        }
+                        if w.crossed(before[i], g(mid, &part.sample(mid), w)?) {
+                            hi = mid;
+                        } else {
+                            lo = mid;
+                        }
+                    }
+                    hi
+                } else if st.jump.is_some() && w.crossed(end, now[i]) {
+                    t_end
+                } else {
+                    continue;
+                };
+                chunk.events.push(TableEventHit {
+                    name: w.name.clone(),
+                    time,
+                });
+            }
+        }
+        *st.prev = Some((t1, now));
         Ok(())
     }
 
@@ -1911,6 +2035,15 @@ fn fmt_number(v: f64) -> String {
     } else {
         format!("{v}")
     }
+}
+
+/// What [`DynamicSolver::watch_step`] reads and keeps of a live explicit run.
+struct WatchState<'a> {
+    knots: &'a crate::ode::integrator::Knots,
+    watches: &'a [crate::ode::live::Watch],
+    prev: &'a mut Option<(f64, Vec<f64>)>,
+    /// The set event the step ended on, with the state before its reset.
+    jump: Option<&'a crate::ode::problem::EventRecord>,
 }
 
 #[cfg(test)]

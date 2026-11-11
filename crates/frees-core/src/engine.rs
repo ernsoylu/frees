@@ -768,6 +768,8 @@ pub(crate) struct LiveCapture {
     pub(crate) want_base: bool,
     pub(crate) base: Option<Scope>,
     pub(crate) session: Option<crate::ode::live::LiveSession>,
+    /// Phase L4: pause conditions as written (`T > 60 [C]`), for this session only.
+    pub(crate) watches: Vec<String>,
 }
 
 /// Run every `DYNAMIC` block with the solved scalars as its base values, and
@@ -819,15 +821,58 @@ fn solve_dynamic_systems(
             }
             _ => system,
         };
+        let parse = |columns: &[String]| {
+            capture
+                .watches
+                .iter()
+                .map(|w| crate::ode::live::Watch::parse(w, columns))
+                .collect::<crate::diag::Result<Vec<_>>>()
+        };
         if !crate::ode::dynamic::is_ida_method(&system.options.method) {
-            let run =
+            let mut run =
                 crate::ode::live::ExplicitRun::new(system, base_values, inner, specs, &doc.defs)?;
-            capture.session = Some(crate::ode::live::LiveSession::explicit(
-                doc.defs.clone(),
-                run,
-            ));
+            let watches = parse(run.columns())?;
+            let names = watches.iter().map(|w| w.name.clone()).collect();
+            run.watch(watches);
+            let mut session = crate::ode::live::LiveSession::explicit(doc.defs.clone(), run);
+            session.watch(names);
+            capture.session = Some(session);
             return Ok(Vec::new());
         }
+        // An IDA watch is a session-only `record` event of the block, so IDA's
+        // own root search finds it; a root return interpolates and resumes
+        // without restarting, so the rows stay the batch rows.
+        let watched;
+        let mut names = Vec::new();
+        let system = if capture.watches.is_empty() {
+            system
+        } else {
+            let columns = crate::ode::dynamic::DynamicSolver::new(
+                system,
+                base_values,
+                &doc.defs,
+                pinned_solver(&inner, specs, ctx),
+            )
+            .classified_columns()?;
+            let mut s = system.clone();
+            for w in parse(&columns)? {
+                use crate::ast::Expr;
+                s.events.push(crate::ode::events::DynamicEvent::new(
+                    w.name.clone(),
+                    Expr::Var(columns[w.column].to_lowercase()),
+                    Expr::Num {
+                        value: w.threshold,
+                        unit: None,
+                        is_imaginary: false,
+                    },
+                    Some(if w.direction > 0 { "rising" } else { "falling" }.to_string()),
+                    "record",
+                ));
+                names.push(w.name);
+            }
+            watched = s;
+            &watched
+        };
         let algebraic = pinned_solver(&inner, specs, ctx);
         let mut run =
             crate::ode::dynamic::DynamicSolver::new(system, base_values, &doc.defs, algebraic)
@@ -837,7 +882,10 @@ fn solve_dynamic_systems(
         if let Some(h) = capture.max_step.filter(|h| *h > 0.0 && h.is_finite()) {
             run.cap_step(h);
         }
-        capture.session = Some(crate::ode::live::LiveSession::new(doc.defs.clone(), run));
+        run.watch(names.clone());
+        let mut session = crate::ode::live::LiveSession::new(doc.defs.clone(), run);
+        session.watch(names);
+        capture.session = Some(session);
         return Ok(Vec::new());
     }
     let mut tables = Vec::with_capacity(doc.dynamics.len());
