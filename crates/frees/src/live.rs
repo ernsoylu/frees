@@ -45,12 +45,24 @@ pub fn live_open_json(source: &str, request_json: &str, block: u32) -> String {
     let overrides = overrides_of(&request);
     let source = apply_overrides(source, request.overrides.as_deref().unwrap_or_default());
     let tables = function_table_defs_of(&request.function_tables);
+    let raw = serde_json::from_str::<serde_json::Value>(request_json).ok();
     // K4: a retry after a failure caps the step for this session.
-    let max_step = serde_json::from_str::<serde_json::Value>(request_json)
-        .ok()
+    let max_step = raw
+        .as_ref()
         .and_then(|v| v.get("liveMaxStep").and_then(serde_json::Value::as_f64));
+    // L4: conditions that pause the run where they cross (`T > 60 [C]`).
+    let watches: Vec<String> = raw
+        .as_ref()
+        .and_then(|v| v.get("liveWatches").and_then(Value::as_array))
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(String::from)
+                .collect()
+        })
+        .unwrap_or_default();
     let opened = PreparedDocument::new(&source, &settings, &overrides, &tables)
-        .and_then(|doc| doc.open_live(block as usize, max_step));
+        .and_then(|doc| doc.open_live_watching(block as usize, max_step, &watches));
     let (solution, session) = match opened {
         Ok(opened) => opened,
         Err(failure) => {
@@ -121,6 +133,7 @@ fn chunk_reply(session: &LiveSession, chunk: Chunk) -> (String, Vec<f64>) {
             .map(|hit| json!({ "name": hit.name, "time": hit.time }))
             .collect::<Vec<Value>>(),
         "stopped": chunk.stopped,
+        "paused": chunk.paused,
         "finished": session.finished(),
         "state": chunk.state,
         "clock": clock,

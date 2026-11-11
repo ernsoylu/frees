@@ -49,6 +49,8 @@ export interface LiveChunk {
   clock: { t: number; h: number } | null
   /** The integration failed after these rows; the rows stay valid. */
   error: string | null
+  /** Phase L4: the pause condition that crossed in this chunk and ended it, as written. */
+  paused?: string | null
 }
 
 /** One applied live input change: the run time it took effect at, the value in SI. */

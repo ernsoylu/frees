@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ActionIcon, Badge, Button, Group, Paper, Select, Slider, Stack, Text, Tooltip } from '@mantine/core'
+import { ActionIcon, Badge, Button, Group, Paper, Select, Slider, Stack, Text, TextInput, Tooltip } from '@mantine/core'
 import { IconPlayerPause, IconPlayerPlay, IconWaveSine, IconX } from '@tabler/icons-react'
 import { LiveClient, type LiveChunk, type LiveEvent, type LiveInputChange, type LiveStepKind, type LiveTable } from './wasm/liveClient'
 import type { ModelRevisionTracker } from './modelRevision'
@@ -72,6 +72,8 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   const [retryStep, setRetryStep] = useState<number | null>(null)
   const [lastInput, setLastInput] = useState<LiveInputChange | null>(null)
   const [scope, setScope] = useState(false)
+  /** Phase L4: pause conditions, `;`-separated, sent when the run opens. */
+  const [watchText, setWatchText] = useState('')
   /** The store, for drawing; `storeRef` is the one the loop writes. */
   const [store, setStore] = useState<LiveStore | null>(null)
   const spectrum = useCallback((values: ArrayLike<number>, fs: number, detrend: boolean) => driver.spectrum(values, fs, detrend), [driver])
@@ -201,6 +203,15 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
       setStep(chunk.clock.h)
     }
     if (chunk.events.length) setLastEvent(chunk.events[chunk.events.length - 1])
+    // L4: a pause condition crossed; the engine ended the chunk on it.
+    const paused = !chunk.error && !chunk.finished ? chunk.paused : null
+    if (paused) {
+      const at = chunk.events.find((e) => e.name === paused)?.time
+      const unit = headerRef.current?.units[0] || 's'
+      setNotice(`Paused: ${paused}${at === undefined ? '' : ` at t = ${fmt(at)} ${unit}`}.`)
+      go('paused')
+      publish(false)
+    }
     if (chunk.error) {
       // Paused at the last accepted row, which is what the store holds: the
       // failed step never produced one, so nothing non-finite is published.
@@ -285,8 +296,13 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     let built: { source: string; request: string }
     try {
       built = buildOpen()
-      // A retry after a failure caps the integrator's step for this run only.
-      if (maxStep !== undefined) built = { ...built, request: JSON.stringify({ ...JSON.parse(built.request), liveMaxStep: maxStep }) }
+      // A retry after a failure caps the integrator's step for this run only;
+      // pause conditions (L4) go with every open, a retry's included.
+      const watches = watchText.split(';').map((w) => w.trim()).filter(Boolean)
+      if (maxStep !== undefined || watches.length) {
+        const extra = { ...(maxStep === undefined ? {} : { liveMaxStep: maxStep }), ...(watches.length ? { liveWatches: watches } : {}) }
+        built = { ...built, request: JSON.stringify({ ...JSON.parse(built.request), ...extra }) }
+      }
     } catch (error) {
       go('closed')
       setNotice(error instanceof Error ? error.message : String(error))
@@ -406,6 +422,9 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
           <Button size="compact-xs" variant="subtle" disabled={busy || ended || status === 'running'} onClick={() => void stepBy('event')}>Next event</Button>
           <Button size="compact-xs" variant="subtle" disabled={busy || ended || status === 'running'} onClick={() => void stepBy('accepted')}>One step</Button>
           <Button size="compact-xs" variant="subtle" disabled={!isOpen || busy} onClick={() => void reset()}>Reset</Button>
+          <Tooltip label={isOpen ? 'Close the run to change what pauses it' : 'Pause where a column crosses a value: L < 2 [m]; T > 60 [C]'}>
+            <TextInput size="xs" w={170} aria-label="Pause when" placeholder="Pause when… T > 60 [C]" value={watchText} onChange={(e) => setWatchText(e.currentTarget.value)} disabled={isOpen} />
+          </Tooltip>
           <Text size="xs" c="dimmed" ml={6}>Speed</Text>
           <Slider
             w={140}

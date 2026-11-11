@@ -197,3 +197,43 @@ fn a_scope_spectrum_peaks_at_the_signal_frequency() {
     let refused: Value = serde_json::from_str(&live_spectrum_json(&[1.0], fs, false)).unwrap();
     assert!(refused["error"].is_string(), "{refused}");
 }
+
+#[test]
+fn a_watch_in_the_request_pauses_the_run_where_it_crosses() {
+    let opened: Value = serde_json::from_str(&live_open_json(
+        BALL,
+        r#"{"liveWatches":["h < 50 [cm]"]}"#,
+        0,
+    ))
+    .unwrap();
+    assert_eq!(opened["ok"], true, "{opened}");
+    let id = opened["session"].as_u64().unwrap() as u32;
+    let chunk = parse(&live_advance_json(id, 2.0, 1e9));
+    // Free fall from 1 m reaches 0.5 m at √(0.5/4.905) s.
+    assert_eq!(chunk["paused"], "h < 50 [cm]", "{chunk}");
+    let hit = chunk["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["name"] == "h < 50 [cm]")
+        .unwrap();
+    assert!(
+        (hit["time"].as_f64().unwrap() - (0.5f64 / 4.905).sqrt()).abs() < 1e-4,
+        "{hit}"
+    );
+    // The next chunk carries on past it, to the bounce.
+    let next = parse(&live_advance_json(id, 2.0, 1e9));
+    assert!(
+        next["paused"].is_null() || next["paused"] == "h < 50 [cm]",
+        "{next}"
+    );
+    live_dispose(id);
+
+    let refused: Value =
+        serde_json::from_str(&live_open_json(BALL, r#"{"liveWatches":["depth > 1"]}"#, 0)).unwrap();
+    assert_eq!(refused["ok"], false);
+    assert!(
+        refused["error"].as_str().unwrap().contains("`depth`"),
+        "{refused}"
+    );
+}

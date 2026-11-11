@@ -483,3 +483,110 @@ fn reset_restores_the_opening_inputs() {
         assert_eq!(bits(&rows), bits(&table.rows), "{method}");
     }
 }
+
+/// Phase L4: a tank draining as `L = (2 − 0.2 t)²`, with `q = 0.4·√L`.
+const TANK: &str = "DYNAMIC tank (method = ida, time = 0 .. 10, points = 41)\n  \
+  der(L) = -0.4*sqrt(max(L, 0))\n  \
+  q = 0.4*sqrt(max(L, 0))\n  \
+  L(0) = 4\n\
+END\n";
+
+/// Runs a watched session to `tf` a frame at a time; the rows, and each
+/// pause with its event's time.
+fn run_watched(session: &mut LiveSession, tf: f64) -> (Vec<Vec<f64>>, Vec<(String, f64)>) {
+    let (mut rows, mut pauses) = (Vec::new(), Vec::new());
+    for _ in 0..1000 {
+        let chunk = session.advance(tf, &mut |_| true);
+        assert!(chunk.error.is_none(), "{:?}", chunk.error);
+        if let Some(name) = &chunk.paused {
+            let hit = chunk
+                .events
+                .iter()
+                .find(|e| &e.name == name)
+                .expect("the pause is an event");
+            pauses.push((name.clone(), hit.time));
+        }
+        rows.extend(chunk.rows);
+        if rows.last().is_some_and(|r: &Vec<f64>| r[0] >= tf) {
+            break;
+        }
+    }
+    (rows, pauses)
+}
+
+#[test]
+fn a_watch_pauses_where_it_crosses_and_the_rows_stay_the_batch_rows() {
+    for method in ["ida", "ode45", "rk4"] {
+        let src = TANK.replace("method = ida", &format!("method = {method}"));
+        let table = batch(&src);
+        let doc = PreparedDocument::new(&src, &SolverSettings::default(), &[], &[])
+            .unwrap_or_else(|e| panic!("{}", e.error));
+        let watches = ["L < 2.25".to_string(), "Q < 0.4 [m^3/s]".to_string()];
+        let mut session = doc
+            .open_live_watching(0, None, &watches)
+            .unwrap_or_else(|e| panic!("{}", e.error))
+            .1;
+        let (rows, pauses) = run_watched(&mut session, 10.0);
+        // Each in turn, where the analytic solution crosses (√L = 1.5 at 2.5 s, 1 at 5 s).
+        assert_eq!(
+            pauses.iter().map(|p| p.0.as_str()).collect::<Vec<_>>(),
+            ["L < 2.25", "Q < 0.4 [m^3/s]"],
+            "{method}"
+        );
+        assert!((pauses[0].1 - 2.5).abs() < 1e-3, "{method}: {pauses:?}");
+        assert!((pauses[1].1 - 5.0).abs() < 1e-3, "{method}: {pauses:?}");
+        // The run is the batch run: IDA bit for bit; an explicit run's time and
+        // state bit for bit, its auxiliary within the sampler's solve.
+        assert_eq!(rows.len(), table.rows.len(), "{method}");
+        if method == "ida" {
+            assert_eq!(bits(&rows), bits(&table.rows));
+        } else {
+            for (live, batch) in rows.iter().zip(&table.rows) {
+                assert_eq!(
+                    bits(&[live[..2].to_vec()]),
+                    bits(&[batch[..2].to_vec()]),
+                    "{method}"
+                );
+                assert!(
+                    (live[2] - batch[2]).abs() <= 1e-6 * batch[2].abs().max(1.0),
+                    "{method}: {live:?} {batch:?}"
+                );
+            }
+        }
+        // A reset rearms the watches.
+        session.reset();
+        assert_eq!(run_watched(&mut session, 10.0).1.len(), 2, "{method}");
+    }
+}
+
+#[test]
+fn a_pause_condition_is_parsed_against_the_columns_in_si() {
+    use frees_core::ode::live::Watch;
+    let columns = ["t", "L", "body$port$T"].map(String::from);
+    let w = Watch::parse(" body.port.T >= 60 [C] ", &columns).unwrap();
+    assert_eq!(
+        (w.name.as_str(), w.column, w.direction),
+        ("body.port.T >= 60 [C]", 2, 1)
+    );
+    assert!((w.threshold - 333.15).abs() < 1e-9);
+    assert_eq!(Watch::parse("l < -2", &columns).unwrap().threshold, -2.0);
+    for (bad, says) in [
+        ("L 2", "needs `>` or `<`"),
+        ("x > 1", "not a column"),
+        ("L > 1 [zz]", "known unit"),
+        ("L > a + 1", "must be a number"),
+    ] {
+        let e = Watch::parse(bad, &columns).unwrap_err().to_string();
+        assert!(e.contains(says), "{bad}: {e}");
+    }
+    // A watch the block cannot carry fails the open, by name.
+    let doc = PreparedDocument::new(TANK, &SolverSettings::default(), &[], &[])
+        .unwrap_or_else(|e| panic!("{}", e.error));
+    let e = doc
+        .open_live_watching(0, None, &["V > 1".into()])
+        .err()
+        .expect("refused")
+        .error
+        .to_string();
+    assert!(e.contains("`V`"), "{e}");
+}
