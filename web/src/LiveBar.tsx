@@ -168,6 +168,8 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   const shown = status !== 'closed' && store && table ? store : null
   useEffect(() => {
     onRows?.(shown && table ? { store: shown, header: table } : null)
+    // Unmounting the bar disposes the run, so the canvas must drop its rows too.
+    return () => onRows?.(null)
   }, [shown, table, onRows])
   useEffect(() => {
     if (!inputRef) return

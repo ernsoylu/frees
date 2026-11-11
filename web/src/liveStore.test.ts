@@ -33,3 +33,16 @@ it('stays bounded: the oldest rows and their events go first', () => {
   store.clear()
   expect(store.toTable(header, false).rows).toEqual([])
 })
+
+it('finds a window by time on a wrapped ring, rows at equal times included (L3b)', () => {
+  const store = new LiveStore(2, 2 * 100)
+  // 250 rows through a 100-row ring; t = 200 appears twice (an event row).
+  const times = Array.from({ length: 250 }, (_, i) => (i <= 200 ? i : i - 1))
+  store.push(rowsOf(times), times.length)
+  expect(store.series(1, 199.5).t[0]).toBe(200)
+  expect(Array.from(store.series(1, 200).t.slice(0, 3))).toEqual([200, 200, 201])
+  expect(store.series(1, 300).t.length).toBe(0)
+  expect(store.series(1).t.length).toBe(100)
+  expect(store.series(1).t[0]).toBe(times[150])
+  expect(store.series(1, 240).y[0]).toBe(2400)
+})
