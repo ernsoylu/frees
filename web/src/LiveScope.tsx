@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Checkbox, Group, MultiSelect, NumberInput, Stack, Text } from '@mantine/core'
 import type { LiveStore } from './liveStore'
 import type { LiveSpectrum, LiveTable } from './wasm/liveClient'
-import { buckets, detrend as detrendLine, measure, spectrumSamples } from './scopeMath'
+import { buckets, detrend as detrendLine, envelopePath, measure, spectrumSamples } from './scopeMath'
 
 interface Props {
   store: LiveStore | null
@@ -21,24 +21,7 @@ const fmt = (v: number) => String(Number(v.toPrecision(4)))
 
 type Spectrum = { freq: number[]; power: number[] }
 
-/** A lane's envelope: each column's min-to-max stroke, joined left to right. */
-function envelope(min: Float64Array, max: Float64Array): { d: string; lo: number; hi: number } {
-  let lo = Infinity
-  let hi = -Infinity
-  for (let c = 0; c < min.length; c++) {
-    if (Number.isNaN(min[c])) continue
-    lo = Math.min(lo, min[c])
-    hi = Math.max(hi, max[c])
-  }
-  const y = (v: number) => (hi > lo ? LANE - 4 - ((v - lo) / (hi - lo)) * (LANE - 8) : LANE / 2)
-  let d = ''
-  for (let c = 0; c < min.length; c++) {
-    if (Number.isNaN(min[c])) continue
-    const x = (((c + 0.5) / min.length) * W).toFixed(1)
-    d += `${d ? 'L' : 'M'}${x},${y(max[c]).toFixed(1)}L${x},${y(min[c]).toFixed(1)}`
-  }
-  return { d, lo, hi }
-}
+const envelope = (min: Float64Array, max: Float64Array) => envelopePath(min, max, W, LANE)
 
 /**
  * Phase L3: the rolling scope. Up to four traces in lanes over one time axis,

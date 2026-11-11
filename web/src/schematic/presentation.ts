@@ -213,6 +213,8 @@ export interface SchematicPresentation extends SheetState {
   routes: Record<string, WireRoute>
   /** RUN-03: the variable a block's badge shows instead of the automatic one, by block id (lower-case names). */
   badges: Record<string, string>
+  /** L3b: the variable a block's mini-scope traces while a live run is open, by block id (lower-case names). */
+  scopes: Record<string, string>
   /** RUN-03: pinned watch rows, in order (lower-case variable names). */
   watch: string[]
   /** RUN-03: how a variable reads, by lower-case name. Display only: inputs are never rewritten. */
@@ -272,6 +274,7 @@ export function renamePresentation(p: SchematicPresentation, renames: ReadonlyMa
     areas: p.areas.map((a) => ({ ...a, members: a.members.map(id) })),
     styles: { ...(p.styles ?? EMPTY_STYLES), instances: move((p.styles ?? EMPTY_STYLES).instances) },
     badges: badges(p.badges ?? {}),
+    scopes: badges(p.scopes ?? {}),
     watch: (p.watch ?? []).map(id),
     formats: move(p.formats ?? {}),
     views: (p.views ?? []).map((v) => ({ ...v, scope: id(v.scope), badges: badges(v.badges), focus: v.focus && { ...v.focus, id: id(v.focus.id) } })),
@@ -424,6 +427,7 @@ export const EMPTY_PRESENTATION: SchematicPresentation = {
   styles: EMPTY_STYLES,
   routes: {},
   badges: {},
+  scopes: {},
   watch: [],
   formats: {},
   overlay: { metric: '', arrows: false },
@@ -711,6 +715,8 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
   const parsedBadges = badgesOf(raw.badges)
   const badges = parsedBadges.badges
   repaired += parsedBadges.bad
+  const parsedScopes = badgesOf(raw.scopes)
+  repaired += parsedScopes.bad
   const watch = [...new Set(list(raw.watch).filter(variable))].slice(0, MAX_ENTRIES)
   repaired += list(raw.watch).length - watch.length
   const formats: Record<string, VariableFormat> = {}
@@ -749,7 +755,7 @@ export function sanitizePresentation(value: unknown): { presentation: SchematicP
       && Object.keys(symbols).length < MAX_SYMBOLS) symbols[id] = { name: sym.name, svg: clean.svg }
     else repaired++
   }
-  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes, badges, watch, formats, overlay: parsedOverlay.overlay, views, annotations, lineColors, symbols, ...sheets.state }, repaired }
+  return { presentation: { positions, legacyOffsets: legacy.offsets, locked, areas, view, styles: styles.styles, routes, badges, scopes: parsedScopes.badges, watch, formats, overlay: parsedOverlay.overlay, views, annotations, lineColors, symbols, ...sheets.state }, repaired }
 }
 
 /**

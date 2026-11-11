@@ -73,6 +73,8 @@ import {
 } from './api'
 import { ModelRevisionTracker } from './modelRevision'
 import { canvasInputLine, liftCanvasInputs, type CanvasInput } from './liveCanvas'
+import type { LiveStore } from './liveStore'
+import type { LiveTable } from './wasm/liveClient'
 import type { LiveControl } from './schematic/LiveControls'
 import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, withSliderBounds, type PinnedSlider } from './sliders'
 import { compareRuns, describeRun, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
@@ -616,6 +618,8 @@ export default function App() {
   /** Phase L2: the canvas inputs the open live run lifted, their values, and whether a run is open to them. */
   const [liveCanvas, setLiveCanvas] = useState<{ inputs: CanvasInput[]; values: Record<string, number> }>({ inputs: [], values: {} })
   const [liveOpen, setLiveOpen] = useState(false)
+  /** Phase L3b: the open run's rows, which the canvas mini-scopes trace. */
+  const [liveRows, setLiveRows] = useState<{ store: LiveStore; header: LiveTable } | null>(null)
   const setCanvasInput = useCallback((input: CanvasInput, value: number) => {
     const live = liveInputRef.current
     if (!live) return
@@ -623,14 +627,15 @@ export default function App() {
     live([canvasInputLine(input, value)])
   }, [])
   const liveControls = useMemo(() => {
-    if (!liveOpen || !liveCanvas.inputs.length) return null
+    const inputs = liveOpen ? liveCanvas.inputs : []
+    if (!inputs.length && !liveRows) return null
     const controls = new Map<string, LiveControl[]>()
-    for (const input of liveCanvas.inputs) {
+    for (const input of inputs) {
       const block = input.block.toLowerCase()
       controls.set(block, [...(controls.get(block) ?? []), { input, value: liveCanvas.values[input.variable.toLowerCase()] ?? input.value }])
     }
-    return { controls, set: setCanvasInput }
-  }, [liveOpen, liveCanvas, setCanvasInput])
+    return { controls, set: setCanvasInput, rows: liveRows }
+  }, [liveOpen, liveCanvas, setCanvasInput, liveRows])
   // A release that lands while a solve is in flight must not be dropped: the
   // app's policy elsewhere is "skip rather than queue", which is right for a
   // lint tick (another keystroke follows) but wrong here — the displayed
@@ -3392,6 +3397,7 @@ export default function App() {
                         setLiveCanvas((c) => ({ ...c, values: opening }))
                       }}
                       onOpenChange={setLiveOpen}
+                      onRows={setLiveRows}
                       onInputsSettled={(lines, applied) => {
                         const names = lines.map((l) => l.split('=')[0].trim().toLowerCase())
                         if (applied) {

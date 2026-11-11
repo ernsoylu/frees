@@ -3,6 +3,8 @@
 // strip's numbers are tested apart from any drawing. The rows are the raw
 // recording; buckets are display only and never feed a measurement.
 
+import type { LiveTable } from './wasm/liveClient'
+
 /** Per pixel column, the least and greatest sample in it (`NaN` where none falls). */
 export function buckets(t: ArrayLike<number>, y: ArrayLike<number>, t0: number, t1: number, columns: number): { min: Float64Array; max: Float64Array } {
   const min = new Float64Array(columns).fill(Number.NaN)
@@ -17,6 +19,28 @@ export function buckets(t: ArrayLike<number>, y: ArrayLike<number>, t0: number, 
     if (!(y[i] <= max[k])) max[k] = y[i]
   }
   return { min, max }
+}
+
+/**
+ * The SVG path of bucketed extremes in a `width` × `height` box: each column's
+ * min-to-max stroke, joined left to right, with 4 units of margin top and bottom.
+ */
+export function envelopePath(min: Float64Array, max: Float64Array, width: number, height: number): { d: string; lo: number; hi: number } {
+  let lo = Infinity
+  let hi = -Infinity
+  for (let c = 0; c < min.length; c++) {
+    if (Number.isNaN(min[c])) continue
+    lo = Math.min(lo, min[c])
+    hi = Math.max(hi, max[c])
+  }
+  const y = (v: number) => (hi > lo ? height - 4 - ((v - lo) / (hi - lo)) * (height - 8) : height / 2)
+  let d = ''
+  for (let c = 0; c < min.length; c++) {
+    if (Number.isNaN(min[c])) continue
+    const x = (((c + 0.5) / min.length) * width).toFixed(1)
+    d += `${d ? 'L' : 'M'}${x},${y(max[c]).toFixed(1)}L${x},${y(min[c]).toFixed(1)}`
+  }
+  return { d, lo, hi }
 }
 
 /** `y` less its least-squares line in `t`. */
@@ -140,4 +164,15 @@ export function measure(t: ArrayLike<number>, y: ArrayLike<number>): Measurement
     settling = lastOut < 0 ? 0 : t[Math.min(n - 1, lastOut + 1)] - t[0]
   }
   return { min, max, peak: Math.max(Math.abs(min), Math.abs(max)), peakToPeak: max - min, mean: area / span, rms: Math.sqrt(square / span), frequency, duty: above / span, overshoot, settling }
+}
+
+/** The live table's column for a lower-case variable name (`body.port.t` is column `body$port$T`), or -1. */
+export function columnOf(header: LiveTable, variable: string): number {
+  return header.vars.findIndex((v, i) => i > 0 && v.toLowerCase().replaceAll('$', '.') === variable)
+}
+
+/** The live table's columns that belong to `block` (`body.port.t` for block `body`), as lower-case dotted names. */
+export function liveColumnsOf(header: LiveTable, block: string): string[] {
+  const prefix = `${block.toLowerCase()}.`
+  return header.vars.slice(1).map((v) => v.toLowerCase().replaceAll('$', '.')).filter((v) => v.startsWith(prefix))
 }

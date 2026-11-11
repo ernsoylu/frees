@@ -233,3 +233,18 @@ it('takes slider values as live inputs, one change in flight, and a reset restor
   fireEvent.click(screen.getByLabelText('Close live run'))
   await waitFor(() => expect(inputRef.current).toBeNull())
 })
+
+it('hands the open run’s rows to the canvas until it closes (L3b)', async () => {
+  const { driver } = fakeDriver(1000)
+  const onRows = vi.fn()
+  render(
+    <MantineProvider>
+      <LiveBar blocks={['tank']} tracker={new ModelRevisionTracker()} buildOpen={() => ({ source: 'src', request: '{}' })} driver={driver} onRows={onRows} />
+    </MantineProvider>,
+  )
+  fireEvent.click(screen.getByText('Next sample'))
+  await waitFor(() => expect(onRows.mock.lastCall?.[0]?.store.size).toBeGreaterThan(0))
+  expect(onRows.mock.lastCall![0].header.vars.length).toBeGreaterThan(1)
+  fireEvent.click(screen.getByLabelText('Close live run'))
+  await waitFor(() => expect(onRows.mock.lastCall?.[0]).toBeNull())
+})

@@ -22,6 +22,20 @@ export class LiveStore {
   dropped = 0
   private events: LiveEvent[] = []
   readonly capacity: number
+  /** Bumped on every push and clear, for drawings that follow the store (L3b). */
+  version = 0
+  private readonly listeners = new Set<() => void>()
+
+  /** Call `listener` after every push and clear; returns the unsubscribe. */
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  private changed(): void {
+    this.version += 1
+    for (const listener of this.listeners) listener()
+  }
 
   constructor(readonly numCols: number, maxValues = MAX_VALUES) {
     this.capacity = Math.max(2, Math.floor(maxValues / Math.max(1, numCols)))
@@ -65,6 +79,7 @@ export class LiveStore {
       }
     }
     this.events.push(...events)
+    this.changed()
   }
 
   /** Row `i`, oldest first. */
@@ -91,6 +106,7 @@ export class LiveStore {
     this.count = 0
     this.dropped = 0
     this.events = []
+    this.changed()
   }
 
   /**
