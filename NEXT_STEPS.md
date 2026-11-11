@@ -852,6 +852,31 @@ entry here is checked off with evidence when it closes.
       - `LiveBar.test.tsx` +1: the field's conditions reach the open request trimmed, a paused chunk stops the pull loop and publishes, and the field is disabled while open.
       - In the browser on `pi-temperature-regulation` at 1,000 s/s, "body.port.T > 340 [K]" paused the run at t = 75.812 s.
       - WASM 3,994.9 KiB raw, within the 5,120 KiB gate.
+  - **L5 done 2026-11-11 (`l5-recorder`): the recorder.**
+    - **What it keeps** (`web/src/liveRecorder.ts`). Every accepted row of the run, from the row the run stands at when Record is pressed (or from the first row, when Record opens a closed run), in a buffer of its own. The Live bar's display ring drops its oldest rows on a long run; the recorder never drops one. A recording ends in one of three ways:
+      - **Finite duration.** "Record for" ends it at the first row at or past start + duration, within a rounding of the grid time. The run goes on afterwards.
+      - **Explicit export.** With no duration, "Stop and export" ends it.
+      - **Size limit.** A recording that reaches the store's 4,000,000-value limit ends there; it is never truncated silently.
+    - **Status.** Each recording ends `complete`, `partial` or `failed`, with a stated reason:
+      - **complete:** the duration elapsed; it was exported with no duration; or a stop event ended the run of a recording with no duration.
+      - **partial:** the run ended, was reset, was closed or had its model changed before the duration elapsed; it was exported early; or it reached its size limit.
+      - **failed:** the integration failed. The rows up to the last accepted one are kept.
+      The bar reports the row count, the span and the reason, and "Export recording" saves an ended recording until the next Record.
+    - **The file** (`<block>-recording.json`, `format: frees-live-recording`, version 1) holds:
+      - **Rows.** Each row in full, so every value round-trips through JSON to the bit.
+      - **Columns** and units.
+      - **Span.** From, to, the requested duration and the time unit.
+      - **Wall-clock times.** When the recording started and ended.
+      - **Events** inside the span.
+      - **Solver settings,** as the run uses them: method, rtol, atol, the grid t0 / tf / points, a fixed step, and the step cap (the block's or a retry's; IDA's batch path is uncapped, so it names only a retry's). `LiveSession::settings`.
+      - **Input timeline:** every change since the open, in SI. Changes before `span.from` are the inputs in force when the recording started.
+      - **Property provenance:** the backend description, and the fluids the document names. The fluid list comes from the same whole-word scan the worker uses to install fluids, so it can name more fluids than the run uses, but never fewer.
+    - **Bridge.** `live_open` answers `settings` and `provenance` beside the table header.
+    - **Evidence.**
+      - `liveRecorder.test.ts` (3): a 1 s recording completes at its end row and takes nothing after it, with values exact through JSON and only the events in its span; a recording started at the current row skips rows it already has, and snapshots the input timeline when it ends; the size limit ends a recording partial.
+      - `LiveBar.test.tsx` +2: Record opens a closed run and records a 0.5 s duration of it, while the run goes on; the export carries the settings and provenance. A reset ends a recording partial, and Stop and export ends one with no duration as complete.
+      - `crates/frees/tests/live.rs` +1: IDA's settings with no cap; an `rk4` block's fixed step with a retry's cap; a property call's fluid.
+      - `live.wasm.test.ts`: the same fields through the compiled engine.
   - **Acceptance.**
     - RC and thermal load steps, a pressure command and a PID gain change each match a reference batch run with piecewise inputs.
     - A rejected edit rolls back and keeps a consistent DAE state.

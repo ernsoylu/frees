@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ActionIcon, Badge, Button, Group, Paper, Select, Slider, Stack, Text, TextInput, Tooltip } from '@mantine/core'
-import { IconPlayerPause, IconPlayerPlay, IconWaveSine, IconX } from '@tabler/icons-react'
-import { LiveClient, type LiveChunk, type LiveEvent, type LiveInputChange, type LiveStepKind, type LiveTable } from './wasm/liveClient'
+import { ActionIcon, Badge, Button, Group, NumberInput, Paper, Select, Slider, Stack, Text, TextInput, Tooltip } from '@mantine/core'
+import { IconPlayerPause, IconPlayerPlay, IconPlayerRecord, IconWaveSine, IconX } from '@tabler/icons-react'
+import { LiveClient, type LiveChunk, type LiveEvent, type LiveInputChange, type LiveProvenance, type LiveSettings, type LiveStepKind, type LiveTable } from './wasm/liveClient'
 import type { ModelRevisionTracker } from './modelRevision'
 import type { OdeTableDto } from './api'
 import { LiveStore } from './liveStore'
 import LiveScope from './LiveScope'
+import { downloadRecording, LiveRecorder } from './liveRecorder'
 
 /** What the bar needs of a live client; tests pass a fake. */
 export type LiveDriver = Pick<LiveClient, 'open' | 'advance' | 'step' | 'reset' | 'setInputs' | 'spectrum' | 'dispose' | 'isOpen'>
@@ -76,6 +77,10 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   const [watchText, setWatchText] = useState('')
   /** The store, for drawing; `storeRef` is the one the loop writes. */
   const [store, setStore] = useState<LiveStore | null>(null)
+  /** Phase L5: the recording's duration (blank: until exported), and the recording. */
+  const [recFor, setRecFor] = useState<number | string>('')
+  const [recording, setRecording] = useState<LiveRecorder | null>(null)
+  const [, setRecTick] = useState(0)
   const spectrum = useCallback((values: ArrayLike<number>, fs: number, detrend: boolean) => driver.spectrum(values, fs, detrend), [driver])
 
   const statusRef = useRef<Status>('closed')
@@ -85,6 +90,8 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   const stepRef = useRef<number | null>(null)
   const storeRef = useRef<LiveStore | null>(null)
   const headerRef = useRef<LiveTable | null>(null)
+  const metaRef = useRef<{ settings: LiveSettings | null; provenance: LiveProvenance | null }>({ settings: null, provenance: null })
+  const recRef = useRef<LiveRecorder | null>(null)
   const onTableRef = useRef(onTable)
   const onSettledRef = useRef(onInputsSettled)
   const inputLogRef = useRef<LiveInputChange[]>([])
@@ -112,6 +119,15 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     statusRef.current = next
     setStatus(next)
   }
+
+  /** End a recording still open, keeping what it has (L5). */
+  const endRecording = (status: 'complete' | 'partial' | 'failed', reason: string | null) => {
+    const rec = recRef.current
+    if (!rec || rec.status !== 'recording') return
+    rec.end(status, reason)
+    setRecTick((n) => n + 1)
+  }
+  const at = () => `t = ${fmt(simRef.current ?? 0)} ${headerRef.current?.units[0] || 's'}`
 
   const clear = () => {
     simRef.current = null
@@ -185,6 +201,11 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
 
   const apply = (chunk: LiveChunk) => {
     storeRef.current?.push(chunk.rows, chunk.numRows, chunk.events)
+    const rec = recRef.current
+    if (rec?.status === 'recording') {
+      rec.push(chunk.rows, chunk.numRows, chunk.events)
+      setRecTick((n) => n + 1)
+    }
     if (chunk.numRows > 0) {
       const timeAt = (r: number) => chunk.rows[r * chunk.numCols]
       const t = timeAt(chunk.numRows - 1)
@@ -216,12 +237,16 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
       // Paused at the last accepted row, which is what the store holds: the
       // failed step never produced one, so nothing non-finite is published.
       setNotice(chunk.error)
+      endRecording('failed', chunk.error)
       const h = stepRef.current ?? spacingRef.current
       setRetryStep(h !== null && h > 0 ? h / 4 : null)
       go('failed')
       publish(false)
     } else if (chunk.finished) {
       setNotice(chunk.stopped && simRef.current !== null ? `A stop event ended the run at t = ${fmt(simRef.current)}.` : 'The run has ended.')
+      const ended = `The run ended at ${at()}`
+      if (recRef.current?.duration === null) endRecording('complete', `${ended}.`)
+      else endRecording('partial', `${ended}, before the recording's ${fmt(recRef.current?.duration ?? 0)} ${headerRef.current?.units[0] || 's'} elapsed.`)
       go('finished')
       publish(chunk.stopped)
     }
@@ -233,6 +258,7 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
       tracker.subscribe(() => {
         if (statusRef.current === 'closed') return
         driver.dispose()
+        endRecording('partial', `The model changed, closing the live run at ${at()}.`)
         go('closed')
         setNotice('The model changed, so the live run closed. Run it again to go live on the new model.')
       }),
@@ -325,6 +351,7 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     }
     setTable(result.table)
     headerRef.current = result.table
+    metaRef.current = { settings: result.settings ?? null, provenance: result.provenance ?? null }
     storeRef.current = new LiveStore(result.table.vars.length)
     setStore(storeRef.current)
     go('paused')
@@ -365,6 +392,7 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
 
   const reset = async () => {
     const changed = inputLogRef.current.length > 0
+    endRecording('partial', `The run was reset at ${at()}.`)
     go('paused')
     setNotice(null)
     clear()
@@ -373,10 +401,33 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   }
 
   const close = () => {
+    endRecording('partial', `The live run was closed at ${at()}.`)
     driver.dispose()
     go('closed')
     setNotice(null)
     clear()
+  }
+
+  /** Start recording from the current row (or the run's first), opening the run if need be. */
+  const record = async () => {
+    if (status === 'closed' && !(await open())) return
+    const header = headerRef.current
+    const store = storeRef.current
+    if (!header || !store) return
+    const duration = typeof recFor === 'number' && recFor > 0 ? recFor : null
+    const first = store.size > 0 ? store.row(store.size - 1) : null
+    recRef.current = new LiveRecorder({ header, ...metaRef.current }, duration, first, () => inputLogRef.current)
+    setRecording(recRef.current)
+    setRecTick((n) => n + 1)
+  }
+
+  /** Save the recording, ending it first when it is still recording. */
+  const exportRecording = () => {
+    const rec = recRef.current
+    if (!rec) return
+    if (rec.duration === null) endRecording('complete', `Exported at ${at()}.`)
+    else endRecording('partial', `Exported at ${at()}, before the recording's ${fmt(rec.duration)} ${unit} elapsed.`)
+    downloadRecording(rec)
   }
 
   const isOpen = status !== 'closed'
@@ -428,6 +479,17 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
           <Tooltip label={isOpen ? 'Close the run to change what pauses it' : 'Pause where a column crosses a value: L < 2 [m]; T > 60 [C]'}>
             <TextInput size="xs" w={170} aria-label="Pause when" placeholder="Pause when… T > 60 [C]" value={watchText} onChange={(e) => setWatchText(e.currentTarget.value)} disabled={isOpen} />
           </Tooltip>
+          <NumberInput size="xs" w={120} aria-label="Record for" placeholder="until export" min={0} value={recFor} onChange={setRecFor} disabled={recording?.status === 'recording'} rightSection={<Text size="xs" c="dimmed">{unit}</Text>} />
+          {recording?.status === 'recording' ? (
+            <Button size="compact-xs" variant="light" color="red" onClick={exportRecording}>Stop and export</Button>
+          ) : (
+            <Tooltip label="Record every row from here, for the duration or until exported">
+              <Button size="compact-xs" variant="subtle" color="red" leftSection={<IconPlayerRecord size={12} />} disabled={busy || ended} onClick={() => void record()}>Record</Button>
+            </Tooltip>
+          )}
+          {recording && recording.status !== 'recording' && (
+            <Button size="compact-xs" variant="subtle" onClick={() => downloadRecording(recording)}>Export recording</Button>
+          )}
           <Text size="xs" c="dimmed" ml={6}>Speed</Text>
           <Slider
             w={140}
@@ -450,6 +512,16 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
         </Group>
         {scope && table && isOpen && <LiveScope key={table.name} store={store} header={table} version={rows} spectrum={spectrum} />}
         {notice && <Text size="xs" c={status === 'failed' ? 'red' : 'orange'} data-testid="live-notice">{notice}</Text>}
+        {recording && (
+          <Text size="xs" c={recording.status === 'recording' ? 'red' : 'dimmed'} data-testid="live-recording">
+            {recording.status === 'recording' ? 'Recording' : `Recording ${recording.status}`}: {recording.rows} rows
+            {recording.from !== null ? ` from t = ${fmt(recording.from)} ${unit}` : ''}
+            {recording.status === 'recording'
+              ? recording.until !== null ? ` until ${fmt(recording.until)} ${unit}` : ''
+              : recording.last !== null && recording.rows > 1 ? ` to ${fmt(recording.last)} ${unit}` : ''}
+            {recording.reason ? `. ${recording.reason}` : ''}
+          </Text>
+        )}
         {status === 'failed' && retryStep !== null && (
           <Group gap={6}>
             <Text size="xs" c="dimmed">The rows up to the failure are kept.</Text>

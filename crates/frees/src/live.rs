@@ -33,8 +33,8 @@ const MAX_BUDGET_MS: f64 = 50.0;
 
 /// Open DYNAMIC block `block` (0-based) of `source` live, replacing any open
 /// session. The request is the solve request (tolerances, overrides, Function
-/// Tables). Answers `{ok, session, table: {name, vars, units, method}}` or
-/// `{ok: false, error}`.
+/// Tables). Answers `{ok, session, table: {name, vars, units, method}, settings,
+/// provenance}` or `{ok: false, error}`.
 pub fn live_open_json(source: &str, request_json: &str, block: u32) -> String {
     LIVE.with(|slot| *slot.borrow_mut() = None);
     let request = match parse_request(request_json) {
@@ -87,6 +87,8 @@ pub fn live_open_json(source: &str, request_json: &str, block: u32) -> String {
         n.set(id.wrapping_add(1).max(1));
         id
     });
+    // L5: what a recording names as its solver settings and property sources.
+    let s = session.settings();
     let header = json!({
         "ok": true,
         "session": id,
@@ -95,6 +97,20 @@ pub fn live_open_json(source: &str, request_json: &str, block: u32) -> String {
             "vars": vars,
             "units": units,
             "method": table.method,
+        },
+        "settings": {
+            "method": s.method,
+            "rtol": s.rtol,
+            "atol": s.atol,
+            "t0": s.t0,
+            "tf": s.tf,
+            "points": s.points,
+            "step": s.step,
+            "maxStep": s.max_step,
+        },
+        "provenance": {
+            "backend": frees_core::props::propfun::backend_description(),
+            "fluids": frees_core::props::propfun::fluids_mentioned(&source),
         },
     });
     LIVE.with(|slot| *slot.borrow_mut() = Some((id, session)));
