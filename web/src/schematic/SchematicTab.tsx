@@ -102,6 +102,10 @@ import { blockDependencies, lineOfEquation, type BlockLink } from './dependencie
 import { formatParamValue, paramValueError, suggestInstanceName } from '../componentText'
 import { QuickAdd } from './QuickAdd'
 import LiveControls, { type LiveControl } from './LiveControls'
+import MiniScope from './MiniScope'
+import { liveColumnsOf } from '../scopeMath'
+import type { LiveStore } from '../liveStore'
+import type { LiveTable } from '../wasm/liveClient'
 import type { CanvasInput } from '../liveCanvas'
 import { CANVAS_COMMANDS, canvasHandlers, canvasKeys, keyProblem, REMAPPABLE, saveCanvasKeys, type CanvasCommand, type Remappable } from './commands'
 import { copyFragment, deleteImpact, loadFragment, pasteFragment, storeFragment, withoutBlocks, type DeleteImpact, type Fragment, type PasteResult } from './clipboard'
@@ -257,7 +261,12 @@ interface Props {
   /** H4: the blocks an event recorded at the playback sample reads; they flash. */
   flash?: readonly string[]
   /** Phase L2: while a live run is open, each block's live inputs (by lowercase block name) and how to set one. */
-  live?: { controls: ReadonlyMap<string, readonly LiveControl[]>; set: (input: CanvasInput, value: number) => void } | null
+  live?: {
+    controls: ReadonlyMap<string, readonly LiveControl[]>
+    set: (input: CanvasInput, value: number) => void
+    /** L3b: the open run's rows, which a block's mini-scope traces. */
+    rows?: { store: LiveStore; header: LiveTable } | null
+  } | null
 }
 
 export type SchematicHandoff = 'plot' | 'table' | 'state' | 'sensitivity'
@@ -1091,6 +1100,7 @@ export default function SchematicTab({
     }, `Import symbol ${name}`)
   // RUN-03: the variables chosen to read on the drawing, and how they read.
   const badges = pres.badges ?? {}
+  const miniScopes = pres.scopes ?? {}
   const watch = pres.watch ?? []
   const formats = pres.formats ?? {}
   const toggleBadge = (block: string, name: string) =>
@@ -1098,6 +1108,11 @@ export default function SchematicTab({
       const { [block]: old, ...rest } = p.badges ?? {}
       return { ...p, badges: old === name ? rest : { ...rest, [block]: name } }
     }, 'Change block readout')
+  const setMiniScope = (block: string, name: string | null) =>
+    updatePres((p) => {
+      const { [block]: _old, ...rest } = p.scopes ?? {}
+      return { ...p, scopes: name ? { ...rest, [block]: name } : rest }
+    }, 'Change block scope')
   const toggleWatch = (name: string) =>
     updatePres((p) => {
       const w = p.watch ?? []
@@ -3612,6 +3627,7 @@ export default function SchematicTab({
                   valueOf={(member) => flowValues.get(`${n.id}.${member}`.toLowerCase())?.value}
                   controls={live?.controls.get(n.id.toLowerCase())}
                   onControl={live?.set}
+                  scope={live?.rows && miniScopes[n.id] ? { ...live.rows, variable: miniScopes[n.id] } : undefined}
                   onPointerDown={(e) => {
                     takeControl()
                     // Dragging a selected block carries the whole selection; locked blocks stay.
@@ -4040,6 +4056,11 @@ export default function SchematicTab({
           }
           onNudge={pinned === activeNode.id ? nudge : undefined}
           shown={{ badge: badges[activeNode.id], watch, formats }}
+          liveScope={
+            pinned === activeNode.id && live?.rows
+              ? { options: liveColumnsOf(live.rows.header, activeNode.id), value: miniScopes[activeNode.id] ?? null, onChange: (name) => setMiniScope(activeNode.id, name) }
+              : undefined
+          }
           onShow={
             pinned === activeNode.id
               ? (how, name) => {
@@ -4145,6 +4166,8 @@ interface BlockProps {
   /** Phase L2: the block's live inputs, drawn above it, and how to set one. */
   controls?: readonly LiveControl[]
   onControl?: (input: CanvasInput, value: number) => void
+  /** Phase L3b: the live rows and the variable the block's mini-scope traces. */
+  scope?: { store: LiveStore; header: LiveTable; variable: string }
 }
 
 const reactAttr = (name: string) => name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
@@ -4193,6 +4216,7 @@ function NodeBlock({
   valueOf,
   controls,
   onControl,
+  scope,
 }: Readonly<BlockProps>) {
   // COMP-08: a missing project symbol falls back to a labelled block.
   const shape = custom === null ? 'block' : (look?.shape ?? node.shape)
@@ -4318,6 +4342,7 @@ function NodeBlock({
       )}
       {locked && <IconLock x={node.w - 13} y={2} size={11} color={ink.subtext} aria-hidden />}
       {controls?.length && onControl ? <LiveControls controls={controls} width={node.w} ink={ink} onSet={onControl} /> : null}
+      {scope && <MiniScope {...scope} width={node.w} y={node.h + (look?.label === 'below' ? labelFont + 8 : 6)} ink={ink} />}
       {node.ports.map((p) => {
         const armed = pendingPort?.instance === node.id && pendingPort?.port === p.port
         const color = p.lineId ? styleOf(p.lineId).color : ink.portIdle
@@ -5179,7 +5204,10 @@ function ReadoutCard({
   onOpenSheet,
   symbols,
   onImportSymbol,
+  liveScope,
 }: Readonly<{
+  /** L3b: while a live run is open, the block's live columns and the one its mini-scope traces. */
+  liveScope?: { options: string[]; value: string | null; onChange: (name: string | null) => void }
   /** COMP-08: the project's symbols, and importing one. */
   symbols?: Record<string, ProjectSymbol>
   onImportSymbol?: ImportSymbol
@@ -5370,6 +5398,20 @@ function ReadoutCard({
           ))}
         </div>
       ))}
+
+      {liveScope && liveScope.options.length > 0 && (
+        <Select
+          size="xs"
+          mt={6}
+          label="Scope on the block while live"
+          placeholder="none"
+          data={liveScope.options}
+          value={liveScope.value}
+          onChange={liveScope.onChange}
+          clearable
+          comboboxProps={{ withinPortal: false }}
+        />
+      )}
 
       {readout.outputs.length > 0 && (
         <>

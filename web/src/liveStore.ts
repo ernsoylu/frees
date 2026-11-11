@@ -22,6 +22,20 @@ export class LiveStore {
   dropped = 0
   private events: LiveEvent[] = []
   readonly capacity: number
+  /** Bumped on every push and clear, for drawings that follow the store (L3b). */
+  version = 0
+  private readonly listeners = new Set<() => void>()
+
+  /** Call `listener` after every push and clear; returns the unsubscribe. */
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  private changed(): void {
+    this.version += 1
+    for (const listener of this.listeners) listener()
+  }
 
   constructor(readonly numCols: number, maxValues = MAX_VALUES) {
     this.capacity = Math.max(2, Math.floor(maxValues / Math.max(1, numCols)))
@@ -65,6 +79,7 @@ export class LiveStore {
       }
     }
     this.events.push(...events)
+    this.changed()
   }
 
   /** Row `i`, oldest first. */
@@ -74,8 +89,16 @@ export class LiveStore {
 
   /** Phase L3: the time column and column `col` of the kept rows at or after `from`, oldest first. */
   series(col: number, from = Number.NEGATIVE_INFINITY): { t: Float64Array; y: Float64Array } {
+    // Rows arrive in time order (a reset clears the store), so the first row
+    // at or after `from` is found by bisection: a short window of a long run
+    // costs its own rows, not the whole history.
     let first = 0
-    while (first < this.count && this.rowAt(first)[0] < from) first++
+    let past = this.count
+    while (first < past) {
+      const mid = (first + past) >>> 1
+      if (this.rowAt(mid)[0] < from) first = mid + 1
+      else past = mid
+    }
     const t = new Float64Array(this.count - first)
     const y = new Float64Array(this.count - first)
     for (let i = first; i < this.count; i++) {
@@ -91,6 +114,7 @@ export class LiveStore {
     this.count = 0
     this.dropped = 0
     this.events = []
+    this.changed()
   }
 
   /**

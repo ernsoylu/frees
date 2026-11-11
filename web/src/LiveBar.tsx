@@ -31,6 +31,8 @@ interface Props {
   onInputsSettled?: (lines: string[], applied: boolean) => void
   /** Whether a run is open to inputs (paused or running), on each change (L2: the canvas controls). */
   onOpenChange?: (open: boolean) => void
+  /** L3b: the open run's rows and header (`null` once closed), for the canvas mini-scopes. */
+  onRows?: (rows: { store: LiveStore; header: LiveTable } | null) => void
 }
 
 type Status = 'closed' | 'opening' | 'paused' | 'running' | 'finished' | 'failed'
@@ -54,7 +56,7 @@ const speedOf = (exponent: number) => 10 ** exponent
  * the revision tracker), so a live run never shows a model that is not the
  * one in the editor.
  */
-export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onTable, inputRef, onInputsReset, onInputsSettled, onOpenChange }: Readonly<Props>) {
+export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onTable, inputRef, onInputsReset, onInputsSettled, onOpenChange, onRows }: Readonly<Props>) {
   const driver = given ?? defaultDriver()
   const [block, setBlock] = useState(blocks[0] ?? '')
   const [status, setStatus] = useState<Status>('closed')
@@ -163,6 +165,12 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   useEffect(() => {
     onOpenChange?.(live)
   }, [live, onOpenChange])
+  const shown = status !== 'closed' && store && table ? store : null
+  useEffect(() => {
+    onRows?.(shown && table ? { store: shown, header: table } : null)
+    // Unmounting the bar disposes the run, so the canvas must drop its rows too.
+    return () => onRows?.(null)
+  }, [shown, table, onRows])
   useEffect(() => {
     if (!inputRef) return
     inputRef.current = live ? setInputs : null

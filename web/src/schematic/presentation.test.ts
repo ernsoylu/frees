@@ -155,6 +155,10 @@ describe('shown variables (RUN-03)', () => {
     })
     expect([presentation.badges, presentation.watch, presentation.formats]).toEqual([shown.badges, shown.watch, shown.formats])
     expect(repaired).toBe(7) // two badges, a duplicate and a number in watch, three formats
+    // L3b: a mini-scope pin is kept or dropped as a badge is; an old file has none.
+    const scoped = sanitizePresentation({ ...EMPTY_PRESENTATION, scopes: { body: 'body.port.t', 'bad id': 'x', fan: 7 } })
+    expect([scoped.presentation.scopes, scoped.repaired]).toEqual([{ body: 'body.port.t' }, 2])
+    expect(sanitizePresentation(EMPTY_PRESENTATION).presentation.scopes).toEqual({})
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: 'fluid:p', arrows: true } }).presentation.overlay).toEqual({ metric: 'fluid:p', arrows: true })
     // CFG-02: a line colour is kept only for a known kind and as #rrggbb; a bad width falls back.
     const lines = sanitizePresentation({ ...EMPTY_PRESENTATION, view: { ...EMPTY_PRESENTATION.view, lineWidth: 'huge' }, lineColors: { electrical: '#FF00FF', twophase: 'red', piping: '#123456' } })
@@ -207,6 +211,7 @@ describe('annotations (VIEW-09) and rename', () => {
       ...presentation,
       positions: { 'sub1.r1': { x: 1, y: 1 } },
       badges: { 'sub1.r1': 'sub1.r1.a.i' },
+      scopes: { 'sub1.r1': 'sub1.r1.a.v' },
       watch: ['sub1.r1.a.v', 'sub1.r10.a.v'],
       formats: { 'sub1.r1.a.i': { digits: 3 } },
       views: [{ name: 'V', scope: 'sub1', camera: { x: 0, y: 0, zoom: 1 }, view: EMPTY_PRESENTATION.view, overlay: { metric: '', arrows: false }, badges: { 'sub1.r1': 'sub1.r1.a.i' }, focus: { kind: 'trace' as const, id: 'sub1.r1' } }],
@@ -214,6 +219,7 @@ describe('annotations (VIEW-09) and rename', () => {
     const moved = renamePresentation(p, new Map([['sub1.r1', 'sub1.ra']]))
     expect(Object.keys(moved.positions)).toEqual(['sub1.ra'])
     expect(moved.badges).toEqual({ 'sub1.ra': 'sub1.ra.a.i' })
+    expect(moved.scopes).toEqual({ 'sub1.ra': 'sub1.ra.a.v' })
     expect(moved.watch).toEqual(['sub1.ra.a.v', 'sub1.r10.a.v']) // whole segments only
     expect(Object.keys(moved.formats)).toEqual(['sub1.ra.a.i'])
     expect(moved.views[0]).toMatchObject({ scope: 'sub1', badges: { 'sub1.ra': 'sub1.ra.a.i' }, focus: { id: 'sub1.ra' } })
