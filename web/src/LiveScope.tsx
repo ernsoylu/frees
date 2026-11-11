@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Checkbox, Group, MultiSelect, NumberInput, Stack, Text } from '@mantine/core'
 import type { LiveStore } from './liveStore'
 import type { LiveSpectrum, LiveTable } from './wasm/liveClient'
-import { buckets, detrend as detrendLine, measure, resample } from './scopeMath'
+import { buckets, detrend as detrendLine, measure, spectrumSamples } from './scopeMath'
 
 interface Props {
   store: LiveStore | null
@@ -16,7 +16,7 @@ const W = 320
 const LANE = 56
 const COLUMNS = W
 const MAX_TRACES = 4
-const SPECTRUM_POINTS = 1024
+const SPECTRUM_POINTS = 16_384
 const fmt = (v: number) => String(Number(v.toPrecision(4)))
 
 type Spectrum = { freq: number[]; power: number[] }
@@ -83,9 +83,11 @@ export default function LiveScope({ store, header, version, spectrum }: Readonly
       traces.map(async (name): Promise<[string, Spectrum | string]> => {
         const s = store.series(vars.indexOf(name), t0)
         if (s.t.length < 8 || !(s.t[s.t.length - 1] > s.t[0])) return [name, 'Too few rows in the window for a spectrum.']
-        const { values, dt } = resample(s.t, s.y, Math.min(SPECTRUM_POINTS, s.t.length))
+        const { values, dt } = spectrumSamples(s.t, s.y, SPECTRUM_POINTS)
         const reply = await spectrum(values, 1 / dt, detrend)
-        return [name, 'error' in reply ? reply.error : reply]
+        if ('error' in reply) return [name, reply.error]
+        // A constant window has no power anywhere, so no bin is its peak.
+        return [name, Math.max(...reply.power) > 0 ? reply : 'The window is constant, so it has no spectrum.']
       }),
     )
       .then((all) => setSpectra(new Map(all)))
@@ -101,7 +103,15 @@ export default function LiveScope({ store, header, version, spectrum }: Readonly
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSpectrum, store, traces, version, windowSpan, detrend, spectrum, kick])
 
+  /** The span the strip measured, and the window asked for when the rows do not fill it. */
+  const measured = (t: Float64Array) => {
+    const got = `${fmt(t[t.length - 1] - t[0])} ${unit}`
+    return span !== null && t[0] - t0 > 1e-9 * span ? `${got} of a ${fmt(span)} ${unit} window` : `${got} window`
+  }
   const lanes = size > 1 && tEnd > t0 ? traces.filter((n) => vars.includes(n)) : []
+  // One copy of each lane's window per render, shared by its drawing and its strip.
+  // ponytail: copies the whole window each chunk; keep running aggregates if very long windows show in a profile.
+  const windows = new Map(showSpectrum ? [] : lanes.map((n) => [n, windowOf(n)]))
   return (
     <Stack gap={4} data-testid="live-scope">
       <Group gap={8} wrap="wrap">
@@ -135,7 +145,7 @@ export default function LiveScope({ store, header, version, spectrum }: Readonly
                 lane = envelope(min, max)
               }
             } else {
-              const s = windowOf(name)
+              const s = windows.get(name)!
               const { min, max } = buckets(s.t, s.y, t0, tEnd, COLUMNS)
               lane = envelope(min, max)
             }
@@ -170,7 +180,7 @@ export default function LiveScope({ store, header, version, spectrum }: Readonly
           for (let i = 2; i < sp.power.length; i++) if (sp.power[i] > sp.power[k]) k = i
           return <Text key={name} size="xs" data-testid="scope-measure">{name}: spectral peak at {fmt(sp.freq[k])} {freqUnit}</Text>
         }
-        const s = windowOf(name)
+        const s = windows.get(name)!
         const m = measure(s.t, s.y)
         if (!m) return null
         const parts = [
@@ -179,13 +189,13 @@ export default function LiveScope({ store, header, version, spectrum }: Readonly
           `RMS ${v(m.rms)}`,
           `mean ${v(m.mean)}`,
           m.frequency === null ? null : `f ${fmt(m.frequency)} ${freqUnit}`,
-          m.frequency === null ? null : `duty ${fmt(100 * m.duty)} %`,
+          m.peakToPeak > 0 ? `duty ${fmt(100 * m.duty)} %` : null,
           m.overshoot === null ? null : `overshoot ${fmt(100 * m.overshoot)} %`,
           m.settling === null ? null : `settling ${fmt(m.settling)} ${unit}`,
         ].filter(Boolean)
         return (
           <Text key={name} size="xs" data-testid="scope-measure">
-            {name}{detrend ? ' (detrended)' : ''}, {fmt(tEnd - t0)} {unit} window: {parts.join(' · ')}
+            {name}{detrend ? ' (detrended)' : ''}, {measured(s.t)}: {parts.join(' · ')}
           </Text>
         )
       })}

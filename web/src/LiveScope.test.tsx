@@ -51,6 +51,9 @@ it('measures the window’s rows in their units, detrends them, and draws one la
   // A 0.5 s window: the strip reads only its rows.
   fireEvent.change(screen.getByLabelText('Scope window'), { target: { value: '0.5' } })
   expect(screen.getByTestId('scope-measure').textContent).toContain('0.5 s window')
+  // A window the rows do not fill names what was measured.
+  fireEvent.change(screen.getByLabelText('Scope window'), { target: { value: '5' } })
+  expect(screen.getByTestId('scope-measure').textContent).toContain('2 s of a 5 s window')
 
   // Detrended, the sine's mean is zero.
   fireEvent.change(screen.getByLabelText('Scope window'), { target: { value: '' } })
@@ -64,8 +67,9 @@ it('measures the window’s rows in their units, detrends them, and draws one la
 it('takes the spectrum of uniformly resampled rows and names its peak', async () => {
   const store = sineStore()
   const spectrum = vi.fn(async (values: ArrayLike<number>, fs: number) => {
-    expect(values.length).toBe(1024)
-    expect(fs).toBeCloseTo(1023 / 2, 6)
+    // Every row kept, at their own 1 kHz: nothing they resolve is folded down.
+    expect(values.length).toBe(2001)
+    expect(fs).toBeCloseTo(1000, 6)
     return { freq: [0, 2.5, 5, 7.5], power: [9, 1, 7, 0.5] }
   })
   render(<MantineProvider><LiveScope store={store} header={header} version={store.size} spectrum={spectrum} /></MantineProvider>)
@@ -73,4 +77,12 @@ it('takes the spectrum of uniformly resampled rows and names its peak', async ()
   await waitFor(() => expect(screen.getByTestId('scope-measure').textContent).toBe('v: spectral peak at 5 Hz'))
   expect(spectrum).toHaveBeenCalledTimes(1)
   expect(screen.getByRole('img', { name: 'Live spectrum' })).toBeTruthy()
+})
+
+it('names no peak for a constant window', async () => {
+  const store = sineStore()
+  const spectrum = vi.fn(async () => ({ freq: [0, 1, 2], power: [0, 0, 0] }))
+  render(<MantineProvider><LiveScope store={store} header={header} version={store.size} spectrum={spectrum} /></MantineProvider>)
+  fireEvent.click(screen.getByLabelText('Spectrum'))
+  await waitFor(() => expect(screen.getByTestId('scope-measure').textContent).toBe('v: The window is constant, so it has no spectrum.'))
 })

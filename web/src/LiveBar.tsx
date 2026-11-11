@@ -418,7 +418,7 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
             <ActionIcon size="sm" variant="subtle" color="gray" aria-label="Close live run" onClick={close}><IconX size={14} /></ActionIcon>
           )}
         </Group>
-        {scope && table && isOpen && <LiveScope store={store} header={table} version={rows} spectrum={spectrum} />}
+        {scope && table && isOpen && <LiveScope key={table.name} store={store} header={table} version={rows} spectrum={spectrum} />}
         {notice && <Text size="xs" c={status === 'failed' ? 'red' : 'orange'} data-testid="live-notice">{notice}</Text>}
         {status === 'failed' && retryStep !== null && (
           <Group gap={6}>

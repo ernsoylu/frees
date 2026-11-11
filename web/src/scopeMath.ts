@@ -54,6 +54,27 @@ export function resample(t: ArrayLike<number>, y: ArrayLike<number>, n: number):
   return { values, dt }
 }
 
+/**
+ * The window's rows as uniform samples for a spectrum, at their own mean
+ * spacing, so nothing the rows resolve folds back to a lower frequency. Past
+ * `max` samples, each run of `k` is averaged into one: a boxcar ahead of the
+ * decimation, so content above the new Nyquist frequency is attenuated
+ * rather than aliased at full strength.
+ * ponytail: a boxcar leaks sidelobes; a proper FIR decimator if a long window's spectrum needs to be clean.
+ */
+export function spectrumSamples(t: ArrayLike<number>, y: ArrayLike<number>, max: number): { values: Float64Array; dt: number } {
+  const fine = resample(t, y, t.length)
+  const k = Math.ceil(t.length / max)
+  if (k <= 1) return fine
+  const values = new Float64Array(Math.floor(t.length / k))
+  for (let i = 0; i < values.length; i++) {
+    let sum = 0
+    for (let j = 0; j < k; j++) sum += fine.values[i * k + j]
+    values[i] = sum / k
+  }
+  return { values, dt: fine.dt * k }
+}
+
 export interface Measurements {
   min: number
   max: number

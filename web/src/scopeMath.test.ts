@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { buckets, detrend, measure, resample } from './scopeMath'
+import { buckets, detrend, measure, resample, spectrumSamples } from './scopeMath'
 
 const grid = (n: number, dt: number) => Array.from({ length: n }, (_, i) => i * dt)
 
@@ -52,4 +52,17 @@ it('detrends a line exactly and resamples uneven rows uniformly', () => {
   const { values, dt } = resample(t, t.map((s) => 10 * s), 5)
   expect(dt).toBe(1)
   expect(Array.from(values)).toEqual([0, 10, 20, 30, 40])
+})
+
+it('samples a spectrum at the rows’ own rate, averaging only past the cap', () => {
+  // 10 s of rows at 1 kHz: kept whole, so a 100 Hz signal stays below Nyquist.
+  const t = grid(10_001, 0.001)
+  const kept = spectrumSamples(t, t.map((s) => Math.sin(2 * Math.PI * 100 * s)), 16_384)
+  expect([kept.values.length, kept.dt]).toEqual([10_001, expect.closeTo(0.001, 12)])
+  // Past the cap each pair is averaged: a 450 Hz tone, past the new 250 Hz Nyquist, is cut to |cos(π·450·1 ms)| = 0.16 rather than folded to 50 Hz at full size.
+  const even = grid(10_000, 0.001)
+  const long = spectrumSamples(even, even.map((s) => Math.sin(2 * Math.PI * 450 * s)), 5_000)
+  expect(long.dt).toBeCloseTo(0.002, 12)
+  expect(long.values.length).toBe(5_000)
+  expect(Math.max(...long.values.map(Math.abs))).toBeLessThan(0.2)
 })
