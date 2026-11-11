@@ -16,7 +16,8 @@
 //                     'monteCarlo' | 'optimize' | 'optimizeMulti' |
 //                     'curveFit' | 'parameterFit' | 'pidTune' |
 //                     'extractPlant' | 'liveOpen' | 'liveAdvance' |
-//                     'liveStep' | 'liveReset' | 'liveSet' | 'liveDispose',
+//                     'liveStep' | 'liveReset' | 'liveSet' | 'liveSpectrum' |
+//                     'liveDispose',
 //             args: string[]}
 //   response {id, ok: true, result: string} | {id, ok: false, fatal?: boolean, error: string}
 //
@@ -59,6 +60,7 @@ import init, {
   live_open,
   live_reset,
   live_set,
+  live_spectrum,
   live_step,
   fluids_used,
   fluid_available,
@@ -250,6 +252,7 @@ export interface EngineRequest {
     | 'liveStep'
     | 'liveReset'
     | 'liveSet'
+    | 'liveSpectrum'
     | 'liveDispose'
   args: string[]
 }
@@ -364,6 +367,9 @@ const handle = async (event: MessageEvent<EngineRequest>) => {
         break
       case 'liveSet':
         result = live_set(Number(args[0]), args[1] ?? '[]')
+        break
+      case 'liveSpectrum':
+        result = live_spectrum(new Float64Array(JSON.parse(args[0] ?? '[]') as number[]), Number(args[1]), args[2] === '1')
         break
       case 'liveDispose':
         live_dispose(Number(args[0]))

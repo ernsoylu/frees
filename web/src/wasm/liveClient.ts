@@ -60,6 +60,8 @@ export interface LiveInputChange {
 
 export type LiveInputResult = { time: number; log: LiveInputChange[] } | { error: string }
 
+export type LiveSpectrum = { freq: number[]; power: number[] } | { error: string }
+
 export type LiveStepKind = 'sample' | 'event' | 'accepted'
 
 export type LiveOpenResult =
@@ -222,6 +224,15 @@ export class LiveClient {
       return null
     }
     return reply
+  }
+
+  /**
+   * Phase L3: the Welch power spectrum of uniformly spaced samples at `fs`
+   * (`signal.rs`), linearly detrended first when asked. Needs no session.
+   */
+  async spectrum(values: ArrayLike<number>, fs: number, detrend: boolean): Promise<LiveSpectrum> {
+    const { result } = await this.call('liveSpectrum', [JSON.stringify(Array.from(values)), String(fs), detrend ? '1' : '0'])
+    return JSON.parse(result) as LiveSpectrum
   }
 
   /** Close the session; replies still in flight for it answer `null`. */

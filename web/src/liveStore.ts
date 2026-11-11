@@ -72,6 +72,20 @@ export class LiveStore {
     return Array.from(this.rowAt(i))
   }
 
+  /** Phase L3: the time column and column `col` of the kept rows at or after `from`, oldest first. */
+  series(col: number, from = Number.NEGATIVE_INFINITY): { t: Float64Array; y: Float64Array } {
+    let first = 0
+    while (first < this.count && this.rowAt(first)[0] < from) first++
+    const t = new Float64Array(this.count - first)
+    const y = new Float64Array(this.count - first)
+    for (let i = first; i < this.count; i++) {
+      const row = this.rowAt(i)
+      t[i - first] = row[0]
+      y[i - first] = row[col]
+    }
+    return { t, y }
+  }
+
   clear(): void {
     this.start = 0
     this.count = 0

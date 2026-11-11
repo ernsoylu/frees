@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActionIcon, Badge, Button, Group, Paper, Select, Slider, Stack, Text, Tooltip } from '@mantine/core'
-import { IconPlayerPause, IconPlayerPlay, IconX } from '@tabler/icons-react'
+import { IconPlayerPause, IconPlayerPlay, IconWaveSine, IconX } from '@tabler/icons-react'
 import { LiveClient, type LiveChunk, type LiveEvent, type LiveInputChange, type LiveStepKind, type LiveTable } from './wasm/liveClient'
 import type { ModelRevisionTracker } from './modelRevision'
 import type { OdeTableDto } from './api'
 import { LiveStore } from './liveStore'
+import LiveScope from './LiveScope'
 
 /** What the bar needs of a live client; tests pass a fake. */
-export type LiveDriver = Pick<LiveClient, 'open' | 'advance' | 'step' | 'reset' | 'setInputs' | 'dispose' | 'isOpen'>
+export type LiveDriver = Pick<LiveClient, 'open' | 'advance' | 'step' | 'reset' | 'setInputs' | 'spectrum' | 'dispose' | 'isOpen'>
 
 interface Props {
   /** The document's DYNAMIC blocks, in order (their ODE Table names). */
@@ -68,6 +69,10 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
   const [kept, setKept] = useState<{ size: number; dropped: number } | null>(null)
   const [retryStep, setRetryStep] = useState<number | null>(null)
   const [lastInput, setLastInput] = useState<LiveInputChange | null>(null)
+  const [scope, setScope] = useState(false)
+  /** The store, for drawing; `storeRef` is the one the loop writes. */
+  const [store, setStore] = useState<LiveStore | null>(null)
+  const spectrum = useCallback((values: ArrayLike<number>, fs: number, detrend: boolean) => driver.spectrum(values, fs, detrend), [driver])
 
   const statusRef = useRef<Status>('closed')
   const simRef = useRef<number | null>(null)
@@ -297,6 +302,7 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     setTable(result.table)
     headerRef.current = result.table
     storeRef.current = new LiveStore(result.table.vars.length)
+    setStore(storeRef.current)
     go('paused')
     return true
   }
@@ -405,10 +411,14 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
             label={(v) => `${fmt(speedOf(v))} ${unit}/s`}
           />
           <Text size="xs" data-testid="live-speed">{fmt(speed)} {unit}/s</Text>
+          <Tooltip label={scope ? 'Hide the scope' : 'Show the scope'}>
+            <ActionIcon size="sm" variant={scope ? 'light' : 'subtle'} aria-label="Scope" aria-pressed={scope} onClick={() => setScope((s) => !s)}><IconWaveSine size={14} /></ActionIcon>
+          </Tooltip>
           {isOpen && (
             <ActionIcon size="sm" variant="subtle" color="gray" aria-label="Close live run" onClick={close}><IconX size={14} /></ActionIcon>
           )}
         </Group>
+        {scope && table && isOpen && <LiveScope store={store} header={table} version={rows} spectrum={spectrum} />}
         {notice && <Text size="xs" c={status === 'failed' ? 'red' : 'orange'} data-testid="live-notice">{notice}</Text>}
         {status === 'failed' && retryStep !== null && (
           <Group gap={6}>
