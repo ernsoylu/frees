@@ -882,6 +882,7 @@ fn solve_dynamic_systems(
         if let Some(h) = capture.max_step.filter(|h| *h > 0.0 && h.is_finite()) {
             run.cap_step(h);
         }
+        run.watch(names.clone());
         let mut session = crate::ode::live::LiveSession::new(doc.defs.clone(), run);
         session.watch(names);
         capture.session = Some(session);

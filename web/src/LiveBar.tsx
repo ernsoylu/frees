@@ -331,8 +331,10 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     return true
   }
 
+  // Resuming or stepping moves on from whatever the last notice said, a pause included.
   const run = async () => {
     if (status === 'closed' && !(await open())) return
+    setNotice(null)
     go('running')
   }
 
@@ -348,6 +350,7 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
 
   const stepBy = async (kind: LiveStepKind) => {
     if (status === 'closed' && !(await open())) return
+    setNotice(null)
     go('paused')
     const chunk = await driver.step(kind).catch((error: unknown) => {
       setNotice(error instanceof Error ? error.message : String(error))

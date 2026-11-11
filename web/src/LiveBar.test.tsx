@@ -280,4 +280,8 @@ it('sends the pause conditions with the open and pauses where one crosses (L4)',
   const advances = spy.advance.mock.calls.length
   await new Promise((r) => setTimeout(r, 50))
   expect(spy.advance.mock.calls.length).toBe(advances)
+  // Resuming clears the pause notice.
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(spy.advance.mock.calls.length).toBeGreaterThan(advances))
+  expect(screen.queryByTestId('live-notice')).toBeNull()
 })

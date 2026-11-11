@@ -560,6 +560,74 @@ fn a_watch_pauses_where_it_crosses_and_the_rows_stay_the_batch_rows() {
 }
 
 #[test]
+fn a_watch_across_a_set_event_crosses_at_the_reset_not_before_it() {
+    // `v > 0` turns true only at the bounce, where the reset flips `v`. On an
+    // explicit method the step ends at the crossing with the reset state, and
+    // its interpolant would cross zero before the bounce.
+    for method in ["ida", "ode45", "rk4"] {
+        let src = BOUNCE.replace("method = ida", &format!("method = {method}"));
+        let doc = PreparedDocument::new(&src, &SolverSettings::default(), &[], &[])
+            .unwrap_or_else(|e| panic!("{}", e.error));
+        let mut session = doc
+            .open_live_watching(0, None, &["v > 0".to_string()])
+            .unwrap_or_else(|e| panic!("{}", e.error))
+            .1;
+        let mut bounce = None;
+        let mut pause = None;
+        for _ in 0..1000 {
+            let chunk = session.advance(4.0, &mut |_| true);
+            assert!(chunk.error.is_none(), "{:?}", chunk.error);
+            for e in &chunk.events {
+                match e.name.as_str() {
+                    "bounce" => bounce = bounce.or(Some(e.time)),
+                    "v > 0" => pause = pause.or(Some(e.time)),
+                    _ => {}
+                }
+            }
+            if chunk.paused.is_some() {
+                break;
+            }
+        }
+        let (Some(bounce), Some(pause)) = (bounce, pause) else {
+            panic!("{method}: bounce {bounce:?}, pause {pause:?}")
+        };
+        assert!(
+            (pause - bounce).abs() <= 1e-9 * bounce,
+            "{method}: paused at {pause}, bounced at {bounce}"
+        );
+    }
+}
+
+#[test]
+fn two_watches_crossed_in_one_step_pause_in_time_order_one_per_resume() {
+    // Both cross in rk4's first 0.1 s step: L = 3.95 at 0.0627 s, 3.94 at
+    // 0.0753 s; the later one is written first.
+    let src = TANK.replace("method = ida", "method = rk4, step = 0.1");
+    let doc = PreparedDocument::new(&src, &SolverSettings::default(), &[], &[])
+        .unwrap_or_else(|e| panic!("{}", e.error));
+    let watches = ["L < 3.94".to_string(), "L < 3.95".to_string()];
+    let mut session = doc
+        .open_live_watching(0, None, &watches)
+        .unwrap_or_else(|e| panic!("{}", e.error))
+        .1;
+    let (rows, pauses) = run_watched(&mut session, 10.0);
+    assert_eq!(
+        pauses.iter().map(|p| p.0.as_str()).collect::<Vec<_>>(),
+        ["L < 3.95", "L < 3.94"]
+    );
+    let at = |l: f64| (2.0 - l.sqrt()) / 0.2;
+    assert!((pauses[0].1 - at(3.95)).abs() < 1e-4, "{pauses:?}");
+    assert!((pauses[1].1 - at(3.94)).abs() < 1e-4, "{pauses:?}");
+    assert_eq!(rows.len(), 41);
+    // A reset forgets a held crossing.
+    let first = session.advance(10.0, &mut |_| true);
+    assert_eq!(first.paused, None);
+    session.reset();
+    let (_, again) = run_watched(&mut session, 10.0);
+    assert_eq!(again.len(), 2);
+}
+
+#[test]
 fn a_pause_condition_is_parsed_against_the_columns_in_si() {
     use frees_core::ode::live::Watch;
     let columns = ["t", "L", "body$port$T"].map(String::from);
