@@ -204,6 +204,30 @@ pub fn live_set_json(id: u32, lines_json: &str) -> String {
     })
 }
 
+/// Phase L3: a scope trace's spectrum. `values` are uniformly sampled at
+/// `fs` (Hz); with `detrend` a least-squares line comes off first. Welch's
+/// density over Hann segments of up to 256 samples (`signal::welch`).
+/// Answers `{freq, power}` or `{error}`.
+pub fn live_spectrum_json(values: &[f64], fs: f64, detrend: bool) -> String {
+    let spectrum = (|| {
+        let x = if detrend {
+            frees_core::signal::detrend(values, true)?
+        } else {
+            values.to_vec()
+        };
+        frees_core::signal::welch(&x, fs, x.len().min(256))
+    })();
+    match spectrum {
+        Ok((freq, power)) => json!({ "freq": freq, "power": power }).to_string(),
+        Err(e) => json!({ "error": e.to_string() }).to_string(),
+    }
+}
+
+#[wasm_bindgen]
+pub fn live_spectrum(values: &[f64], fs: f64, detrend: bool) -> String {
+    live_spectrum_json(values, fs, detrend)
+}
+
 /// Drop session `id` if it is the open one.
 #[wasm_bindgen]
 pub fn live_dispose(id: u32) {

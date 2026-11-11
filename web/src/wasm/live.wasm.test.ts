@@ -5,7 +5,8 @@
 // @ts-expect-error Node built-in module not declared in Vite client tsconfig
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { initSync, live_advance, live_dispose, live_open, live_step, solve_zerocopy } from './pkg/frees.js'
+import { initSync, live_advance, live_dispose, live_open, live_spectrum, live_step, solve_zerocopy } from './pkg/frees.js'
+import { resample } from '../scopeMath'
 
 initSync({ module: readFileSync(new URL('./pkg/frees_bg.wasm', import.meta.url)) })
 
@@ -43,4 +44,16 @@ it('live chunks reassemble the batch rows bit for bit', () => {
   live_dispose(open.session)
   const gone = live_step(open.session, 'sample', 1) as { header: string }
   expect(JSON.parse(gone.header)).toEqual({ gone: true })
+})
+
+it('the scope spectrum of resampled uneven rows peaks at the signal frequency (L3)', () => {
+  // 3 Hz on a jittered grid with a drift, as accepted rows arrive.
+  const t = Array.from({ length: 600 }, (_, i) => (i + 0.3 * Math.sin(i)) / 200)
+  const y = t.map((s) => Math.sin(2 * Math.PI * 3 * s) + 5 * s)
+  const { values, dt } = resample(t, y, 512)
+  const sp = JSON.parse(live_spectrum(values, 1 / dt, true)) as { freq: number[]; power: number[] }
+  let k = 1
+  for (let i = 2; i < sp.power.length; i++) if (sp.power[i] > sp.power[k]) k = i
+  expect(Math.abs(sp.freq[k] - 3)).toBeLessThan(1 / dt / 256)
+  expect(JSON.parse(live_spectrum(new Float64Array([1]), 10, false))).toHaveProperty('error')
 })

@@ -2,7 +2,8 @@
 //! call names its session, so a stale one is answered `gone`, never acted on.
 
 use frees::live::{
-    live_advance_json, live_dispose, live_open_json, live_reset_json, live_set_json, live_step_json,
+    live_advance_json, live_dispose, live_open_json, live_reset_json, live_set_json,
+    live_spectrum_json, live_step_json,
 };
 use serde_json::Value;
 
@@ -164,4 +165,35 @@ END\n";
         serde_json::from_str::<Value>(&live_set_json(id, r#"["P = 1"]"#)).unwrap()["gone"],
         true
     );
+}
+
+#[test]
+fn a_scope_spectrum_peaks_at_the_signal_frequency() {
+    // 5 Hz on a ramp, sampled at 100 Hz for 4 s.
+    let fs = 100.0;
+    let x: Vec<f64> = (0..400)
+        .map(|i| {
+            let t = f64::from(i) / fs;
+            3.0 * t + (2.0 * std::f64::consts::PI * 5.0 * t).sin()
+        })
+        .collect();
+    let out: Value = serde_json::from_str(&live_spectrum_json(&x, fs, true)).unwrap();
+    let freq = out["freq"].as_array().unwrap();
+    let power = out["power"].as_array().unwrap();
+    assert_eq!(freq.len(), 129, "256-sample segments: {out}");
+    let peak = (0..power.len())
+        .max_by(|&a, &b| {
+            power[a]
+                .as_f64()
+                .unwrap()
+                .total_cmp(&power[b].as_f64().unwrap())
+        })
+        .unwrap();
+    assert!(
+        (freq[peak].as_f64().unwrap() - 5.0).abs() <= fs / 256.0,
+        "{}",
+        freq[peak]
+    );
+    let refused: Value = serde_json::from_str(&live_spectrum_json(&[1.0], fs, false)).unwrap();
+    assert!(refused["error"].is_string(), "{refused}");
 }
