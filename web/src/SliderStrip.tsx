@@ -1,7 +1,14 @@
-import { ActionIcon, Alert, Group, Paper, Slider, Stack, Text, Tooltip } from '@mantine/core'
+import { useEffect, useRef } from 'react'
+import { ActionIcon, Alert, Group, NativeSelect, Paper, Slider, Stack, Text, Tooltip } from '@mantine/core'
 import { IconAlertTriangle, IconX } from '@tabler/icons-react'
 import { formatValue } from './format'
 import { sliderStep, type PinnedSlider } from './sliders'
+import { defaultSeries, SERIES_LABELS, seriesOptions, stepPreferred, type SeriesId } from './preferredValues'
+
+/** Wheel travel (pixels) per step, so a trackpad's small deltas add up to notches. */
+const NOTCH = 40
+/** Quiet time after the last notch before the value is committed with a solve. */
+const COMMIT_MS = 300
 
 interface Props {
   pins: PinnedSlider[]
@@ -19,6 +26,8 @@ interface Props {
   /** Pins whose variable is no longer a literal parameter in the document —
    *  shown, but not applied, so an edit can never make a slider destructive. */
   inertNames?: string[]
+  /** Phase L6: choose what a pin's wheel steps through; absent in a kiosk embed. */
+  onSeries?: (name: string, series: SeriesId) => void
 }
 
 /**
@@ -26,7 +35,7 @@ interface Props {
  * through the same override path REPL assignments use, so the solution (and
  * every plot and table drawn from it) follows the handle.
  */
-export default function SliderStrip({ pins, onChange, onCommit, onUnpin, solving, stale, inertNames }: Readonly<Props>) {
+export default function SliderStrip({ pins, onChange, onCommit, onUnpin, solving, stale, inertNames, onSeries }: Readonly<Props>) {
   const inert = new Set((inertNames ?? []).map((n) => n.toLowerCase()))
   if (pins.length === 0) {
     return null
@@ -56,53 +65,106 @@ export default function SliderStrip({ pins, onChange, onCommit, onUnpin, solving
         </Alert>
       )}
       <Stack gap={10}>
-        {pins.map((pin) => {
-          const isInert = inert.has(pin.name.toLowerCase())
-          return (
-          <div key={pin.name}>
-            <Group gap={6} wrap="nowrap" mb={2}>
-              <Text size="xs" ff="monospace" style={{ flex: 1, minWidth: 0 }} truncate>
-                {pin.name}
-              </Text>
-              <Text size="xs" ff="monospace" c={isInert ? 'dimmed' : 'teal'}>
-                {formatValue(pin.value)}
-                {pin.units && pin.units !== '-' ? ` ${pin.units}` : ''}
-              </Text>
-              {onUnpin && (
-                <Tooltip label={`Unpin ${pin.name}`}>
-                  <ActionIcon
-                    size="xs"
-                    variant="subtle"
-                    color="gray"
-                    aria-label={`Unpin ${pin.name}`}
-                    onClick={() => onUnpin(pin.name)}
-                  >
-                    <IconX size={12} />
-                  </ActionIcon>
-                </Tooltip>
-              )}
-            </Group>
-            {isInert && (
-              <Text size="xs" c="orange" mb={2}>
-                no longer a parameter in the document — not applied
-              </Text>
-            )}
-            <Slider
-              size="sm"
-              disabled={isInert}
-              min={pin.min}
-              max={pin.max}
-              step={sliderStep(pin.min, pin.max)}
-              value={pin.value}
-              onChange={(v) => onChange(pin.name, v)}
-              onChangeEnd={(v) => onCommit(pin.name, v)}
-              label={(v) => formatValue(v)}
-              thumbLabel={`${pin.name} value`}
-            />
-          </div>
-          )
-        })}
+        {pins.map((pin) => (
+          <SliderRow key={pin.name} pin={pin} inert={inert.has(pin.name.toLowerCase())} onChange={onChange} onCommit={onCommit} onUnpin={onUnpin} onSeries={onSeries} />
+        ))}
       </Stack>
     </Paper>
+  )
+}
+
+function SliderRow({
+  pin,
+  inert,
+  onChange,
+  onCommit,
+  onUnpin,
+  onSeries,
+}: Readonly<{ pin: PinnedSlider; inert: boolean } & Pick<Props, 'onChange' | 'onCommit' | 'onUnpin' | 'onSeries'>>) {
+  const series = pin.series ?? defaultSeries(pin.name, pin.units)
+  const ref = useRef<HTMLDivElement>(null)
+  // The wheel listener is native: React's is passive and cannot keep the page from scrolling.
+  const latest = useRef({ pin, series, inert, onChange, onCommit })
+  useEffect(() => {
+    latest.current = { pin, series, inert, onChange, onCommit }
+  })
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let travel = 0
+    let value: number | null = null
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const wheel = (e: WheelEvent) => {
+      const { pin, series, inert, onChange, onCommit } = latest.current
+      if (inert || series === 'linear') return
+      e.preventDefault()
+      travel += e.deltaMode === 0 ? e.deltaY : e.deltaY * NOTCH
+      if (Math.abs(travel) < NOTCH) return
+      const dir = travel < 0 ? 1 : -1
+      travel = 0
+      const next = stepPreferred(value ?? pin.value, series, pin.units, dir)
+      if (next === null || next < pin.min || next > pin.max) return
+      value = next
+      onChange(pin.name, next)
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        onCommit(pin.name, next)
+        value = null
+      }, COMMIT_MS)
+    }
+    el.addEventListener('wheel', wheel, { passive: false })
+    return () => {
+      el.removeEventListener('wheel', wheel)
+      clearTimeout(timer)
+    }
+  }, [])
+  return (
+    <div ref={ref} data-slider={pin.name}>
+      <Group gap={6} wrap="nowrap" mb={2}>
+        <Text size="xs" ff="monospace" style={{ flex: 1, minWidth: 0 }} truncate>
+          {pin.name}
+        </Text>
+        <Text size="xs" ff="monospace" c={inert ? 'dimmed' : 'teal'}>
+          {formatValue(pin.value)}
+          {pin.units && pin.units !== '-' ? ` ${pin.units}` : ''}
+        </Text>
+        {onSeries && (
+          <Tooltip label="What a wheel notch over the slider steps through">
+            <NativeSelect
+              size="xs"
+              w={92}
+              aria-label={`${pin.name} wheel steps`}
+              data={seriesOptions(pin.units).map((id) => ({ value: id, label: SERIES_LABELS[id] }))}
+              value={series}
+              onChange={(e) => onSeries(pin.name, e.currentTarget.value as SeriesId)}
+            />
+          </Tooltip>
+        )}
+        {onUnpin && (
+          <Tooltip label={`Unpin ${pin.name}`}>
+            <ActionIcon size="xs" variant="subtle" color="gray" aria-label={`Unpin ${pin.name}`} onClick={() => onUnpin(pin.name)}>
+              <IconX size={12} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+      </Group>
+      {inert && (
+        <Text size="xs" c="orange" mb={2}>
+          no longer a parameter in the document — not applied
+        </Text>
+      )}
+      <Slider
+        size="sm"
+        disabled={inert}
+        min={pin.min}
+        max={pin.max}
+        step={sliderStep(pin.min, pin.max)}
+        value={pin.value}
+        onChange={(v) => onChange(pin.name, v)}
+        onChangeEnd={(v) => onCommit(pin.name, v)}
+        label={(v) => formatValue(v)}
+        thumbLabel={`${pin.name} value`}
+      />
+    </div>
   )
 }
