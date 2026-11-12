@@ -66,8 +66,27 @@ export type LiveSpectrum = { freq: number[]; power: number[] } | { error: string
 
 export type LiveStepKind = 'sample' | 'event' | 'accepted'
 
+/** Phase L5: the integrator settings a live run uses, in the time column's unit. */
+export interface LiveSettings {
+  method: string
+  rtol: number
+  atol: number
+  t0: number
+  tf: number
+  points: number
+  step: number | null
+  /** The block's or a retry's step cap; `null` is the method's default. */
+  maxStep: number | null
+}
+
+/** Phase L5: the property backend, and the fluids the document names (a whole-word scan, so a superset). */
+export interface LiveProvenance {
+  backend: string
+  fluids: string[]
+}
+
 export type LiveOpenResult =
-  | { ok: true; session: number; table: LiveTable }
+  | { ok: true; session: number; table: LiveTable; settings?: LiveSettings; provenance?: LiveProvenance }
   | { ok: false; error: string }
 
 interface Pending {

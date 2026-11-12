@@ -4,6 +4,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
 import { afterEach, expect, it, vi } from 'vitest'
+import { notifications } from '@mantine/notifications'
 import LiveBar, { type LiveDriver } from './LiveBar'
 import { ModelRevisionTracker } from './modelRevision'
 import type { LiveChunk } from './wasm/liveClient'
@@ -284,4 +285,74 @@ it('sends the pause conditions with the open and pauses where one crosses (L4)',
   fireEvent.click(screen.getByLabelText('Run live'))
   await waitFor(() => expect(spy.advance.mock.calls.length).toBeGreaterThan(advances))
   expect(screen.queryByTestId('live-notice')).toBeNull()
+})
+
+/** Capture what an export saves (jsdom has no object URLs). */
+function captureDownloads() {
+  const saved: Blob[] = []
+  vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: (b: Blob) => (saved.push(b), 'blob:x'), revokeObjectURL() {} }))
+  return async () => JSON.parse(await saved.at(-1)!.text())
+}
+
+it('records a finite duration of the run with its settings and provenance, and exports it (L5)', async () => {
+  const { driver, spy } = fakeDriver(1000)
+  const settings = { method: 'ida', rtol: 1e-6, atol: 1e-9, t0: 0, tf: 10, points: 101, step: null, maxStep: null }
+  const provenance = { backend: 'rustprop', fluids: ['Water'] }
+  const plain = spy.open.getMockImplementation()!
+  spy.open.mockImplementation(async (...a: [string, string, number, number]) => ({ ...(await plain(...a)), settings, provenance }))
+  const last = captureDownloads()
+  mount(driver)
+  fireEvent.change(screen.getByLabelText('Record for'), { target: { value: '0.5' } })
+  // Record opens a closed run, paused, so it records from the first row.
+  fireEvent.click(screen.getByRole('button', { name: 'Record' }))
+  await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toBe('Recording: 0 rows'))
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toBe('Recording complete: 6 rows from t = 0 s to 0.5 s'))
+  // The run goes on; the recording took no more.
+  await waitFor(() => expect(Number(screen.getByTestId('live-time').textContent!.split(' ')[2])).toBeGreaterThan(0.5))
+  fireEvent.click(screen.getByLabelText('Pause'))
+  fireEvent.click(screen.getByRole('button', { name: 'Export recording' }))
+  const file = await last()
+  expect(file).toMatchObject({ format: 'frees-live-recording', block: 'tank', status: 'complete', reason: null, solver: settings, provenance, span: { from: 0, to: 0.5, requested: 0.5, unit: 's' } })
+  expect(file.rows.map((r: number[]) => r[0])).toEqual([0, 0.1, 0.2, 0.3, 0.4, 0.5])
+  expect(file.columns).toEqual([{ name: 't', unit: 's' }, { name: 'L', unit: 'm' }])
+})
+
+it('a reset ends a recording partial, and Stop and export ends one until export (L5)', async () => {
+  const { driver } = fakeDriver(1000)
+  const last = captureDownloads()
+  mount(driver)
+  fireEvent.click(screen.getByRole('button', { name: 'Record' }))
+  await waitFor(() => expect(screen.getByTestId('live-recording')).toBeTruthy())
+  fireEvent.click(screen.getByRole('button', { name: 'Next sample' }))
+  await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toBe('Recording: 2 rows from t = 0 s'))
+  fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
+  await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toBe('Recording partial: 2 rows from t = 0 s to 0.1 s. The run was reset at t = 0.1 s.'))
+  fireEvent.click(screen.getByRole('button', { name: 'Export recording' }))
+  expect((await last()).status).toBe('partial')
+
+  // Recording until exported: Stop and export ends it complete, at the export.
+  fireEvent.click(screen.getByRole('button', { name: 'Record' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Next sample' }))
+  await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toBe('Recording: 2 rows from t = 0 s'))
+  fireEvent.click(screen.getByRole('button', { name: 'Stop and export' }))
+  expect(await last()).toMatchObject({ status: 'complete', reason: 'Exported at t = 0.1 s.', solver: null, provenance: null })
+})
+
+it('a failed request ends a recording failed, and an unsaved recording outlives the bar (L5)', async () => {
+  const { driver, spy } = fakeDriver(1000)
+  mount(driver)
+  fireEvent.click(screen.getByRole('button', { name: 'Record' }))
+  await waitFor(() => expect(screen.getByTestId('live-recording')).toBeTruthy())
+  fireEvent.click(screen.getByRole('button', { name: 'Next sample' }))
+  await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toBe('Recording: 2 rows from t = 0 s'))
+  spy.advance.mockRejectedValueOnce(new Error('The live worker failed'))
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toMatch(/^Recording failed: .*The live worker failed$/))
+  expect(screen.getByTestId('live-notice').textContent).toBe('The live worker failed')
+  // Unmounting (the model's run went) keeps it on offer.
+  const show = vi.spyOn(notifications, 'show')
+  cleanup()
+  expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'live-recording-kept', autoClose: false }))
+  show.mockRestore()
 })

@@ -237,3 +237,42 @@ fn a_watch_in_the_request_pauses_the_run_where_it_crosses() {
         "{refused}"
     );
 }
+
+#[test]
+fn the_open_names_the_run_settings_and_its_property_sources() {
+    // L5: what a recording carries as its solver settings and provenance.
+    let (id, header) = open(BALL);
+    let s = &header["settings"];
+    assert_eq!(s["method"], "ida");
+    assert_eq!(
+        (s["t0"].as_f64(), s["tf"].as_f64(), s["points"].as_u64()),
+        (Some(0.0), Some(2.0), Some(41))
+    );
+    assert!(
+        s["rtol"].as_f64().unwrap() > 0.0 && s["atol"].as_f64().unwrap() > 0.0,
+        "{s}"
+    );
+    assert!(s["maxStep"].is_null(), "an uncapped IDA run: {s}");
+    assert_eq!(header["provenance"]["fluids"], serde_json::json!([]));
+    assert!(header["provenance"]["backend"].is_string());
+    live_dispose(id);
+
+    // A retry's cap and an explicit block's fixed step are named; so is a fluid.
+    let src = BALL.replace("method = ida", "method = rk4, step = 0.01")
+        + "rho = Density(Water, T = 300 [K], P = 1e5 [Pa])\n";
+    let opened: Value =
+        serde_json::from_str(&live_open_json(&src, r#"{"liveMaxStep":0.005}"#, 0)).unwrap();
+    assert_eq!(opened["ok"], true, "{opened}");
+    let s = &opened["settings"];
+    assert_eq!(
+        (
+            s["method"].as_str(),
+            s["step"].as_f64(),
+            s["maxStep"].as_f64()
+        ),
+        (Some("rk4"), Some(0.01), Some(0.005)),
+        "{s}"
+    );
+    assert_eq!(opened["provenance"]["fluids"], serde_json::json!(["Water"]));
+    live_dispose(opened["session"].as_u64().unwrap() as u32);
+}

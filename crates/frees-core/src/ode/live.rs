@@ -1022,6 +1022,22 @@ pub struct InputChange {
     pub value: f64,
 }
 
+/// The integrator settings a live run uses (Phase L5, for the recorder).
+#[derive(Debug, Clone, PartialEq)]
+pub struct LiveSettings {
+    pub method: String,
+    pub rtol: f64,
+    pub atol: f64,
+    /// The batch grid `linspace(t0, tf, points)`, which the live rows continue.
+    pub t0: f64,
+    pub tf: f64,
+    pub points: usize,
+    /// A fixed step, for a fixed-step method.
+    pub step: Option<f64>,
+    /// The step cap: the block's, or a retry's; `None` is the method's default.
+    pub max_step: Option<f64>,
+}
+
 impl LiveSession {
     pub(crate) fn new(defs: Definitions, run: IdaRun) -> LiveSession {
         LiveSession::of(defs, Run::Ida(Box::new(run)))
@@ -1222,6 +1238,37 @@ impl LiveSession {
         match &self.run {
             Run::Ida(run) => run.columns(),
             Run::Explicit(run) => &run.columns,
+        }
+    }
+
+    /// The integrator settings the run uses.
+    pub fn settings(&self) -> LiveSettings {
+        match &self.run {
+            Run::Ida(run) => LiveSettings {
+                method: run.method.clone(),
+                rtol: run.rtol,
+                atol: run.atol,
+                t0: run.t0,
+                tf: run.tf,
+                points: run.points,
+                step: None,
+                // The batch IDA path runs uncapped; only a live retry caps it.
+                max_step: run.hmax,
+            },
+            Run::Explicit(run) => {
+                let o = &run.block.system.options;
+                let (t0, tf, points) = run.live.grid();
+                LiveSettings {
+                    method: o.method.clone(),
+                    rtol: o.rtol,
+                    atol: o.atol,
+                    t0,
+                    tf,
+                    points,
+                    step: o.step,
+                    max_step: o.max_step,
+                }
+            }
         }
     }
 

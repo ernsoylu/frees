@@ -26,6 +26,9 @@ it('live chunks reassemble the batch rows bit for bit', () => {
   const table = JSON.parse(batch.envelope).odeTables[0]
   const open = JSON.parse(live_open(BALL, '{}', 0))
   expect(open).toMatchObject({ ok: true, table: { name: table.name, vars: table.vars, units: table.units, method: 'ida' } })
+  // L5: the open names what a recording records as its settings and provenance.
+  expect(open).toMatchObject({ settings: { method: 'ida', t0: 0, maxStep: null }, provenance: { fluids: [] } })
+  expect(typeof open.provenance.backend).toBe('string')
   const rows: number[] = []
   const events: unknown[] = []
   for (let t = 0.17; ; t = Math.min(2, t + 0.17)) {
