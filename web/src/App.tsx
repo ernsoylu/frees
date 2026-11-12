@@ -77,6 +77,7 @@ import type { LiveStore } from './liveStore'
 import type { LiveTable } from './wasm/liveClient'
 import type { LiveControl } from './schematic/LiveControls'
 import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, withSliderBounds, type PinnedSlider } from './sliders'
+import type { SeriesId } from './preferredValues'
 import { compareRuns, describeRun, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
 import { playbackVariables, timeLabel, timelineOf, type Timeline } from './playback'
 import { wasmUnitConversions } from './wasm/engineClient'
@@ -2104,6 +2105,11 @@ export default function App() {
     setPinnedSliders((prev) => prev.filter((p) => p.name !== name))
   }
 
+  /** Phase L6: what a slider's wheel steps through (presentation; no solve). */
+  function setSliderSeries(name: string, series: SeriesId) {
+    setPinnedSliders((prev) => prev.map((p) => (p.name === name ? { ...p, series } : p)))
+  }
+
   function invalidateTable() {
     // Text edits invalidate the runs of every parametric table. Return the same
     // array when there is nothing to clear so a plain keystroke doesn't
@@ -3345,6 +3351,7 @@ export default function App() {
                       onChange={(name, v) => setSliderValue(name, v, false)}
                       onCommit={(name, v) => setSliderValue(name, v, true)}
                       onUnpin={unpinSlider}
+                      onSeries={setSliderSeries}
                       solving={solving}
                       stale={slidersStale}
                     />

@@ -1,5 +1,6 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
 import type { PinnedSlider } from './sliders'
+import { seriesOptions, type SeriesId } from './preferredValues'
 
 /**
  * Share-by-URL: the whole document travels in the URL fragment as
@@ -160,11 +161,12 @@ function readSliders(raw: unknown): PinnedSlider[] | undefined {
   if (!Array.isArray(raw)) return undefined
   const out: PinnedSlider[] = []
   for (const r of raw.slice(0, MAX_SHARED_SLIDERS)) {
-    const { name, value, units, min, max } = (r ?? {}) as Record<string, unknown>
+    const { name, value, units, min, max, series } = (r ?? {}) as Record<string, unknown>
     if (typeof name !== 'string' || !IDENT.test(name) || out.some((o) => o.name.toLowerCase() === name.toLowerCase())) continue
     if (![value, min, max].every((n) => typeof n === 'number' && Number.isFinite(n)) || !((min as number) < (max as number))) continue
     const u = typeof units === 'string' && UNITS.test(units) ? units : ''
-    out.push({ name, units: u, min: min as number, max: max as number, value: Math.min(max as number, Math.max(min as number, value as number)) })
+    const steps = typeof series === 'string' && (seriesOptions(u) as string[]).includes(series) ? { series: series as SeriesId } : {}
+    out.push({ name, units: u, min: min as number, max: max as number, value: Math.min(max as number, Math.max(min as number, value as number)), ...steps })
   }
   return out.length ? out : undefined
 }

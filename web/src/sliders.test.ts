@@ -66,6 +66,11 @@ describe('sliderOverrideEquation', () => {
       .toBe('P = 250000 [Pa]')
   })
 
+  it('writes a reported Ω as ohm, which the lexer reads', () => {
+    expect(sliderOverrideEquation(pin({ name: 'R', value: 5100, units: 'Ω' }))).toBe('R = 5100 [ohm]')
+    expect(sliderOverrideEquation(pin({ name: 'rho', value: 2, units: 'Ω-m' }))).toBe('rho = 2 [ohm-m]')
+  })
+
   it('omits the placeholder unit', () => {
     expect(sliderOverrideEquation(pin({ units: '-' }))).toBe('eta = 0.75')
   })

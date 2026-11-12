@@ -2,6 +2,8 @@
 // follow. Pure helpers — the range policy and the override wire format — kept
 // out of the component so both are testable and the rules are stated once.
 
+import type { SeriesId } from './preferredValues'
+
 /** A variable pinned to the slider strip. Persisted in the project file. */
 export interface PinnedSlider {
   /** Variable name in its display spelling (what the user typed). */
@@ -13,6 +15,8 @@ export interface PinnedSlider {
   /** Range ends; resolved once at pin time so dragging never moves the track. */
   min: number
   max: number
+  /** Phase L6: what a wheel notch steps through; absent means `defaultSeries`. */
+  series?: SeriesId
 }
 
 /**
@@ -62,7 +66,11 @@ export function sliderStep(min: number, max: number): number {
  * a stale REPL assignment of the same variable.
  */
 export function sliderOverrideEquation(pin: PinnedSlider): string {
-  const unit = pin.units && pin.units !== '-' ? ` [${pin.units}]` : ''
+  // A pin keeps the unit the solve reported, and the engine reports a
+  // resistance as `Ω`, a name the registry knows but the lexer cannot read in
+  // a bracket; written back as `ohm`, the override parses.
+  const units = pin.units.replaceAll('Ω', 'ohm')
+  const unit = units && units !== '-' ? ` [${units}]` : ''
   return `${pin.name} = ${pin.value}${unit}`
 }
 

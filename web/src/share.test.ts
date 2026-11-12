@@ -86,6 +86,13 @@ describe('share-by-URL', () => {
       expect(readShareHash(hash)).toEqual({ text: 'R = 1000 [Ohm]', lesson: 'lesson-rc-charging', sliders: [RC] })
     })
 
+    it('carries a slider’s wheel series when its unit takes it (L6)', () => {
+      const pipe = { name: 'D', value: 0.05, units: 'm', min: 0.02, max: 0.2, series: 'dn' as const }
+      const odd = { name: 'T', value: 300, units: 'K', min: 250, max: 350, series: 'dn' as const }
+      const read = readShareHash(hashOf(buildShareUrl('D = 0.05 [m]', BASE, { sliders: [pipe, odd] }))) as { sliders: unknown[] }
+      expect(read.sliders).toEqual([pipe, { name: 'T', value: 300, units: 'K', min: 250, max: 350 }])
+    })
+
     it('a link from a newer frees says so instead of opening nothing', () => {
       const read = readShareHash('#share=3.' + new URL(buildShareUrl('x = 1', BASE)!).hash.slice(7))
       expect(read).toEqual({ error: expect.stringMatching(/newer version of frees \(link format 3\)/) })
