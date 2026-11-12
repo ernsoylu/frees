@@ -142,7 +142,7 @@ function portReadings(
 /** Each of a block's wired ports → the stream naming its variables, with the
  *  domain that decides which members to report. A port can appear on several
  *  edges (at a junction); they all name the same stream, so the first wins. */
-function streamPrefixes(
+export function streamPrefixes(
   node: SchematicNode,
   edges: readonly SchematicEdge[],
 ): Map<string, { stream: string; domain: string; lineId: string }> {

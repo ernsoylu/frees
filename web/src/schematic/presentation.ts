@@ -223,7 +223,7 @@ export interface SchematicPresentation extends SheetState {
    * RUN-04/WIRE-10: the metric the wires are coloured by (`domain:member`, '' for none) and measured-flow arrows.
    * Phase H: flow particles, and their schematic speed (a multiplier, not a physical velocity).
    */
-  overlay: { metric: string; arrows: boolean; particles?: boolean; speed?: number; scales?: Record<string, ScaleSetting> }
+  overlay: { metric: string; arrows: boolean; particles?: boolean; speed?: number; scales?: Record<string, ScaleSetting>; power?: boolean }
   /** VIEW-08: named views saved with the project. */
   views: SavedView[]
   /** VIEW-09: notes, callouts, variable cards and legends, each drawn in one scope. */
@@ -495,9 +495,10 @@ function scaleOf(v: unknown): ScaleSetting | null {
 export const PARTICLE_SPEEDS = [0.25, 0.5, 1, 2, 4]
 
 function overlayOf(v: unknown): { overlay: SchematicPresentation['overlay']; bad: number } {
-  const { metric, arrows, particles, speed, scales } = record(v) ?? {}
+  const { metric, arrows, particles, speed, scales, power } = record(v) ?? {}
   const overlay: SchematicPresentation['overlay'] = { metric: typeof metric === 'string' && /^([a-z]+:[a-z]+)?$/.test(metric) ? metric : '', arrows: arrows === true }
   if (particles === true) overlay.particles = true
+  if (power === true) overlay.power = true
   if (typeof speed === 'number' && PARTICLE_SPEEDS.includes(speed)) overlay.speed = speed
   let badScales = 0
   for (const [key, raw] of Object.entries(record(scales) ?? {})) {
@@ -505,7 +506,7 @@ function overlayOf(v: unknown): { overlay: SchematicPresentation['overlay']; bad
     if (/^[a-z]+:[a-z]+$/.test(key) && setting && Object.keys(overlay.scales ?? {}).length < MAX_ENTRIES) overlay.scales = { ...overlay.scales, [key]: setting }
     else badScales++
   }
-  const bad = overlay.metric !== metric || overlay.arrows !== arrows || (particles !== undefined && particles !== overlay.particles && particles !== false) || (speed !== undefined && speed !== overlay.speed) || badScales > 0 || (scales !== undefined && record(scales) === undefined)
+  const bad = overlay.metric !== metric || overlay.arrows !== arrows || (particles !== undefined && particles !== overlay.particles && particles !== false) || (power !== undefined && power !== true && power !== false) || (speed !== undefined && speed !== overlay.speed) || badScales > 0 || (scales !== undefined && record(scales) === undefined)
   return { overlay, bad: v !== undefined && bad ? 1 : 0 }
 }
 

@@ -8,6 +8,7 @@ import type { OdeTableDto } from './api'
 import { LiveStore } from './liveStore'
 import LiveScope from './LiveScope'
 import { downloadRecording, LiveRecorder } from './liveRecorder'
+import type { LabTimelineEntry } from './labs'
 
 /** What the bar needs of a live client; tests pass a fake. */
 export type LiveDriver = Pick<LiveClient, 'open' | 'advance' | 'step' | 'reset' | 'setInputs' | 'spectrum' | 'dispose' | 'isOpen'>
@@ -35,6 +36,12 @@ interface Props {
   onOpenChange?: (open: boolean) => void
   /** L3b: the open run's rows and header (`null` once closed), for the canvas mini-scopes. */
   onRows?: (rows: { store: LiveStore; header: LiveTable } | null) => void
+  /** M1: a lab's input timeline, which the engine applies itself, and its pause conditions; sent with every open. */
+  lab?: { timeline: LabTimelineEntry[]; watches?: string[]; speed?: number } | null
+  /** M1: the timeline lines the run applied, as the lab writes them, so the sliders can follow. */
+  onTimelineApplied?: (lines: string[]) => void
+  /** M1: each new value opens the block afresh and runs it (a lab's Run, an approved autorun). */
+  autorun?: number
 }
 
 type Status = 'closed' | 'opening' | 'paused' | 'running' | 'finished' | 'failed'
@@ -58,7 +65,7 @@ const speedOf = (exponent: number) => 10 ** exponent
  * the revision tracker), so a live run never shows a model that is not the
  * one in the editor.
  */
-export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onTable, inputRef, onInputsReset, onInputsSettled, onOpenChange, onRows }: Readonly<Props>) {
+export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onTable, inputRef, onInputsReset, onInputsSettled, onOpenChange, onRows, lab, onTimelineApplied, autorun }: Readonly<Props>) {
   const driver = given ?? defaultDriver()
   const [block, setBlock] = useState(blocks[0] ?? '')
   const [status, setStatus] = useState<Status>('closed')
@@ -232,6 +239,18 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
       setStep(chunk.clock.h)
     }
     if (chunk.events.length) setLastEvent(chunk.events[chunk.events.length - 1])
+    // M1: the run applied timeline changes at this chunk's end.
+    if (chunk.inputs?.length) {
+      inputLogRef.current = [...inputLogRef.current, ...chunk.inputs]
+      setLastInput(chunk.inputs[chunk.inputs.length - 1])
+      const names = new Set(chunk.inputs.map((c) => c.name.toLowerCase()))
+      const at = chunk.inputs[0].time
+      const lines = (lab?.timeline ?? [])
+        .filter((e) => e.at <= at + 1e-9 * Math.max(1, Math.abs(at)))
+        .flatMap((e) => e.set)
+        .filter((l) => names.has(l.split('=')[0].trim().toLowerCase()))
+      if (lines.length) onTimelineApplied?.(lines)
+    }
     // L4: a pause condition crossed; the engine ended the chunk on it.
     const paused = !chunk.error && !chunk.finished ? chunk.paused : null
     if (paused) {
@@ -356,9 +375,13 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
       built = buildOpen()
       // A retry after a failure caps the integrator's step for this run only;
       // pause conditions (L4) go with every open, a retry's included.
-      const watches = watchText.split(';').map((w) => w.trim()).filter(Boolean)
-      if (maxStep !== undefined || watches.length) {
-        const extra = { ...(maxStep === undefined ? {} : { liveMaxStep: maxStep }), ...(watches.length ? { liveWatches: watches } : {}) }
+      const watches = [...(lab?.watches ?? []), ...watchText.split(';').map((w) => w.trim()).filter(Boolean)]
+      if (maxStep !== undefined || watches.length || lab) {
+        const extra = {
+          ...(maxStep === undefined ? {} : { liveMaxStep: maxStep }),
+          ...(watches.length ? { liveWatches: watches } : {}),
+          ...(lab ? { liveTimeline: lab.timeline } : {}),
+        }
         built = { ...built, request: JSON.stringify({ ...JSON.parse(built.request), ...extra }) }
       }
     } catch (error) {
@@ -401,6 +424,27 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     go('paused')
     publish(false)
   }
+
+  // Under reduced motion an autorun opens the run paused at its start: stepping replaces play.
+  // Read when the run opens, since a media hook reports its first value only after mount.
+  const runAfresh = async () => {
+    await null
+    if (lab?.speed) setExponent(Math.min(3, Math.max(-2, Math.log10(lab.speed))))
+    go('closed')
+    clear()
+    if ((await open()) && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) go('running')
+  }
+
+  // M1: open afresh and run, once per new `autorun` value (a value present at mount counts).
+  const autorunRef = useRef(0)
+  useEffect(() => {
+    if (!autorun || autorun === autorunRef.current) return
+    autorunRef.current = autorun
+    driver.dispose()
+    void runAfresh()
+    // `runAfresh` reads refs and props of this render; the run starts once per value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autorun])
 
   const retry = async (maxStep: number) => {
     driver.dispose()

@@ -4,9 +4,13 @@ import {
   buildShareUrl,
   clearRawDocumentUrl,
   MAX_SHARE_URL_CHARS,
+  MAX_SHARED_CHANGES,
+  MAX_SHARED_SLIDERS,
   readShareHash,
+  timelineOfLog,
   type ShareRead,
 } from './share'
+import { compressToEncodedURIComponent } from 'lz-string'
 
 const BASE = 'https://frees.example/'
 const textOf = (r: ShareRead) => (r && 'text' in r ? r.text : null)
@@ -129,6 +133,43 @@ describe('share-by-URL', () => {
 
     it('refuses a payload longer than any link frees emits', () => {
       expect(readShareHash('#share=' + 'A'.repeat(MAX_SHARE_URL_CHARS + 1))).toBeNull()
+    })
+  })
+
+  describe('M2: a shared experiment', () => {
+    it('carries a live run’s input changes as a timeline, the changes at one time together', () => {
+      const timeline = timelineOfLog([
+        { time: 100, name: 'q_load', value: 4000 },
+        { time: 100, name: 't_t', value: 1e6 },
+        { time: 1600, name: 'q_load', value: 1500 },
+      ])
+      expect(timeline).toEqual([{ at: 100, set: ['q_load = 4000', 't_t = 1000000'] }, { at: 1600, set: ['q_load = 1500'] }])
+      const read = readShareHash(new URL(buildShareUrl('Q_load = 1500 [W]', BASE, { timeline })!).hash)
+      expect(read).toEqual({ text: 'Q_load = 1500 [W]', timeline })
+    })
+
+    it('drops anything but literal assignments at finite, non-negative times, and sorts them', () => {
+      const payload = {
+        text: 'x = 1',
+        timeline: [
+          { at: 5, set: ['x = 2 [m]', 'y = sin(1)', 'z = 1 [m]] + 1', 'w = 1e-3'] },
+          { at: 1, set: ['x = .5'] },
+          { at: -1, set: ['x = 3'] },
+          { at: Number.NaN, set: ['x = 3'] },
+          { at: 2, set: 'x = 3' },
+          { at: 3, set: ['x = 3\ny = 4'] },
+        ],
+      }
+      const read = readShareHash('#share=2.' + compressToEncodedURIComponent(JSON.stringify(payload)))
+      expect(read).toEqual({ text: 'x = 1', timeline: [{ at: 1, set: ['x = .5'] }, { at: 5, set: ['x = 2 [m]', 'w = 1e-3'] }] })
+    })
+
+    it('refuses a timeline longer than a reader keeps, rather than one that loses its last changes', () => {
+      const at = (n: number) => Array.from({ length: n }, (_, k) => ({ at: k, set: ['x = 1'] }))
+      expect(buildShareUrl('x = 1', BASE, { timeline: at(MAX_SHARED_CHANGES) })).not.toBeNull()
+      expect(buildShareUrl('x = 1', BASE, { timeline: at(MAX_SHARED_CHANGES + 1) })).toBeNull()
+      const wide = Array.from({ length: MAX_SHARED_SLIDERS + 1 }, (_, k) => `x${k} = 1`)
+      expect(buildShareUrl('x = 1', BASE, { timeline: [{ at: 0, set: wide }] })).toBeNull()
     })
   })
 })

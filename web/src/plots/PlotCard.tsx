@@ -385,6 +385,9 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
     if (!stateTableDefs?.length) return { indices: [], columns: [], values: {} }
     return detectStateTables(variables, stateTableDefs).find((t) => t.name === name) ?? { indices: [], columns: [], values: {} }
   }
+  // Phase M1b: a diagram plot's x=/y= pairs are recorded columns of the table it is bound to.
+  const paths = (pairs?: { x: string; y: string }[]) =>
+    spec.source?.kind === 'table' ? (pairs ?? []).map((p) => ({ ...buildXYSeries(inputs.tableRows, [], p.x, [p.y])[0], name: `${p.y} vs ${p.x}` })) : undefined
   if (spec.kind === 'property' && diagram) {
     const selectedCircuit = spec.property.stateTable
       ? stateTableDefs?.find((s) => s.name === spec.property.stateTable)
@@ -393,10 +396,10 @@ export function buildFigure(spec: PlotSpec, inputs: FigureInputs): PlotlyFigure 
       ? (!selectedCircuit.fluid || selectedCircuit.fluid.toLowerCase() === spec.property.fluid.toLowerCase())
       : (!stateTableDefs || stateTableDefs.length <= 1 || stateTableDefs.every((s) => !s.fluid || s.fluid.toLowerCase() === spec.property.fluid.toLowerCase()))
     const effectiveCyclePath = fluidMatches ? cyclePath : undefined
-    return buildPropertyFigure(diagram, spec.property, spec.format, overlayStates(spec.property.stateTable), theme, effectiveCyclePath, revision, playback)
+    return buildPropertyFigure(diagram, spec.property, spec.format, overlayStates(spec.property.stateTable), theme, effectiveCyclePath, revision, playback, paths(spec.property.trajectory))
   }
   if (spec.kind === 'psychro' && psychart) {
-    return buildPsychroFigure(psychart, spec.psychro, spec.format, overlayStates(spec.psychro.stateTable), theme, undefined, revision, playback)
+    return buildPsychroFigure(psychart, spec.psychro, spec.format, overlayStates(spec.psychro.stateTable), theme, undefined, revision, playback, paths(spec.psychro.trajectory))
   }
   if (spec.kind === 'xy' && !spec.source) return null
   const isNoXNeeded =

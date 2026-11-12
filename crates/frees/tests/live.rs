@@ -276,3 +276,41 @@ fn the_open_names_the_run_settings_and_its_property_sources() {
     assert_eq!(opened["provenance"]["fluids"], serde_json::json!(["Water"]));
     live_dispose(opened["session"].as_u64().unwrap() as u32);
 }
+
+#[test]
+fn a_timeline_in_the_request_is_applied_by_the_run_and_reported() {
+    let src = "P = 2 [kW]\nDYNAMIC heat (method = ida, time = 0 .. 10, points = 11)\n  \
+  der(T) = (P/1000 - 0.5*(T - 20))/2\n  \
+  T(0) = 20\n\
+END\n";
+    let request = r#"{"liveTimeline":[{"at":4,"set":["P = 3 [kW]"]}]}"#;
+    let opened: Value = serde_json::from_str(&live_open_json(src, request, 0)).unwrap();
+    assert_eq!(opened["ok"], true, "{opened}");
+    let id = opened["session"].as_u64().unwrap() as u32;
+    // The first chunk ends on the change's row, which the run applied.
+    let first = live_advance_json(id, 10.0, 1e9);
+    let header = parse(&first);
+    assert_eq!(header["numRows"], 5, "{header}");
+    assert_eq!(header["inputs"][0]["time"], 4.0, "{header}");
+    assert_eq!(header["inputs"][0]["name"], "p");
+    assert_eq!(header["inputs"][0]["value"], 3000.0);
+    let rest = live_advance_json(id, 10.0, 1e9);
+    assert_eq!(parse(&rest)["inputs"], serde_json::json!([]));
+    let (t4, t10) = (first.1[9], rest.1[rest.1.len() - 1]);
+    let exact = 26.0 + (t4 - 26.0) * (-6.0f64 / 4.0).exp();
+    assert!((t10 - exact).abs() < 1e-4, "{t10} vs {exact}");
+    live_dispose(id);
+
+    for bad in [
+        r#"{"liveTimeline":[{"set":["P = 3"]}]}"#,
+        r#"{"liveTimeline":[{"at":4,"set":["P = 2*x"]}]}"#,
+        r#"{"liveTimeline":{"at":4}}"#,
+    ] {
+        let refused: Value = serde_json::from_str(&live_open_json(src, bad, 0)).unwrap();
+        assert_eq!(refused["ok"], false, "{bad}");
+        assert!(
+            refused["error"].as_str().unwrap().contains("timeline"),
+            "{refused}"
+        );
+    }
+}

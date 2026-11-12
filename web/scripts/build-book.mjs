@@ -42,7 +42,8 @@ for (const p of book.REFERENCE_PAGES) {
 
 // Gallery: graded models that solve without extra requests, at most
 // PER_CATEGORY per category, transient (plottable) models first — except the
-// lessons (I5), which are all in, so the Book's lesson search reaches each.
+// lessons (I5) and the live labs (M1), which are all in, so the Book's lesson
+// search reaches each.
 const graded = book.EXAMPLES.filter((e) => /\{\s*CHECK\s/.test(e.text))
 const byCat = new Map()
 for (const e of [...graded].sort((a, b) => Number(/^\s*DYNAMIC\b/m.test(b.text)) - Number(/^\s*DYNAMIC\b/m.test(a.text)))) {
@@ -54,7 +55,7 @@ const gallery = []
 for (const [, list] of [...byCat].sort((a, b) => a[0].localeCompare(b[0]))) {
   let taken = 0
   for (const e of list) {
-    if (taken === PER_CATEGORY && e.category !== 'Lessons') break
+    if (taken === PER_CATEGORY && e.category !== 'Lessons' && e.category !== 'Labs') break
     const r = JSON.parse(wasm.solve(e.text, '{}'))
     if (!r.success) continue
     gallery.push({ ex: e, result: r })

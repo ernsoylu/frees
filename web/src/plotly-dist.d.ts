@@ -18,7 +18,7 @@ declare module 'plotly.js/lib/core' {
   }
 
   export interface PlotlyTrace {
-    type: 'scatter' | 'bar' | 'pie' | 'histogram' | 'mesh3d' | 'scatter3d' | 'box'
+    type: 'scatter' | 'bar' | 'pie' | 'histogram' | 'mesh3d' | 'scatter3d' | 'box' | 'sankey'
     mode?: string
     name: string
     x?: (number | string | null)[]
@@ -48,6 +48,11 @@ declare module 'plotly.js/lib/core' {
     boxpoints?: 'all' | 'outliers' | 'suspectedoutliers' | false | string
     jitter?: number
     pointpos?: number
+    /** Sankey nodes and links (the schematic's power view). */
+    node?: Record<string, unknown>
+    link?: Record<string, unknown>
+    valueformat?: string
+    valuesuffix?: string
   }
 
   export interface PlotlyAxisLayout {
@@ -149,6 +154,11 @@ declare module 'plotly.js/lib/histogram' {
   export default traceModule
 }
 declare module 'plotly.js/lib/mesh3d' {
+  const traceModule: unknown
+  export default traceModule
+}
+
+declare module 'plotly.js/lib/sankey' {
   const traceModule: unknown
   export default traceModule
 }

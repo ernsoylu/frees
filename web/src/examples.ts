@@ -2836,6 +2836,57 @@ q_B_equal_f = q_total / (1 + sqrt(149.8 / 80))
 { CHECK q_B_equal_f 0.000532767919714017 1e-09 }`,
   },
   {
+    id: 'pump-valve-operating-point',
+    title: 'Pump, pipe and throttling valve: the operating point',
+    description: 'Solve, then open the Schematic and click P1 or V1: each card draws its curve and the point it runs at.',
+    category: 'Fluids',
+    text: `// frees-language: 2
+{ A centrifugal pump lifts water from one open tank to another at the same
+  level through 120 m of 80 mm steel pipe and a control valve. The pump runs
+  where its head curve meets the system: the pipe's friction and the valve's
+  drop, both growing with the flow. Closing the valve steepens the system
+  curve and moves the point up the pump curve, to less flow at more head.
+
+  The head curve is the manufacturer's table; the valve passes
+  m_dot*|m_dot| = (u*Cv)^2*rho*dP at opening u.
+
+  On the Schematic, click P1 for the pump curve with the operating point on
+  it, or V1 for the valve's drop at the present opening. Pin u_v as a slider
+  and move it: the valve's curve and both points follow.
+
+  Source: Y. A. Cengel and J. M. Cimbala, Fluid Mechanics, 4th ed.,
+  McGraw-Hill, 2018, Sec. 14-2 (matching a pump to a piping system). }
+
+TABLE pump_head(Q [m^3/s]) [m]
+  0       32
+  0.005   31
+  0.010   28
+  0.015   23
+  0.020   16
+  0.025   7
+END
+
+rho = 998 [kg/m^3]
+u_v = 0.6 [-] { valve opening }
+
+PumpMap P1(a, b, rho=rho, map$=pump_head)
+Duct    L1(b, c, rho=rho, mu=1.0e-3 [Pa-s], L=120 [m], D=0.08 [m], rough=4.5e-5 [m])
+Valve   V1(c, d, Cv=0.0015 [m^2], rho=rho, u=u_v, model$=linear)
+Sink    TANK(d) { the upper tank }
+
+a.P = 101325 [Pa] { both tanks open to the atmosphere }
+d.P = 101325 [Pa]
+c.h = 100000 [J/kg] { water near 24 C; nothing here changes it }
+
+Q_op = P1.q    { operating flow, m^3/s }
+H_op = P1.head { operating head, m }
+dP_valve = c.P - d.P
+
+{ CHECK Q_op 0.0119058453909063 1e-9 }
+{ CHECK H_op 26.0941546090937 1e-7 }
+{ CHECK dP_valve 174648.958226199 1e-3 }`,
+  },
+  {
     id: 'pipeline-pump-head',
     title: 'Pump head for a long cooling-water line',
     description: 'Solve. Pump into a smooth Pipe against a 160 ft lift; NCEES HVAC&R Problem 515.',
@@ -4223,6 +4274,366 @@ PLOT 'Speed and measured speed'
   x = time
   y = v
   y = v_m
+END`,
+  },
+  {
+    id: 'lab-thermostat',
+    title: 'Lab — a thermostat limit cycle',
+    description: 'A graded live lab: an on-off heater holds a room inside a band; widen the band live and the cycle slows. Run it live from the lesson panel. Solve (F2).',
+    category: 'Labs',
+    text: `// frees-language: 2
+{ Lab — a thermostat limit cycle.
+
+  An on-off heater Q_h warms a room of heat capacity C_th that loses heat
+  through UA to the outdoors at T_a. The thermostat switches the heater off
+  when the room reaches T_set + dT_band/2 and on again when it falls to
+  T_set - dT_band/2. The room never settles: it cycles between the two
+  switching temperatures, a limit cycle.
+
+  Hysteresis stand-in: the relay is a heater state u (0 or 1) that two
+  EVENTs set where T crosses each switching temperature. That is exact for
+  a relay with hysteresis; frees has no general hysteresis or state-machine
+  contract yet.
+
+  Between switchings the room is a first-order lag with tau = C_th/UA,
+  heating toward T_on = T_a + Q_h/UA and cooling toward T_a, so each half
+  of the cycle is a logarithm:
+    t_heat = tau*ln((T_on - T_lo)/(T_on - T_hi))
+    t_cool = tau*ln((T_hi - T_a)/(T_lo - T_a))
+
+  Sources: F. P. Incropera et al., Fundamentals of Heat and Mass Transfer,
+  7th ed., Wiley, 2011, §5.2 (lumped capacitance); K. J. Åström and
+  R. M. Murray, Feedback Systems, 2nd ed., Princeton University Press, 2021,
+  ch. 1 (on-off control). }
+
+Q_h     = 2000 [W]      { heater power }
+UA      = 50 [W/K]      { room loss conductance }
+C_th    = 50000 [J/K]   { room heat capacity }
+T_a     = 10 [C]        { outdoor temperature }
+T_set   = 20 [C]        { set point }
+dT_band = 2 [K]         { hysteresis width: the lab's slider }
+
+DYNAMIC room (method = ida, time = 0 .. 6000, points = 2001)
+  der(T) = (u*Q_h - UA*(T - T_a))/C_th
+  der(u) = 0
+  T(0) = 15 [C]
+  u(0) = 1
+  EVENT off: T = T_set + dT_band/2 | rising -> set u = 0
+  EVENT on: T = T_set - dT_band/2 | falling -> set u = 1
+END
+
+tau     = C_th/UA                                                         { time constant }
+T_on    = T_a + Q_h/UA                                                    { where the heater alone would hold the room }
+t_heat  = tau*ln((T_on - (T_set - dT_band/2))/(T_on - (T_set + dT_band/2)))
+t_cool  = tau*ln((T_set + dT_band/2 - T_a)/(T_set - dT_band/2 - T_a))
+P_cycle = t_heat + t_cool                                                 { the limit cycle's period }
+duty    = t_heat/P_cycle                                                  { the heater's on fraction }
+
+{ CHECK P_cycle 267.362069960823 1e-6 }
+{ CHECK duty 0.249442168473802 1e-9 }
+PLOT 'Room temperature and heater state'
+  kind = xy
+  x = time
+  y = T
+END`,
+  },
+  {
+    id: 'lab-accumulator',
+    title: 'Lab — charging a hydraulic accumulator',
+    description: 'A graded live lab: a gas-charged accumulator fills through a line restriction; step the supply pressure live and time the response. Run it live from the lesson panel. Solve (F2).',
+    category: 'Labs',
+    text: `// frees-language: 2
+{ Lab — charging a hydraulic accumulator.
+
+  A bladder accumulator, precharged with gas to p_0 in a volume V_0, is
+  filled with oil from a supply at p_s through a line with a laminar
+  resistance R_line, so the oil flow is (p_s - p)/R_line. The gas is
+  compressed isothermally, p*V_g = p_0*V_0: the stiffer the gas becomes as
+  it is squeezed, the less oil each bar of pressure admits, so the
+  response is not a plain exponential.
+
+  With a = p_0*V_0 and u = a*(p_s/p - 1), the time to go from p_1 to p_2 is
+    t = (R_line/p_s^2)*((u_1 - u_2) + a*ln(u_1/u_2))
+  which the lab's grades use as their reference.
+
+  Source: J. Watton, Fundamentals of Fluid Power Control, Cambridge
+  University Press, 2009 (accumulators). }
+
+p_s    = 100 [bar]        { supply pressure: the lab's slider }
+p_0    = 50 [bar]         { gas precharge }
+V_0    = 10 [L]           { gas volume at precharge }
+R_line = 5e9 [Pa-s/m^3]   { laminar line resistance }
+
+DYNAMIC charge (method = ida, time = 0 .. 60, points = 601)
+  der(V_g) = -(p_s - p)/R_line
+  p = p_0*V_0/V_g
+  V_g(0) = V_0
+END
+
+V_oil = V_0 - p_0*V_0/p_s   { oil stored once the accumulator reaches p_s }
+
+{ CHECK V_oil 0.005 1e-12 }
+PLOT 'Accumulator pressure'
+  kind = xy
+  x = time
+  y = p
+END`,
+  },
+  {
+    id: 'lab-quarter-car',
+    title: 'Lab — quarter-car resonance',
+    description: 'A graded live lab: a quarter car rides a sinusoidal road; move the road frequency live onto the body resonance and watch the body amplitude grow on an X-Y plot. Run it live from the lesson panel. Solve (F2).',
+    category: 'Labs',
+    text: `// frees-language: 2
+{ Lab — quarter-car resonance.
+
+  A quarter car: the body m_s sits on the suspension k_s, c_s over the
+  wheel m_u, which rides the road through the tyre stiffness k_t. The road
+  is a sine of amplitude A_road at f_road. Its phase phi is a state, so a
+  live change of frequency keeps the road continuous.
+
+  In the steady state the body moves at the road frequency with amplitude
+  H_body*A_road, where with s = j*omega
+    H_body = |k_t*(k_s + c_s*s)| / |(m_s*s^2 + c_s*s + k_s)*(m_u*s^2 + c_s*s + k_s + k_t) - (c_s*s + k_s)^2|
+  written out below in real arithmetic. The body resonance is near
+  1.18 Hz; the wheel hop is near 10.6 Hz.
+
+  Source: T. D. Gillespie, Fundamentals of Vehicle Dynamics, SAE, 1992,
+  ch. 5 (ride). }
+
+m_s    = 250 [kg]        { sprung (body) mass }
+m_u    = 40 [kg]         { unsprung (wheel) mass }
+k_s    = 16000 [N/m]     { suspension stiffness }
+c_s    = 1000 [N-s/m]    { damper }
+k_t    = 160000 [N/m]    { tyre stiffness }
+A_road = 0.02 [m]        { road amplitude }
+f_road = 0.5 [Hz]        { road frequency: the lab's slider }
+
+DYNAMIC ride (method = ode45, time = 0 .. 24, points = 1201)
+  der(phi) = 2*pi#*f_road
+  y_r = A_road*sin(phi)
+  der(z_s) = v_s
+  der(z_u) = v_u
+  m_s*der(v_s) = -k_s*(z_s - z_u) - c_s*(v_s - v_u)
+  m_u*der(v_u) = k_s*(z_s - z_u) + c_s*(v_s - v_u) - k_t*(z_u - y_r)
+  phi(0) = 0
+  z_s(0) = 0
+  z_u(0) = 0
+  v_s(0) = 0
+  v_u(0) = 0
+END
+
+omega  = 2*pi#*f_road
+a_h    = k_s - m_s*omega^2
+b_h    = omega*c_s
+c_h    = k_s + k_t - m_u*omega^2
+H_body = k_t*sqrt(k_s^2 + b_h^2)/sqrt((a_h*c_h - k_s^2)^2 + b_h^2*(a_h + c_h - 2*k_s)^2)   { body transmissibility }
+X_body = H_body*A_road                                                                  { steady body amplitude }
+
+{ CHECK H_body 1.19832696263027 1e-9 }
+{ CHECK X_body 0.0239665392526055 1e-11 }
+PLOT 'Body against road'
+  kind = xy
+  x = y_r
+  y = z_s
+END`,
+  },
+  {
+    id: 'lab-refrigeration',
+    title: 'Lab — refrigeration start-up on P-h',
+    description: 'A graded live lab: an R134a unit pulls a cold room down while its states trace paths on the P-h chart; halve the compressor live and watch the room settle warmer. Run it live from the lesson panel. Solve (F2).',
+    category: 'Labs',
+    text: `// frees-language: 2
+{ Lab — refrigeration start-up on P-h.
+
+  A cold room of heat capacity C_room, with a conductance UA to the
+  ambient, is pulled down from the ambient temperature by an R134a
+  vapour-compression unit. The evaporator runs dT_e below the room and the
+  condenser at T_c. The compressor moves a fixed volume V_dot of the
+  saturated vapour it draws, so as the room cools the suction density
+  falls, the mass flow falls with it, and the cooling capacity
+  Q_e = m_dot*(h_1 - h_4) shrinks. The states trace their paths on the
+  P-h chart as the evaporating pressure drops.
+
+  The room settles where the capacity meets the heat gain,
+    UA*(T_amb - T_ss) = V_dot*rho_1(T_ss - dT_e)*(h_1 - h_4),
+  which the steady equations after the DYNAMIC block solve as the
+  lab's reference.
+
+  Source: Y. A. Cengel and M. A. Boles, Thermodynamics: An Engineering
+  Approach, McGraw-Hill (the vapour-compression refrigeration cycle). }
+
+T_amb  = 303.15 [K]        { ambient around the room }
+T_c    = 313.15 [K]        { condensing temperature }
+dT_e   = 10 [K]            { evaporator approach below the room }
+eta_c  = 0.75              { isentropic efficiency of the compressor }
+V_dot  = 0.004 [m^3/s]     { compressor displacement: the lab's slider }
+UA     = 150 [W/K]         { room envelope conductance }
+C_room = 2e5 [J/K]         { heat capacity of the room and its contents }
+
+DYNAMIC pulldown (method = ida, time = 0 .. 10000, points = 1001)
+  T_e   = T_room - dT_e
+  P_e   = P_sat(R134a, T=T_e)
+  P_c   = P_sat(R134a, T=T_c)
+  h_1   = Enthalpy(R134a, T=T_e, x=1)    { saturated vapour leaving the evaporator }
+  s_1   = Entropy(R134a, T=T_e, x=1)
+  rho_1 = Density(R134a, T=T_e, x=1)
+  h_2   = h_1 + (Enthalpy(R134a, P=P_c, s=s_1) - h_1)/eta_c
+  h_3   = Enthalpy(R134a, T=T_c, x=0)    { saturated liquid leaving the condenser }
+  h_4   = h_3                            { throttling }
+  m_dot = V_dot*rho_1
+  Q_e   = m_dot*(h_1 - h_4)
+  C_room*der(T_room) = UA*(T_amb - T_room) - Q_e
+  T_room(0) = T_amb
+END
+
+{ The steady room: capacity equals the envelope gain. }
+T_ess   = T_ss - dT_e
+h_1ss   = Enthalpy(R134a, T=T_ess, x=1)
+rho_1ss = Density(R134a, T=T_ess, x=1)
+h_3ss   = Enthalpy(R134a, T=T_c, x=0)
+UA*(T_amb - T_ss) = V_dot*rho_1ss*(h_1ss - h_3ss)
+
+{ CHECK T_ss 270.521849526338 1e-6 }
+PLOT 'Start-up on P-h'
+  kind = property
+  fluid = R134a
+  diagram = 'P-h'
+  overlaystates = false
+  x = h_1, h_2, h_3, h_4     { paired in order with y: one path per state }
+  y = P_e, P_c, P_c, P_e
+END`,
+  },
+  {
+    id: 'lab-battery-windup',
+    title: 'Lab — battery load step and PID anti-windup',
+    description: 'A graded live lab: a PI-controlled chiller holds a battery pack until a load step saturates the valve; back-calculation stops the integrator winding up. Run it live from the lesson panel. Solve (F2).',
+    category: 'Labs',
+    text: `// frees-language: 2
+{ Lab — a battery load step and PID anti-windup.
+
+  A battery pack of heat capacity C_pack makes Q_load of heat and loses a
+  little to the ambient through UA_amb. A chiller loop cools it: water
+  at T_in flows at u*m_max through a plate exchanger of effectiveness
+  eps, so it removes Q_c = u*m_max*cp_c*eps*(T_pack - T_in). A PI
+  controller sets the valve u between 0 and 1 to hold T_set.
+
+  When the load steps beyond what the chiller can remove, the valve
+  saturates fully open and the pack climbs toward
+    Q_peak = m_max*cp_c*eps*(T_hot - T_in) + UA_amb*(T_hot - T_amb).
+  A plain integrator keeps integrating the error all that while (windup),
+  so when the load drops it holds the valve open long after the pack is
+  back at T_set and undercools it. Back-calculation feeds (u - v)/T_t
+  into the integrator, which stops the windup: the smaller the tracking
+  time T_t, the sooner the integrator follows the saturated valve.
+
+  Source: K. J. Astrom and T. Hagglund, Advanced PID Control, ISA, 2006
+  (integrator windup and back-calculation). }
+
+C_pack = 20000 [J/K]       { pack heat capacity }
+UA_amb = 5 [W/K]           { pack to ambient }
+T_amb  = 298.15 [K]
+T_in   = 288.15 [K]        { chilled water supply }
+m_max  = 0.05 [kg/s]       { chilled water flow, valve fully open }
+eps    = 0.6               { exchanger effectiveness }
+cp_c   = Cp(Water, T=T_in, P=200000 [Pa])
+Q_load = 1500 [W]          { pack heat: the lab steps it }
+Q_peak = 4000 [W]          { the step the lab applies }
+T_set  = 308.15 [K]        { set point }
+K_p    = 2 [1/K]           { proportional gain }
+T_i    = 100 [s]           { integral time }
+T_t    = 20 [s]            { tracking time: the lab's slider }
+
+{ The valve opening that holds T_set at Q_load: where the run starts. }
+u_0 = (Q_load + UA_amb*(T_amb - T_set))/(m_max*cp_c*eps*(T_set - T_in))
+
+DYNAMIC load (method = ida, time = 0 .. 2400, points = 2401)
+  e   = T_pack - T_set
+  v   = K_p*e + z                        { unsaturated PI output }
+  u   = min(max(v, 0), 1)                { the valve }
+  der(z) = K_p*e/T_i + (u - v)/T_t       { integrator with back-calculation }
+  Q_c = u*m_max*cp_c*eps*(T_pack - T_in)
+  C_pack*der(T_pack) = Q_load - Q_c + UA_amb*(T_amb - T_pack)
+  T_pack(0) = T_set
+  z(0) = u_0
+END
+
+{ The pack with the valve fully open under Q_peak. }
+Q_peak = m_max*cp_c*eps*(T_hot - T_in) + UA_amb*(T_hot - T_amb)
+
+{ CHECK u_0 0.577028520203865 1e-9 }
+{ CHECK T_hot 319.15034603893 1e-6 }
+PLOT 'Pack temperature'
+  kind = xy
+  x = time
+  y = T_pack
+END`,
+  },
+  {
+    id: 'lab-air-mixing',
+    title: 'Lab — outdoor-air mixing on the psychrometric chart',
+    description: 'A graded live lab: a ventilated room and its mixed supply trace paths on the psychrometric chart; raise the outdoor-air fraction live and watch the room cool and dry. Run it live from the lesson panel. Solve (F2).',
+    category: 'Labs',
+    text: `// frees-language: 2
+{ Lab — outdoor-air mixing on the psychrometric chart.
+
+  A ventilated room holds m_room of dry air. A fan supplies m_dot of dry
+  air, mixed from outdoor air (fraction f_oa) and air returned from the
+  room. Mixing is adiabatic, so humidity ratio and enthalpy per kg of dry
+  air mix in proportion to the flows:
+    w_mix = f_oa*w_out + (1 - f_oa)*w_room,  h_mix likewise.
+  The people and lights in the room add Q_int of heat and m_w of
+  moisture, which leaves as vapour at h_w.
+
+  In the steady state the outdoor part of the supply carries the gains
+  away:
+    w_ss = w_out + m_w/(f_oa*m_dot),
+    h_ss = h_out + (Q_int + m_w*h_w)/(f_oa*m_dot),
+  so more outdoor air brings the room closer to the outdoor state. The
+  chart traces the room and the mixed air as they move.
+
+  Source: ASHRAE Handbook, Fundamentals, ch. 1 (psychrometrics: adiabatic
+  mixing of two streams). }
+
+P      = 101325 [Pa]
+T_out  = 288.15 [K]        { outdoor dry bulb }
+RH_out = 0.8               { outdoor relative humidity }
+f_oa   = 0.2               { outdoor-air fraction: the lab's slider }
+m_dot  = 0.5 [kg/s]        { supply, dry air }
+m_room = 60 [kg]           { dry air in the room }
+Q_int  = 800 [W]           { sensible gains }
+m_w    = 0.0002 [kg/s]     { moisture gains }
+h_w    = 2.5e6 [J/kg]      { enthalpy of the added vapour }
+w_out  = HumRat(AirH2O, T=T_out, P=P, R=RH_out)
+h_out  = Enthalpy(AirH2O, T=T_out, P=P, W=w_out)
+w_0    = HumRat(AirH2O, T=297.15 [K], P=P, R=0.5)     { the room at the start }
+h_0    = Enthalpy(AirH2O, T=297.15 [K], P=P, W=w_0)
+
+DYNAMIC room (method = ida, time = 0 .. 8000, points = 801)
+  w_mix  = f_oa*w_out + (1 - f_oa)*w_room
+  h_mix  = f_oa*h_out + (1 - f_oa)*h_room
+  T_mix  = Temperature(AirH2O, H=h_mix, P=P, W=w_mix)
+  T_room = Temperature(AirH2O, H=h_room, P=P, W=w_room)
+  m_room*der(w_room) = m_dot*(w_mix - w_room) + m_w
+  m_room*der(h_room) = m_dot*(h_mix - h_room) + Q_int + m_w*h_w
+  w_room(0) = w_0
+  h_room(0) = h_0
+END
+
+w_ss = w_out + m_w/(f_oa*m_dot)
+h_ss = h_out + (Q_int + m_w*h_w)/(f_oa*m_dot)
+T_ss = Temperature(AirH2O, H=h_ss, P=P, W=w_ss)
+
+{ CHECK w_ss 0.0105256953110218 1e-12 }
+{ CHECK T_ss 295.89533483557 1e-6 }
+PLOT 'Room and mixed air'
+  kind = psychro
+  overlaystates = false
+  tmin = 10
+  tmax = 30
+  ymax = 0.02
+  x = T_room, T_mix     { paired in order with y: the room and the mixed air }
+  y = w_room, w_mix
 END`,
   }
 ]

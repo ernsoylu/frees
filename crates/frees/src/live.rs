@@ -61,14 +61,30 @@ pub fn live_open_json(source: &str, request_json: &str, block: u32) -> String {
                 .collect()
         })
         .unwrap_or_default();
+    // M1: a lab's input timeline, `[{at, set: ["Q = 300 [W]"]}]`, which the
+    // run applies itself.
+    let timeline = match raw.as_ref().and_then(|v| v.get("liveTimeline")) {
+        None => Vec::new(),
+        Some(value) => match timeline_of(value) {
+            Some(timeline) => timeline,
+            None => {
+                return json!({
+                    "ok": false,
+                    "error": "Live mode: a timeline entry needs a time `at` and literal assignments `set`, such as `Q = 50 [W]`.",
+                })
+                .to_string()
+            }
+        },
+    };
     let opened = PreparedDocument::new(&source, &settings, &overrides, &tables)
         .and_then(|doc| doc.open_live_watching(block as usize, max_step, &watches));
-    let (solution, session) = match opened {
+    let (solution, mut session) = match opened {
         Ok(opened) => opened,
         Err(failure) => {
             return json!({ "ok": false, "error": failure.error.to_string() }).to_string()
         }
     };
+    session.schedule(timeline);
     let vars = session.columns().to_vec();
     // The batch envelope's `odeTables[].units`: the checker's unit per column,
     // the time column in seconds when the checker left it open.
@@ -150,6 +166,11 @@ fn chunk_reply(session: &LiveSession, chunk: Chunk) -> (String, Vec<f64>) {
             .collect::<Vec<Value>>(),
         "stopped": chunk.stopped,
         "paused": chunk.paused,
+        "inputs": chunk
+            .inputs
+            .iter()
+            .map(|c| json!({ "time": c.time, "name": c.name, "value": c.value }))
+            .collect::<Vec<Value>>(),
         "finished": session.finished(),
         "state": chunk.state,
         "clock": clock,
@@ -195,6 +216,30 @@ pub fn live_reset_json(id: u32) -> String {
     .0
 }
 
+/// The SI changes of literal assignments as the sliders write them; `None`
+/// when one is not a literal assignment.
+fn changes_of(lines: &[String]) -> Option<Vec<(String, f64)>> {
+    let (names, pins) = literal_pins(lines)?;
+    names
+        .into_iter()
+        .zip(&pins)
+        .map(|(name, eq)| Some((name, PreparedDocument::literal_pin(eq)?.1)))
+        .collect()
+}
+
+/// M1: `[{at, set: [assignment…]}]`; `None` when an entry is malformed.
+fn timeline_of(value: &Value) -> Option<frees_core::ode::live::Timeline> {
+    value
+        .as_array()?
+        .iter()
+        .map(|entry| {
+            let at = entry.get("at")?.as_f64().filter(|t| t.is_finite())?;
+            let lines: Vec<String> = serde_json::from_value(entry.get("set")?.clone()).ok()?;
+            Some((at, changes_of(&lines)?))
+        })
+        .collect()
+}
+
 /// Phase L1: change inputs of session `id` live. `lines_json` is a JSON array
 /// of literal assignments as the sliders write them (`"Q = 50 [W]"`). Answers
 /// `{time, log: [{time, name, value}]}` (the time the change applied at and
@@ -205,14 +250,9 @@ pub fn live_set_json(id: u32, lines_json: &str) -> String {
     let Ok(lines) = serde_json::from_str::<Vec<String>>(lines_json) else {
         return refuse("Live mode: the input changes must be a list of assignments.");
     };
-    let Some((names, pins)) = literal_pins(&lines) else {
+    let Some(changes) = changes_of(&lines) else {
         return refuse("Live mode: an input change must assign a number, such as `Q = 50 [W]`.");
     };
-    let changes: Vec<(String, f64)> = names
-        .into_iter()
-        .zip(&pins)
-        .filter_map(|(name, eq)| Some((name, PreparedDocument::literal_pin(eq)?.1)))
-        .collect();
     LIVE.with(|slot| {
         let mut slot = slot.borrow_mut();
         let Some((_, session)) = slot.as_mut().filter(|(open, _)| *open == id) else {

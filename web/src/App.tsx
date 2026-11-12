@@ -49,7 +49,7 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
-import { buildShareUrl, clearRawDocumentUrl, clearShareHash, deriveProjectTitle, fetchRawDocument, MAX_SHARE_URL_CHARS, readShareHash, sharedDocumentOf, type SharedDocument } from './share'
+import { buildShareUrl, clearRawDocumentUrl, clearShareHash, deriveProjectTitle, fetchRawDocument, MAX_SHARE_URL_CHARS, readShareHash, sharedDocumentOf, timelineOfLog, type SharedDocument } from './share'
 import { openPrintReport } from './report'
 import {
   check,
@@ -179,6 +179,7 @@ const GettingStartedModal = lazy(() => import('./GettingStartedModal'))
 import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
 import type { Example } from './examples'
 import { lessonFor, LESSONS, type Lesson } from './lessons'
+import type { LabResult, LabTimelineEntry } from './labs'
 import { clearExampleParam, EMBED, fullAppUrl } from './embed'
 import type { EquationEditorHandle } from './EquationEditor'
 const EquationEditor = lazy(() => import('./EquationEditor'))
@@ -364,7 +365,7 @@ const SHARED_BOOT: { doc: SharedDocument; conflicts: boolean } | null = (() => {
   return { doc: shared, conflicts: saved?.text != null && saved.text !== shared.text }
 })()
 /** I6: a link that carries lesson settings, not only the document. */
-const carriesSettings = (d: SharedDocument) => d.lesson !== undefined || d.sliders !== undefined
+const carriesSettings = (d: SharedDocument) => d.lesson !== undefined || d.sliders !== undefined || d.timeline !== undefined
 
 // Capture before effects consume the URL; valid #share= links take precedence.
 const RAW_DOCUMENT_URL = new URLSearchParams(globalThis.location.search).get('url')
@@ -464,6 +465,9 @@ export default function App() {
   const currentSlicesRef = useRef<(() => ProjectSlices) | null>(null)
   // The open lesson is declared further down too.
   const shareLessonRef = useRef<string | undefined>(undefined)
+  const shareLiveLogRef = useRef<{ time: number; name: string; value: number }[] | null>(null)
+  /** M2: the experiment a link opened with, while the text is unchanged. */
+  const sharedTimelineRef = useRef<LabTimelineEntry[] | null>(null)
   const copyShareUrl = useCallback((url: string, notes: string[]) => {
     navigator.clipboard.writeText(url).then(
       () => notifications.show({
@@ -481,11 +485,16 @@ export default function App() {
     // the pinned sliders; say what stays behind.
     const slices = currentSlicesRef.current?.()
     const notes = slices ? projectOnlyNotes(buildProject({ ...slices, sliders: [] })) : []
-    const extras = { lesson: shareLessonRef.current, sliders: slices?.sliders }
+    // M2: a live run's input changes travel as an experiment, with the sliders the run opened with.
+    // A received experiment is forwarded as it came until a live run here makes a newer one.
+    const log = shareLiveLogRef.current
+    const timeline = log?.length ? timelineOfLog(log) : (sharedTimelineRef.current ?? undefined)
+    const sliders = log?.length && liveOpenSlidersRef.current.length ? liveOpenSlidersRef.current : slices?.sliders
+    const extras = { lesson: shareLessonRef.current, sliders, timeline }
     const url = buildShareUrl(textRef.current, undefined, extras)
     if (url !== null) return copyShareUrl(url, notes)
     // I6: past the cap the fallback is explicit, never a silently shorter link.
-    const bare = extras.lesson || extras.sliders?.length ? buildShareUrl(textRef.current) : null
+    const bare = extras.lesson || extras.sliders?.length || timeline ? buildShareUrl(textRef.current) : null
     const id = 'share-too-long'
     notifications.show({
       id,
@@ -501,7 +510,7 @@ export default function App() {
           {bare !== null && (
             <Button mt="xs" size="xs" variant="light" onClick={() => {
               notifications.hide(id)
-              copyShareUrl(bare, [...notes, 'the lesson and the pinned sliders'])
+              copyShareUrl(bare, [...notes, 'the lesson, the pinned sliders and any live experiment'])
             }}>Copy a link to the document alone</Button>
           )}
         </>
@@ -660,6 +669,27 @@ export default function App() {
   // Phase I2: the lesson beside the open gallery example, if it has one.
   const [lesson, setLesson] = useState<Lesson | null>(null)
   useEffect(() => { shareLessonRef.current = lesson?.example }, [lesson])
+  // M2: the input changes of the live run on screen, which a share link carries as an experiment.
+  useEffect(() => { shareLiveLogRef.current = result?.odeTables?.find((t) => t.inputLog?.length)?.inputLog ?? null }, [result])
+  // Phase M1: a lesson's live lab. The token opens the Live bar on the lab's
+  // timeline and runs it; the grades come from a headless run of the same
+  // timeline, which the engine applies at the same rows.
+  // Both are kept for the lesson they ran for, so opening another lesson drops them.
+  const [labState, setLabState] = useState<{ for: string; token: number; grades: LabResult[] | { error: string } | 'running' | null } | null>(null)
+  const labRunRef = useRef(0)
+  const labOfLesson = labState && lesson && labState.for === lesson.example ? labState : null
+  const labToken = labOfLesson?.token ?? 0
+  // M2: a shared experiment's timeline, kept for the document it came with:
+  // an edit to the text drops it.
+  const [sharedExperiment, setSharedExperiment] = useState<{ text: string; timeline: LabTimelineEntry[] } | null>(null)
+  const experiment = useMemo(() => (sharedExperiment && sharedExperiment.text === text ? { timeline: sharedExperiment.timeline } : null), [sharedExperiment, text])
+  useEffect(() => { sharedTimelineRef.current = experiment?.timeline ?? null }, [experiment])
+  // M1: a model edit ends a lab run and clears its grades; they were for the model before it.
+  useEffect(() => modelRevisionRef.current.subscribe(() => {
+    labRunRef.current += 1
+    setLabState(null)
+  }), [])
+  const labGrades = labOfLesson?.grades ?? null
   // The engine's overall completion while a solve runs, 0…1, or null when
   // nothing is running. The Solve button paints it as its own background —
   // this is the answer to the Phase 7–8 "spinning worker with no cancel"
@@ -1097,7 +1127,8 @@ export default function App() {
   // the user may have *wanted* the state they are looking at.
   const mirrorCheckedRef = useRef(false)
   useEffect(() => {
-    if (mirrorCheckedRef.current || sharedBoot !== null) return
+    // I4: an embed never reads the visitor's workspace, the mirror included.
+    if (mirrorCheckedRef.current || sharedBoot !== null || EMBED.embed) return
     mirrorCheckedRef.current = true
     const booted = bootRef.current ?? null
     void readAutosaveMirror().then((mirror) => {
@@ -1762,6 +1793,60 @@ export default function App() {
     })
   }
 
+  /** The source and solve request a live run opens with (the Live bar's and a lab's). */
+  function buildLiveOpen() {
+    flushTableEdits()
+    liveOpenSlidersRef.current = pinnedSliders
+    // L2: a valid check's instances locate the canvas inputs in this text.
+    const lifted = modelRevisionRef.current.isCheckValidAndSolvable()
+      ? liftCanvasInputs(effectiveText(), checkResult?.instances ?? [])
+      : { source: effectiveText(), inputs: [] }
+    const opening = Object.fromEntries(lifted.inputs.map((i) => [i.variable.toLowerCase(), i.value]))
+    setLiveCanvas({ inputs: lifted.inputs, values: opening })
+    liveAppliedRef.current = new Map([...pinnedSliders.map((p) => [p.name.toLowerCase(), p.value] as const), ...Object.entries(opening)])
+    return {
+      source: lifted.source,
+      request: solveRequest({ ...stopCriteria, complexMode }, buildVariableInfo(), false, unitSystem, false, functionTableDtos(), solveOverrides()),
+    }
+  }
+
+  /** M1: run the lesson's lab live, and grade a headless run of the same timeline. */
+  async function runLessonLab(l: Lesson) {
+    if (!l.lab) return
+    // Opened first: flushing table edits may bump the revision, which would end this run.
+    const { source, request } = buildLiveOpen()
+    const run = ++labRunRef.current
+    setLabState((s) => ({ for: l.example, token: (s?.token ?? 0) + 1, grades: 'running' }))
+    // A model edit (see the revision subscription) ends the run; its grades are never written.
+    const settle = (grades: LabResult[] | { error: string }) => {
+      if (run === labRunRef.current) setLabState((s) => (s && s.for === l.example ? { ...s, grades } : s))
+    }
+    const [{ LiveClient }, { gradeLab, runLab }] = await Promise.all([import('./wasm/liveClient'), import('./labs')])
+    const client = new LiveClient()
+    try {
+      settle(gradeLab(l.lab, await runLab(client, source, request, l.lab)))
+    } catch (error) {
+      settle({ error: error instanceof Error ? error.message : String(error) })
+    } finally {
+      client.terminate()
+    }
+  }
+
+  /** M1: the sliders follow the lines a lab's timeline applied, where their units match. */
+  function followTimeline(lines: string[]) {
+    const parsed = lines.flatMap((line) => {
+      const m = /^\s*([A-Za-z_][\w.]*)\s*=\s*([-+0-9.eE]+)\s*(?:\[([^\]]*)\])?\s*$/.exec(line)
+      return m ? [{ name: m[1].toLowerCase(), value: Number(m[2]), units: (m[3] ?? '').trim() }] : []
+    })
+    for (const p of parsed) liveAppliedRef.current.set(p.name, p.value)
+    // The chunk may carry several changes to one name; the last one applied is current.
+    const latest = new Map(parsed.map((p) => [p.name, p]))
+    setPinnedSliders((prev) => prev.map((s) => {
+      const hit = latest.get(s.name.toLowerCase())
+      return hit && hit.units === s.units ? { ...s, value: hit.value } : s
+    }))
+  }
+
   /** I2: the lesson's Reset — its baseline sliders, solved again. */
   function resetLesson(l: Lesson) {
     modelRevisionRef.current.bumpValues()
@@ -1778,7 +1863,15 @@ export default function App() {
       description: 'Opened from a link', category: 'Shared', text: doc.text,
     })
     if (doc.sliders) setPinnedSliders(doc.sliders)
-    notifications.show({ color: 'teal', title: 'Opened shared document', message: 'Loaded from the link.' })
+    setSharedExperiment(doc.timeline ? { text: doc.text, timeline: doc.timeline } : null)
+    const changes = doc.timeline?.reduce((n, e) => n + e.set.length, 0) ?? 0
+    notifications.show({
+      color: 'teal',
+      title: 'Opened shared document',
+      message: doc.timeline
+        ? `Loaded from the link, with a live experiment: ${changes} input change${changes === 1 ? '' : 's'} from t = ${doc.timeline[0].at} s to ${doc.timeline.at(-1)!.at} s. Solve, then run it live to replay them.`
+        : 'Loaded from the link.',
+    })
   }
 
   // I4: `?example=<id>` opens a gallery example (and its lesson) at boot. A
@@ -3093,6 +3186,48 @@ export default function App() {
     polezero: 'Pole-Zero',
     rootlocus: 'Root Locus',
   }
+  // Phase K3/M1/M2: the Live bar. A lesson's lab runs on its timeline; a shared
+  // experiment's timeline replays on any live run of the document it came with.
+  // M2: an embed may autorun only an approved lesson's lab (`?autorun`), once the visitor has solved it.
+  const embedLab = EMBED.embed && EMBED.autorun && lesson?.lab && result?.success ? lesson.lab : null
+  const liveBar = liveBlocks.length > 0 ? (
+    <Suspense fallback={null}>
+      <LiveBar
+        blocks={liveBlocks}
+        tracker={modelRevisionRef.current}
+        buildOpen={buildLiveOpen}
+        lab={labToken && lesson?.lab ? lesson.lab : embedLab ?? experiment}
+        autorun={labToken || (embedLab ? 1 : 0)}
+        onTimelineApplied={followTimeline}
+        onTable={publishLiveTable}
+        inputRef={liveInputRef}
+        onInputsReset={() => {
+          const opening = Object.fromEntries(liveCanvas.inputs.map((i) => [i.variable.toLowerCase(), i.value]))
+          liveAppliedRef.current = new Map([...liveOpenSlidersRef.current.map((p) => [p.name.toLowerCase(), p.value] as const), ...Object.entries(opening)])
+          setPinnedSliders(liveOpenSlidersRef.current)
+          setLiveCanvas((c) => ({ ...c, values: opening }))
+        }}
+        onOpenChange={setLiveOpen}
+        onRows={setLiveRows}
+        onInputsSettled={(lines, applied) => {
+          const names = lines.map((l) => l.split('=')[0].trim().toLowerCase())
+          if (applied) {
+            lines.forEach((l, i) => liveAppliedRef.current.set(names[i], Number.parseFloat(l.split('=')[1])))
+            return
+          }
+          setPinnedSliders((prev) => prev.map((p) => {
+            const value = liveAppliedRef.current.get(p.name.toLowerCase())
+            return names.includes(p.name.toLowerCase()) && value !== undefined ? { ...p, value } : p
+          }))
+          setLiveCanvas((c) => ({
+            ...c,
+            values: { ...c.values, ...Object.fromEntries(names.flatMap((n) => (n in c.values ? [[n, liveAppliedRef.current.get(n) ?? c.values[n]]] : []))) },
+          }))
+        }}
+      />
+    </Suspense>
+  ) : null
+
   const panelContent: Record<string, ReactNode> = {
     equations: (
       <div style={editorPanelPad}>
@@ -3375,54 +3510,7 @@ export default function App() {
                     />
                   </Suspense>
                 )}
-                {liveBlocks.length > 0 && (
-                  <Suspense fallback={null}>
-                    <LiveBar
-                      blocks={liveBlocks}
-                      tracker={modelRevisionRef.current}
-                      buildOpen={() => {
-                        flushTableEdits()
-                        liveOpenSlidersRef.current = pinnedSliders
-                        // L2: a valid check's instances locate the canvas inputs in this text.
-                        const lifted = modelRevisionRef.current.isCheckValidAndSolvable()
-                          ? liftCanvasInputs(effectiveText(), checkResult?.instances ?? [])
-                          : { source: effectiveText(), inputs: [] }
-                        const opening = Object.fromEntries(lifted.inputs.map((i) => [i.variable.toLowerCase(), i.value]))
-                        setLiveCanvas({ inputs: lifted.inputs, values: opening })
-                        liveAppliedRef.current = new Map([...pinnedSliders.map((p) => [p.name.toLowerCase(), p.value] as const), ...Object.entries(opening)])
-                        return {
-                          source: lifted.source,
-                          request: solveRequest({ ...stopCriteria, complexMode }, buildVariableInfo(), false, unitSystem, false, functionTableDtos(), solveOverrides()),
-                        }
-                      }}
-                      onTable={publishLiveTable}
-                      inputRef={liveInputRef}
-                      onInputsReset={() => {
-                        const opening = Object.fromEntries(liveCanvas.inputs.map((i) => [i.variable.toLowerCase(), i.value]))
-                        liveAppliedRef.current = new Map([...liveOpenSlidersRef.current.map((p) => [p.name.toLowerCase(), p.value] as const), ...Object.entries(opening)])
-                        setPinnedSliders(liveOpenSlidersRef.current)
-                        setLiveCanvas((c) => ({ ...c, values: opening }))
-                      }}
-                      onOpenChange={setLiveOpen}
-                      onRows={setLiveRows}
-                      onInputsSettled={(lines, applied) => {
-                        const names = lines.map((l) => l.split('=')[0].trim().toLowerCase())
-                        if (applied) {
-                          lines.forEach((l, i) => liveAppliedRef.current.set(names[i], Number.parseFloat(l.split('=')[1])))
-                          return
-                        }
-                        setPinnedSliders((prev) => prev.map((p) => {
-                          const value = liveAppliedRef.current.get(p.name.toLowerCase())
-                          return names.includes(p.name.toLowerCase()) && value !== undefined ? { ...p, value } : p
-                        }))
-                        setLiveCanvas((c) => ({
-                          ...c,
-                          values: { ...c.values, ...Object.fromEntries(names.flatMap((n) => (n in c.values ? [[n, liveAppliedRef.current.get(n) ?? c.values[n]]] : []))) },
-                        }))
-                      }}
-                    />
-                  </Suspense>
-                )}
+                {liveBar}
                 <Suspense fallback={null}>
                   <RunsPanel
                     scenarios={scenarios}
@@ -3669,6 +3757,7 @@ export default function App() {
           <Center flex={1}><Text size="sm" c="dimmed">Solve to draw the plot.</Text></Center>
         )}
       </div>
+      {embedLab && liveBar}
       {embedPins.length > 0 && (
         <Suspense fallback={null}>
           <SliderStrip
@@ -3991,7 +4080,14 @@ export default function App() {
             value={(name) => result?.variables.find((v) => v.name.toLowerCase() === name.toLowerCase())?.value}
             solving={solving}
             onSet={(name, value) => setSliderValue(name, value, true)}
-            onReset={() => resetLesson(lesson)}
+            onReset={() => {
+              labRunRef.current += 1
+              setLabState(null)
+              resetLesson(lesson)
+            }}
+            canRunLab={liveBlocks.length > 0 && !solving}
+            onRunLab={() => void runLessonLab(lesson)}
+            labGrades={labGrades}
             pairTitle={LESSONS.find((l) => l.example === lesson.pair)?.title}
             onOpenPair={lesson.pair ? () => void import('./examples').then((m) => {
               const pair = m.EXAMPLES.find((e) => e.id === lesson.pair)

@@ -144,6 +144,7 @@ small kiosk: one view, the sliders you choose, **Solve**, **Reset** and
 | `sliders` | names, comma-separated (at most 8) | Pins those literals as sliders and shows only them. Names must be literals the document assigns. |
 | `theme` | `light` or `dark` | Forces the colour scheme. |
 | `readonly` | — | Accepted for clarity: an embed is always read-only, because no editor is mounted. Sliders still work. |
+| `autorun` | — | When the example is a gallery lab, plays its live run once the visitor presses **Solve**. Any other document ignores it. Under reduced motion the run opens paused, to be stepped. |
 
 Unknown values are ignored. A share link (`#share=…`) works in place of
 `example`.
@@ -151,7 +152,8 @@ Unknown values are ignored. A share link (`#share=…`) works in place of
 **What an embed never does.** It neither reads nor writes the visitor's own
 saved workspace, so a frame on another site cannot show their work or
 overwrite it. It also never runs a model by itself: **Solve** checks the
-model first, as it does for any document you open. **Reset** returns to the
+model first, as it does for any document you open, and `autorun` waits for
+that Solve. **Reset** returns to the
 model as it opened. **Open in full frees** opens the same model in a new tab,
 without the kiosk parameters.
 
@@ -164,6 +166,14 @@ the lesson and each slider's value and range, so the person opening it lands
 on the same step. Tables, plots and the schematic layout stay in the `.frees`
 project file, and the copy notice lists what was left out.
 
+**Shared experiments.** After a live run, the link also carries the run's
+input changes: the slider moves and any lab timeline, each with the run time
+it applied at, in SI. It then carries the sliders at the values the run
+started from, not where they ended. The person opening the link sees how many
+changes it holds. The document opens unsolved, and once they solve it, any
+live run replays those changes at the same rows. Editing the document drops
+the experiment.
+
 - **Versioned.** A link without lesson settings keeps the original format, so
   every version of frees opens it. A link with them is marked as format 2. A
   link from a newer frees says so and asks you to reload, rather than opening
@@ -171,7 +181,8 @@ project file, and the copy notice lists what was left out.
 - **Bounded.** Opening a link keeps only well-formed settings. A slider needs a
   plain variable name and a finite range that brackets its value, which is
   clamped into it. At most 16 sliders are read, and a lesson that does not
-  exist is ignored.
+  exist is ignored. An experiment keeps at most 64 times, each with literal
+  assignments only (`name = number [unit]`), at finite times of zero or more.
 - **The 16,000-character cap.** A link longer than this would not survive chat
   apps and proxies, so frees refuses it and says so. Save the project and send
   the file instead. If the document alone fits, **Copy a link to the document

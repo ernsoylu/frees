@@ -1,7 +1,7 @@
 /**
  * Phase I4: embed and kiosk mode, read once from the page's query string.
  *
- *   ?embed=1&view=schematic|plot&readonly&sliders=a,b&theme=light|dark
+ *   ?embed=1&view=schematic|plot&readonly&sliders=a,b&theme=light|dark&autorun
  *   ?example=<gallery-id>          (with or without embed)
  *
  * Every value is bounded and whitelisted: an unknown view or theme is ignored,
@@ -18,6 +18,8 @@ export interface EmbedOptions {
   sliders: string[] | null
   theme: 'light' | 'dark' | null
   example: string | null
+  /** M2: run the open lesson's live lab once the visitor solves; only a gallery lesson with a lab qualifies. */
+  autorun: boolean
 }
 
 const IDENT = /^[A-Za-z_]\w{0,63}$/
@@ -42,13 +44,14 @@ export function parseEmbed(search: string): EmbedOptions {
     sliders: sliders === null ? null : [...new Set(sliders.split(',').map((s) => s.trim()).filter((s) => IDENT.test(s)))].slice(0, MAX_SLIDERS),
     theme: theme === 'light' || theme === 'dark' ? theme : null,
     example: example !== null && SLUG.test(example) ? example : null,
+    autorun: flag(q, 'autorun'),
   }
 }
 
 /** The same model in the full application: the embed parameters dropped, the example and any share link kept. */
 export function fullAppUrl(href: string): string {
   const url = new URL(href)
-  for (const k of ['embed', 'view', 'readonly', 'sliders', 'theme']) url.searchParams.delete(k)
+  for (const k of ['embed', 'view', 'readonly', 'sliders', 'theme', 'autorun']) url.searchParams.delete(k)
   return url.href
 }
 

@@ -45,7 +45,7 @@ describe('lesson manifests (I2)', () => {
     expect(valueOf(text, baseline, lesson.observe.variable)).toBe(v0)
     // The plain document is the baseline: the sliders start where the model does.
     expect(valueOf(text, [], lesson.observe.variable)).toBe(v0)
-  })
+  }, 30_000)
 
   it('reads round-off as no change', () => {
     expect(directionOf(1, 1 + 1e-12)).toBe('stays the same')

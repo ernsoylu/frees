@@ -175,6 +175,8 @@ You now know the whole loop: describe equations, Check (F4), Solve (F2), sweep a
 ## Learn by example
 Three short journeys — a scalar with units, a component chain, and a map or transient upgrade — are in *Journey 1 — A scalar equation with units*. **Examples & Tutorials** has longer guided problems and a library of verified examples. When you need the exact signature of a function, the **Reference** A–Z index is the canonical home for every symbol.
 
+**Lessons and live labs.** The gallery's *Lessons* open a panel beside the model: predict, change one input, observe, explain, check. The *Labs* add a live run. Solve the example, then choose **Run the lab live**. The Live bar runs the block while the lab's input timeline changes inputs at stated times, such as a thermostat band widening at 3000 s. The engine applies each change itself, at the first row at or after its time, so the run is the same at any speed and after every reset, and the sliders follow. A headless run of the same timeline grades the lab. Each grade, such as a cycle period, the time to a pressure or a steady amplitude, is shown against its reference value and tolerance, and the panel names where each reference comes from.
+
 [Related: journey-scalar, journey-chain, journey-upgrade, lang-overview, fluids-overview, components-overview, examples]
 
 [Topic: repl]

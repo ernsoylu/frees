@@ -102,6 +102,14 @@ export interface PropertyConfig {
   /** Name of the declared STATE TABLE block whose states to overlay; null
    * overlays every detected state. Selecting one also sets the fluid. */
   stateTable?: string | null
+  /** Phase M1b: recorded columns drawn as a path over the run, one per (x, y) pair, in SI. */
+  trajectory?: TrajectoryPair[]
+}
+
+/** Two columns of a dynamic run's table, drawn against each other on a property or psychrometric diagram. */
+export interface TrajectoryPair {
+  x: string
+  y: string
 }
 
 export interface PsychroConfig {
@@ -116,6 +124,8 @@ export interface PsychroConfig {
   /** Name of the declared STATE TABLE block whose states to overlay; null
    * overlays every detected state. */
   stateTable?: string | null
+  /** Phase M1b: recorded (dry-bulb T, humidity ratio w) columns drawn as a path, in SI. */
+  trajectory?: TrajectoryPair[]
 }
 
 export interface ControlConfig {
