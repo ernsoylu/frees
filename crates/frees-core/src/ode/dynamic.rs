@@ -672,6 +672,10 @@ impl<'a> DynamicSolver<'a> {
             if !one_step && stepped && !more(chunk) {
                 break;
             }
+            // A timeline change is due at this clock (M2): stop here for it.
+            if st.stop_clock.is_some_and(|s| stepper.clock().0 >= s) {
+                break;
+            }
             if stepper.done(&p) {
                 st.horizon += stepper.span();
                 p.tf = st.horizon;

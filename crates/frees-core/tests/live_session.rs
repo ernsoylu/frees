@@ -1045,6 +1045,41 @@ fn rapid_changes_keep_the_log_ordered_and_replay_bitwise() {
 }
 
 #[test]
+fn a_logged_run_scheduled_as_a_timeline_replays_bitwise() {
+    // Phase M2: a shared experiment is the input log, scheduled on a fresh
+    // open. An explicit change lands at an internal step's end, between rows;
+    // the replay must apply it there, not at the next row.
+    for method in ["ida", "ode45", "rk4"] {
+        let src = heater(method);
+        let mut first = open(&src);
+        let mut rows = run(&mut first, 2.0, 0.37, 7).rows;
+        first.set_inputs(&[("Q".into(), 50.0)]).unwrap();
+        rows.extend(run(&mut first, 5.3, 0.37, 7).rows);
+        first.set_inputs(&[("Q".into(), 0.0)]).unwrap();
+        rows.extend(run(&mut first, 10.0, 0.37, 7).rows);
+        let log = first.input_log().to_vec();
+        let mut second = open(&src);
+        second.schedule(
+            log.iter()
+                .map(|c| (c.time, vec![(c.name.clone(), c.value)]))
+                .collect(),
+        );
+        let replayed = run(&mut second, 10.0, 10.0, 1000).rows;
+        let times: Vec<u64> = second
+            .input_log()
+            .iter()
+            .map(|c| c.time.to_bits())
+            .collect();
+        assert_eq!(
+            times,
+            log.iter().map(|c| c.time.to_bits()).collect::<Vec<_>>(),
+            "{method}"
+        );
+        assert_eq!(bits(&replayed), bits(&rows), "{method}");
+    }
+}
+
+#[test]
 fn a_timeline_applies_at_its_rows_at_any_frame_budget_and_replays_after_a_reset() {
     // Phase M1: Q 10 → 50 W at 3 s, then 0 at 6.05 s (on the row at 6.1 s).
     for method in ["ida", "ode45", "rk4"] {
@@ -1065,14 +1100,13 @@ fn a_timeline_applies_at_its_rows_at_any_frame_budget_and_replays_after_a_reset(
             [50.0, 0.0],
             "{method}"
         );
-        // At the row on IDA; on an explicit method at the step that reached it.
-        for ((t, _), row) in log.iter().zip([3.0, 6.1]) {
-            assert!(
-                *t >= row - 1e-12 && *t < row + 0.1,
-                "{method}: applied at {t}"
-            );
+        // At the row on IDA; on an explicit method at the end of the first
+        // internal step at or after the change's own time (M2).
+        for ((t, _), (at, row)) in log.iter().zip([(3.0, 3.0), (6.05, 6.1)]) {
             if method == "ida" {
                 assert!((t - row).abs() < 1e-12, "{method}: {t}");
+            } else {
+                assert!(*t >= at && *t < at + 0.1, "{method}: applied at {t}");
             }
         }
         let (t1, t2) = (log[0].0, log[1].0);

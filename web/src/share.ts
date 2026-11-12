@@ -157,6 +157,8 @@ export function buildShareUrl(text: string, base?: string, extras: Omit<SharedDo
   const origin = base ?? globalThis.location.origin + globalThis.location.pathname
   const sliders = extras.sliders?.length ? extras.sliders : undefined
   const timeline = extras.timeline?.length ? extras.timeline : undefined
+  // M2: past what a reader keeps, refuse rather than lose the last changes; the caller offers a document-only link.
+  if (timeline && (timeline.length > MAX_SHARED_CHANGES || timeline.some((e) => e.set.length > MAX_SHARED_SLIDERS))) return null
   const payload = extras.lesson || sliders || timeline
     ? `${SHARE_VERSION}.${compressToEncodedURIComponent(JSON.stringify({ text, lesson: extras.lesson, sliders, timeline }))}`
     : compressToEncodedURIComponent(text)

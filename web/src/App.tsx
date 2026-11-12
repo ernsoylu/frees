@@ -466,6 +466,8 @@ export default function App() {
   // The open lesson is declared further down too.
   const shareLessonRef = useRef<string | undefined>(undefined)
   const shareLiveLogRef = useRef<{ time: number; name: string; value: number }[] | null>(null)
+  /** M2: the experiment a link opened with, while the text is unchanged. */
+  const sharedTimelineRef = useRef<LabTimelineEntry[] | null>(null)
   const copyShareUrl = useCallback((url: string, notes: string[]) => {
     navigator.clipboard.writeText(url).then(
       () => notifications.show({
@@ -484,9 +486,10 @@ export default function App() {
     const slices = currentSlicesRef.current?.()
     const notes = slices ? projectOnlyNotes(buildProject({ ...slices, sliders: [] })) : []
     // M2: a live run's input changes travel as an experiment, with the sliders the run opened with.
+    // A received experiment is forwarded as it came until a live run here makes a newer one.
     const log = shareLiveLogRef.current
-    const timeline = log?.length ? timelineOfLog(log) : undefined
-    const sliders = timeline && liveOpenSlidersRef.current.length ? liveOpenSlidersRef.current : slices?.sliders
+    const timeline = log?.length ? timelineOfLog(log) : (sharedTimelineRef.current ?? undefined)
+    const sliders = log?.length && liveOpenSlidersRef.current.length ? liveOpenSlidersRef.current : slices?.sliders
     const extras = { lesson: shareLessonRef.current, sliders, timeline }
     const url = buildShareUrl(textRef.current, undefined, extras)
     if (url !== null) return copyShareUrl(url, notes)
@@ -680,6 +683,12 @@ export default function App() {
   // an edit to the text drops it.
   const [sharedExperiment, setSharedExperiment] = useState<{ text: string; timeline: LabTimelineEntry[] } | null>(null)
   const experiment = useMemo(() => (sharedExperiment && sharedExperiment.text === text ? { timeline: sharedExperiment.timeline } : null), [sharedExperiment, text])
+  useEffect(() => { sharedTimelineRef.current = experiment?.timeline ?? null }, [experiment])
+  // M1: a model edit ends a lab run and clears its grades; they were for the model before it.
+  useEffect(() => modelRevisionRef.current.subscribe(() => {
+    labRunRef.current += 1
+    setLabState(null)
+  }), [])
   const labGrades = labOfLesson?.grades ?? null
   // The engine's overall completion while a solve runs, 0…1, or null when
   // nothing is running. The Solve button paints it as its own background —
@@ -1804,15 +1813,17 @@ export default function App() {
   /** M1: run the lesson's lab live, and grade a headless run of the same timeline. */
   async function runLessonLab(l: Lesson) {
     if (!l.lab) return
+    // Opened first: flushing table edits may bump the revision, which would end this run.
+    const { source, request } = buildLiveOpen()
     const run = ++labRunRef.current
     setLabState((s) => ({ for: l.example, token: (s?.token ?? 0) + 1, grades: 'running' }))
+    // A model edit (see the revision subscription) ends the run; its grades are never written.
     const settle = (grades: LabResult[] | { error: string }) => {
       if (run === labRunRef.current) setLabState((s) => (s && s.for === l.example ? { ...s, grades } : s))
     }
     const [{ LiveClient }, { gradeLab, runLab }] = await Promise.all([import('./wasm/liveClient'), import('./labs')])
     const client = new LiveClient()
     try {
-      const { source, request } = buildLiveOpen()
       settle(gradeLab(l.lab, await runLab(client, source, request, l.lab)))
     } catch (error) {
       settle({ error: error instanceof Error ? error.message : String(error) })
@@ -1828,9 +1839,11 @@ export default function App() {
       return m ? [{ name: m[1].toLowerCase(), value: Number(m[2]), units: (m[3] ?? '').trim() }] : []
     })
     for (const p of parsed) liveAppliedRef.current.set(p.name, p.value)
+    // The chunk may carry several changes to one name; the last one applied is current.
+    const latest = new Map(parsed.map((p) => [p.name, p]))
     setPinnedSliders((prev) => prev.map((s) => {
-      const hit = parsed.find((p) => p.name === s.name.toLowerCase() && p.units === s.units)
-      return hit ? { ...s, value: hit.value } : s
+      const hit = latest.get(s.name.toLowerCase())
+      return hit && hit.units === s.units ? { ...s, value: hit.value } : s
     }))
   }
 

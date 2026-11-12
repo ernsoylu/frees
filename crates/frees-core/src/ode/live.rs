@@ -745,6 +745,10 @@ pub(crate) struct ExplicitLive {
     /// end of the last accepted step.
     pub(crate) watches: Vec<Watch>,
     pub(crate) watch_prev: Option<(f64, Vec<f64>)>,
+    /// Phase M2: a chunk ends once the stepper's clock reaches this, where a
+    /// timeline change applies. A logged explicit change happened at an
+    /// internal step's end, which a replay reaches bit for bit.
+    pub(crate) stop_clock: Option<f64>,
     t0: f64,
     tf: f64,
     points: usize,
@@ -1201,9 +1205,12 @@ impl LiveSession {
     }
 
     /// Phase M1: a finite input timeline the run applies itself, each change
-    /// as [`Self::set_inputs`] at the first row at or after its time. A chunk
-    /// never runs past a change still to apply, so the run is the same at any
-    /// frame budget, and a reset replays the timeline from the start.
+    /// as [`Self::set_inputs`]: an IDA run's at the first row at or after its
+    /// time, an explicit run's at the end of the first internal step at or
+    /// after it — where a live change on each lands, so a logged change
+    /// replays where it happened (M2). A chunk never runs past a change still
+    /// to apply, so the run is the same at any frame budget, and a reset
+    /// replays the timeline from the start.
     pub fn schedule(&mut self, mut timeline: Timeline) {
         timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
         self.timeline = timeline;
@@ -1222,11 +1229,18 @@ impl LiveSession {
         Some((row, grid_time(grid, row)))
     }
 
-    /// Apply each timeline change whose row the chunk reached. A refused
-    /// change ends the chunk with its error and drops the rest of the timeline.
+    /// Apply each timeline change the chunk reached: its row on IDA, its time
+    /// on the explicit stepper's clock. A refused change ends the chunk with
+    /// its error and drops the rest of the timeline.
     fn apply_due(&mut self, mut chunk: Chunk) -> Chunk {
         while let Some((_, time)) = self.due_row() {
-            let reached = chunk.rows.last().is_some_and(|r| r[0] >= time);
+            let reached = match &self.run {
+                Run::Ida(_) => chunk.rows.last().is_some_and(|r| r[0] >= time),
+                Run::Explicit(run) => {
+                    let at = self.timeline[self.due].0;
+                    run.clock().is_some_and(|(t, _)| t >= at)
+                }
+            };
             if !reached || chunk.error.is_some() || self.finished() {
                 break;
             }
@@ -1251,9 +1265,15 @@ impl LiveSession {
         if let Some(chunk) = self.release() {
             return chunk;
         }
-        let last = match self.due_row() {
-            Some((row, _)) => last.min(row.max(self.index())),
-            None => last,
+        let due = self.timeline.get(self.due).map(|(at, _)| *at);
+        let due_row = self.due_row();
+        let last = match (&mut self.run, due_row) {
+            (Run::Explicit(run), _) => {
+                run.live.stop_clock = due;
+                last
+            }
+            (Run::Ida(_), Some((row, _))) => last.min(row.max(self.index())),
+            (Run::Ida(_), None) => last,
         };
         let watches = &self.watches;
         let mut more = |c: &Chunk| !c.events.iter().any(|e| watches.contains(&e.name)) && more(c);

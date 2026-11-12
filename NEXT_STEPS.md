@@ -1016,6 +1016,10 @@ entry here is checked off with evidence when it closes.
         - under reduced motion a lab opens paused, steps, and is graded;
         - a shared experiment opens unsolved, at the sliders its run started from, and a plain live run replays `q_load = 4000 from t = 100`;
         - an embed autoruns only after Solve, shows no restore offer, and leaves the visitor's workspace byte for byte.
+    - **Review (#116).**
+      - **Replay timing.** A logged change on an explicit run happened at an internal step's end, between rows, but the timeline rounded it to the next row. An explicit run now applies a timeline change at the end of the first internal step at or after its time (`ExplicitLive::stop_clock`), so a scheduled log replays bit for bit (`live_session.rs` `a_logged_run_scheduled_as_a_timeline_replays_bitwise`, ida/ode45/rk4; it fails without the fix). IDA keeps row times, where its live changes land. The M1 labs' grades are unchanged.
+      - **Links.** A timeline past what a reader keeps (64 entries, 16 lines each) is refused, and the document-only fallback offered instead. Forwarding a received experiment keeps its timeline until a live run here makes a newer one.
+      - **Sliders and grades.** Sliders follow the last of several changes to one name in a chunk. A model edit ends a grading run and clears its grades.
     - **Ceiling.**
       - An experiment's lines are in SI, so a slider follows them only when its unit is SI.
       - The live speed is not shared.

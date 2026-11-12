@@ -4,6 +4,8 @@ import {
   buildShareUrl,
   clearRawDocumentUrl,
   MAX_SHARE_URL_CHARS,
+  MAX_SHARED_CHANGES,
+  MAX_SHARED_SLIDERS,
   readShareHash,
   timelineOfLog,
   type ShareRead,
@@ -160,6 +162,14 @@ describe('share-by-URL', () => {
       }
       const read = readShareHash('#share=2.' + compressToEncodedURIComponent(JSON.stringify(payload)))
       expect(read).toEqual({ text: 'x = 1', timeline: [{ at: 1, set: ['x = .5'] }, { at: 5, set: ['x = 2 [m]', 'w = 1e-3'] }] })
+    })
+
+    it('refuses a timeline longer than a reader keeps, rather than one that loses its last changes', () => {
+      const at = (n: number) => Array.from({ length: n }, (_, k) => ({ at: k, set: ['x = 1'] }))
+      expect(buildShareUrl('x = 1', BASE, { timeline: at(MAX_SHARED_CHANGES) })).not.toBeNull()
+      expect(buildShareUrl('x = 1', BASE, { timeline: at(MAX_SHARED_CHANGES + 1) })).toBeNull()
+      const wide = Array.from({ length: MAX_SHARED_SLIDERS + 1 }, (_, k) => `x${k} = 1`)
+      expect(buildShareUrl('x = 1', BASE, { timeline: [{ at: 0, set: wide }] })).toBeNull()
     })
   })
 })
