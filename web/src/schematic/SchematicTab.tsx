@@ -4529,8 +4529,8 @@ function ParamInspector({
   )
 }
 
-/** A written number with an optional unit bracket, `0.05` or `0.05 [m]`. */
-const WRITTEN_NUMBER = /^\s*(-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?)\s*(?:\[([^\]]*)\])?\s*$/i
+/** A written number with an optional unit bracket, `0.05` or `0.05 [m]`, once trimmed. */
+const WRITTEN_NUMBER = /^(-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?) *(?:\[([^\]]*)\])?$/i
 
 /**
  * Phase L6: the card editor's value field. When it holds a number, a wheel
@@ -4547,9 +4547,11 @@ export function ParamValueInput({
   onEnter,
   onEscape,
 }: Readonly<{ name: string; unit: string; value: string; error: string | null; onChange: (v: string) => void; onEnter: () => void; onEscape: () => void }>) {
-  const written = WRITTEN_NUMBER.exec(value)
+  const written = WRITTEN_NUMBER.exec(value.trim())
   const units = written?.[2] ?? unit
-  const [series, setSeries] = useState<SeriesId>(() => defaultSeries(name, units))
+  const [chosen, setSeries] = useState<SeriesId>(() => defaultSeries(name, units))
+  // A series the written unit no longer offers (DN after `[m]` became `[in]`) falls back to the unit's default.
+  const series = seriesOptions(units).includes(chosen) ? chosen : defaultSeries(name, units)
   const step = (dir: 1 | -1): boolean => {
     if (!written) return false
     const next = stepPreferred(Number(written[1]), series, units, dir)

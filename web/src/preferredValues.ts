@@ -23,7 +23,7 @@ export const SERIES_LABELS: Record<SeriesId, string> = { linear: 'linear', e6: '
 /** Millimetres per unit, for the length units DN and insulation steps take. */
 const MM_PER: Record<string, number> = { m: 1000, cm: 10, mm: 1 }
 
-const ELECTRICAL = /^(p|n|u|µ|m|k|M|G)?(ohm|Ω|F|farad|H|henry)$/i
+const ELECTRICAL = /^[pnuµmkMG]?(ohm|Ω|F|farad|H|henry)$/i
 
 /** The series a value in `units` can step through. */
 export function seriesOptions(units: string): SeriesId[] {
@@ -37,7 +37,7 @@ export function defaultSeries(name: string, units: string): SeriesId {
   if (!MM_PER[u]) return 'linear'
   const last = name.split(/[.$]/).at(-1) ?? name
   if (/thick|insul|^t_?ins|^delta/i.test(last)) return 'insulation'
-  if (/^d(n|i|h|ia|iam|iameter)?(_|\d|$)|diam/i.test(last)) return 'dn'
+  if (/(^d(n|i|h|ia|iam|iameter)?(_|\d|$))|diam/i.test(last)) return 'dn'
   return 'linear'
 }
 
@@ -50,7 +50,7 @@ const lastOf = (list: number[], ok: (c: number) => boolean) => [...list].reverse
  * series' ends.
  */
 export function stepPreferred(value: number, series: SeriesId, units: string, dir: 1 | -1): number | null {
-  if (series === 'linear' || !(value > 0) || !Number.isFinite(value)) return null
+  if (series === 'linear' || !Number.isFinite(value) || value <= 0) return null
   const above = (c: number) => c > value * (1 + 1e-9)
   const below = (c: number) => c < value * (1 - 1e-9)
   if (series === 'dn' || series === 'insulation') {

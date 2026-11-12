@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ActionIcon, Alert, Group, NativeSelect, Paper, Slider, Stack, Text, Tooltip } from '@mantine/core'
 import { IconAlertTriangle, IconX } from '@tabler/icons-react'
 import { formatValue } from './format'
@@ -83,10 +83,15 @@ function SliderRow({
 }: Readonly<{ pin: PinnedSlider; inert: boolean } & Pick<Props, 'onChange' | 'onCommit' | 'onUnpin' | 'onSeries'>>) {
   const series = pin.series ?? defaultSeries(pin.name, pin.units)
   const ref = useRef<HTMLDivElement>(null)
+  // A wheel burst moves only the handle; the value is set, and solved, once the wheel is quiet.
+  const [wheeled, setWheeled] = useState<number | null>(null)
+  const cancelWheel = useRef(() => {})
+  // Anything else that sets the value (a drag, a lab's timeline) drops a pending wheel step.
+  useEffect(() => cancelWheel.current(), [pin.value])
   // The wheel listener is native: React's is passive and cannot keep the page from scrolling.
-  const latest = useRef({ pin, series, inert, onChange, onCommit })
+  const latest = useRef({ pin, series, inert, onCommit })
   useEffect(() => {
-    latest.current = { pin, series, inert, onChange, onCommit }
+    latest.current = { pin, series, inert, onCommit }
   })
   useEffect(() => {
     const el = ref.current
@@ -94,8 +99,13 @@ function SliderRow({
     let travel = 0
     let value: number | null = null
     let timer: ReturnType<typeof setTimeout> | undefined
+    cancelWheel.current = () => {
+      clearTimeout(timer)
+      value = null
+      setWheeled(null)
+    }
     const wheel = (e: WheelEvent) => {
-      const { pin, series, inert, onChange, onCommit } = latest.current
+      const { pin, series, inert } = latest.current
       if (inert || series === 'linear') return
       e.preventDefault()
       travel += e.deltaMode === 0 ? e.deltaY : e.deltaY * NOTCH
@@ -105,11 +115,11 @@ function SliderRow({
       const next = stepPreferred(value ?? pin.value, series, pin.units, dir)
       if (next === null || next < pin.min || next > pin.max) return
       value = next
-      onChange(pin.name, next)
+      setWheeled(next)
       clearTimeout(timer)
       timer = setTimeout(() => {
-        onCommit(pin.name, next)
         value = null
+        latest.current.onCommit(latest.current.pin.name, next)
       }, COMMIT_MS)
     }
     el.addEventListener('wheel', wheel, { passive: false })
@@ -118,6 +128,7 @@ function SliderRow({
       clearTimeout(timer)
     }
   }, [])
+  const shown = wheeled ?? pin.value
   return (
     <div ref={ref} data-slider={pin.name}>
       <Group gap={6} wrap="nowrap" mb={2}>
@@ -125,7 +136,7 @@ function SliderRow({
           {pin.name}
         </Text>
         <Text size="xs" ff="monospace" c={inert ? 'dimmed' : 'teal'}>
-          {formatValue(pin.value)}
+          {formatValue(shown)}
           {pin.units && pin.units !== '-' ? ` ${pin.units}` : ''}
         </Text>
         {onSeries && (
@@ -159,8 +170,11 @@ function SliderRow({
         min={pin.min}
         max={pin.max}
         step={sliderStep(pin.min, pin.max)}
-        value={pin.value}
-        onChange={(v) => onChange(pin.name, v)}
+        value={shown}
+        onChange={(v) => {
+          cancelWheel.current()
+          onChange(pin.name, v)
+        }}
         onChangeEnd={(v) => onCommit(pin.name, v)}
         label={(v) => formatValue(v)}
         thumbLabel={`${pin.name} value`}
