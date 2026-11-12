@@ -35,8 +35,10 @@ export function plotDefToSpec(dto: PlotDefDto): PlotSpec {
     applyXyAttrs(spec, first, all, dto.name, diagnostics)
   } else if (kind === 'property') {
     applyPropertyAttrs(spec, first, bool)
+    spec.property.trajectory = trajectoryPairs(all, dto.name, diagnostics)
   } else if (kind === 'psychro') {
     applyPsychroAttrs(spec, num, bool)
+    spec.psychro.trajectory = trajectoryPairs(all, dto.name, diagnostics)
   } else {
     applyControlAttrs(spec, first)
   }
@@ -86,6 +88,13 @@ function applyXyAttrs(
   if (z) spec.xy.zVar = z
   const size = first('size') ?? first('sizevar')
   if (size) spec.xy.sizeVar = size
+}
+
+/** `x=` and `y=` on a diagram plot pair up in order: each pair is one recorded path. */
+function trajectoryPairs(all: StrAll, plotName: string, diagnostics: string[]) {
+  const [xs, ys] = [all('x'), all('y')]
+  if (xs.length !== ys.length) diagnostics.push(`PLOT '${plotName}': ${xs.length} x= and ${ys.length} y= do not pair up; the extra ones are ignored`)
+  return xs.slice(0, ys.length).map((x, i) => ({ x, y: ys[i] }))
 }
 
 function applyPropertyAttrs(spec: PlotSpec, first: StrGet, bool: BoolGet): void {

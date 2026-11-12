@@ -26,6 +26,20 @@ PLOT 'Boiler Cycle'
 END
 ```
 
+### Paths from a dynamic run
+On a property or psychrometric diagram, `x` and `y` name recorded columns of a `DYNAMIC` block, in SI. The lists pair up in order, and each pair is drawn as a path over the run, ending in a marker at the last row. This P-h chart traces the four states of a refrigeration unit as it pulls a room down:
+```
+PLOT 'Start-up on P-h'
+  kind = property
+  fluid = R134a
+  diagram = 'P-h'
+  overlaystates = false
+  x = h_1, h_2, h_3, h_4
+  y = P_e, P_c, P_c, P_e
+END
+```
+On the psychrometric chart, pair a dry-bulb temperature with a humidity ratio, for example `x = T_room` and `y = w_room`. A live run publishes its rows to the same table at each pause, step and stop, so the paths then show the run so far.
+
 ## Control-system plot kinds
 Feed these the arrays produced by `bode`, `nyquist`, `pole`/`zero` (see *Control Systems & Symbolic CAS*):
 - **Bode** — stacked magnitude (dB) and phase (deg) vs. frequency:

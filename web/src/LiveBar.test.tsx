@@ -339,6 +339,55 @@ it('a reset ends a recording partial, and Stop and export ends one until export 
   expect(await last()).toMatchObject({ status: 'complete', reason: 'Exported at t = 0.1 s.', solver: null, provenance: null })
 })
 
+it('a lab opens with its timeline on each new autorun value, and the applied lines reach the sliders (M1)', async () => {
+  const { driver, spy } = fakeDriver(1000)
+  const plain = spy.advance.getMockImplementation()!
+  let calls = 0
+  spy.advance.mockImplementation(async (t: number) => {
+    const c = await plain(t)
+    // The engine applied the timeline at this chunk's end.
+    return ++calls === 2 ? { ...c, inputs: [{ time: 0.3, name: 'q', value: 300 }] } : c
+  })
+  const onApplied = vi.fn()
+  const lab = { timeline: [{ at: 0.3, set: ['Q = 300 [W]'] }, { at: 0.8, set: ['Q = 0 [W]'] }], watches: ['L < 1 [m]'], speed: 10 }
+  const bar = (autorun: number) => (
+    <MantineProvider>
+      <LiveBar blocks={['tank']} tracker={new ModelRevisionTracker()} buildOpen={() => ({ source: 'src', request: '{}' })} driver={driver} lab={lab} autorun={autorun} onTimelineApplied={onApplied} />
+    </MantineProvider>
+  )
+  const { rerender } = render(bar(1))
+  await waitFor(() => expect(onApplied).toHaveBeenCalledWith(['Q = 300 [W]']))
+  expect(JSON.parse(spy.open.mock.calls[0][1])).toEqual({ liveWatches: ['L < 1 [m]'], liveTimeline: lab.timeline })
+  expect(screen.getByTestId('live-input').textContent).toBe('q = 300 from t = 0.3')
+  // The lab plays at its own speed.
+  expect(screen.getByTestId('live-speed').textContent).toBe('10 s/s')
+  // The same value does not open again; a new one does, from the start.
+  rerender(bar(1))
+  expect(spy.open).toHaveBeenCalledTimes(1)
+  rerender(bar(2))
+  await waitFor(() => expect(spy.open).toHaveBeenCalledTimes(2))
+  expect(spy.dispose).toHaveBeenCalled()
+})
+
+it('under reduced motion a lab autorun opens paused at its start, and stepping moves it (M acceptance)', async () => {
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), addEventListener() {}, removeEventListener() {} }))
+  try {
+    const { driver, spy } = fakeDriver(1000)
+    render(
+      <MantineProvider>
+        <LiveBar blocks={['tank']} tracker={new ModelRevisionTracker()} buildOpen={() => ({ source: 'src', request: '{}' })} driver={driver} lab={{ timeline: [] }} autorun={1} />
+      </MantineProvider>,
+    )
+    await waitFor(() => expect(spy.open).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.getByLabelText('Run live')).toBeTruthy())
+    expect(spy.advance).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Next sample' }))
+    await waitFor(() => expect(spy.step).toHaveBeenCalledWith('sample'))
+  } finally {
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
+  }
+})
+
 it('a failed request ends a recording failed, and an unsaved recording outlives the bar (L5)', async () => {
   const { driver, spy } = fakeDriver(1000)
   mount(driver)

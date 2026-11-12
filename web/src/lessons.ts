@@ -1,3 +1,4 @@
+import type { LiveLab } from './labs'
 import type { PinnedSlider } from './sliders'
 
 /**
@@ -35,6 +36,8 @@ export interface Lesson {
   /** The lesson in another domain governed by the same equation. */
   pair?: string
   sources: string[]
+  /** Phase M1: the lesson run live, with an input timeline and graded measures. */
+  lab?: LiveLab
 }
 
 export const PREDICTIONS = ['rises', 'falls', 'stays the same'] as const
@@ -288,6 +291,190 @@ export const LESSONS: readonly Lesson[] = [
     predict: 'If the speed sensor responds four times slower, the overshoot …',
     explain: 'The controller sees the speed 2 s late, so it keeps pushing after the car has passed 20 m/s: the overshoot rises from 2.6 % to 54 %. The plant and the gains did not change — only the information did.',
     sources: ['K. J. Åström, R. M. Murray, Feedback Systems, 2nd ed., Princeton University Press, 2021 (cruise control)'],
+  },
+  {
+    example: 'lab-thermostat',
+    title: 'A thermostat limit cycle',
+    domain: 'Control',
+    concepts: ['on-off control', 'hysteresis', 'limit cycle', 'time constant'],
+    objective: 'See that an on-off thermostat never settles: the room cycles between its two switching temperatures, and a wider band makes a slower, larger cycle.',
+    prerequisites: ['A lumped thermal mass, τ = C/UA', 'Switching a heater on and off'],
+    equation: 't_{heat} = \\tau \\ln\\frac{T_{on} - T_{lo}}{T_{on} - T_{hi}}, \\qquad t_{cool} = \\tau \\ln\\frac{T_{hi} - T_a}{T_{lo} - T_a}',
+    sliders: [
+      { name: 'dT_band', value: 2, units: 'K', min: 0.5, max: 6 },
+      { name: 'Q_h', value: 2000, units: 'W', min: 1000, max: 4000 },
+    ],
+    view: 'plots',
+    trend: 'The cycle period rises as the hysteresis band widens.',
+    change: { variable: 'dT_band', to: 4, label: 'Widen the band to 4 K' },
+    observe: { variable: 'P_cycle', label: 'cycle period', expect: 'rises' },
+    predict: 'If the thermostat’s band doubles from 2 K to 4 K, the cycle period …',
+    explain: 'The room must now heat and cool through 4 K instead of 2 K, along the same exponentials, so each half takes about twice as long: the period goes from 267.4 s to 539.0 s. The heater’s duty barely moves, because the average heat it must supply is the same.',
+    sources: [
+      'F. P. Incropera et al., Fundamentals of Heat and Mass Transfer, 7th ed., Wiley, 2011, §5.2',
+      'K. J. Åström, R. M. Murray, Feedback Systems, 2nd ed., Princeton University Press, 2021, ch. 1 (on-off control)',
+    ],
+    lab: {
+      brief: 'The room cycles in a 2 K band; at 3000 s the band widens to 4 K. The grades time the cycle before and after.',
+      timeline: [{ at: 3000, set: ['dT_band = 4 [K]'] }],
+      grades: [
+        { label: 'Period in the 2 K band', measure: { kind: 'interval', event: 'off', after: 1000 }, expected: 267.36207, tolerance: 0.1, unit: 's' },
+        { label: 'Period in the 4 K band', measure: { kind: 'interval', event: 'off', after: 3600 }, expected: 538.99650, tolerance: 0.2, unit: 's' },
+      ],
+      reference: 'The analytic period t_heat + t_cool of each band, from the two exponentials between switchings. The first cycle after the change is partial, so the second band is timed from 3600 s.',
+      speed: 100,
+    },
+  },
+  {
+    example: 'lab-accumulator',
+    title: 'Charging a hydraulic accumulator',
+    domain: 'Fluid power',
+    concepts: ['accumulator', 'gas spring', 'nonlinear response'],
+    objective: 'See that an accumulator charges quickly at first and ever more slowly, because the gas stiffens as it is compressed, and that a higher supply pressure stores more oil.',
+    prerequisites: ['Boyle’s law, p·V = constant', 'Laminar flow through a restriction, q = Δp/R'],
+    equation: 't = \\frac{R}{p_s^2}\\left[(u_1 - u_2) + a \\ln\\frac{u_1}{u_2}\\right], \\qquad a = p_0 V_0, \\quad u = a\\left(\\frac{p_s}{p} - 1\\right)',
+    sliders: [
+      { name: 'p_s', value: 100, units: 'bar', min: 60, max: 200 },
+      { name: 'R_line', value: 5e9, units: 'Pa-s/m^3', min: 1e9, max: 2e10 },
+    ],
+    view: 'plots',
+    trend: 'The stored oil rises with the supply pressure.',
+    change: { variable: 'p_s', to: 150, label: 'Raise the supply to 150 bar' },
+    observe: { variable: 'V_oil', label: 'stored oil volume', expect: 'rises' },
+    predict: 'If the supply pressure rises from 100 to 150 bar, the oil the accumulator stores …',
+    explain: 'The gas is squeezed until it matches the supply: V_g = p₀V₀/p_s falls from 5 L to 3.33 L, so the stored oil rises from 5 L to 6.67 L. Each extra bar admits less oil than the last, because the gas is stiffer the more it is compressed.',
+    sources: ['J. Watton, Fundamentals of Fluid Power Control, Cambridge University Press, 2009 (accumulators)'],
+    lab: {
+      brief: 'The accumulator charges from its 50 bar precharge toward a 100 bar supply; at 20 s the supply steps to 150 bar. The run pauses where the pressure passes 95 bar and 142.5 bar.',
+      timeline: [{ at: 20, set: ['p_s = 150 [bar]'] }],
+      watches: ['p > 95 [bar]', 'p > 142.5 [bar]'],
+      grades: [
+        { label: 'Time to 95 bar', measure: { kind: 'event', event: 'p > 95 [bar]', after: 0 }, expected: 9.72952, tolerance: 0.01, unit: 's' },
+        { label: 'Time to 142.5 bar', measure: { kind: 'event', event: 'p > 142.5 [bar]', after: 20 }, expected: 23.00306, tolerance: 0.01, unit: 's' },
+      ],
+      reference: 'The closed-form isothermal charging time above, from 50 bar to 95 bar under 100 bar, and from the pressure at 20 s (99.909 bar, from the same formula) to 142.5 bar under 150 bar.',
+    },
+  },
+  {
+    example: 'lab-quarter-car',
+    title: 'Quarter-car resonance',
+    domain: 'Mechanical',
+    concepts: ['base excitation', 'resonance', 'transmissibility'],
+    objective: 'See that a car body barely follows a slow road wave, but moves more than twice the road amplitude when the wave meets the body resonance.',
+    prerequisites: ['A mass–spring–damper', 'Steady sinusoidal response'],
+    equation: 'H(j\\omega) = \\frac{k_t\\,(k_s + c_s s)}{(m_s s^2 + c_s s + k_s)(m_u s^2 + c_s s + k_s + k_t) - (c_s s + k_s)^2}\\Bigg|_{s = j\\omega}',
+    sliders: [
+      { name: 'f_road', value: 0.5, units: 'Hz', min: 0.2, max: 3 },
+      { name: 'c_s', value: 1000, units: 'N-s/m', min: 300, max: 3000 },
+    ],
+    view: 'plots',
+    trend: 'The body amplitude rises as the road frequency nears the body resonance.',
+    change: { variable: 'f_road', to: 1.2, label: 'Drive the road at 1.2 Hz' },
+    observe: { variable: 'X_body', label: 'steady body amplitude', expect: 'rises' },
+    predict: 'If the road wave arrives at 1.2 Hz instead of 0.5 Hz, the body amplitude …',
+    explain: 'The body on its suspension and tyre resonates near 1.18 Hz. At 0.5 Hz it follows the road with H = 1.20; at 1.2 Hz H = 2.61, so a 20 mm road wave moves the body 52 mm. The damper limits the peak: more c_s lowers it and spreads it.',
+    sources: ['T. D. Gillespie, Fundamentals of Vehicle Dynamics, SAE, 1992, ch. 5 (ride)'],
+    lab: {
+      brief: 'The road runs at 0.5 Hz; at 12 s it moves to 1.2 Hz, onto the body resonance. The grades read the steady body amplitude before and after.',
+      timeline: [{ at: 12, set: ['f_road = 1.2 [Hz]'] }],
+      grades: [
+        { label: 'Body amplitude at 0.5 Hz', measure: { kind: 'max', column: 'z_s', from: 8, to: 12 }, expected: 0.0239665, tolerance: 2.5e-4, unit: 'm' },
+        { label: 'Body amplitude at 1.2 Hz', measure: { kind: 'max', column: 'z_s', from: 20, to: 24 }, expected: 0.0522409, tolerance: 5e-4, unit: 'm' },
+      ],
+      reference: 'A_road·|H(jω)| at each frequency, from the transfer function above; the transients have decayed (ζ ≈ 0.25 on the body mode) by each window.',
+    },
+  },
+  {
+    example: 'lab-refrigeration',
+    title: 'Refrigeration start-up on P-h',
+    domain: 'Thermal',
+    concepts: ['vapour compression', 'pull-down', 'suction density'],
+    objective: 'See that a fixed-displacement compressor loses capacity as the room it cools gets colder, because the vapour it draws thins, so the room settles where the shrinking capacity meets the heat gain.',
+    prerequisites: ['The vapour-compression cycle on P-h', 'A lumped heat capacity, C·dT/dt = Q̇'],
+    equation: 'C\\frac{dT}{dt} = UA\\,(T_{amb} - T) - \\dot V \\rho_1(T - \\Delta T_e)\\,(h_1 - h_4)',
+    sliders: [
+      { name: 'V_dot', value: 0.004, units: 'm^3/s', min: 0.001, max: 0.008 },
+      { name: 'UA', value: 150, units: 'W/K', min: 50, max: 400 },
+    ],
+    view: 'plots',
+    trend: 'A smaller compressor leaves the room warmer.',
+    change: { variable: 'V_dot', to: 0.002, label: 'Halve the compressor displacement' },
+    observe: { variable: 'T_ss', label: 'steady room temperature', expect: 'rises' },
+    predict: 'If the compressor displacement is halved, the temperature the room settles at …',
+    explain: 'Half the displacement moves half the vapour at a given suction state, so the room warms until the denser suction vapour and the larger envelope gain balance again: from 270.52 K to 279.49 K. On the P-h chart the evaporator states climb back up as the evaporating pressure rises.',
+    sources: ['Y. A. Cengel and M. A. Boles, Thermodynamics: An Engineering Approach, McGraw-Hill (vapour-compression refrigeration)'],
+    lab: {
+      brief: 'The unit pulls the room down from 303 K while the four states slide down the P-h chart; at 5000 s the compressor drops to half its displacement. The grades read the room where it settles each time.',
+      timeline: [{ at: 5000, set: ['V_dot = 0.002 [m^3/s]'] }],
+      grades: [
+        { label: 'Room at full displacement', measure: { kind: 'value', column: 'T_room', time: 5000 }, expected: 270.52185, tolerance: 0.02, unit: 'K' },
+        { label: 'Room at half displacement', measure: { kind: 'value', column: 'T_room', time: 10000 }, expected: 279.48631, tolerance: 0.02, unit: 'K' },
+      ],
+      reference: 'The steady balance UA·(T_amb − T) = V̇·ρ₁·(h₁ − h₄), solved with R134a properties at V̇ = 0.004 and 0.002 m³/s (the document solves the first as T_ss); about nine time constants have passed by each grade.',
+      speed: 200,
+    },
+  },
+  {
+    example: 'lab-battery-windup',
+    title: 'A battery load step and PID anti-windup',
+    domain: 'Control',
+    concepts: ['PI control', 'actuator saturation', 'integrator windup'],
+    objective: 'See that a PI controller whose valve saturates winds up its integrator and then undercools the pack, and that back-calculation stops it.',
+    prerequisites: ['A PI controller, u = K_p·e + ∫K_p·e/T_i dt', 'A lumped heat capacity'],
+    equation: '\\dot z = \\frac{K_p e}{T_i} + \\frac{u - v}{T_t}, \\qquad v = K_p e + z, \\qquad u = \\min(\\max(v, 0), 1)',
+    sliders: [
+      { name: 'Q_load', value: 1500, units: 'W', min: 500, max: 5000 },
+      { name: 'T_t', value: 20, units: 's', min: 2, max: 2000 },
+    ],
+    view: 'plots',
+    trend: 'A heavier load opens the chiller valve further.',
+    change: { variable: 'Q_load', to: 2000, label: 'Raise the pack heat to 2000 W' },
+    observe: { variable: 'u_0', label: 'valve opening at the set point', expect: 'rises' },
+    predict: 'If the pack makes 2000 W instead of 1500 W, the valve opening that holds 308 K …',
+    explain: 'At the set point the chiller must remove the load less the small loss to the ambient, so u rises from 0.577 to 0.776. Live, a 4000 W load is more than the open valve removes, so the pack climbs toward 319.15 K. With T_t = 20 s the integrator follows the saturated valve and the pack returns to 308.15 K without undershoot; with a tracking time of hours it winds up and the pack falls below 300 K.',
+    sources: ['K. J. Astrom and T. Hagglund, Advanced PID Control, ISA, 2006 (integrator windup and back-calculation)'],
+    lab: {
+      brief: 'The pack sits at 308 K under 1500 W; at 100 s the load steps to 4000 W, beyond the chiller, and at 1600 s it drops back. Move T_t up and run it again to see the windup.',
+      timeline: [{ at: 100, set: ['Q_load = 4000 [W]'] }, { at: 1600, set: ['Q_load = 1500 [W]'] }],
+      grades: [
+        { label: 'Pack with the valve saturated', measure: { kind: 'value', column: 'T_pack', time: 1600 }, expected: 319.15035, tolerance: 0.01, unit: 'K' },
+        { label: 'Lowest pack temperature after the load drops', measure: { kind: 'min', column: 'T_pack', from: 1600, to: 2400 }, expected: 308.15, tolerance: 0.3, unit: 'K' },
+        { label: 'Pack back at the set point', measure: { kind: 'value', column: 'T_pack', time: 2400 }, expected: 308.15, tolerance: 0.02, unit: 'K' },
+      ],
+      reference: 'T_hot from the fully open balance Q_peak = m_max·c_p·ε·(T − T_in) + UA·(T − T_amb), solved in the document; the set point; and a 0.3 K bound on the undershoot the anti-windup must keep (a plain integrator undercools the pack by about 8 K).',
+      speed: 50,
+    },
+  },
+  {
+    example: 'lab-air-mixing',
+    title: 'Outdoor-air mixing on the psychrometric chart',
+    domain: 'HVAC',
+    concepts: ['adiabatic mixing', 'ventilation', 'humidity ratio'],
+    objective: 'See that the mixed air lies on the line between outdoor and room air, and that more outdoor air carries the room’s heat and moisture away, so the room settles closer to the outdoor state.',
+    prerequisites: ['Humidity ratio and enthalpy per kg of dry air', 'Mass and energy balances on a well-mixed room'],
+    equation: 'w_{ss} = w_{out} + \\frac{\\dot m_w}{f_{oa}\\,\\dot m}, \\qquad h_{ss} = h_{out} + \\frac{\\dot Q_{int} + \\dot m_w h_w}{f_{oa}\\,\\dot m}',
+    sliders: [
+      { name: 'f_oa', value: 0.2, units: '', min: 0.05, max: 1 },
+      { name: 'Q_int', value: 800, units: 'W', min: 0, max: 3000 },
+    ],
+    view: 'plots',
+    trend: 'More outdoor air makes the room drier.',
+    change: { variable: 'f_oa', to: 0.5, label: 'Raise the outdoor-air fraction to 0.5' },
+    observe: { variable: 'w_ss', label: 'steady room humidity ratio', expect: 'falls' },
+    predict: 'If half the supply is outdoor air instead of a fifth, the room’s humidity ratio …',
+    explain: 'Only the outdoor part of the supply removes the gains, so the room sits above the outdoor state by the gains over f_oa·ṁ. At f_oa = 0.5 that excess is 2.5 times smaller: w falls from 0.01053 to 0.00933 and the room from 295.90 K to 291.26 K.',
+    sources: ['ASHRAE Handbook, Fundamentals, ch. 1 (psychrometrics: adiabatic mixing)'],
+    lab: {
+      brief: 'The room starts at 24 °C and 50 % and settles under a fifth outdoor air; at 6000 s the damper opens to half. The chart traces the room and the mixed air.',
+      timeline: [{ at: 6000, set: ['f_oa = 0.5'] }],
+      grades: [
+        { label: 'Room temperature at f_oa = 0.2', measure: { kind: 'value', column: 'T_room', time: 6000 }, expected: 295.89533, tolerance: 0.01, unit: 'K' },
+        { label: 'Room humidity ratio at f_oa = 0.5', measure: { kind: 'value', column: 'w_room', time: 8000 }, expected: 0.0093257, tolerance: 2e-6, unit: 'kg/kg' },
+        { label: 'Room temperature at f_oa = 0.5', measure: { kind: 'value', column: 'T_room', time: 8000 }, expected: 291.25516, tolerance: 0.01, unit: 'K' },
+      ],
+      reference: 'The steady balances above with AirH2O properties at f_oa = 0.2 and 0.5 (the document solves the first as w_ss and T_ss); ten and eight time constants m_room/(f_oa·ṁ) have passed by the grades.',
+      speed: 200,
+    },
   },
 ]
 

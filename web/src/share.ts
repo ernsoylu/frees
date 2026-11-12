@@ -1,6 +1,7 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
 import type { PinnedSlider } from './sliders'
 import { seriesOptions, type SeriesId } from './preferredValues'
+import type { LabTimelineEntry } from './labs'
 
 /**
  * Share-by-URL: the whole document travels in the URL fragment as
@@ -124,13 +125,17 @@ export const MAX_SHARE_URL_CHARS = 16000
  * document alone, and is still what a link without lesson settings emits, so
  * every deployed reader opens it. Version 2 (`#share=2.<lz JSON>`) adds the
  * open lesson and the pinned sliders. lz-string's URI alphabet has no `.`, so
- * the prefix cannot be mistaken for a v1 payload.
+ * the prefix cannot be mistaken for a v1 payload. M2 adds an optional
+ * experiment timeline to version 2; a reader without it opens the document
+ * and sliders and drops the timeline.
  */
 export interface SharedDocument {
   text: string
   /** The gallery example whose lesson was open. */
   lesson?: string
   sliders?: PinnedSlider[]
+  /** M2: a live run's input changes, replayed when the visitor runs it live. */
+  timeline?: LabTimelineEntry[]
 }
 export type ShareRead = SharedDocument | { error: string } | null
 
@@ -142,14 +147,18 @@ const SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/
 // A unit is written into an override equation (`x = 1 [units]`): no brackets,
 // braces, quotes or line breaks can close it.
 const UNITS = /^[^[\]{}"\r\n]{0,40}$/
+export const MAX_SHARED_CHANGES = 64
+// A timeline line is one literal assignment, as the sliders write them.
+const LINE = /^[A-Za-z_]\w{0,63} = [-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?(?: \[[^[\]{}"\r\n]{0,40}\])?$/i
 
 /** Builds a share URL for the document and, when given, its lesson settings;
  *  null when the link would exceed {@link MAX_SHARE_URL_CHARS}. */
 export function buildShareUrl(text: string, base?: string, extras: Omit<SharedDocument, 'text'> = {}): string | null {
   const origin = base ?? globalThis.location.origin + globalThis.location.pathname
   const sliders = extras.sliders?.length ? extras.sliders : undefined
-  const payload = extras.lesson || sliders
-    ? `${SHARE_VERSION}.${compressToEncodedURIComponent(JSON.stringify({ text, lesson: extras.lesson, sliders }))}`
+  const timeline = extras.timeline?.length ? extras.timeline : undefined
+  const payload = extras.lesson || sliders || timeline
+    ? `${SHARE_VERSION}.${compressToEncodedURIComponent(JSON.stringify({ text, lesson: extras.lesson, sliders, timeline }))}`
     : compressToEncodedURIComponent(text)
   const url = origin + SHARE_PREFIX + payload
   return url.length > MAX_SHARE_URL_CHARS ? null : url
@@ -171,6 +180,32 @@ function readSliders(raw: unknown): PinnedSlider[] | undefined {
   return out.length ? out : undefined
 }
 
+/** Only literal assignments at finite, non-negative times survive, at most
+ *  {@link MAX_SHARED_CHANGES} entries, in time order. */
+function readTimeline(raw: unknown): LabTimelineEntry[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const out: LabTimelineEntry[] = []
+  for (const r of raw.slice(0, MAX_SHARED_CHANGES)) {
+    const { at, set } = (r ?? {}) as Record<string, unknown>
+    if (typeof at !== 'number' || !Number.isFinite(at) || at < 0 || !Array.isArray(set)) continue
+    const lines = set.slice(0, MAX_SHARED_SLIDERS).filter((l): l is string => typeof l === 'string' && LINE.test(l))
+    if (lines.length) out.push({ at, set: lines })
+  }
+  return out.length ? out.sort((a, b) => a.at - b.at) : undefined
+}
+
+/** M2: a live run's input log as a timeline, the changes at one time together, values in SI. */
+export function timelineOfLog(log: readonly { time: number; name: string; value: number }[]): LabTimelineEntry[] {
+  const out: LabTimelineEntry[] = []
+  for (const c of log) {
+    const line = `${c.name} = ${c.value}`
+    const last = out.at(-1)
+    if (last?.at === c.time) last.set.push(line)
+    else out.push({ at: c.time, set: [line] })
+  }
+  return out
+}
+
 /** Reads a `#share=` fragment. Null when the hash is absent, not a share link,
  *  or does not decode (a truncated or hand-mangled link must open the normal
  *  workspace, not throw); an error only for a link from a newer frees. */
@@ -189,7 +224,7 @@ export function readShareHash(hash: string): ShareRead {
     const data = JSON.parse(decoded) as Record<string, unknown>
     if (typeof data.text !== 'string' || data.text.length === 0 || data.text.length > MAX_SHARED_TEXT) return null
     const lesson = typeof data.lesson === 'string' && SLUG.test(data.lesson) ? data.lesson : undefined
-    return { text: data.text, lesson, sliders: readSliders(data.sliders) }
+    return { text: data.text, lesson, sliders: readSliders(data.sliders), timeline: readTimeline(data.timeline) }
   } catch {
     return null
   }

@@ -1043,3 +1043,65 @@ fn rapid_changes_keep_the_log_ordered_and_replay_bitwise() {
         assert_eq!(bits(&replayed), bits(&rows), "{method}");
     }
 }
+
+#[test]
+fn a_timeline_applies_at_its_rows_at_any_frame_budget_and_replays_after_a_reset() {
+    // Phase M1: Q 10 → 50 W at 3 s, then 0 at 6.05 s (on the row at 6.1 s).
+    for method in ["ida", "ode45", "rk4"] {
+        let mut session = open(&heater(method));
+        session.schedule(vec![
+            (6.05, vec![("Q".into(), 0.0)]),
+            (3.0, vec![("Q".into(), 50.0)]),
+        ]);
+        let whole = run(&mut session, 10.0, 10.0, 1000).rows;
+        let log: Vec<(f64, f64)> = session
+            .input_log()
+            .iter()
+            .map(|c| (c.time, c.value))
+            .collect();
+        assert_eq!(whole.len(), 101, "{method}");
+        assert_eq!(
+            log.iter().map(|c| c.1).collect::<Vec<_>>(),
+            [50.0, 0.0],
+            "{method}"
+        );
+        // At the row on IDA; on an explicit method at the step that reached it.
+        for ((t, _), row) in log.iter().zip([3.0, 6.1]) {
+            assert!(
+                *t >= row - 1e-12 && *t < row + 0.1,
+                "{method}: applied at {t}"
+            );
+            if method == "ida" {
+                assert!((t - row).abs() < 1e-12, "{method}: {t}");
+            }
+        }
+        let (t1, t2) = (log[0].0, log[1].0);
+        let first = |t: f64| 20.0 + 20.0 * (1.0 - (-t / 4.0).exp());
+        let second = |t: f64| 120.0 + (first(t1) - 120.0) * (-(t - t1) / 4.0).exp();
+        let third = |t: f64| 20.0 + (second(t2) - 20.0) * (-(t - t2) / 4.0).exp();
+        for row in &whole {
+            let (t, temp) = (row[0], row[1]);
+            let exact = if t <= t1 {
+                first(t)
+            } else if t <= t2 {
+                second(t)
+            } else {
+                third(t)
+            };
+            assert!(
+                (temp - exact).abs() < 2e-4,
+                "{method}, t = {t}: {temp} vs {exact}"
+            );
+        }
+        // Small frames and two-row chunks, after a reset: the same run.
+        session.reset();
+        let framed = run(&mut session, 10.0, 0.13, 2).rows;
+        assert_eq!(bits(&framed), bits(&whole), "{method}");
+        let again: Vec<(f64, f64)> = session
+            .input_log()
+            .iter()
+            .map(|c| (c.time, c.value))
+            .collect();
+        assert_eq!(again, log, "{method}");
+    }
+}

@@ -239,3 +239,91 @@ const PARTICLE_SLOW = 1.6
 const PARTICLE_FAST = 0.4
 /** Pixels between particles along a wire. */
 export const PARTICLE_GAP = 16
+
+/** M3: the across value that turns each domain's flow into power; heat flow is power already. */
+const POWER_OF: Record<string, string | null> = { electrical: 'v', mechanical: 'w', translational: 'vel', fluid: 'h', heat: null }
+
+/** One port's power, W, signed into its block: V·I, τ·ω, F·v, ṁ·h or Q̇. */
+export interface PortPower {
+  block: string
+  port: string
+  domain: string
+  /** The connection the port is on, so a Sankey can balance each net. */
+  net: string
+  power: number
+}
+
+/**
+ * Phase M3: the power at every port the engine gives a flow-into rule for
+ * (`Connection::flow_into`), each port once however many wires meet it. A
+ * port with no rule (signal, a fluid port named neither in nor out, a
+ * definition's boundary) or no finite value contributes nothing.
+ */
+export function portPowers(edges: readonly SchematicEdge[], values: ReadonlyMap<string, VariableResult>): PortPower[] {
+  const seen = new Map<string, PortPower>()
+  const value = (name: string) => {
+    const v = values.get(name.toLowerCase())?.value
+    return v !== undefined && Number.isFinite(v) ? v : undefined
+  }
+  for (const e of edges) {
+    const domain = e.domain.toLowerCase()
+    if (!(domain in POWER_OF)) continue
+    for (const [block, port, rule, stream] of [[e.from, e.fromPort, e.fromFlow, e.fromStream], [e.to, e.toPort, e.toFlow, e.toStream]] as const) {
+      const key = `${block}|${port}`
+      if (!rule || !port || seen.has(key)) continue
+      const across = POWER_OF[domain]
+      const flow = value(rule.variable)
+      const a = across === null ? 1 : stream ? value(`${stream}.${across}`) : undefined
+      if (flow === undefined || a === undefined) continue
+      seen.set(key, { block, port, domain, net: e.lineId, power: rule.into * flow * a })
+    }
+  }
+  return [...seen.values()]
+}
+
+/** M3: each block's net power in, W — positive where it dissipates or stores, negative where it supplies. */
+export function blockPowers(ports: readonly PortPower[]): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const p of ports) out.set(p.block, (out.get(p.block) ?? 0) + p.power)
+  return out
+}
+
+/**
+ * M3: an energy Sankey from block nets. A port's own V·I or ṁ·h moves with
+ * the ground and the enthalpy reference, and around a closed loop it only
+ * circulates; a block's net does not (in steady state what enters it leaves).
+ * So within each connected network, every block that supplies energy (net < 0)
+ * sends it to the blocks that take it out (net > 0), shared in proportion to
+ * what each takes: a balance, not the route energy takes along the wires.
+ */
+export function powerSankey(ports: readonly PortPower[]): { nodes: string[]; links: { source: number; target: number; value: number }[] } {
+  // Blocks on the same connection are one network.
+  const parent = new Map<string, string>()
+  const root = (b: string): string => {
+    const p = parent.get(b) ?? b
+    if (p === b) return b
+    const r = root(p)
+    parent.set(b, r)
+    return r
+  }
+  const firstOn = new Map<string, string>()
+  for (const p of ports) {
+    const other = firstOn.get(p.net)
+    if (other === undefined) firstOn.set(p.net, p.block)
+    else parent.set(root(p.block), root(other))
+  }
+  const groups = new Map<string, [string, number][]>()
+  for (const [block, net] of blockPowers(ports)) groups.set(root(block), [...(groups.get(root(block)) ?? []), [block, net]])
+  const nodes: string[] = []
+  const index = (name: string) => {
+    const k = nodes.indexOf(name)
+    return k >= 0 ? k : nodes.push(name) - 1
+  }
+  const links: { source: number; target: number; value: number }[] = []
+  for (const group of groups.values()) {
+    const takers = group.filter(([, n]) => n > 0)
+    const taken = takers.reduce((s, [, n]) => s + n, 0)
+    for (const [src, n] of group) if (n < 0) for (const [sink, t] of takers) links.push({ source: index(src), target: index(sink), value: (-n * t) / taken })
+  }
+  return { nodes, links }
+}

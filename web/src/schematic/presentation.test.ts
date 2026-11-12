@@ -169,6 +169,9 @@ describe('shown variables (RUN-03)', () => {
     // Phase H: particles and their schematic speed, one of the offered steps.
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: '', arrows: false, particles: true, speed: 2 } }).presentation.overlay).toEqual({ metric: '', arrows: false, particles: true, speed: 2 })
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: '', arrows: false, particles: 'yes', speed: 1e6 } as never })).toMatchObject({ presentation: { overlay: { metric: '', arrows: false } }, repaired: 1 })
+    // Phase M3: blocks filled by power.
+    expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: '', arrows: false, power: true } }).presentation.overlay).toEqual({ metric: '', arrows: false, power: true })
+    expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: '', arrows: false, power: 1 } as never })).toMatchObject({ presentation: { overlay: { metric: '', arrows: false } }, repaired: 1 })
     // A reference and a fixed range per metric; a half range or an inverted one is dropped.
     const scales = { 'fluid:t': { reference: 300 }, 'fluid:p': { min: 1e5, max: 2e5 }, 'heat:t': { min: 400, max: 300 }, 'fluid:h': { min: 1 }, 'drop table': { reference: 1 } }
     expect(sanitizePresentation({ ...EMPTY_PRESENTATION, overlay: { metric: 'fluid:t', arrows: false, scales } as never })).toMatchObject({

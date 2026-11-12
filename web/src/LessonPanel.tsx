@@ -3,6 +3,7 @@ import { ActionIcon, Badge, Button, Group, Paper, ScrollArea, SegmentedControl, 
 import { IconRefresh, IconX } from '@tabler/icons-react'
 import Latex from './Latex'
 import { directionOf, PREDICTIONS, type Lesson, type Prediction } from './lessons'
+import type { LabResult } from './labs'
 import { formatCompact } from './schematic/readouts'
 
 interface Props {
@@ -17,6 +18,12 @@ interface Props {
   onOpenPair?: () => void
   pairTitle?: string
   onClose: () => void
+  /** M1: whether the lab can run now (the example is solved and nothing is solving). */
+  canRunLab?: boolean
+  /** M1: run the lesson's lab live and grade it. */
+  onRunLab?: () => void
+  /** M1: the lab's grades, while running, or why the run failed. */
+  labGrades?: LabResult[] | { error: string } | 'running' | null
 }
 
 /**
@@ -24,7 +31,7 @@ interface Props {
  * observe, explain, check. The observed numbers are the model's own solves;
  * the example's CHECKs remain the grade.
  */
-export default function LessonPanel({ lesson, value, solving, onSet, onReset, onOpenPair, pairTitle, onClose }: Readonly<Props>) {
+export default function LessonPanel({ lesson, value, solving, onSet, onReset, onOpenPair, pairTitle, onClose, canRunLab, onRunLab, labGrades }: Readonly<Props>) {
   const [prediction, setPrediction] = useState<Prediction | null>(null)
   const [before, setBefore] = useState<number | null>(null)
   const [after, setAfter] = useState<number | null>(null)
@@ -104,6 +111,29 @@ export default function LessonPanel({ lesson, value, solving, onSet, onReset, on
                   The model did not show the trend this lesson promises ({lesson.observe.expect}). Reset, or check the model’s edits.
                 </Text>
               )}
+            </>
+          )}
+
+          {lesson.lab && (
+            <>
+              <Text size="xs" fw={600}>Live lab</Text>
+              <Text size="xs">{lesson.lab.brief}</Text>
+              <Button size="xs" variant="light" color="grape" disabled={!canRunLab || labGrades === 'running'} onClick={onRunLab}>
+                {labGrades === 'running' ? 'Grading…' : 'Run the lab live'}
+              </Button>
+              {!canRunLab && <Text size="xs" c="dimmed">Solve the example first (F2).</Text>}
+              {labGrades && labGrades !== 'running' && ('error' in labGrades ? (
+                <Text size="xs" c="red" data-testid="lab-error">The lab could not run: {labGrades.error}</Text>
+              ) : (
+                <Stack gap={2} data-testid="lab-grades" role="list" aria-label="Lab grades">
+                  {labGrades.map((g) => (
+                    <Text key={g.label} size="xs" role="listitem" c={g.pass ? 'teal' : 'red'}>
+                      {g.pass ? '✓' : '✗'} {g.label}: {g.measured === null ? 'not reached' : `${formatCompact(g.measured)} ${g.unit}`} (reference {formatCompact(g.expected)} ± {formatCompact(g.tolerance)} {g.unit})
+                    </Text>
+                  ))}
+                </Stack>
+              ))}
+              <Text size="xs" c="dimmed">Reference: {lesson.lab.reference}</Text>
             </>
           )}
 

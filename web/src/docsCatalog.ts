@@ -357,6 +357,7 @@ small kiosk: one view, the sliders you choose, **Solve**, **Reset** and
 | \`sliders\` | names, comma-separated (at most 8) | Pins those literals as sliders and shows only them. Names must be literals the document assigns. |
 | \`theme\` | \`light\` or \`dark\` | Forces the colour scheme. |
 | \`readonly\` | — | Accepted for clarity: an embed is always read-only, because no editor is mounted. Sliders still work. |
+| \`autorun\` | — | When the example is a gallery lab, plays its live run once the visitor presses **Solve**. Any other document ignores it. Under reduced motion the run opens paused, to be stepped. |
 
 Unknown values are ignored. A share link (\`#share=…\`) works in place of
 \`example\`.
@@ -364,7 +365,8 @@ Unknown values are ignored. A share link (\`#share=…\`) works in place of
 **What an embed never does.** It neither reads nor writes the visitor's own
 saved workspace, so a frame on another site cannot show their work or
 overwrite it. It also never runs a model by itself: **Solve** checks the
-model first, as it does for any document you open. **Reset** returns to the
+model first, as it does for any document you open, and \`autorun\` waits for
+that Solve. **Reset** returns to the
 model as it opened. **Open in full frees** opens the same model in a new tab,
 without the kiosk parameters.
 
@@ -377,6 +379,14 @@ the lesson and each slider's value and range, so the person opening it lands
 on the same step. Tables, plots and the schematic layout stay in the \`.frees\`
 project file, and the copy notice lists what was left out.
 
+**Shared experiments.** After a live run, the link also carries the run's
+input changes: the slider moves and any lab timeline, each with the run time
+it applied at, in SI. It then carries the sliders at the values the run
+started from, not where they ended. The person opening the link sees how many
+changes it holds. The document opens unsolved, and once they solve it, any
+live run replays those changes at the same rows. Editing the document drops
+the experiment.
+
 - **Versioned.** A link without lesson settings keeps the original format, so
   every version of frees opens it. A link with them is marked as format 2. A
   link from a newer frees says so and asks you to reload, rather than opening
@@ -384,7 +394,8 @@ project file, and the copy notice lists what was left out.
 - **Bounded.** Opening a link keeps only well-formed settings. A slider needs a
   plain variable name and a finite range that brackets its value, which is
   clamped into it. At most 16 sliders are read, and a lesson that does not
-  exist is ignored.
+  exist is ignored. An experiment keeps at most 64 times, each with literal
+  assignments only (\`name = number [unit]\`), at finite times of zero or more.
 - **The 16,000-character cap.** A link longer than this would not survive chat
   apps and proxies, so frees refuses it and says so. Save the project and send
   the file instead. If the document alone fits, **Copy a link to the document
@@ -575,6 +586,7 @@ After a solve, each block prints its most telling result — a heat exchanger's 
 - **Ports** — the state at each wired port (\`P\`, \`T\`, \`ṁ\`, \`h\`, and the domain's own members: \`Q̇\` for heat, \`V\`/\`I\` for electrical, and so on), in SI with units.
 - **Results** — the block's named outputs, the same \`CHLR.Q\` / \`CMP.W\` you can reference in equations.
 - **Parameters** — what the block was built with, **and where the value came from**. A document that sizes a heat exchanger from correlations and geometry injects the answer as a parameter, so the card shows \`ua  576.79 W/K  (UA_chl_r)\` — the number *and* the variable, so you can trace it back to the correlation that produced it.
+- **Operating point** — a fan (\`Fan\`, \`FanCurve\`, \`FanMap\`), a map pump (\`PumpMap\`, \`LiquidPumpMap\`) or a \`Valve\` draws its own curve with the point it runs at: pressure rise or head against volume flow, or a valve's drop against mass flow at its present opening. A \`map$\` table is evaluated by the engine against the last solve, over twice the operating flow. The curve is redrawn only when a parameter changes, including a slider or live input bound to it, such as a valve's \`u\`; the point follows the playback sample and the live run. A valve's point reads its two port pressures, so both ports must be wired to something. The gallery's *Pump, pipe and throttling valve* shows both.
 
 Click a block to pin the card and jump to the line that declares it in the editor.
 
@@ -589,7 +601,7 @@ Click a block to pin the card and jump to the line that declares it in the edito
 | **Reset layout** | preview the automatic arrangement; Apply or Cancel (locked blocks stay) |
 | **Export…** | SVG, PNG or print/PDF of the whole model, the current view or the selection, with the legend, values and run context you choose. On a white or transparent background the drawing takes the light colours whatever the app's theme; a *Theme* background keeps the screen's |
 | **Open in…** | each value on a pinned card opens in the app's own windows: **Plot** (the X-Y plot dialog, seeded from a run parametric table that has the variable), **Add to a parametric table** (a column in the latest table, opened), **Property diagram of its fluid** (a fluid stream's fluid) and **Sensitivity of this output**. An action that does not apply is disabled and says why |
-| **Overlay** | colour and widen the wires by one solved quantity (only those the solve produced, one domain and unit on one scale) with a legend of its range; wires with no value, a non-finite value or another unit are dashed apart, other domains fade. **Measured flow arrows** point the way current, heat and mass actually flow: current and heat by their sign into a port, mass flow from a port named \`in\` toward one named \`out\`; zero flow, or a wire with no solved flow and convention, gets no arrow |
+| **Overlay** | colour and widen the wires by one solved quantity (only those the solve produced, one domain and unit on one scale) with a legend of its range; wires with no value, a non-finite value or another unit are dashed apart, other domains fade. **Measured flow arrows** point the way current, heat and mass actually flow: current and heat by their sign into a port, mass flow from a port named \`in\` toward one named \`out\`; zero flow, or a wire with no solved flow and convention, gets no arrow. **Fill blocks by power** tints each block by its net power in, the sum over its ports of V·I, τ·ω, F·v, ṁ·h and Q̇: red takes energy out of the network (dissipates, stores, or delivers it as work or heat no port carries), blue puts it in; the block's tooltip gives the number. **Power flow** draws the same nets as a Sankey, each connected network's suppliers shared among the blocks taking power in. A port's own V·I or ṁ·h moves with the ground and the enthalpy reference, so it is never shown alone; no entropy reaches a port, so there is no exergy view |
 | **Watch** | a pinned block's card shows each solved value with three controls: show it on the block, add it to the Watch panel, and its display unit and significant digits. A typed unit must measure the same quantity (the engine checks it); it changes how the value reads, never the document. A Watch row selects its block; a selected block marks its rows |
 | **Equations only** | a model with equations and no components shows its variables and the solve's blocks in solve order instead of an empty canvas. A dashed arrow means a block uses values an earlier block solved; it is not a wire. Equations in one block are solved together. Click a variable to pin its card, or an equation to open its line |
 | **Symbol** (pinned card's style) | turn a block 90°, 180° or 270°, mirror it, show its name only or its full card, and put its name inside, above or below at 11–18 px — for this block, every block of its type, or the project. Ports move with the symbol and keep their names, wires follow them, and the equations do not change |
@@ -932,6 +944,20 @@ PLOT 'Boiler Cycle'
   connectstates = true
 END
 \`\`\`
+
+### Paths from a dynamic run
+On a property or psychrometric diagram, \`x\` and \`y\` name recorded columns of a \`DYNAMIC\` block, in SI. The lists pair up in order, and each pair is drawn as a path over the run, ending in a marker at the last row. This P-h chart traces the four states of a refrigeration unit as it pulls a room down:
+\`\`\`
+PLOT 'Start-up on P-h'
+  kind = property
+  fluid = R134a
+  diagram = 'P-h'
+  overlaystates = false
+  x = h_1, h_2, h_3, h_4
+  y = P_e, P_c, P_c, P_e
+END
+\`\`\`
+On the psychrometric chart, pair a dry-bulb temperature with a humidity ratio, for example \`x = T_room\` and \`y = w_room\`. A live run publishes its rows to the same table at each pause, step and stop, so the paths then show the run so far.
 
 ## Control-system plot kinds
 Feed these the arrays produced by \`bode\`, \`nyquist\`, \`pole\`/\`zero\` (see *Control Systems & Symbolic CAS*):
@@ -1355,6 +1381,8 @@ You now know the whole loop: describe equations, Check (F4), Solve (F2), sweep a
 
 ## Learn by example
 Three short journeys — a scalar with units, a component chain, and a map or transient upgrade — are in *Journey 1 — A scalar equation with units*. **Examples & Tutorials** has longer guided problems and a library of verified examples. When you need the exact signature of a function, the **Reference** A–Z index is the canonical home for every symbol.
+
+**Lessons and live labs.** The gallery's *Lessons* open a panel beside the model: predict, change one input, observe, explain, check. The *Labs* add a live run. Solve the example, then choose **Run the lab live**. The Live bar runs the block while the lab's input timeline changes inputs at stated times, such as a thermostat band widening at 3000 s. The engine applies each change itself, at the first row at or after its time, so the run is the same at any speed and after every reset, and the sliders follow. A headless run of the same timeline grades the lab. Each grade, such as a cycle period, the time to a pressure or a steady amplitude, is shown against its reference value and tolerance, and the panel names where each reference comes from.
 
 [Related: journey-scalar, journey-chain, journey-upgrade, lang-overview, fluids-overview, components-overview, examples]`,
   "repl": `# REPL Terminal & Workspace

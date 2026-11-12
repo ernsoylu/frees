@@ -10,6 +10,7 @@ import {
   FileButton,
   Group,
   Kbd,
+  Loader,
   Menu,
   NativeSelect,
   NumberInput,
@@ -27,6 +28,7 @@ import {
   useComputedColorScheme,
 } from '@mantine/core'
 import { useReducedMotion } from '@mantine/hooks'
+import type { PlotlyFigure } from 'plotly.js/lib/core'
 import {
   IconAdjustments,
   IconArrowBackUp,
@@ -43,7 +45,7 @@ import {
   IconZoomIn,
   IconZoomOut,
 } from '@tabler/icons-react'
-import { check as checkText, type BlockResult, type CheckResponse, type ComponentResult, type ConnectionDto, type InstanceIdentityDto, type StreamPhase, type VariableResult } from '../api'
+import { check as checkText, replEvaluate, type BlockResult, type CheckResponse, type ComponentResult, type ConnectionDto, type InstanceIdentityDto, type StreamPhase, type VariableResult } from '../api'
 import {
   declarationLine,
   declarationLineFromCheck,
@@ -94,8 +96,10 @@ import {
   type SourceEdit,
 } from './sourceEdit'
 import { componentFile, editInterface, extractSubsystem, importComponents, movePresentation, type Extraction, type InterfaceChange } from './encapsulation'
-import { canDiverge, CARRIES, DIVERGING_STOPS, divergingColor, edgeReadings, flowAlong, overlayMetrics, PARTICLE_GAP, particlePeriods, PHASE_COLORS, PHASE_METRIC, phaseColor, phaseReadings, rampColor, RAMP_STOPS, type ScaleSetting } from './overlay'
-import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, streamSummary, type NodeReadout, type Reading } from './readouts'
+import { blockPowers, canDiverge, CARRIES, DIVERGING_STOPS, divergingColor, edgeReadings, flowAlong, overlayMetrics, PARTICLE_GAP, particlePeriods, PHASE_COLORS, PHASE_METRIC, phaseColor, phaseReadings, portPowers, powerSankey, rampColor, RAMP_STOPS, type ScaleSetting } from './overlay'
+import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, streamPrefixes, streamSummary, type NodeReadout, type Reading } from './readouts'
+import { curveSpec, type CurveSpec } from './operatingPoint'
+import OperatingPointChart from './OperatingPointChart'
 import { INSIGHTS, insightLines, insightsFor } from './insights'
 import { wasmUnitConversions } from '../wasm/engineClient'
 import { COMPONENT_CATALOG, type ComponentSpec } from '../componentCatalog'
@@ -202,6 +206,7 @@ const GUIDE_PX = 6
 const NO_PORTS: ReadonlySet<string> = new Set()
 const EMPTY_ROUTES: Record<string, WireRoute> = {}
 const ComponentWizardModal = lazy(() => import('../ComponentWizardModal'))
+const PlotlyChart = lazy(() => import('../plots/PlotlyChart'))
 /** A new block's top-left, from the point it was placed at (drawing units). */
 const PLACE_OFFSET = { x: 60, y: 24 }
 /** Steps the canvas undo timeline keeps. */
@@ -1162,6 +1167,16 @@ export default function SchematicTab({
     [overlaySet.particles, reducedMotion, layout.edges, flowValues],
   )
   const particleSpeed = overlaySet.speed ?? 1
+  // Phase M3: blocks filled by the net power their ports carry in, from the
+  // port quantities the solve reports (V·I, τ·ω, F·v, ṁ·h, Q̇), at the sample shown.
+  const portPower = useMemo(() => (overlaySet.power ? portPowers(layout.edges, values) : null), [overlaySet.power, layout.edges, values])
+  const powers = useMemo(() => (portPower ? blockPowers(portPower) : null), [portPower])
+  const powerScale = powers ? Math.max(0, ...[...powers.values()].map(Math.abs)) : 0
+  const powerOf = (id: string) => {
+    const net = powers?.get(id)
+    return net === undefined ? undefined : { net, color: divergingColor(powerScale > 0 ? 0.5 + net / (2 * powerScale) : 0.5) }
+  }
+  const [sankeyOpen, setSankeyOpen] = useState(false)
   const setOverlay = (next: Partial<SchematicPresentation['overlay']>) =>
     updatePres((p) => ({ ...p, overlay: { ...(p.overlay ?? { metric: '', arrows: false }), ...next } }), 'Change overlay')
   // VIEW-08: presets change view settings only; a named view also restores
@@ -2262,6 +2277,21 @@ export default function SchematicTab({
   const active = pinned ?? hovered
   const activeNode = active ? positioned.get(active) : undefined
   const activeReadout = active ? readouts.get(active) : undefined
+  // Phase M4: a fan, pump or valve's curve and where the values put it.
+  const operating = useMemo(() => {
+    if (!activeNode?.type) return undefined
+    const spec = curveSpec(activeNode.type, components?.find((c) => c.name.toLowerCase() === activeNode.id)?.params ?? [], values)
+    if (!spec) return undefined
+    const streams = streamPrefixes(activeNode, layout.edges)
+    // `q` is the block's own; `in.p` is read on the stream its port is wired to.
+    const value = (member: string) => {
+      const [port, m] = member.includes('.') ? member.split('.') : [null, member]
+      const name = port === null ? `${activeNode.id}.${m}` : streams.get(port) ? `${streams.get(port)!.stream}.${m}` : `${activeNode.id}.${member}`
+      const v = values.get(name.toLowerCase())?.value
+      return v !== undefined && Number.isFinite(v) ? v : undefined
+    }
+    return { spec, at: spec.point(value) }
+  }, [activeNode, components, values, layout.edges])
   /** The block a variable belongs to — the longest instance path it starts with — and the port after it. */
   const ownerOf = (name: string) => {
     let block = ''
@@ -2800,7 +2830,7 @@ export default function SchematicTab({
           )}
           <Popover position="bottom-end" withinPortal shadow="md">
             <Popover.Target>
-              <Button size="compact-xs" variant={metric || overlaySet.arrows || overlaySet.particles ? 'light' : 'subtle'} color="gray">
+              <Button size="compact-xs" variant={metric || overlaySet.arrows || overlaySet.particles || overlaySet.power ? 'light' : 'subtle'} color="gray">
                 Overlay
               </Button>
             </Popover.Target>
@@ -2843,6 +2873,7 @@ export default function SchematicTab({
                 )}
                 <Switch size="xs" label="Measured flow arrows" checked={overlaySet.arrows} onChange={(e) => setOverlay({ arrows: e.currentTarget.checked })} />
                 <Switch size="xs" label="Flow particles" checked={overlaySet.particles === true} onChange={(e) => setOverlay({ particles: e.currentTarget.checked })} />
+                <Switch size="xs" label="Fill blocks by power" checked={overlaySet.power === true} onChange={(e) => setOverlay({ power: e.currentTarget.checked })} />
                 {overlaySet.particles && (
                   <Select
                     size="xs"
@@ -3630,6 +3661,7 @@ export default function SchematicTab({
                   controls={live?.controls.get(n.id.toLowerCase())}
                   onControl={live?.set}
                   scope={live?.rows && miniScopes[n.id] ? { ...live.rows, variable: miniScopes[n.id] } : undefined}
+                  power={powerOf(n.id)}
                   onPointerDown={(e) => {
                     takeControl()
                     // Dragging a selected block carries the whole selection; locked blocks stay.
@@ -3828,7 +3860,7 @@ export default function SchematicTab({
       <div role="status" aria-live="polite" data-testid="canvas-announcer" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>
         {announcement}
       </div>
-      {(overlayRead || byPhase || overlaySet.arrows || overlaySet.particles) && (
+      {(overlayRead || byPhase || overlaySet.arrows || overlaySet.particles || overlaySet.power) && (
         <Paper withBorder shadow="sm" p="xs" role="region" aria-label="Overlay legend" data-testid="overlay-legend" style={{ position: 'absolute', right: 8, top: 44, width: 230, zIndex: 4 }}>
           {metric && overlayRead && (
             <Stack gap={2}>
@@ -3877,8 +3909,36 @@ export default function SchematicTab({
               {paused ? ' Paused with playback.' : ''}
             </Text>
           )}
+          {overlaySet.power && (
+            <Stack gap={2} mt={metric || overlaySet.arrows || overlaySet.particles ? 4 : 0} data-testid="power-legend">
+              <Text size="xs" fw={600}>net power in [W]</Text>
+              <div style={{ height: 8, borderRadius: 2, background: `linear-gradient(to right, ${DIVERGING_STOPS.join(', ')})` }} />
+              <Group justify="space-between" wrap="nowrap">
+                <Text size="10px">−{formatCompact(powerScale)} supplies</Text>
+                <Text size="10px">takes in +{formatCompact(powerScale)}</Text>
+              </Group>
+              <Text size="10px" c="dimmed">
+                The sum over each block's ports of V·I, τ·ω, F·v, ṁ·h and Q̇, signed into the block: red takes energy out of the network (dissipates, stores, or delivers it as work or heat the ports do not carry), blue puts it in. A port's own V·I or ṁ·h moves with the ground and the enthalpy reference; a block's net does not while what enters it leaves. No entropy reaches a port, so exergy is not shown. Unfilled: no port power.
+              </Text>
+              <Button size="compact-xs" variant="light" disabled={!portPower?.length} onClick={() => setSankeyOpen(true)}>
+                Power flow
+              </Button>
+            </Stack>
+          )}
         </Paper>
       )}
+      <Modal opened={sankeyOpen && portPower !== null} onClose={() => setSankeyOpen(false)} title="Power flow" size="xl">
+        {sankeyOpen && portPower && (
+          <Suspense fallback={<Loader size="sm" />}>
+            <PlotlyChart figure={sankeyFigure(powerSankey(portPower), ink)} minHeight={420} />
+          </Suspense>
+        )}
+        {sankeyOpen && (
+          <Text size="xs" c="dimmed" mt={6}>
+            Each block's net power over its ports, W. Within each connected network, what the blue blocks put in is shared among the red blocks that take it out, in proportion to what each takes: a balance, not the route along the wires.
+          </Text>
+        )}
+      </Modal>
       <Modal opened={noteEdit !== null} onClose={() => setNoteEdit(null)} title="Annotation" size="sm">
         {noteEdit && (() => {
           const a = annotations.find((x) => x.id === noteEdit.id)
@@ -4074,6 +4134,7 @@ export default function SchematicTab({
           }
           onFormat={pinned === activeNode.id ? setFormat : undefined}
           handoff={pinned === activeNode.id ? cardHandoff : undefined}
+          operating={operating}
         />
       )}
     </Stack>
@@ -4170,6 +4231,37 @@ interface BlockProps {
   onControl?: (input: CanvasInput, value: number) => void
   /** Phase L3b: the live rows and the variable the block's mini-scope traces. */
   scope?: { store: LiveStore; header: LiveTable; variable: string }
+  /** Phase M3: the block's net power in, W, and its fill. */
+  power?: { net: number; color: string }
+}
+
+/** M4: a map table at one flow, against the last solve's workspace (worker 0, where the solve ran). */
+const evaluateTable = async (table: string, x: number) => {
+  const r = await replEvaluate('', `${table}(${x})`)
+  return r.success ? r.value : null
+}
+
+/** M3: the power Sankey as a Plotly figure: suppliers blue, blocks taking power in red. */
+function sankeyFigure({ nodes, links }: ReturnType<typeof powerSankey>, ink: SchematicInk): PlotlyFigure {
+  const supplies = new Set(links.map((l) => l.source))
+  return {
+    data: [
+      {
+        type: 'sankey',
+        name: 'Power flow',
+        valueformat: '.4~g',
+        valuesuffix: ' W',
+        node: { label: nodes, pad: 14, thickness: 14, color: nodes.map((_, k) => divergingColor(supplies.has(k) ? 0 : 1)) },
+        link: {
+          source: links.map((l) => l.source),
+          target: links.map((l) => l.target),
+          value: links.map((l) => l.value),
+          color: links.map(() => 'rgba(134, 142, 150, 0.4)'),
+        },
+      },
+    ],
+    layout: { paper_bgcolor: ink.canvas, font: { color: ink.text, size: 12 } },
+  }
 }
 
 const reactAttr = (name: string) => name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
@@ -4219,6 +4311,7 @@ function NodeBlock({
   controls,
   onControl,
   scope,
+  power,
 }: Readonly<BlockProps>) {
   // COMP-08: a missing project symbol falls back to a labelled block.
   const shape = custom === null ? 'block' : (look?.shape ?? node.shape)
@@ -4267,7 +4360,7 @@ function NodeBlock({
       data-flash={flash || undefined}
       style={{ cursor: locked ? 'default' : 'move' }}
     >
-      <title>{`${node.type ?? ''} ${node.label} — ${symbolLabel}${flash ? ' — event at this sample' : ''}${portSummaries(node, summary)}`}</title>
+      <title>{`${node.type ?? ''} ${node.label} — ${symbolLabel}${flash ? ' — event at this sample' : ''}${power ? ` — net power in ${formatCompact(power.net)} W` : ''}${portSummaries(node, summary)}`}</title>
       <rect
         width={node.w}
         height={node.h}
@@ -4279,6 +4372,7 @@ function NodeBlock({
         strokeWidth={flash ? 3 : highlighted || active ? 2.2 : 1.2}
         strokeDasharray={node.terminal ? '4 2' : undefined}
       />
+      {power && <rect width={node.w} height={node.h} rx={node.terminal ? 3 : 7} fill={power.color} fillOpacity={0.35} pointerEvents="none" data-power={power.net} />}
       {chip && (
         <text
           x={chipX}
@@ -5286,7 +5380,10 @@ function ReadoutCard({
   symbols,
   onImportSymbol,
   liveScope,
+  operating,
 }: Readonly<{
+  /** M4: the block's operating-point curve and the point the values put it at. */
+  operating?: { spec: CurveSpec; at: [number, number] | null }
   /** L3b: while a live run is open, the block's live columns and the one its mini-scope traces. */
   liveScope?: { options: string[]; value: string | null; onChange: (name: string | null) => void }
   /** COMP-08: the project's symbols, and importing one. */
@@ -5468,6 +5565,8 @@ function ReadoutCard({
           {SHAPE_LABELS[node.shape]} — no solved values yet. Press Solve.
         </Text>
       )}
+
+      {operating && <OperatingPointChart spec={operating.spec} at={operating.at} evaluate={evaluateTable} />}
 
       {readout.ports.map((p) => (
         <div key={p.port}>

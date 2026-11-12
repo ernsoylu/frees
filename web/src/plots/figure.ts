@@ -473,6 +473,22 @@ function playbackTraces(
   return { traces, gaps: c.gaps }
 }
 
+/** Phase M1b: recorded paths (SI columns of a dynamic run) on a diagram's axes, each ending in a marker at its last row. */
+function pathTraces(paths: XYSeries[] | undefined, xUnit: UnitChoice, yUnit: UnitChoice, lineColors: Record<string, string> | undefined): PlotlyTrace[] {
+  return (paths ?? []).flatMap((p, i) => {
+    const x = p.x.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v * xUnit.scale + xUnit.offset : null))
+    const y = p.y.map((v) => (Number.isFinite(v) ? v * yUnit.scale + yUnit.offset : null))
+    const color = lineColors?.[p.name] ?? PATH_COLORS[i % PATH_COLORS.length]
+    let last = x.length - 1
+    while (last >= 0 && (x[last] === null || y[last] === null)) last--
+    const line: PlotlyTrace = { type: 'scatter', mode: 'lines', name: p.name, uid: `path_${p.name}`, x, y, connectgaps: false, line: { color, width: 2 }, showlegend: true }
+    if (last < 0) return [line]
+    return [line, { type: 'scatter', mode: 'markers', name: `${p.name} at the last row`, uid: `path_end_${p.name}`, x: [x[last]], y: [y[last]], marker: { color, size: 8 }, showlegend: false }]
+  })
+}
+
+const PATH_COLORS = ['#f08c00', '#1c7ed6', '#2f9e44', '#ae3ec9']
+
 function noteGaps(layout: PlotlyLayout, gaps: string[], color: string) {
   if (gaps.length === 0) return
   layout.annotations = [
@@ -494,6 +510,7 @@ export function buildPropertyFigure(
   cyclePath?: Record<string, number>[],
   revision?: string | number,
   playback?: PlaybackSample,
+  paths?: XYSeries[],
 ): PlotlyFigure {
   const colors = THEMES[theme]
   const xUnit = resolveUnit(diagram.xProperty, format.xUnit, format.celsius)
@@ -561,6 +578,7 @@ export function buildPropertyFigure(
     )
   }
 
+  traces.push(...pathTraces(paths, xUnit, yUnit, format.lineColors))
   const log = { x: format.xLog ?? diagram.xLog, y: format.yLog ?? diagram.yLog }
   const cursor = playbackTraces(playback, diagram.xProperty, diagram.yProperty, diagram.fluid, log, format.lineColors?.['playback'] || '#e03131', xUnit, yUnit)
   traces.push(...cursor.traces)
@@ -587,6 +605,7 @@ export function buildPsychroFigure(
   cyclePath?: Record<string, number>[],
   revision?: string | number,
   playback?: PlaybackSample,
+  paths?: XYSeries[],
 ): PlotlyFigure {
   const colors = THEMES[theme]
   const xUnit = resolveUnit('T', format.xUnit, format.celsius)
@@ -619,6 +638,7 @@ export function buildPsychroFigure(
       ),
     )
   }
+  traces.push(...pathTraces(paths, xUnit, yUnit, format.lineColors))
   const log = { x: format.xLog ?? false, y: format.yLog ?? false }
   const cursor = playbackTraces(playback, 'T', 'w', null, log, format.lineColors?.['playback'] || '#e03131', xUnit, yUnit)
   traces.push(...cursor.traces)

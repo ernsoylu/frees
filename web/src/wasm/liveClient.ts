@@ -51,6 +51,8 @@ export interface LiveChunk {
   error: string | null
   /** Phase L4: the pause condition that crossed in this chunk and ended it, as written. */
   paused?: string | null
+  /** Phase M1: the timeline changes the run applied at this chunk's end, values in SI. */
+  inputs?: LiveInputChange[]
 }
 
 /** One applied live input change: the run time it took effect at, the value in SI. */

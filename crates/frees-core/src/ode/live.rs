@@ -79,6 +79,9 @@ pub struct Chunk {
     pub error: Option<FreesError>,
     /// Phase L4: the watch that crossed in this chunk and ended it, as written.
     pub paused: Option<String>,
+    /// Phase M1: the timeline changes the run applied at this chunk's end,
+    /// as [`LiveSession::input_log`] records them.
+    pub inputs: Vec<InputChange>,
 }
 
 /// Phase L4: a condition that pauses a live run where it crosses — a column of
@@ -1033,11 +1036,19 @@ pub struct LiveSession {
     /// Watch crossings later than the one a chunk paused at, in time order:
     /// each pauses its own resume.
     held: Vec<TableEventHit>,
+    /// Phase M1: input changes the run applies itself, in time order
+    /// ([`Self::schedule`]), and how many of them it has applied.
+    timeline: Timeline,
+    due: usize,
 }
 
 fn pins_names(pins: &[(String, f64)]) -> Vec<String> {
     pins.iter().map(|(n, _)| n.clone()).collect()
 }
+
+/// Phase M1: an input timeline, `(time, [(name, SI value)…])` per entry
+/// ([`LiveSession::schedule`]).
+pub type Timeline = Vec<(f64, Vec<(String, f64)>)>;
 
 /// One applied live input change (Phase L1): the run's time it took effect
 /// at, after the row or step there, and the new value.
@@ -1084,6 +1095,8 @@ impl LiveSession {
             log: Vec::new(),
             watches: Vec::new(),
             held: Vec::new(),
+            timeline: Vec::new(),
+            due: 0,
         }
     }
 
@@ -1187,18 +1200,69 @@ impl LiveSession {
         &self.log
     }
 
+    /// Phase M1: a finite input timeline the run applies itself, each change
+    /// as [`Self::set_inputs`] at the first row at or after its time. A chunk
+    /// never runs past a change still to apply, so the run is the same at any
+    /// frame budget, and a reset replays the timeline from the start.
+    pub fn schedule(&mut self, mut timeline: Timeline) {
+        timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
+        self.timeline = timeline;
+        self.due = 0;
+    }
+
+    /// The grid row the next timeline change applies at, and that row's time.
+    fn due_row(&self) -> Option<(usize, f64)> {
+        let (at, _) = self.timeline.get(self.due)?;
+        let s = self.settings();
+        let grid = (s.t0, s.tf, s.points);
+        let mut row = grid_last_row(s.t0, s.tf, s.points, *at);
+        if grid_time(grid, row) < *at {
+            row += 1;
+        }
+        Some((row, grid_time(grid, row)))
+    }
+
+    /// Apply each timeline change whose row the chunk reached. A refused
+    /// change ends the chunk with its error and drops the rest of the timeline.
+    fn apply_due(&mut self, mut chunk: Chunk) -> Chunk {
+        while let Some((_, time)) = self.due_row() {
+            let reached = chunk.rows.last().is_some_and(|r| r[0] >= time);
+            if !reached || chunk.error.is_some() || self.finished() {
+                break;
+            }
+            let (at, changes) = self.timeline[self.due].clone();
+            self.due += 1;
+            let logged = self.log.len();
+            let applied = self.set_inputs(&changes);
+            chunk.inputs.extend_from_slice(&self.log[logged..]);
+            if let Err(e) = applied {
+                chunk.error = Some(FreesError::solver(format!(
+                    "Live mode: the timeline's change at t = {at} was refused: {}",
+                    e.to_string_message()
+                )));
+                self.due = self.timeline.len();
+            }
+        }
+        chunk
+    }
+
     /// Rows up to `last`, ending the chunk early where a watch crosses.
     fn rows(&mut self, last: usize, more: &mut dyn FnMut(&Chunk) -> bool) -> Chunk {
         if let Some(chunk) = self.release() {
             return chunk;
         }
+        let last = match self.due_row() {
+            Some((row, _)) => last.min(row.max(self.index())),
+            None => last,
+        };
         let watches = &self.watches;
         let mut more = |c: &Chunk| !c.events.iter().any(|e| watches.contains(&e.name)) && more(c);
         let chunk = match &mut self.run {
             Run::Ida(run) => run.advance(&self.defs, last, &mut more, None),
             Run::Explicit(run) => run.run(&self.defs, last, &mut more, false),
         };
-        self.mark(chunk)
+        let chunk = self.mark(chunk);
+        self.apply_due(chunk)
     }
 
     fn index(&self) -> usize {
@@ -1244,7 +1308,8 @@ impl LiveSession {
             Run::Ida(run) => run.step_accepted(&self.defs),
             Run::Explicit(run) => run.run(&self.defs, ROW_CAP, &mut |_| true, true),
         };
-        self.mark(chunk)
+        let chunk = self.mark(chunk);
+        self.apply_due(chunk)
     }
 
     /// Back to `t0`, with nothing integrated and the inputs the run opened
@@ -1253,6 +1318,7 @@ impl LiveSession {
         self.pins.clear();
         self.log.clear();
         self.held.clear();
+        self.due = 0;
         match &mut self.run {
             Run::Ida(run) => run.restart(),
             Run::Explicit(run) => run.restart(),

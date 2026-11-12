@@ -936,13 +936,124 @@ entry here is checked off with evidence when it closes.
      - an accumulator pressure response;
      - quarter-car resonance on an X-Y plot;
      - outdoor-air mixing on the psychrometric chart.
+  - **M1a done 2026-11-12 (`m1a-live-labs`): the lab framework and the three equation-only labs.**
+    - **Timeline in the engine** (`ode/live.rs`, `LiveSession::schedule`). A lab's inputs change at stated times: the open request's `liveTimeline: [{at, set: ["Q = 300 [W]"]}]`, as literal assignments parsed like the sliders' (`changes_of`). The session applies each change itself, as `set_inputs`, at the first grid row at or after its time. A chunk never runs past a change still to apply, so the run is the same at any frame budget, and a reset replays the timeline from the start. On IDA the change lands on the row; on an explicit method it lands at the step that reached the row, as L1's changes do (the quarter car's 12 s change applies at 12.0136 s on ode45). Each chunk reports the changes applied at its end (`inputs`), which reach the input log, the recorder and the sliders. A malformed entry refuses the open, and a refused change ends the chunk with the error.
+    - **Labs** (`web/src/labs.ts`, `Lesson.lab`). A lab is a lesson with a live section: a brief, the timeline, optional pause conditions, the speed the bar plays it at, and grades. Each grade measures, in SI:
+      - a column's value at a row;
+      - its largest or smallest row over a window;
+      - the time of the first crossing of an event or watch after a time;
+      - the interval between the next two crossings.
+      Each grade states its expected value, tolerance and unit, and the lab names where its reference comes from.
+    - **In the app.** The lesson panel's "Run the lab live" opens the Live bar on the lab's timeline and runs it (`autorun`). The sliders follow the applied lines whose units match. A headless run of the same timeline, on its own worker (`runLab`), grades it. The panel lists each grade as measured against reference ± tolerance, ✓ or ✗.
+    - **Thermostat.**
+      - **Model.** A relay with hysteresis, as the documented stand-in for the deferred hysteresis contract: a heater state `u` that two EVENTs set where T crosses T_set ± band/2.
+      - **Run.** The band widens from 2 K to 4 K at 3000 s.
+      - **Reference.** The analytic periods τ·ln((T_on − T_lo)/(T_on − T_hi)) + τ·ln((T_hi − T_a)/(T_lo − T_a)): 267.362 s and 538.997 s.
+      - **Measured.** 267.341 s and 539.000 s, so the live change moves the event thresholds.
+    - **Accumulator.**
+      - **Model.** Isothermal gas charging through a laminar line.
+      - **Run.** The supply steps from 100 to 150 bar at 20 s, with watches at 95 and 142.5 bar.
+      - **Reference.** The closed-form charging time (R/p_s²)·((u₁ − u₂) + a·ln(u₁/u₂)): 9.72952 s, and 23.00306 s from the analytic 99.909 bar at 20 s.
+      - **Measured.** 9.72951 s and 23.00311 s.
+    - **Quarter car.**
+      - **Model.** A two-mass quarter car whose road phase is a state, so a live frequency change keeps the road continuous.
+      - **Run.** 0.5 Hz, then 1.2 Hz from 12 s.
+      - **Reference.** A_road·|H(jω)| from the transfer function: 0.0239665 m and 0.0522409 m.
+      - **Measured.** 0.0239572 m and 0.0522405 m, the largest row over a steady window; rows every 20 ms read a peak low by at most 0.1 %. The X-Y plot draws the body against the road.
+    - **Evidence.**
+      - `tests/live_session.rs` +1 (now 26): a heater's two-step timeline applies at its rows on IDA, ode45 and rk4. It follows the piecewise analytic solution within 2e-4, and a reset run in 0.13 s frames with two-row chunks matches the whole run bit for bit.
+      - `crates/frees/tests/live.rs` +1: `liveTimeline` through the boundary, with the chunk's `inputs`, and three malformed timelines refused.
+      - `labs.wasm.test.ts` (8): each lab passes its grades through the compiled engine. Run in 2 ms frames and again after a reset, it gives the same rows and events. One more test covers the four measures.
+      - `LessonPanel.test.tsx` (2) and `LiveBar.test.tsx` +1: the lab section, its grades and errors; the open request carries the timeline and watches, a new `autorun` value opens afresh, and applied lines reach `onTimelineApplied`.
+      - The labs are lessons, so `lessons.test.ts` checks their manifests and static change. The Book takes every lab (`build-book.mjs`).
+    - **In the browser.** On `lab-thermostat`, after Solve, "Run the lab live" played the room at the lab's 100 s/s. The bar showed "dt_band = 4 from t = 3000", the dT_band slider moved to 4 K, and both grades passed: 267.34 s against 267.36 ± 0.1 s, and 539 s against 539 ± 0.2 s.
+    - **Ceiling.** A slider follows a timeline line only when the line's unit matches the slider's. The labs write their lines in the sliders' units.
+  - **M1b done 2026-11-12 (`m1b-property-labs`): paths on diagrams and the three property-backed labs.** Item 1 is complete.
+    - **Paths on property and psychrometric diagrams** (`plots/fromCode.ts`, `sources.ts`, `figure.ts`). On a `kind = property` or `kind = psychro` PLOT, `x` and `y` list a DYNAMIC block's recorded columns. The lists pair up in order, and each pair is drawn in SI on the diagram's axes as one path, with a marker at its last row. The plot binds to the run's table as an XY plot does. Unequal lists are reported, and the extra names ignored. Before this, diagrams overlaid only solved steady states and the H3 playback cursor, which needs a component network.
+    - **Refrigeration start-up** (`lab-refrigeration`).
+      - **Model.** An R134a unit with a fixed displacement pulls a cold room down from 303 K. The suction density falls as the room cools, so the capacity falls too.
+      - **On P-h.** States 1–4 trace their paths.
+      - **Run.** At 5000 s the displacement halves, from 0.004 to 0.002 m³/s.
+      - **Reference.** The steady balance UA·(T_amb − T) = V̇·ρ₁·(h₁ − h₄), solved with the same properties: 270.52185 K and 279.48631 K.
+      - **Measured.** 270.52476 K and 279.47985 K.
+    - **Battery anti-windup** (`lab-battery-windup`).
+      - **Model.** A PI chiller valve, saturated between 0 and 1, with back-calculation (tracking time T_t on a slider).
+      - **Run.** The load steps from 1500 to 4000 W at 100 s, beyond the open valve, and back at 1600 s.
+      - **Reference.** The fully open balance, solved in the document: T_hot = 319.15035 K. Then the set point, and a 0.3 K bound on the undershoot.
+      - **Measured.** 319.14974 K, a lowest temperature of 308.1528 K, and 308.1528 K at the end.
+      - **Without anti-windup.** With T_t = 10⁶ s the integrator winds up to 296.8 by 1600 s, and the pack falls to 300.1 K.
+    - **Outdoor-air mixing** (`lab-air-mixing`).
+      - **Model.** A ventilated room supplied with adiabatically mixed outdoor and return air (AirH2O), with sensible and moisture gains.
+      - **On the chart.** The room and the mixed air trace their paths.
+      - **Run.** The outdoor fraction rises from 0.2 to 0.5 at 6000 s.
+      - **Reference.** The closed-form steady states w = w_out + ṁ_w/(f·ṁ) and h = h_out + (Q̇ + ṁ_w·h_w)/(f·ṁ): 295.89533 K at 0.2; 0.0093257 kg/kg and 291.25516 K at 0.5.
+      - **Measured.** 295.89539 K; 0.00932599 and 291.25629 K.
+    - **Evidence.**
+      - `labs.wasm.test.ts` runs the three new labs through the compiled engine. Each passes its grades, and each gives the same rows and events in 2 ms frames and after a reset.
+      - `lessons.test.ts` checks their static changes: T_ss rises, u_0 rises, w_ss falls.
+      - `plots/data.test.ts` +1: paths parsed, bound and drawn on both diagrams.
+      - check-examples 826/826; the Book takes 60 gallery examples with every CHECK.
+    - **In the browser.**
+      - On `lab-refrigeration` the run played at 200 s/s, and both grades passed. The P-h chart drew the four paths: state 1 down the saturated-vapour line, state 2 along the condensing pressure, state 4 down the throttling line.
+      - On `lab-air-mixing` all three grades passed, and the chart drew the room and mixed-air paths.
+      - Found there: repeated `x =` keys in a PLOT replace each other, so only comma lists pair up.
+    - **Ceiling.**
+      - A path shows the table's rows: all of a batch run's, and a live run's as published at each pause.
+      - The playback cursor does not move along a path.
   2. **Shared experiments.** A shared experiment carries its settings and a finite input timeline. Embed mode may autorun an approved lesson.
+  - **M2 done 2026-11-12 (`m2-shared-experiments`).**
+    - **The link** (`share.ts`). A share link made after a live run carries the run's input log as a timeline, version 2 with an optional `timeline`. Changes at one time share an entry, as literal assignments in SI (`q_load = 4000`). The link also carries the sliders the run opened with (`liveOpenSlidersRef`), not where they ended. Reading keeps at most 64 entries: literal assignments only, at finite times ≥ 0, sorted. A reader without M2 drops the timeline and opens the rest.
+    - **Opening.** The lesson and sliders come back as in I6. The notice counts the experiment's changes. Nothing solves until the visitor does. After that, any live run of the document applies the timeline, as a lab's does (M1). An edit to the text drops it.
+    - **Embed autorun** (`?autorun`). An embed of a gallery lab plays its live run once the visitor presses Solve. Any other document ignores the flag, and the bar is not mounted.
+    - **Reduced motion.** An autorun, whether a lab's or an embed's, opens paused at its start, and stepping replaces play. The setting is read when the run opens, since a media hook reports its first value only after mount.
+    - **Found and fixed.** An embed offered to restore the visitor's IndexedDB autosave mirror, contrary to I4. The mirror check now skips embeds.
+    - **Evidence.**
+      - `share.test.ts` +2: the log becomes a timeline, the link round-trips it, and malformed, negative, non-finite, non-literal and multi-line entries are dropped.
+      - `embed.test.ts`: `autorun` is parsed and dropped from the full-app URL.
+      - `LiveBar.test.tsx` +1: under reduced motion an autorun opens paused and steps.
+      - `e2e/labs.spec.ts` (4, Chromium) covers the M acceptance:
+        - a lab run from the keyboard grades ✓, plays at its speed, and its timeline reaches the bar and the slider;
+        - under reduced motion a lab opens paused, steps, and is graded;
+        - a shared experiment opens unsolved, at the sliders its run started from, and a plain live run replays `q_load = 4000 from t = 100`;
+        - an embed autoruns only after Solve, shows no restore offer, and leaves the visitor's workspace byte for byte.
+    - **Ceiling.**
+      - An experiment's lines are in SI, so a slider follows them only when its unit is SI.
+      - The live speed is not shared.
   3. **Loss and power block view** (if F agreed a loss convention): blocks filled by Q̇ loss, shaft power, Ṡ_gen or T₀·Ṡ_gen, plus an energy and exergy Sankey.
+  - **M3 done 2026-11-12 (`m3-power-view`).**
+    - **The convention** (`overlay.ts`). A port's power is the engine's flow into it (`Connection::flow_into`) times its across value: V·I, τ·ω, F·v, ṁ·h, or Q̇ itself. Each port counts once, however many wires meet it. A port with no rule or no finite value counts nothing. A block's net is the sum over its ports: positive takes energy out of the network (dissipates, stores, or delivers work or heat no port carries), negative puts it in.
+    - **On the canvas.** "Fill blocks by power" (Overlay; presentation `overlay.power`) tints each block on the diverging scale about zero, scaled to the largest magnitude. The tooltip gives the net in W. It follows the playback sample, as the wire overlay does.
+    - **Sankey** ("Power flow", Plotly's `sankey` trace, now in the partial bundle). Within each connected network, every supplier's net is shared among the blocks taking power in, in proportion.
+      - A first version linked ports along each connection. On `rankine-ideal-cycle` it drew loops: the fluid's ṁ·h only circulates around a closed cycle, and a port's V·I or ṁ·h moves with the ground and the enthalpy reference. A block's net does neither while what enters it leaves, so the Sankey is a balance of nets, not a route along the wires.
+    - **Evidence.**
+      - `overlay.test.ts` +2: V·I, τ·ω, ṁ·h and Q̇ signed into blocks; a doubled wire counts its port once; the Sankey shares supply in proportion, keeps networks apart, and has no loops.
+      - `presentation.test.ts`: `overlay.power` parses, and a non-boolean is repaired.
+      - `e2e/labs.spec.ts` +1. On `rankine-ideal-cycle` the boiler (−2,728,592 W) and pump (−3,034 W) supply the turbine (713,042 W) and condenser (2,018,584 W). They balance within 1 W, and the Sankey has their four nodes.
+    - **In the browser.** On `resistor-bridge-equivalent` the source's −0.047742 W equals the five resistors' sum.
+    - **Ceiling.**
+      - No entropy reaches a port, so there is no Ṡ_gen, T₀·Ṡ_gen or exergy Sankey. That needs an entropy flow at fluid and heat ports, a library change.
+      - A dynamic block that gains mass (a vessel filling) has a net that depends on the enthalpy reference.
+      - The proportional sharing is a balance, not a path: it does not say which supplier fed which block.
   4. **Operating-point cards.** Pump, fan, compressor and valve curves with a live point, rebuilt only when their parameters change.
+  - **M4 done 2026-11-12 (`m4-operating-points`).**
+    - **Curves** (`schematic/operatingPoint.ts`, `OperatingPointChart.tsx`). The block card draws the curve and its operating point.
+      - `Fan` and `FanCurve`: ΔP = ΔP₀(1 − Q|Q|/Q₀²), drawn to Q₀.
+      - `FanMap`, `PumpMap` and `LiquidPumpMap`: the `map$` table, evaluated through the REPL on worker 0 against the last solve, at 41 flows up to twice the operating flow, rounded up to a 1-2-5 step.
+      - `Valve` (fixed, linear, equal-percentage): ΔP = ṁ|ṁ|/(Cv_eff²·ρ) at the present opening.
+    - **Rebuilt only when parameters change.** A parameter reads the live or solved value of the variable it is bound to, so a slider or live input on `u` redraws the valve. The curve is memoised on its parameter key and extent; the point reads `q`/`dp`/`head`, or a valve's port streams, at the values shown (solve, playback sample, or live run).
+    - **Gallery.** `pump-valve-operating-point` (Fluids): a map pump against 120 m of 80 mm pipe and a linear valve at u = 0.6. The source is Çengel & Cimbala, *Fluid Mechanics*, §14-2. CHECKs: Q = 0.0119058 m³/s, H = 26.0942 m, ΔP_valve = 174,649 Pa, matching the CLI.
+    - **Evidence.**
+      - `operatingPoint.test.tsx` (4): the fan curve and its point; the valve at a solved and at a live opening, and equal-percentage; a map pump's table and 1-2-5 extent; a name that is not an identifier builds no call; the table is evaluated 41 times once, and a moving point does not re-evaluate it.
+      - `e2e/labs.spec.ts` +1: on the gallery example the pump card reads Q = 0.011906 m³/s, head = 26.094 m with 41 curve points, and the valve card ṁ = 11.882 kg/s, ΔP = 174,650 Pa.
+    - **Ceiling.**
+      - No compressor curve: `Compressor` and `TwoPhaseCompressor` take efficiency maps, not a flow–pressure characteristic.
+      - A port on a one-ended stream (a boundary the document pins by name) has no edge, so a valve on one has no point. The gallery example ends its line at a `Sink`.
+      - The REPL's `ans` is overwritten by the table evaluation.
   - **Acceptance.**
     - Each lab has graded reference outputs and a reproducible reset and input timeline.
     - Keyboard and reduced-motion journeys pass.
     - Opening a shared lesson gives the same safe initial state.
+  - **Acceptance met 2026-11-12.** `labs.wasm.test.ts` covers the labs' grades, resets and frame-cut runs. `e2e/labs.spec.ts` (6, Chromium) covers the keyboard and reduced-motion journeys and the shared lesson's safe initial state, plus the M3 power view and the M4 cards.
 - **Deferred beyond M** (each needs its own semantics and numerical validation):
   - scheduling several DYNAMIC blocks;
   - structural state migration;

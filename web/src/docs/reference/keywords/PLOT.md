@@ -28,8 +28,10 @@ The name must be a quoted string. Recognized keys:
 
 - **`kind`** — `xy` (default; also `line`), `property`, `psychro`, `bode`, `nyquist`, `nichols`, `polezero` (`pzmap`), `rootlocus` (`rlocus`).
 - **xy** — `x`, `y` (comma-separated list), `type`, `z`, `size`.
-- **property** — `fluid`, `diagram`, `quality`, `isolines`, `overlaystates`, `connectstates`, `closecycle`.
-- **psychro** — `pressure`, `tmin`, `tmax`, `wetbulb`, `enthalpy`, `volume`.
+- **property** — `fluid`, `diagram`, `quality`, `isolines`, `overlaystates`, `connectstates`, `closecycle`, and `x`, `y` for paths.
+- **psychro** — `pressure`, `tmin`, `tmax`, `wetbulb`, `enthalpy`, `volume`, and `x`, `y` for paths.
+
+On a property or psychrometric diagram, `x` and `y` are comma-separated lists of a `DYNAMIC` block's recorded columns. They pair up in order, and each pair is drawn as one path over the run, with a marker at its last row. The values are in SI, matching the diagram's axes: on a P-h chart `x = h_1, h_2` with `y = P_e, P_c` draws two states. On the psychrometric chart, `x` is a dry-bulb temperature and `y` a humidity ratio. The plot binds to the run's table as an XY plot does. If the lists have different lengths, the extra names are reported and ignored. The Labs gallery's refrigeration and air-mixing examples use paths.
 - **bode / nyquist** — `omega`, `mag`, `phase`, `real`, `imag`.
 - **format** — `title`, `xlabel`, `ylabel`, `xlog`, `ylog`, `y2log`, `grid`, `legend`, `fontsize`, `xmin`, `xmax`, `ymin`, `ymax`.
 

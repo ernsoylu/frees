@@ -13,8 +13,9 @@ function matchChannel(targetVars: Iterable<string>, n: string): boolean {
 /** Old bindings migrate only when exactly one source contains all requested channels. */
 export function resolvePlotSource(spec: PlotSpec, tables: TableSpec[], variables: VariableResult[]): PlotSource | undefined {
   if (spec.source) return spec.source
-  if (spec.kind !== 'xy') return undefined
-  const names = [...(spec.xy.chartType === 'histogram' ? [] : [spec.xy.xVar]), ...spec.xy.yVars, ...(spec.xy.y2Vars ?? []), spec.xy.zVar, spec.xy.sizeVar].filter((s): s is string => !!s)
+  const path = spec.kind === 'property' ? spec.property.trajectory : spec.kind === 'psychro' ? spec.psychro.trajectory : undefined
+  if (spec.kind !== 'xy' && !path?.length) return undefined
+  const names = (path?.length ? path.flatMap((p) => [p.x, p.y]) : [...(spec.xy.chartType === 'histogram' ? [] : [spec.xy.xVar]), ...spec.xy.yVars, ...(spec.xy.y2Vars ?? []), spec.xy.zVar, spec.xy.sizeVar]).filter((s): s is string => !!s)
   if (!names.length) return undefined
   const candidates: PlotSource[] = tables.flatMap((t) => {
     if (t.kind === 'parametric' && names.every((n) => matchChannel(t.vars, n))) {
