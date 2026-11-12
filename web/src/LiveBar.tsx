@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActionIcon, Badge, Button, Group, NumberInput, Paper, Select, Slider, Stack, Text, TextInput, Tooltip } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { IconPlayerPause, IconPlayerPlay, IconPlayerRecord, IconWaveSine, IconX } from '@tabler/icons-react'
 import { LiveClient, type LiveChunk, type LiveEvent, type LiveInputChange, type LiveProvenance, type LiveSettings, type LiveStepKind, type LiveTable } from './wasm/liveClient'
 import type { ModelRevisionTracker } from './modelRevision'
@@ -128,6 +129,13 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     setRecTick((n) => n + 1)
   }
   const at = () => `t = ${fmt(simRef.current ?? 0)} ${headerRef.current?.units[0] || 's'}`
+  /** A request to the live worker failed: the run is over, and so is a recording of it. */
+  const fail = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error)
+    setNotice(message)
+    go('failed')
+    endRecording('failed', message)
+  }
 
   const clear = () => {
     simRef.current = null
@@ -265,6 +273,24 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     [tracker, driver],
   )
   useEffect(() => () => driver.dispose(), [driver])
+  // The bar goes when the model's run does (an edit clears the solve). A
+  // recording that was not saved outlives it: a notice offers its export.
+  useEffect(() => () => {
+    const rec = recRef.current
+    if (!rec || rec.rows === 0 || rec.exported) return
+    rec.end('partial', `The live run closed at ${at()}.`)
+    notifications.show({
+      id: 'live-recording-kept',
+      autoClose: false,
+      title: `Live recording of ${rec.block} kept`,
+      message: (
+        <Button size="compact-xs" variant="light" mt={4} onClick={() => { downloadRecording(rec); notifications.hide('live-recording-kept') }}>
+          Export recording
+        </Button>
+      ),
+    })
+    // Runs once, on unmount; `at` reads refs.
+  }, [])
 
   // The pull loop: one advance in flight, asked for on each animation frame.
   useEffect(() => {
@@ -290,7 +316,13 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
         target = Math.min(wanted, sim + lead)
       }
       wall = now
-      const chunk = await driver.advance(target, BUDGET_MS)
+      let chunk: LiveChunk | null
+      try {
+        chunk = await driver.advance(target, BUDGET_MS)
+      } catch (error) {
+        if (!cancelled) fail(error)
+        return
+      }
       if (cancelled) return
       if (chunk) {
         apply(chunk)
@@ -380,8 +412,7 @@ export default function LiveBar({ blocks, tracker, buildOpen, driver: given, onT
     setNotice(null)
     go('paused')
     const chunk = await driver.step(kind).catch((error: unknown) => {
-      setNotice(error instanceof Error ? error.message : String(error))
-      go('failed')
+      fail(error)
       return null
     })
     if (chunk) {

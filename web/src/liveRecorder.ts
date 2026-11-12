@@ -22,7 +22,11 @@ const fmt = (v: number) => String(Number(v.toPrecision(5)))
 export class LiveRecorder {
   private readonly parts: Float64Array[] = []
   private readonly events: LiveEvent[] = []
+  /** Events after the newest kept row, kept once a row covers them. */
+  private pending: LiveEvent[] = []
   rows = 0
+  /** It has been saved to a file. */
+  exported = false
   status: RecordingStatus = 'recording'
   reason: string | null = null
   /** Sim time of the newest row kept. */
@@ -94,13 +98,30 @@ export class LiveRecorder {
     if ((this.rows + n) * cols > this.maxValues) {
       n = Math.max(0, Math.floor(this.maxValues / cols) - this.rows)
       if (n > 0) this.keep(rows.subarray(first * cols), n)
+      this.collect(events)
       this.end('partial', `The recording reached its limit of ${this.maxValues.toLocaleString('en-US')} values at t = ${fmt(this.last ?? 0)}; the rows up to it are kept.`)
       return
     }
     if (n > 0) this.keep(rows.subarray(first * cols), n)
-    const from = this.from
-    for (const e of events) if (from !== null && e.time >= from && (this.until === null || e.time <= this.until)) this.events.push(e)
+    this.collect(events)
     if (done) this.end('complete', null)
+  }
+
+  /**
+   * Keep the events inside the saved span, from the first row to the newest.
+   * An event past the newest row waits: a chunk can end on a step past its
+   * last row, so the next chunk's rows may still cover it.
+   */
+  private collect(events: readonly LiveEvent[]) {
+    const from = this.from
+    const all = [...this.pending, ...events]
+    this.pending = []
+    if (from === null || this.last === null) return
+    for (const e of all) {
+      if (e.time < from) continue
+      if (e.time <= this.last) this.events.push(e)
+      else this.pending.push(e)
+    }
   }
 
   /** End the recording; it keeps what it has. */
@@ -147,4 +168,5 @@ export function downloadRecording(r: LiveRecorder): void {
   a.click()
   a.remove()
   URL.revokeObjectURL(url)
+  r.exported = true
 }

@@ -4,6 +4,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
 import { afterEach, expect, it, vi } from 'vitest'
+import { notifications } from '@mantine/notifications'
 import LiveBar, { type LiveDriver } from './LiveBar'
 import { ModelRevisionTracker } from './modelRevision'
 import type { LiveChunk } from './wasm/liveClient'
@@ -336,4 +337,22 @@ it('a reset ends a recording partial, and Stop and export ends one until export 
   await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toBe('Recording: 2 rows from t = 0 s'))
   fireEvent.click(screen.getByRole('button', { name: 'Stop and export' }))
   expect(await last()).toMatchObject({ status: 'complete', reason: 'Exported at t = 0.1 s.', solver: null, provenance: null })
+})
+
+it('a failed request ends a recording failed, and an unsaved recording outlives the bar (L5)', async () => {
+  const { driver, spy } = fakeDriver(1000)
+  mount(driver)
+  fireEvent.click(screen.getByRole('button', { name: 'Record' }))
+  await waitFor(() => expect(screen.getByTestId('live-recording')).toBeTruthy())
+  fireEvent.click(screen.getByRole('button', { name: 'Next sample' }))
+  await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toBe('Recording: 2 rows from t = 0 s'))
+  spy.advance.mockRejectedValueOnce(new Error('The live worker failed'))
+  fireEvent.click(screen.getByLabelText('Run live'))
+  await waitFor(() => expect(screen.getByTestId('live-recording').textContent).toMatch(/^Recording failed: .*The live worker failed$/))
+  expect(screen.getByTestId('live-notice').textContent).toBe('The live worker failed')
+  // Unmounting (the model's run went) keeps it on offer.
+  const show = vi.spyOn(notifications, 'show')
+  cleanup()
+  expect(show).toHaveBeenCalledWith(expect.objectContaining({ id: 'live-recording-kept', autoClose: false }))
+  show.mockRestore()
 })

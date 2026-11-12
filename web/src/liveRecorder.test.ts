@@ -63,3 +63,20 @@ it('ends partial at its size limit, keeping the rows up to it', () => {
   expect(file.status).toBe('partial')
   expect(file.reason).toBe('The recording reached its limit of 14 values at t = 0.6; the rows up to it are kept.')
 })
+
+it('saves the events of the span it saved, including one a later chunk covers', () => {
+  // Coarse rows: the recording ends on the 1.5 s row, so the 1.2 s event is inside it.
+  const coarse = new LiveRecorder(meta, 1, null, () => [])
+  coarse.push(Float64Array.from([0, 1, 1.5, 2, 3, 3]), 3, [{ name: 'in', time: 1.2 }, { name: 'out', time: 2.5 }])
+  expect(json(coarse).events).toEqual([{ name: 'in', time: 1.2 }])
+  // A chunk that ends on a step past its last row: its event waits for the row that covers it.
+  const r = new LiveRecorder(meta, null, null, () => [])
+  r.push(rows(0, 1), 2, [{ name: 'early', time: 0.15 }])
+  expect(json(r).events).toEqual([])
+  r.push(rows(2, 2), 1, [])
+  expect(json(r).events).toEqual([{ name: 'early', time: 0.15 }])
+  // At the size limit, the events up to the last row kept are saved.
+  const full = new LiveRecorder(meta, null, null, () => [], 14)
+  full.push(rows(0, 9), 10, [{ name: 'kept', time: 0.55 }, { name: 'past', time: 0.85 }])
+  expect(json(full).events).toEqual([{ name: 'kept', time: 0.55 }])
+})
