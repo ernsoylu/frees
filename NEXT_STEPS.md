@@ -297,7 +297,7 @@ entry here is checked off with evidence when it closes.
      - **Gates.** fmt, clippy native and wasm32 `-D warnings`, `cargo check -p frees-core --no-default-features`, `cargo test --workspace -- --skip golden_corpus_parity`, the four WASM parity shards, vitest 896/896 in 78 files, `check-examples` 809/809 (2,898 assertions), `tsc -b` clean, lint 0 errors (90 warnings, unchanged), every Chromium e2e spec 66/66 (one skipped).
      - **Yardstick:** E.1's build B (3,783,997 raw) is the floor this lands near; the shipped module is 210 KB above it. B also left out the mixture engine's code, which the shipped module keeps so a blend solves once its tables are installed.
 
-### Programme of 2026-11-06: interactive simulation and teaching (CircuitJS study) — proposed, not approved
+### Programme of 2026-11-06: interactive simulation and teaching (CircuitJS study) — complete (F–M merged by 2026-11-12)
 
 **Source.** On 2026-11-06, four independent studies of CircuitJS ([sharpie7/circuitjs1](https://github.com/sharpie7/circuitjs1) at `dd47cf4`) compared it with frees: three are in `CIRCUITJS1FREESANALYSIS.md` and one is this session's.
 - `CIRCUITJS1FREESANALYSIS.md` is research input. It is kept out of Git, like other audit evidence (see CLAUDE.md).
@@ -1071,6 +1071,194 @@ entry here is checked off with evidence when it closes.
   - equivalent R/UA analysis between two ports;
   - audio and sonification;
   - UI localisation.
+
+### Programme of 2026-11-12: workspace shell — ribbon, commands, windows (RustGIS comparison) — approved 2026-11-13
+
+**Sources.** Two design documents dated 2026-11-12 compare frees' shell with RustGIS ([opengeos/RustGIS](https://github.com/opengeos/RustGIS) at `1282926`, Apache-2.0):
+- **Doc A**, "frees UI/UX design change proposal" v1.0. It reviews frees at `10bd4cb`.
+- **Doc B**, "frees UI/UX Design Change Document".
+
+Neither document is in Git; like the CircuitJS studies, they are research input. Both are source reviews. Neither launched either application, so every usability claim below is a design judgement, not a measured result.
+
+**Binding rules (every phase).**
+- **Patterns only.** No RustGIS code, icons, theme JSON, spacing scale or artwork enter frees. We reimplement behaviour with frees' existing React 19, Mantine, Tabler and dockview, so no attribution is owed.
+- **Visual identity is frozen** (Doc A §5, Doc B §9.1). The following stay as they are: `primaryColor: 'teal'`, the dark default, `defaultRadius: 'md'`, the Cascadia Code stack, the teal.7 → cyan.6 Solve gradient (it doubles as the progress bar), the dockview retint to Mantine tokens, and every chart, CodeMirror and Glide palette. New chrome uses only existing tokens and existing Tabler icons. No new docking, chart or icon package is allowed.
+- **Keep a route to every feature.** No phase removes a command until the command parity test shows it is reachable elsewhere. Old labels stay as search aliases.
+- **Close and Delete are different actions.** Closing a view never deletes data, stops a run, discards an analysis draft, clears terminal history or loses a digitizer calibration.
+- **Behind a flag until parity.** The ribbon ships behind a preference flag. The flag goes only when command parity and the acceptance criteria below are green. Saved layouts are migrated, never force-reset.
+
+**Evaluation of the two documents.**
+- **Where they agree** (adopted):
+  - one command registry shared by every entry point;
+  - a ribbon replacing the File, Functions and Tools menus;
+  - dockview stays;
+  - named layouts;
+  - a window list;
+  - a searchable function browser in place of the 17 flyouts;
+  - disabled commands that say why;
+  - palette rows with their location;
+  - analysis dialogs becoming dockable later;
+  - mobile keeping its own pattern.
+- **Doc A is stronger** on four points, all adopted:
+  - the command-target contract;
+  - separating Close from Delete;
+  - state that must survive closing a view;
+  - migrating layouts and recovering from bad ones.
+  - It also states its limits honestly.
+- **Doc B is stronger** on these, all adopted:
+  - a concrete tab-and-group map (its Appendix A is the starting map);
+  - the status bar;
+  - rich tooltips;
+  - a shortcut sheet generated from the registry;
+  - folding the schematic toolbar's ~15 clusters into labelled groups;
+  - tab context menus;
+  - keeping the rail.
+- **Conflicts, resolved:**
+  - **Tabs.** Permanent tabs are **Home · Insert · Data · Analysis · View · Help**, with File kept as a project menu entry, not a ribbon. Contextual tabs **Table · Plot · Schematic · Digitizer** appear only when relevant (Doc A §7.2), and selecting a document does not force a tab switch. Doc A's Model and Results tabs fold into Insert, Analysis and View.
+  - **Left side.** The rail stays as the navigation spine (Doc B). Doc A's Project Explorer is deferred (below).
+  - **Table wording.** The help docs call the GUI object a *Function Table* and the `TABLE` keyword a *lookup table*, so the labels are **Parametric Table**, **Function Table (one input)** and **Function Table (curve family)**. "Lookup", "1-D", "2-D", "1-arg" and "curve" become search aliases. Doc A's "Lookup / Curve Family Table" rename would rewrite the docs and the project vocabulary for no gain.
+  - **Schematic commands.** Every canvas command gets a labelled home on the contextual Schematic tab (Doc B). The canvas keeps a compact strip with the sheet breadcrumb, zoom and fit, and the selection and issue counts, plus every direct-manipulation key, so frequent canvas actions never need a trip to the top of the screen (Doc A §8.4).
+  - **Units.** The unit system stays in Preferences. The status bar shows it and opens that field. It does not move (Doc B §6.1 relocates it, but its own Appendix C keeps Preferences unchanged).
+- **Claims checked against `10bd4cb` (2026-11-12).**
+  - **The run target differs by entry point** (Doc A UX-02). It is worse than the document states:
+    - The toolbar follows `focusedParam`, which ignores the Inspector and Variables edge panels. F2 and F4 follow `activeTab === 'table'`, which the Inspector overwrites. So focusing a table, then the Inspector, then pressing F2 solves the *model*, while the toolbar button solves the *table*.
+    - The toolbar's table Solve calls `onSolveTable` with no check; F2 calls `checkThenSolveTable`.
+    - The toolbar's model Check uses `checkWithFallback`, which opens a code-defined parametric table when the model alone is not solvable. F4 and the palette use plain `onCheck`.
+    - Stop shows only while the focused target is busy. A table running behind a focused Editor loses its Stop button; Esc still works.
+  - **Table-create wording.** There are four vocabularies, not three:
+    - the rail: "function table (1-arg)" and "(curve)";
+    - the workbook list menu: "Function Table (without Curve)" and "(with Curve family)";
+    - the workbook header: "Function Table (1D)" and "(2D)";
+    - the badges: "Lookup function — one curve" and "— multiple parameter values".
+  - **Fluid state tables.** The rail's "Add fluid state table" opens the Fluid States window. The palette's item of the same name inserts a `STATE TABLE` block. `insertFunction` does not open a closed Editor, so that insert can fail silently.
+  - **Delete paths.**
+    - The rail's Tables and Plots lists put a trash icon on the row that opens the window, with no confirmation and no undo. The workbook's own list delete has undo.
+    - A parametric table in its own window can be deleted *only* from the rail.
+    - The Inspector deletes plots but not tables.
+    - Its "Remove Row" removes the last row (`slice(0, -1)`).
+  - **The Inspector hint is false.** It says Variable Information, Min / Max and Curve Fit "are on the left rail and in the Tools menu". The rail has none of them. Doc B calls the hint apologetic; it is wrong.
+  - **Context menus.** There is one context menu in the app (`SchematicTab.tsx`), as Doc B F9 says.
+  - **Preferences.** "Change in variables" is a disabled field, as Doc B F7 says.
+  - **Layouts.** The dock handle (`WorkspaceDock.tsx` `WorkspaceDockHandle`) exposes open, open-instance, close, set-title, is-open, reset, restore and the three perspectives. It has no named layouts, float, maximize or close-others. dockview 7 supports floating groups and maximize, but the handle does not expose them as commands.
+  - **Undo keys.** Doc B F4's "Ctrl+Y vs Ctrl+Shift+Z" inconsistency is **false**. The workbook and the schematic both accept Ctrl+Y and Ctrl+Shift+Z. Only the workbook's tooltip says Ctrl+Y alone, so the fix is the tooltip, not a rebinding.
+- **Rejected or changed.**
+  - **Browser-reserved shortcuts as defaults.** Ctrl+W, Ctrl+Tab, Ctrl+Shift+Tab and Ctrl+1–3 (Doc B Table 6) are reserved by the browser in a normal tab; Ctrl+1–9 switch tabs. Those commands ship with no default binding and are reached from the palette and the tab menus.
+  - **Ctrl+F1** is kept, but double-clicking a tab also collapses the ribbon, because some Linux desktops take Ctrl+F1.
+  - **Ctrl+P** opens Print Report only when there is a successful solve; otherwise the browser's print stands.
+  - **No new colour, font, spacing or icon family**, and no RustGIS assets.
+
+**Phase N — command consistency** (Doc A P0; Doc B phase 1 core). It builds no new chrome; every later phase consumes it.
+- **N1 — the registry.**
+  - One module holds every command. Each entry has a stable id (`model.solve`, `table.solve`, `panel.open`, …), a label, aliases, a Tabler icon, a location (the menu path today, the ribbon path from O), a shortcut, an unavailable reason and a handler.
+  - The TopBar File and Tools menus, the rail's create actions and layout menu, the palette groups, the mobile menu and the `?` sheet are all built from it.
+  - Function-catalogue and documentation entries stay data-driven; schematic canvas commands keep `schematic/commands.ts`, and the palette maps them.
+  - A command that is not available stays listed, greyed, with its reason as visible text, not hover-only. Example: Print Report reads "Solve first: the report prints the last successful solve."
+  - Palette rows show their location and shortcut.
+- **N2 — one run-target resolver.**
+  - The target is a focused parametric table, else the model. Utility panels (Inspector, Variables, Terminal) keep the last document's target.
+  - The toolbar, F2 and F4, and the palette all use it. Solve always checks first. Check uses one fallback rule on every path.
+  - The target is shown in text beside Check and Solve and named in their tooltips. The buttons keep their accessible names "Check" and "Solve".
+  - The palette offers "Solve Model" plus "Solve Table: ‹name›" for each parametric table.
+  - Stop follows the running job, not the focused window.
+  - A menu captures its target when it opens. If that object is gone when the command runs, the command reports it and does nothing; it never redirects.
+- **N3 — names and destructive actions.**
+  - The canonical table labels above apply everywhere.
+  - **New Fluid State Table** opens the Editor and inserts the block. **Open Fluid States** opens the window.
+  - Trash leaves the rail rows. **Delete table** joins the Inspector for every user table, and both Delete table and Delete plot confirm.
+  - "Remove Row" becomes **Remove Last Row**.
+  - The false Inspector hint goes.
+  - The workbook's Redo tooltip reads Ctrl+Shift+Z / Ctrl+Y.
+- **N4 — shortcuts.**
+  - Ctrl+S and Ctrl+Shift+S save and save as; Ctrl+O opens a project; Ctrl+P is the conditional Print Report.
+  - The `?` sheet is generated from the registry plus the canvas keys. It lists the editor's Ctrl+Space and the schematic keys, which it partly omits today.
+- **Acceptance.**
+  - A parity test: every menu, rail, mobile and palette entry resolves to a registry id; the palette contains every menu command; no two commands share a label; the `?` sheet equals the registry's bindings.
+  - A Playwright journey: focus a parametric table, then the Inspector, press F2, and the table solves; the palette names both targets; Stop stays visible after focus moves; a target deleted after its menu opened is reported, not redirected.
+  - Light and dark screenshots at fixed sizes show no change beyond labels (AC-01).
+  - The existing suites pass.
+
+**Phase O — ribbon shell** (Doc A P1a; Doc B phase 2). Behind the flag.
+- **Header (~36 px).** The wordmark, the File entry (a project menu or backstage), and Quick Access: Save, then Undo and Redo whose tooltips name the history they reverse (Editor, table, schematic or scenario; disabled with a reason when no history applies), then Check and Solve. Also the project pill, a visible command-search field, the status pill, the run-target text, Solve with its options, and Stop.
+- **Tabs**, using Doc B Appendix A, regrouped:
+  - **Home**: Project, Run, Solve Setup (Find all solutions and Complex mode as visible toggles, Stop Criteria… into Preferences), Panels, Layout.
+  - **Insert**: Tables (canonical labels, Import CSV…, Fluid State Table), Plots (X-Y Plot…, Property Diagram…, Psychrometric Chart…), Model (Add Component…, Insert Function…), Graph Digitizer.
+  - **Data**: Import/Export, plus Table Operations… and Create Function from Columns.
+  - **Analysis**: Optimization… ("Min / Max" kept as an alias), Monte Carlo…, Global Sensitivity…, Curve Fit…, Parameter Estimation…, PID Tuner…, Variable Settings… ("Variable Information" kept as an alias).
+  - **View**: every panel, so it is the completeness tab; Layouts, moved from the rail footer; theme.
+  - **Help**: Getting Started…, Examples…, Documentation, Keyboard Shortcuts, About.
+- **Contextual tabs.**
+  - **Table**: Configure Columns…, Add Row, Remove Last Row, Fill Column…, Undo/Redo, Plot Selected Columns, Retry Failed Runs, and Export as two labelled items: "Data export — full precision" and "Report export — formatted". A code-defined table shows "Defined in equations" and Go to Definition.
+  - **Plot**: Configure, Export (view scope kept separate from publication style), Inspect.
+  - **Digitizer**: Image → Calibrate → Extract → Review → Use Data.
+- **Function Browser.** Insert Function… is one searchable modal over the 17 categories, with signature, example, Insert and Open Reference. It replaces the flyouts and reuses the catalogue, snippets and caret logic.
+- **Collapse.** Expanded, compact or collapsed, with a peek on tab click, Ctrl+F1, and double-click on a tab. The ribbon defaults to collapsed below 900 px of height. Overflow is visible: groups first, then chevrons. Group labels are labelled regions, and arrow keys move within the ribbon.
+- **Status bar (~24–28 px).** Save destination and state, the solve state and its duration, the unit system (opens Preferences), the warning count (jumps to the source), the active layout and worker status. It reads the state that feeds the status pill.
+- **Rich tooltips.** Bold label, one line of description, the shortcut, and "Unavailable: ‹reason›". Every tooltip is linked with `aria-describedby`.
+- **Mobile.** The pattern is unchanged; the hamburger gains Insert and Analysis from the registry. Embed is out of scope.
+- **Acceptance.**
+  - Every File, Functions and Tools entry is at most one click from a tab and still in the palette (AC-02).
+  - The theme is unchanged (AC-01).
+  - Nothing required is clipped at 1440×900, 1280×720, 1024×768, 768×1024 or 390×844, or at 200 % zoom (AC-09).
+  - Keyboard traversal works.
+  - Initial load is no worse than the same models measured before the change: the ribbon imports no Plotly and no analysis dialog (AC-13). The bundle gate holds.
+  - Help screenshots and labels are updated in the same release.
+
+**Phase P — Schematic tab** (Doc B §6.6). It is separate from O because of its size and the schematic e2e baseline.
+- **Groups:** Sheets, Model, Edit, Arrange, Overlay, Annotate, Drawing Views (named apart from workspace layouts), Zoom. Every current control keeps its icon, shortcut and handler, and moves only to a new parent.
+- **Canvas strip.** The canvas keeps the compact strip. The view-settings popover moves to View › Schematic, with its persisted settings unchanged.
+- **Wording.** Arrange Drawing stays distinct from Reset Workspace Layout.
+- **Acceptance.** `e2e/schematic-baseline.spec.ts` passes. Any re-baselined screenshot is reviewed image by image, with the reason recorded. Every canvas command is reachable from the tab, the palette and its key.
+
+**Phase Q — windows and layouts** (Doc A P1b; Doc B phase 3 window parts).
+- **Dock handle.** It gains focus, move, float/dock-back, maximize/restore and close-others/close-all-in-group, each through dockview's supported API (checked against the pinned version first).
+- **Tab context menu.** Close View, Close Others, Close All in Group, Float, Maximize, Move to Edge / Centre, Move Left/Right/Below. These are the keyboard equivalents of dragging.
+- **Window List…** View tab and palette: it is searchable, groups windows by kind, marks the active one and gives full names.
+- **Launchers** gain Focus All and Close All.
+- **Named layouts.**
+  - Save Layout As…, Manage Layouts…, Undo Layout Change and Reset Workspace Layout.
+  - A layout records the active document, the groups and widths, utility state, the ribbon tab and density.
+  - The schema is versioned with a `frees-dock-layout-v3` migration. Layouts are stored per device; a project's layout slice restores only valid ids, clamped to the screen, and drops invalid references with a notice.
+  - Switching projects never inherits dangling panels, and desktop and compact arrangements are kept apart.
+- **State outside panel lifetimes.** Analysis drafts, terminal history, digitizer calibration and run ownership move out of the components, so closing or hiding a view keeps them. Expensive panels stay lazily mounted.
+- **List context menus**, built from the registry:
+  - table rows: Rename…, Configure Columns…, Plot Columns, Export, Retry Failed Runs, Delete;
+  - plot tabs: Rename…, Configure…, Export…, Close;
+  - variable rows: Pin to Slider, Copy Value, Copy Name, Variable Settings….
+- **Acceptance.**
+  - The window list matches dockview's state exactly.
+  - Layouts survive reload, a project switch and corrupt storage, and the Editor and every panel can always be reopened (AC-07, AC-08).
+  - Close and restore keep data (AC-05).
+  - Every drag action has a command (AC-06).
+  - Long names are truncated with an accessible full name (AC-10).
+  - Drafts, history and calibration survive close and reopen (AC-11).
+
+**Phase R — inspection and guided tools** (Doc A P1c and P2; Doc B phase 3 analysis parts).
+- **Inspector.** It names its target and gains schematic-selection and variable adapters.
+- **Problems panel.** Source, severity, message and Go to Source, shared by solve diagnostics and the schematic issue list. Inline indicators stay.
+- **Runs & Scenarios** leaves the Variable Explorer and keeps scenario, completed-run, baseline and stale labels. Playback/Live becomes a panel or strip that always says live, current, stale or recorded time.
+- **Analysis tools** (Optimization, Curve Fit, Parameter Estimation, Monte Carlo, Sensitivity, PID Tuner) become dockable windows with one structure: Target → Inputs → Method → Advanced → Run → Results → Apply/Export. Each keeps every current setting and its own semantics.
+- **Help.** "Where is this command?" in Help and the palette opens the tab and highlights the control without running it. A short first-run workflow is added.
+- **Acceptance.** Stale, failed and stopped results are labelled right, and Stop stays bound to its job across focus changes (AC-12). Each migrated tool passes its existing tests unchanged.
+
+**Validation (after O, and again after R).** Task sessions with five engineers of mixed experience:
+- open an example and solve;
+- run a sweep and plot it;
+- import a CSV and fit it;
+- add and connect a component and follow a diagnostic;
+- compare a scenario with its baseline;
+- close and recover a panel;
+- save and restore a layout;
+- export full-precision data and a publication plot.
+
+Record completion, wrong-target commands, navigation errors, recovery time and help requests. The target is each task completed by at least four of five participants without help. The sessions can share participants with the R15 pilot. A small study is directional, not proof. **Never fabricate participant outcomes.**
+
+**Deferred** (each needs its own trigger):
+- **Project Explorer** (Doc A §9.1): only if the validation sessions show object and view confusion surviving Q.
+- **Side-by-side linked views** with linked cursors (Doc B R5): this needs link semantics for plots, schematics and states, so it is a candidate after Q.
+- **Quick Access customisation and favourites.**
+- **External browser pop-out windows.**
+- **An exportable History pane** (Doc B B10): RunsPanel and playback cover runs today.
+- **The palette → shortcut-editor jump**, and remappable global keys beyond the canvas's.
 
 ### R15 usability pilot (Phase 4.4)
 
