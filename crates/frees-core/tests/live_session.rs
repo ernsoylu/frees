@@ -658,3 +658,388 @@ fn a_pause_condition_is_parsed_against_the_columns_in_si() {
         .to_string();
     assert!(e.contains("`V`"), "{e}");
 }
+
+// ── Phase L acceptance ───────────────────────────────────────────────────────
+//
+// A live input change is checked against a reference built from batch runs
+// alone: the document as written up to the change, then the document with the
+// new input value, started at the change time from the first run's state
+// there. An IDA change applies at a row; `rk4` with its step on the row
+// spacing applies at a step that is a row, so both references share the live
+// run's grid. (`ode45` applies at an adaptive step between rows; L1's heater
+// test checks it against the analytic piecewise solution.)
+
+struct Case {
+    name: &'static str,
+    /// The document, with `{method}`, `{t0}`, `{points}` and an `{init:x}`
+    /// placeholder for each state's initial value.
+    template: &'static str,
+    /// Input values as the document writes them (`Kp = 2`).
+    inputs: &'static [(&'static str, f64)],
+    states: &'static [(&'static str, f64)],
+    tf: f64,
+    points: usize,
+    /// When the input changes, and to what.
+    at: f64,
+    change: (&'static str, f64),
+}
+
+const CASES: &[Case] = &[
+    Case {
+        name: "RC load step",
+        template: "Vs = {Vs}\nR = 1000\nRl = {Rl}\nC = 0.001\n\
+DYNAMIC rc (method = {method}, time = {t0} .. 10, points = {points})\n  \
+  der(v) = (Vs - v)/(R*C) - v/(Rl*C)\n  \
+  i_load = v/Rl\n  \
+  v(0) = {init:v}\n\
+END\n",
+        inputs: &[("Vs", 5.0), ("Rl", 2000.0)],
+        states: &[("v", 0.0)],
+        tf: 10.0,
+        points: 101,
+        at: 3.0,
+        change: ("Rl", 500.0),
+    },
+    Case {
+        name: "thermal load step",
+        template: "Q = {Q}\nUA = 5\nCth = 400\nT_a = 20\n\
+DYNAMIC wall (method = {method}, time = {t0} .. 600, points = {points})\n  \
+  der(T) = (Q - UA*(T - T_a))/Cth\n  \
+  q_loss = UA*(T - T_a)\n  \
+  T(0) = {init:T}\n  \
+  EVENT warm: T = 30 | rising -> record\n  \
+  EVENT hot: T = 50 | rising -> record\n\
+END\n",
+        inputs: &[("Q", 100.0)],
+        states: &[("T", 20.0)],
+        tf: 600.0,
+        points: 121,
+        at: 200.0,
+        change: ("Q", 300.0),
+    },
+    Case {
+        name: "pressure command",
+        template: "p_cmd = {p_cmd}\nKv = 1e-4\nKo = 2e-5\nCh = 1e-6\n\
+DYNAMIC vessel (method = {method}, time = {t0} .. 20, points = {points})\n  \
+  dp = p_cmd - p\n  \
+  q_in = Kv*dp/sqrt(abs(dp) + 1000)\n  \
+  q_out = Ko*sqrt(max(p, 0))\n  \
+  der(p) = (q_in - q_out)/Ch\n  \
+  p(0) = {init:p}\n\
+END\n",
+        inputs: &[("p_cmd", 300000.0)],
+        states: &[("p", 100000.0)],
+        tf: 20.0,
+        points: 101,
+        at: 8.0,
+        change: ("p_cmd", 500000.0),
+    },
+    Case {
+        name: "PID gain change",
+        template: "Kp = {Kp}\nKi = 0.5\nr = 1\ntau = 3\n\
+DYNAMIC loop (method = {method}, time = {t0} .. 30, points = {points})\n  \
+  e = r - y\n  \
+  u = Kp*e + Ki*I\n  \
+  der(I) = e\n  \
+  der(y) = (u - y)/tau\n  \
+  I(0) = {init:I}\n  \
+  y(0) = {init:y}\n\
+END\n",
+        inputs: &[("Kp", 2.0)],
+        states: &[("I", 0.0), ("y", 0.0)],
+        tf: 30.0,
+        points: 151,
+        at: 10.0,
+        change: ("Kp", 6.0),
+    },
+];
+
+impl Case {
+    fn dt(&self) -> f64 {
+        self.tf / (self.points - 1) as f64
+    }
+
+    /// `rk4` steps on the row spacing, so its steps are the rows; the cap is
+    /// stated, as the default (span / 100) would differ between the runs.
+    fn method_spec(&self, method: &str) -> String {
+        if method == "rk4" {
+            format!("rk4, step = {0}, maxstep = {0}", self.dt())
+        } else {
+            method.to_string()
+        }
+    }
+
+    fn doc(
+        &self,
+        method: &str,
+        t0: f64,
+        points: usize,
+        inputs: &[(&str, f64)],
+        init: &[(String, f64)],
+    ) -> String {
+        let mut s = self
+            .template
+            .replace("{method}", &self.method_spec(method))
+            .replace("{t0}", &format!("{t0:?}"))
+            .replace("{points}", &points.to_string());
+        for (name, value) in inputs {
+            s = s.replace(&format!("{{{name}}}"), &format!("{value:?}"));
+        }
+        for (name, value) in init {
+            s = s.replace(&format!("{{init:{name}}}"), &format!("{value:?}"));
+        }
+        s
+    }
+
+    fn original(&self, method: &str) -> String {
+        let init: Vec<(String, f64)> = self
+            .states
+            .iter()
+            .map(|(n, v)| (n.to_string(), *v))
+            .collect();
+        self.doc(method, 0.0, self.points, self.inputs, &init)
+    }
+}
+
+/// Advance a live run to `time` and change the input there; answers the rows
+/// so far and the time the change applied at.
+fn change_at(
+    session: &mut LiveSession,
+    method: &str,
+    dt: f64,
+    time: f64,
+    change: (&str, f64),
+) -> (Vec<Vec<f64>>, f64) {
+    let mut rows = run(session, time, dt * 3.0, 4).rows;
+    if method != "ida" {
+        // An explicit run applies at its current step; step to the row first.
+        while session
+            .clock()
+            .is_none_or(|(t, _)| t < time - 1e-9 * time.max(1.0))
+        {
+            rows.append(&mut session.step_accepted().rows);
+        }
+    }
+    let applied = session.set_inputs(&[(change.0.into(), change.1)]).unwrap();
+    (rows, applied)
+}
+
+#[test]
+fn input_changes_match_a_batch_reference_with_piecewise_inputs() {
+    for case in CASES {
+        for method in ["ida", "rk4"] {
+            let src = case.original(method);
+            let first = batch(&src);
+            let mut session = open(&src);
+            let dt = case.dt();
+            let (mut rows, t1) = change_at(&mut session, method, dt, case.at, case.change);
+            rows.extend(run(&mut session, case.tf, dt * 3.0, 4).rows);
+            let label = format!("{}, {method}", case.name);
+            assert_eq!(rows.len(), case.points, "{label}");
+
+            // The reference's second run starts at t1 from the first run's
+            // state there, with the new input.
+            let k = first
+                .rows
+                .iter()
+                .position(|r| (r[0] - t1).abs() <= 1e-9 * case.tf)
+                .unwrap_or_else(|| panic!("{label}: t1 = {t1} is a row"));
+            let cols = &first.columns;
+            let init: Vec<(String, f64)> = case
+                .states
+                .iter()
+                .map(|(n, _)| {
+                    (
+                        n.to_string(),
+                        first.rows[k][cols.iter().position(|c| c.eq_ignore_ascii_case(n)).unwrap()],
+                    )
+                })
+                .collect();
+            let mut inputs = case.inputs.to_vec();
+            inputs
+                .iter_mut()
+                .find(|(n, _)| *n == case.change.0)
+                .unwrap()
+                .1 = case.change.1;
+            let second =
+                batch(&case.doc(method, first.rows[k][0], case.points - k, &inputs, &init));
+            assert_eq!(&second.columns, cols, "{label}");
+
+            // Rows at or before t1 precede the change; an rk4 clock can sit an
+            // ulp short of its grid row, which then follows the change.
+            let split = rows.iter().take_while(|r| r[0] <= t1).count();
+            // Before it the live rows are the batch rows: bit for bit on IDA;
+            // on an explicit method time and states are, and auxiliaries
+            // agree to the inner solve's tolerance (K1b).
+            let exact = if method == "ida" {
+                cols.len()
+            } else {
+                1 + case.states.len()
+            };
+            let head = |r: &[Vec<f64>]| {
+                r.iter()
+                    .map(|row| row[..exact].to_vec())
+                    .collect::<Vec<_>>()
+            };
+            assert_eq!(
+                bits(&head(&rows[..split])),
+                bits(&head(&first.rows[..split])),
+                "{label}: before the change"
+            );
+            for (live, batch) in rows[..split].iter().zip(&first.rows) {
+                for (a, b) in live.iter().zip(batch).skip(exact) {
+                    assert!(
+                        (a - b).abs() <= 1e-6 * b.abs().max(1.0),
+                        "{label}: t = {}: {a} vs {b}",
+                        live[0]
+                    );
+                }
+            }
+            // After it they are the second run's, every column, each measured
+            // against its own range over the run: a small difference of large
+            // values (the loop error `e = r - y`) is not a large relative one.
+            let scale: Vec<f64> = (0..cols.len())
+                .map(|c| second.rows.iter().map(|r| r[c].abs()).fold(1e-12, f64::max))
+                .collect();
+            let mut worst = 0.0f64;
+            for (live, reference) in rows[split..].iter().zip(&second.rows[split - k..]) {
+                assert!(
+                    (live[0] - reference[0]).abs() <= 1e-9 * case.tf,
+                    "{label}: t {} vs {}",
+                    live[0],
+                    reference[0]
+                );
+                for (c, (a, b)) in live.iter().zip(reference).enumerate().skip(1) {
+                    worst = worst.max((a - b).abs() / scale[c]);
+                }
+            }
+            // Both runs integrate at the default rtol = 1e-6 with their own
+            // step histories, so they agree to the tolerance, not the bit.
+            println!("{label}: worst relative difference {worst:.2e}");
+            assert!(worst < 1e-5, "{label}: worst relative difference {worst:e}");
+
+            // Events: the first run's up to the change, then the second's; none twice, none lost.
+            let mut expected: Vec<_> = first
+                .events
+                .iter()
+                .filter(|e| e.time <= t1)
+                .cloned()
+                .collect();
+            expected.extend(second.events.iter().filter(|e| e.time > t1).cloned());
+            if case.name == "thermal load step" {
+                // `warm` crosses before the change; `hot` only after it.
+                let names: Vec<&str> = expected.iter().map(|e| e.name.as_str()).collect();
+                assert_eq!(names, ["warm", "hot"], "{label}");
+            }
+            let live_events = run_events(&case.original(method), method, dt, case);
+            assert_eq!(
+                live_events.len(),
+                expected.len(),
+                "{label}: {live_events:?} vs {expected:?}"
+            );
+            for (a, b) in live_events.iter().zip(&expected) {
+                assert_eq!(a.name, b.name, "{label}");
+                assert!(
+                    (a.time - b.time).abs() < 1e-6 * case.tf,
+                    "{label}: {} at {} vs {}",
+                    a.name,
+                    a.time,
+                    b.time
+                );
+            }
+        }
+    }
+}
+
+/// The events of a live run with the case's change, collected chunk by chunk.
+fn run_events(
+    src: &str,
+    method: &str,
+    dt: f64,
+    case: &Case,
+) -> Vec<frees_core::ode::problem::TableEventHit> {
+    let mut session = open(src);
+    let mut events = run(&mut session, case.at, dt * 3.0, 4).events;
+    if method != "ida" {
+        while session
+            .clock()
+            .is_none_or(|(t, _)| t < case.at - 1e-9 * case.at)
+        {
+            events.append(&mut session.step_accepted().events);
+        }
+    }
+    session
+        .set_inputs(&[(case.change.0.into(), case.change.1)])
+        .unwrap();
+    events.extend(run(&mut session, case.tf, dt * 3.0, 4).events);
+    events
+}
+
+#[test]
+fn a_refused_change_on_a_dae_keeps_a_consistent_state() {
+    // The PID loop carries algebraic `e` and `u`; a refused gain leaves the
+    // run the batch run, and a later accepted one still matches its reference.
+    let case = &CASES[3];
+    for method in ["ida", "ode45"] {
+        let src = case.original(method);
+        let table = batch(&src);
+        let mut session = open(&src);
+        let mut rows = run(&mut session, 6.0, 0.5, 3).rows;
+        for bad in [f64::NAN, f64::INFINITY] {
+            assert!(
+                session.set_inputs(&[("Kp".into(), bad)]).is_err(),
+                "{method}"
+            );
+        }
+        assert!(
+            session.set_inputs(&[("nope".into(), 1.0)]).is_err(),
+            "{method}"
+        );
+        assert!(session.input_log().is_empty(), "{method}");
+        rows.extend(run(&mut session, case.tf, 0.5, 3).rows);
+        assert_eq!(bits(&rows), bits(&table.rows), "{method}");
+    }
+}
+
+#[test]
+fn rapid_changes_keep_the_log_ordered_and_replay_bitwise() {
+    // Thirty gain changes, several at the same row or step, as a fast slider
+    // drag sends them between chunks.
+    let case = &CASES[3];
+    for method in ["ida", "ode45"] {
+        let src = case.original(method);
+        let mut first = open(&src);
+        let mut rows = Vec::new();
+        for i in 0..30 {
+            if i % 3 != 2 {
+                rows.extend(run(&mut first, 0.8 * (i + 1) as f64, 0.4, 2).rows);
+            }
+            first
+                .set_inputs(&[("Kp".into(), 1.0 + (i % 7) as f64)])
+                .unwrap();
+        }
+        rows.extend(run(&mut first, case.tf, 0.4, 2).rows);
+        let log = first.input_log().to_vec();
+        assert_eq!(log.len(), 30, "{method}");
+        assert!(
+            log.windows(2).all(|w| w[0].time <= w[1].time),
+            "{method}: the log is in time order"
+        );
+        assert!(
+            log.windows(2).any(|w| w[0].time == w[1].time),
+            "{method}: some changes share a time"
+        );
+
+        let mut second = open(&src);
+        let mut replayed = Vec::new();
+        for change in &log {
+            replayed.extend(reach(&mut second, method, change.time));
+            let at = second
+                .set_inputs(&[(change.name.clone(), change.value)])
+                .unwrap();
+            assert_eq!(at.to_bits(), change.time.to_bits(), "{method}");
+        }
+        replayed.extend(run(&mut second, case.tf, 0.4, 1000).rows);
+        assert_eq!(bits(&replayed), bits(&rows), "{method}");
+    }
+}

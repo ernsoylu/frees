@@ -914,6 +914,20 @@ entry here is checked off with evidence when it closes.
     - A rejected edit rolls back and keeps a consistent DAE state.
     - Duplicate or lost events: none.
     - Rapid slider changes keep the input log ordered and reproducible: replaying the log reproduces the run bit for bit.
+  - **L acceptance, measured 2026-11-11 (`l-acceptance`; `crates/frees-core/tests/live_session.rs`, now 23 tests).**
+    - **The reference is built from batch runs only.** The document as written runs up to the change. A second run then has the new input value, starts at the change time, and takes the first run's state there as its initial condition. Up to the change, the live rows must equal the first run's rows. After it, they must equal the second run's in every column, each measured against that column's range over the run.
+    - **Methods.**
+      - **IDA** applies a change at a row.
+      - **rk4** steps on the row spacing, with its cap stated. Unstated, the default cap (span / 100) differs between the two runs: it was 0.07 against a 0.1 step for the 7 s second run, and the gap came to 1.9e-5.
+      - **ode45** changes at an adaptive step between rows. L1's heater test checks it against the analytic piecewise solution.
+    - **Piecewise inputs.** Four cases: an RC load step (`Rl` 2 kΩ → 500 Ω at 3 s), a thermal load step (`Q` 100 → 300 W at 200 s), a pressure command (`p_cmd` 3 → 5 bar at 8 s, through a square-root valve law) and a PID gain change (`Kp` 2 → 6 at 10 s, with algebraic `e` and `u`).
+      - **Before the change:** IDA rows are bit for bit. On rk4, time and states are bit for bit, and auxiliaries agree within 1e-6 (K1b).
+      - **After the change:** worst differences of 2.2e-6, 5.1e-7, 1.9e-6 and 6.4e-6 on IDA (both runs at rtol = 1e-6, each with its own step history), and of 1.5e-15, 0, 5.0e-16 and 4.5e-15 on rk4.
+    - **Events.** The thermal case's `warm` (crossed before the change) and `hot` (reachable only after it) arrive once each, at the reference times within 1e-6 of the span. On every case and method, the live run's events equal the first run's up to the change followed by the second run's: none twice, none lost.
+    - **A rejected edit.** On the PID loop's DAE (IDA and ode45), refusing `Kp = NaN`, `Kp = inf` and an unknown name leaves the log empty, and the run goes on as the batch run, bit for bit.
+    - **Rapid changes.** Thirty gain changes on the PID loop, a third of them at the same row or step as the one before, as a fast drag sends them between two-row chunks. The log stays in time order, and replaying it reproduces the run bit for bit on IDA and ode45.
+    - **Budgets.** WASM 3,998.8 KiB raw, within the 5,120 KiB gate; workspace 3,469 tests.
+    - **Found and fixed (an L1 bug).** An explicit run can stand past rows it has not emitted, because a chunk ends at a row but the stepper at a step. A change sampled those rows after the change, so their auxiliaries showed the new input before it applied: `u = Kp·e` at t = 1.0 with the gain applied at t ≈ 1.05. The states were right. A replay emits those rows first, so it gave the correct values, and the two disagreed. `ExplicitRun::retarget` now samples the rows the stepper has passed under the old values (`rows_through`) and holds them for the next chunk. On IDA a change applies at a row, so it was never affected.
 - **M. Live labs and sharing (stage 4).**
   1. **Graded live labs** built on I's lessons:
      - a thermostat limit cycle with the hysteresis width on a slider (needs the deferred hysteresis contract, or a documented smooth stand-in);

@@ -573,6 +573,34 @@ impl<'a> DynamicSolver<'a> {
         }
     }
 
+    /// The grid rows a live explicit run's knots cover up to time `t` that
+    /// no chunk has emitted, sampled by `self` (the sampler) and marked sent.
+    /// All or nothing: if one row fails, none is marked sent and no knot is
+    /// dropped, so a refused change leaves every row for the next chunk.
+    pub(crate) fn rows_through(
+        &self,
+        st: &mut crate::ode::live::ExplicitLive,
+        t: f64,
+    ) -> Result<Vec<Vec<f64>>> {
+        let grid = st.grid();
+        let mut rows = Vec::new();
+        let mut next = st.next;
+        loop {
+            let tr = crate::ode::live::grid_time(grid, next);
+            if tr > t || tr > st.knots.last_time() {
+                break;
+            }
+            rows.push(self.table_row(tr, &st.knots.sample(tr))?);
+            next += 1;
+        }
+        if next > st.next {
+            st.knots
+                .drop_before(crate::ode::live::grid_time(grid, next - 1));
+            st.next = next;
+        }
+        Ok(rows)
+    }
+
     /// One live explicit chunk (Phase K1b): integrate, emit the grid rows the
     /// knots cover up to row `last`, and stop when `more` says so (asked
     /// between internal steps, after at least one), on a stop event, or —

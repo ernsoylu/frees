@@ -772,6 +772,9 @@ pub struct ExplicitRun {
     original: Scope,
     /// Phase L4: kept here, as a reset starts the live state afresh.
     watches: Vec<Watch>,
+    /// Rows the stepper had passed when an input changed, sampled under the
+    /// values before the change and emitted at the head of the next chunk.
+    held: Vec<Vec<f64>>,
 }
 
 impl ExplicitRun {
@@ -797,6 +800,7 @@ impl ExplicitRun {
             failed: false,
             original: base.clone(),
             watches: Vec::new(),
+            held: Vec::new(),
         };
         let (stepping, sampling) = run.block.prepared(defs)?;
         run.columns = stepping.columns();
@@ -840,7 +844,10 @@ impl ExplicitRun {
         more: &mut dyn FnMut(&Chunk) -> bool,
         one_step: bool,
     ) -> Chunk {
-        let mut chunk = Chunk::default();
+        let mut chunk = Chunk {
+            rows: std::mem::take(&mut self.held),
+            ..Chunk::default()
+        };
         if self.finished() {
             chunk.stopped = self.live.end.is_some();
             return chunk;
@@ -898,14 +905,20 @@ impl ExplicitRun {
     fn restart(&mut self) {
         self.block.base = self.original.clone();
         self.parked = None;
+        self.held.clear();
         self.restart_grid();
     }
 
     /// Run on under new base values from the stepper's current time (Phase
     /// L1): the derivative is evaluated afresh there. If that fails the old
     /// values stand and the run is as it was.
+    ///
+    /// The stepper can stand past rows a chunk has not emitted yet, since a
+    /// chunk ends at a row but the stepper at a step. Those rows precede the
+    /// change, so they are sampled now, under the old values, and held for the
+    /// next chunk; sampled after the change they would show its auxiliaries
+    /// before it applied.
     fn retarget(&mut self, defs: &Definitions, base: Scope) -> Result<f64> {
-        let old = std::mem::replace(&mut self.block.base, base);
         let t = self
             .live
             .stepper
@@ -913,8 +926,21 @@ impl ExplicitRun {
             .map_or(self.live.t0, |s| s.clock().0);
         let Some((a, b)) = self.parked.take() else {
             // Reset and not yet run: the next chunk prepares on the new values.
+            self.block.base = base;
             return Ok(t);
         };
+        let mut sampling = self.block.solver(defs);
+        sampling.resume(b);
+        let passed = sampling.rows_through(&mut self.live, t);
+        let b = sampling.park();
+        match passed {
+            Ok(rows) => self.held.extend(rows),
+            Err(e) => {
+                self.parked = Some((a, b));
+                return Err(e);
+            }
+        }
+        let old = std::mem::replace(&mut self.block.base, base);
         let (mut stepping, mut sampling) = (self.block.solver(defs), self.block.solver(defs));
         stepping.resume(a);
         sampling.resume(b);

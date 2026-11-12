@@ -27,7 +27,7 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Worker Pool**: Up to 4 Web Workers executing independent parametric sweep chunks in parallel with weighted progress, preserving deterministic row ordering.
 - **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-11-06: 3,900.8 KiB raw / 1,556.5 KiB gzipped, 1,219.2 KiB headroom, after Phase E moved 24 fluids and the mixture tables out of the module). Raised from 4,096 on 2026-09-10, owner-authorized; the `ci.yml` header carries the full ledger.
 - **Test Suite Health**:
-  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,466 tests pass across all workspace crates.
+  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,469 tests pass across all workspace crates.
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
   - `vitest run` (Node 22): 99 test files, 1,119 tests passing (needs the built `web/src/wasm/pkg`).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
