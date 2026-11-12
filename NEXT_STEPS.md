@@ -879,6 +879,36 @@ entry here is checked off with evidence when it closes.
       - `live.wasm.test.ts`: the same fields through the compiled engine.
       - **Found in the browser.** On `newton-cooling-transient` (ode45, rows every 1.5075 s), the first cut ended a 1 s recording before its second row, keeping only t = 0. The row that crosses the end now closes the recording. A 5 s recording kept 5 rows, from 0 to 6.0302 s, completed. Its file named ode45 at rtol 1e-8 over 200 points and "rustprop (CoolProp 8.0.0)", and carried each value unrounded.
       - WASM 3,997.4 KiB raw, within the 5,120 KiB gate.
+  - **L6 done 2026-11-11 (`l6-preferred-values`): preferred-value stepping.**
+    - **Series** (`web/src/preferredValues.ts`):
+      - **E6, E12, E24** (IEC 60063), across decades.
+      - **DN:** the ISO 6708 nominal sizes, stepped as diameters in mm.
+      - **insulation:** common stock thicknesses of pipe and slab insulation. This is not a standard series, and the source says so.
+      - **Lengths only.** DN and insulation are offered only for a value in m, cm or mm, and step in that unit.
+      - **Which series by default.** E24 for a resistance, capacitance or inductance (`ohm`, `Ω`, `F`, `farad`, `H`, `henry`, prefixed or not). DN for a length named like a diameter (`D`, `D_h`, `Di`, `diam…`). insulation for a length named like a thickness (`t_ins`, `thick…`, `insul…`). Linear otherwise.
+      - **Stepping.** From a value off the series, a step goes to the next series value in the direction asked. Past the series' ends, nothing moves.
+    - **Sliders** (`SliderStrip.tsx`):
+      - **Choice.** Each pin has a "wheel steps" choice, saved on the pin (`series`) in the project file and in share links. A share link keeps the choice only when the pin's unit takes it.
+      - **Wheel.** A notch over the slider moves the value to the next series value. Trackpad deltas add up to whole notches.
+      - **Commit.** The value is committed with one solve after 300 ms of quiet, so a burst of notches is one solve.
+      - **Range.** A step past the slider's range does nothing.
+      - **Linear.** A linear pin leaves the wheel to the page.
+      - **Kiosk embeds** step by the default series, with no choice shown.
+    - **Card editor** (`ParamValueInput` in `SchematicTab.tsx`):
+      - **Stepping.** When the draft is a number (`0.05` or `0.05 [m]`), a wheel notch or ArrowUp / ArrowDown steps it, keeping the written unit bracket.
+      - **Series choice.** It sits under the field.
+      - **Apply.** The step stays a draft until Apply, as typing does.
+      - **Non-numbers.** A binding that is not a number (`D_main`) is left alone, and the wheel goes to the page.
+    - **Found in the browser and fixed.**
+      - **The problem.** A pin keeps the unit the solve reported, and the engine reports a resistance as `Ω`. The unit registry knows `Ω`, but the lexer rejects the character in a bracket ("unexpected character `Ω`"). So any slider on a resistance, dragged or stepped, made the solve fail with a syntax error on the override line.
+      - **The fix.** `sliderOverrideEquation`, which every slider solve and live input goes through, now writes `Ω` back as `ohm`. That also repairs pins already saved with `Ω`.
+      - **Still open.** The lexer reading `Ω` in a unit bracket would let a document say back every unit the engine reports. That is a language-contract change, so it is not made here.
+    - **Evidence.**
+      - `preferredValues.test.ts` (3): E-series steps across decades from on- and off-series values; DN and insulation steps in m, cm and mm, stopping at the ends; the default series by unit and name.
+      - `preferredStepping.test.tsx` (3): a slider's wheel steps 4.7 → 5.1 kΩ on E24, ignores a step past its range, and commits once after the wheel goes quiet; a linear slider leaves the wheel to the page. A card draft steps through DN by arrows and wheel, keeping `[m]` and then `[mm]`. A non-numeric draft is left alone.
+      - `share.test.ts` +1: a pin's series round-trips, and one that its unit cannot take is dropped.
+      - `sliders.test.ts` +1: `Ω` and `Ω-m` are written as `ohm` and `ohm-m`.
+      - In the browser on a resistor document, with R pinned at 6,200 Ω: one wheel notch down stepped it to 5,600 Ω, and the solve that followed gave tau = 0.0056 s. Before the fix, the same notch failed the solve.
   - **Acceptance.**
     - RC and thermal load steps, a pressure command and a PID gain change each match a reference batch run with piecewise inputs.
     - A rejected edit rolls back and keeps a consistent DAE state.

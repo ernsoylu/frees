@@ -1,4 +1,5 @@
 import { flushSync } from 'react-dom'
+import { defaultSeries, SERIES_LABELS, seriesOptions, stepPreferred, type SeriesId } from '../preferredValues'
 import { createElement, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import {
   ActionIcon,
@@ -10,6 +11,7 @@ import {
   Group,
   Kbd,
   Menu,
+  NativeSelect,
   NumberInput,
   Modal,
   Paper,
@@ -4502,18 +4504,14 @@ function ParamInspector({
                     onChange={(v) => setEditing({ ...editing, value: v ?? '', error: null })}
                   />
                 ) : (
-                  <TextInput
-                    size="xs"
-                    aria-label={`New ${p.name}`}
+                  <ParamValueInput
+                    name={p.name}
+                    unit={p.unit ?? ''}
                     value={editing.value}
                     error={editing.error}
-                    autoFocus
-                    onChange={(e) => setEditing({ ...editing, value: e.currentTarget.value, error: null })}
-                    onKeyDown={(e) => {
-                      e.stopPropagation()
-                      if (e.key === 'Enter') apply()
-                      if (e.key === 'Escape') setEditing(null)
-                    }}
+                    onChange={(value) => setEditing({ ...editing, value, error: null })}
+                    onEnter={apply}
+                    onEscape={() => setEditing(null)}
                   />
                 )}
                 <Button size="compact-xs" onClick={apply}>
@@ -4527,6 +4525,89 @@ function ParamInspector({
           </Stack>
         )
       })}
+    </Stack>
+  )
+}
+
+/** A written number with an optional unit bracket, `0.05` or `0.05 [m]`, once trimmed. */
+const WRITTEN_NUMBER = /^(-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?) *(?:\[([^\]]*)\])?$/i
+
+/**
+ * Phase L6: the card editor's value field. When it holds a number, a wheel
+ * notch or ArrowUp / ArrowDown steps it through the chosen preferred series
+ * (E24 for a resistance, DN for a diameter, …), keeping the written unit; it
+ * stays a draft until Apply, as typing does.
+ */
+export function ParamValueInput({
+  name,
+  unit,
+  value,
+  error,
+  onChange,
+  onEnter,
+  onEscape,
+}: Readonly<{ name: string; unit: string; value: string; error: string | null; onChange: (v: string) => void; onEnter: () => void; onEscape: () => void }>) {
+  const written = WRITTEN_NUMBER.exec(value.trim())
+  const units = written?.[2] ?? unit
+  const [chosen, setSeries] = useState<SeriesId>(() => defaultSeries(name, units))
+  // A series the written unit no longer offers (DN after `[m]` became `[in]`) falls back to the unit's default.
+  const series = seriesOptions(units).includes(chosen) ? chosen : defaultSeries(name, units)
+  const step = (dir: 1 | -1): boolean => {
+    if (!written) return false
+    const next = stepPreferred(Number(written[1]), series, units, dir)
+    if (next === null) return false
+    onChange(written[2] === undefined ? String(next) : `${next} [${written[2]}]`)
+    return true
+  }
+  const canStep = Boolean(written) && series !== 'linear'
+  const stepRef = useRef({ step, canStep })
+  useEffect(() => {
+    stepRef.current = { step, canStep }
+  })
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let travel = 0
+    // Native and not passive, so a step keeps the card from scrolling.
+    const wheel = (e: WheelEvent) => {
+      if (!stepRef.current.canStep) return
+      e.preventDefault()
+      travel += e.deltaMode === 0 ? e.deltaY : e.deltaY * 40
+      if (Math.abs(travel) < 40) return
+      const dir = travel < 0 ? 1 : -1
+      travel = 0
+      stepRef.current.step(dir)
+    }
+    el.addEventListener('wheel', wheel, { passive: false })
+    return () => el.removeEventListener('wheel', wheel)
+  }, [])
+  return (
+    <Stack gap={2}>
+      <TextInput
+        ref={ref}
+        size="xs"
+        aria-label={`New ${name}`}
+        value={value}
+        error={error}
+        autoFocus
+        onChange={(e) => onChange(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          e.stopPropagation()
+          if (e.key === 'Enter') onEnter()
+          if (e.key === 'Escape') onEscape()
+          if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && step(e.key === 'ArrowUp' ? 1 : -1)) e.preventDefault()
+        }}
+      />
+      {written && (
+        <NativeSelect
+          size="xs"
+          aria-label={`${name} wheel steps`}
+          data={seriesOptions(units).map((id) => ({ value: id, label: `steps: ${SERIES_LABELS[id]}` }))}
+          value={series}
+          onChange={(e) => setSeries(e.currentTarget.value as SeriesId)}
+        />
+      )}
     </Stack>
   )
 }
