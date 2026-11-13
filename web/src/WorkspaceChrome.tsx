@@ -50,7 +50,6 @@ import {
   IconSettings,
   IconTable,
   IconTerminal2,
-  IconTrash,
   IconSearch,
   IconVariable,
   IconLink,
@@ -101,11 +100,11 @@ interface RailProps {
   /** Specific window ids open (e.g. "diagram:<id>") for per-instance marks. */
   openIds?: string[]
   /** Plots (X-Y, property, psychrometric) available to open as windows. */
-  plots?: { id: string; name: string; tag?: string; deletable?: boolean }[]
+  plots?: { id: string; name: string; tag?: string }[]
   /** Number of plot windows currently open (badge on the Plots icon). */
   plotCount?: number
   /** Tables available to open as individual windows. */
-  workspaceTables?: { id: string; name: string; deletable?: boolean }[]
+  workspaceTables?: { id: string; name: string; tag?: string }[]
   /** Number of table windows currently open (badge on the Tables icon). */
   tableCount?: number
   onSelect: (view: string) => void
@@ -114,10 +113,8 @@ interface RailProps {
   onApplyLayout?: (perspective: LayoutPerspective) => void
   onOpenPlot?: (id: string) => void
   onNewPlot?: (kind: 'xy' | 'property' | 'psychro') => void
-  onDeletePlot?: (id: string) => void
   onOpenTable?: (id: string) => void
   onNewTable?: (kind: 'parametric' | 'function-1d' | 'function-2d') => void
-  onDeleteTable?: (id: string) => void
   /** Open the singleton Fluid State table window. */
   onOpenStates?: () => void
   onPreferences: () => void
@@ -139,7 +136,6 @@ function InstanceLauncher({
   items,
   openIds,
   onOpen,
-  onDelete,
 }: Readonly<{
   expanded: boolean
   active: boolean
@@ -149,10 +145,9 @@ function InstanceLauncher({
   newActions: { label: string; onClick: () => void }[]
   emptyLabel: string
   icon: React.ReactNode
-  items: { id: string; name: string; tag?: string; deletable?: boolean }[]
+  items: { id: string; name: string; tag?: string }[]
   openIds: Set<string>
   onOpen?: (id: string) => void
-  onDelete?: (id: string) => void
 }>) {
   const variant = active ? 'light' : 'subtle'
   const color = active ? 'teal' : 'gray'
@@ -210,29 +205,14 @@ function InstanceLauncher({
                 <span style={{ display: 'inline-block', width: 10 }} />
               )
             }
+            // Opening is the row's only action: Delete lives in the Inspector,
+            // with a confirmation, so a slip never costs a table (N3).
             rightSection={
-              <Group gap={4} wrap="nowrap" align="center">
-                {it.tag && (
-                  <Text size="9px" c="dimmed">
-                    {it.tag}
-                  </Text>
-                )}
-                {it.deletable && onDelete && (
-                  <ActionIcon
-                    component="span"
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    aria-label={`Delete ${it.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(it.id)
-                    }}
-                  >
-                    <IconTrash size={12} />
-                  </ActionIcon>
-                )}
-              </Group>
+              it.tag && (
+                <Text size="9px" c="dimmed">
+                  {it.tag}
+                </Text>
+              )
             }
           >
             {it.name}
@@ -369,10 +349,8 @@ export function Rail({
   onApplyLayout,
   onOpenPlot,
   onNewPlot,
-  onDeletePlot,
   onOpenTable,
   onNewTable,
-  onDeleteTable,
   onOpenStates,
   onPreferences,
   onAbout,
@@ -443,7 +421,6 @@ export function Rail({
               items={plots}
               openIds={openIdSet}
               onOpen={onOpenPlot}
-              onDelete={onDeletePlot}
             />
           ) : view.value === 'table' && workspaceTables ? (
             <InstanceLauncher
@@ -454,17 +431,16 @@ export function Rail({
               idPrefix="table:"
               label="Tables"
               newActions={[
-                { label: 'New parametric table', onClick: () => onNewTable?.('parametric') },
-                { label: 'New function table (1-arg)', onClick: () => onNewTable?.('function-1d') },
-                { label: 'New function table (curve)', onClick: () => onNewTable?.('function-2d') },
-                { label: 'Add fluid state table', onClick: () => onOpenStates?.() },
+                { label: 'New Parametric Table', onClick: () => onNewTable?.('parametric') },
+                { label: 'New Function Table (one input)', onClick: () => onNewTable?.('function-1d') },
+                { label: 'New Function Table (curve family)', onClick: () => onNewTable?.('function-2d') },
+                { label: 'Open Fluid States', onClick: () => onOpenStates?.() },
               ]}
               emptyLabel="No tables yet"
               icon={<IconTable size={iconSize} stroke={1.6} />}
               items={workspaceTables}
               openIds={openIdSet}
               onOpen={onOpenTable}
-              onDelete={onDeleteTable}
             />
           ) : (
             <RailEntry
@@ -738,6 +714,10 @@ function StatusPill({ pill, hint }: Readonly<{ pill: PillContent | null; hint: s
 
 interface TopBarProps {
   isTable: boolean
+  /** What Check and Solve act on: "Model" or "Table: ‹name›" (N2). */
+  targetLabel?: string
+  /** Any solve, check or table run is in flight, whatever is focused — Stop follows the job. */
+  runBusy?: boolean
   checking: boolean
   solving: boolean
   /** Engine completion, 0…1, while a solve or a table run is in flight; `null`
@@ -802,9 +782,9 @@ interface TopBarProps {
   onPidTuner: () => void
 }
 
-function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
-  if (!canSolve) return 'Check & Solve (F2)'
-  return isTable ? 'Solve every table run (F2)' : 'Solve the system (F2)'
+function solveTooltipFor(canSolve: boolean, isTable: boolean, target: string): string {
+  if (!canSolve) return `Check & Solve ${target} (F2)`
+  return isTable ? `Solve every run of ${target} (F2)` : 'Solve the model (F2)'
 }
 
 function statusPillFor(props: Readonly<TopBarProps>) {
@@ -829,7 +809,8 @@ function statusPillFor(props: Readonly<TopBarProps>) {
 export function TopBar(props: Readonly<TopBarProps>) {
   const { isTable } = props
   const canSolve = isTable ? props.tableCheckResult?.solvable === true : props.solvable
-  const solveTooltip = solveTooltipFor(canSolve, isTable)
+  const target = props.targetLabel ?? (isTable ? 'the table' : 'Model')
+  const solveTooltip = solveTooltipFor(canSolve, isTable, target)
   const pill = statusPillFor(props)
   const solveBusy = isTable ? props.tableSolving : props.solving
   // `null` is "running, nothing reported yet" — an empty bar, not a missing
@@ -1062,7 +1043,12 @@ export function TopBar(props: Readonly<TopBarProps>) {
 
       <Group gap="xs" wrap="nowrap">
         <StatusPill pill={pill} hint={hint} />
-        <Tooltip label={`${isTable ? 'Check every table run' : 'Compile and check'} (F4)`}>
+        {props.targetLabel && (
+          <Text size="xs" c="dimmed" maw={180} truncate="end" data-testid="run-target" title={props.targetLabel}>
+            {props.targetLabel}
+          </Text>
+        )}
+        <Tooltip label={`${isTable ? `Check every run of ${target}` : 'Compile and check the model'} (F4)`}>
           <Button
             variant="default"
             size="xs"
@@ -1141,7 +1127,7 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu>
           </Button.Group>
         </Tooltip>
-        {solveBusy && props.onStop && (
+        {(props.runBusy ?? solveBusy) && props.onStop && (
           <Tooltip label="Stop computation (cancels solve and resets worker)">
             <Button
               size="xs"

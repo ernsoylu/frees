@@ -184,6 +184,7 @@ import { clearExampleParam, EMBED, fullAppUrl } from './embed'
 import type { EquationEditorHandle } from './EquationEditor'
 const EquationEditor = lazy(() => import('./EquationEditor'))
 import {
+  ConfirmModal,
   MessageModal,
   ProjectConflictModal,
   SaveCheckModal,
@@ -801,12 +802,21 @@ export default function App() {
 
   const editorRef = useRef<EquationEditorHandle>(null)
 
+  const dockRef = useRef<WorkspaceDockHandle | null>(null)
+
   // Insert a function template at the editor caret (Functions menu). "$0" in
   // the snippet marks where the caret lands; selected text is replaced. The
-  // editor must be visible first, so switch to it before inserting.
+  // editor must be open first: open (or focus) its window, then insert once
+  // the lazily loaded editor has mounted, rather than dropping the snippet.
   const insertFunction = useCallback((snippet: string) => {
     setActiveTab('equations')
-    setTimeout(() => editorRef.current?.insertSnippet(snippet), 50)
+    dockRef.current?.open('equations')
+    let tries = 0
+    const attempt = () => {
+      if (editorRef.current) editorRef.current.insertSnippet(snippet)
+      else if (++tries < 60) setTimeout(attempt, 50)
+    }
+    setTimeout(attempt, 50)
   }, [])
   // Component Browser/Wizard: append the generated `Type NAME(...)` block on its
   // own line in the equations editor (same path as bound-cell statements).
@@ -837,7 +847,6 @@ export default function App() {
 
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
-  const dockRef = useRef<WorkspaceDockHandle | null>(null)
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
   // Last-focused non-auxiliary window — drives the content-aware Inspector
   // (focusing the Inspector/Solution panels themselves doesn't change it).
@@ -856,6 +865,9 @@ export default function App() {
     return []
   })
   const [deletedTables, setDeletedTables] = useState<TableSpec[]>([])
+  // N3: Delete table / Delete plot ask first. The target is captured when the
+  // button is pressed; if it is gone by the time the user confirms, nothing is deleted.
+  const [confirmDelete, setConfirmDelete] = useState<{ kind: 'table' | 'plot'; id: string; name: string } | null>(null)
   const tablesRef = useRef(tables)
   function writeTables(update: React.SetStateAction<TableSpec[]>) {
     const next = typeof update === 'function' ? update(tablesRef.current) : update
@@ -2608,6 +2620,24 @@ export default function App() {
 
   checkThenSolveTableRef.current = (id) => { void checkThenSolveTable(id) }
 
+  // N2: one run target for the toolbar, F2/F4 and the palette — the focused
+  // parametric table, else the model. `focusedWindow` already ignores the
+  // utility panels (Inspector, Variables, Terminal), so they keep the target.
+  // Solve always checks first; Check falls back to a code-defined parametric
+  // table the same way on every path.
+  const solveTarget = () => (focusedParam ? checkThenSolveTable(focusedParam.id) : checkThenSolve())
+  const checkTarget = () => (focusedParam ? onCheckTable(focusedParam.id) : checkWithFallback())
+  // A palette or menu entry captures its table when it is built; if the table
+  // is gone when the command runs, say so and do nothing — never redirect.
+  const solveTableById = (id: string, name: string) => {
+    if (!tablesRef.current.some((t) => t.id === id && t.kind === 'parametric')) {
+      notifications.show({ color: 'orange', title: 'Table not found', message: `“${name}” no longer exists; nothing was solved.` })
+      return
+    }
+    dockRef.current?.openInstance(`table:${id}`, 'table', name)
+    void checkThenSolveTable(id)
+  }
+
   // From a read-only table's column selection: open the New X-Y plot modal
   // pre-filled with the time column as x and the selected columns as y.
   const handlePlotColumns = (xVar: string, yVars: string[], tableId?: string) => {
@@ -2733,11 +2763,11 @@ export default function App() {
       }
       if (e.key === 'F2') {
         e.preventDefault()
-        void (activeTab === 'table' ? checkThenSolveTable() : checkThenSolve())
+        void solveTarget()
       }
       if (e.key === 'F4') {
         e.preventDefault()
-        void (activeTab === 'table' ? onCheckTable() : onCheck())
+        void checkTarget()
       }
       // "?" opens the shortcuts overlay, but only when the user isn't typing
       // into the editor, an input, or any text field.
@@ -3026,24 +3056,28 @@ export default function App() {
       actions: [
         {
           id: 'check',
-          label: 'Check',
-          description: 'Validate the system (F4)',
+          label: 'Check Model',
+          keywords: ['check', 'validate'],
+          description: 'Validate the system (F4 when no table is focused)',
           leftSection: <IconChecks size={18} />,
-          onClick: () => {
-            setActiveTab('equations')
-            void onCheck()
-          },
+          onClick: () => { void checkWithFallback() },
         },
         {
           id: 'solve',
-          label: 'Solve',
-          description: 'Check & solve the system (F2)',
+          label: 'Solve Model',
+          keywords: ['solve', 'run'],
+          description: 'Check & solve the system (F2 when no table is focused)',
           leftSection: <IconPlayerPlayFilled size={16} />,
-          onClick: () => {
-            setActiveTab('equations')
-            void checkThenSolve()
-          },
+          onClick: () => { void checkThenSolve() },
         },
+        ...tables.filter((t) => t.kind === 'parametric').map((t) => ({
+          id: `solve-table:${t.id}`,
+          label: `Solve Table: ${t.name}`,
+          keywords: ['solve', 'run', 'parametric'],
+          description: 'Check & solve every run of this table (F2 with the table focused)',
+          leftSection: <IconPlayerPlayFilled size={16} />,
+          onClick: () => solveTableById(t.id, t.name),
+        })),
       ],
     },
     {
@@ -3052,7 +3086,7 @@ export default function App() {
         { id: 'view-editor', label: 'Editor', leftSection: <IconCode size={18} />, onClick: () => dockRef.current?.open('equations') },
         { id: 'view-table', label: 'Tables', description: 'Open the latest table (or create one)', leftSection: <IconTable size={18} />, onClick: openLatestOrNewTable },
         { id: 'view-plots', label: 'Plots', description: 'Open the latest plot (or create one)', leftSection: <IconChartLine size={18} />, onClick: openLatestOrNewPlot },
-        { id: 'view-states', label: 'Fluid States', leftSection: <IconTemperature size={18} />, onClick: () => {
+        { id: 'view-states', label: 'Open Fluid States', keywords: ['fluid states'], leftSection: <IconTemperature size={18} />, onClick: () => {
           const first = declaredStateDefs[0]
           if (first) dockRef.current?.openInstance(`state:${first.name}`, 'states', first.name)
           else dockRef.current?.open('states')
@@ -3084,7 +3118,7 @@ export default function App() {
         { id: 'new-property-plot', label: 'Add property graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('property') },
         { id: 'new-psychro-plot', label: 'Add psychrometric graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('psychro') },
         { id: 'import-csv', label: 'Import CSV as function table', description: 'Two columns of a .csv become a function callable in the equations', leftSection: <IconFileTypeCsv size={18} />, onClick: importCsvAsFunctionTable },
-        { id: 'new-state-table', label: 'Add fluid state table', description: 'Insert a STATE TABLE block (fluid-aware circuit) at the caret', leftSection: <IconTemperature size={18} />, onClick: () => insertFunction('STATE TABLE Circuit1(P1, T1, h2)\n  FLUID = Water\nEND\n') },
+        { id: 'new-state-table', label: 'New Fluid State Table', keywords: ['add fluid state table', 'state table'], description: 'Open the Editor and insert a STATE TABLE block (fluid-aware circuit) at the caret', leftSection: <IconTemperature size={18} />, onClick: () => insertFunction('STATE TABLE Circuit1(P1, T1, h2)\n  FLUID = Water\nEND\n') },
       ],
     },
     {
@@ -3393,8 +3427,8 @@ export default function App() {
                       <Button size="xs" variant="default" onClick={() => setTables((all) => all.map((pt) => pt.id === t.id && pt.kind === 'parametric' ? invalidateActiveParam({ ...pt, rows: [...pt.rows, newParamRow()] }) : pt))}>
                         Add Row
                       </Button>
-                      <Button size="xs" variant="default" onClick={() => setTables((all) => all.map((pt) => pt.id === t.id && pt.kind === 'parametric' ? invalidateActiveParam({ ...pt, rows: pt.rows.slice(0, -1) }) : pt))}>
-                        Remove Row
+                      <Button size="xs" variant="default" disabled={t.rows.length <= 1} onClick={() => setTables((all) => all.map((pt) => pt.id === t.id && pt.kind === 'parametric' ? invalidateActiveParam({ ...pt, rows: pt.rows.slice(0, -1) }) : pt))}>
+                        Remove Last Row
                       </Button>
                     </Group>
                     <Button size="xs" variant="default" color="gray" onClick={() => updateParamTable(t.id, (pt) => ({ ...pt, results: [] }))}>
@@ -3403,6 +3437,11 @@ export default function App() {
                   </>
                 ) : (
                   <Text size="xs" c="dimmed">Function table — edit values in the table window.</Text>
+                )}
+                {t && t.source !== 'code' && (
+                  <Button size="xs" variant="light" color="red" onClick={() => setConfirmDelete({ kind: 'table', id: t.id, name: t.name })}>
+                    Delete table
+                  </Button>
                 )}
               </Stack>
             </div>
@@ -3429,7 +3468,7 @@ export default function App() {
               />
               <Text size="xs" c="dimmed">Configure and Export are on the plot's toolbar.</Text>
               {p && !p.fromCode && (
-                <Button size="xs" variant="light" color="red" onClick={() => handlePlotsChange(plots.filter((x) => x.id !== p.id))}>
+                <Button size="xs" variant="light" color="red" onClick={() => setConfirmDelete({ kind: 'plot', id: p.id, name: p.name })}>
                   Delete plot
                 </Button>
               )}
@@ -3445,7 +3484,6 @@ export default function App() {
             <Stack gap="xs">
               <Text size="sm" fw={600} c="teal.4">Equations</Text>
               <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Results appear in the Variable Explorer on the right.</Text>
-              <Text size="xs" c="dimmed">Variable Information, Min / Max and Curve Fit are on the left rail and in the Tools menu.</Text>
             </Stack>
           </div>
         )
@@ -3811,23 +3849,21 @@ export default function App() {
         active={activeTab}
         openKinds={openKinds}
         openIds={openIds}
-        plots={mergedPlots.map((p) => ({ id: p.id, name: p.name, tag: PLOT_KIND_LABEL[p.kind], deletable: !p.fromCode }))}
+        plots={mergedPlots.map((p) => ({ id: p.id, name: p.name, tag: PLOT_KIND_LABEL[p.kind] }))}
         plotCount={mergedPlots.length}
         onOpenPlot={(id) => {
           const p = mergedPlots.find((x) => x.id === id)
           if (p) dockRef.current?.openInstance(`plot:${id}`, 'plot', p.name)
         }}
         onNewPlot={(kind) => setNewPlotKind(kind)}
-        onDeletePlot={(id) => handlePlotsChange(plots.filter((p) => p.id !== id))}
         workspaceTables={[
-          ...tables.map((t) => ({ id: t.id, name: t.name, deletable: t.source !== 'code' })),
+          ...tables.map((t) => ({ id: t.id, name: t.name })),
           // Declared STATE TABLE blocks appear as read-only entries that open
           // the shared Fluid States window, tagged with their fluid.
           ...declaredStateDefs.map((s) => ({
             id: `state:${s.name}`,
             name: s.name,
             tag: s.fluid ?? 'States',
-            deletable: false,
           })),
         ]}
         tableCount={tables.length + declaredStateDefs.length}
@@ -3840,7 +3876,6 @@ export default function App() {
           const t = tables.find((x) => x.id === id)
           if (t) openTableWindow(t)
         }}
-        onDeleteTable={(id) => setTables((prev) => prev.filter((t) => t.id !== id))}
         onOpenStates={() => {
           const first = declaredStateDefs[0]
           if (first) dockRef.current?.openInstance(`state:${first.name}`, 'states', first.name)
@@ -3875,8 +3910,10 @@ export default function App() {
           onCheck={checkWithFallback}
           onSolve={checkThenSolve}
           onStop={onStop}
-          onCheckTable={() => { if (focusedParam) void onCheckTable(focusedParam.id) }}
-          onSolveTable={() => { if (focusedParam) void onSolveTable(focusedParam.id) }}
+          targetLabel={focusedParam ? `Table: ${focusedParam.name}` : 'Model'}
+          runBusy={solving || checking || solvingTableId !== null || checkingTableId !== null}
+          onCheckTable={() => { void checkTarget() }}
+          onSolveTable={() => { void solveTarget() }}
           onFindAllChange={(checked) => {
             setFindAll(checked)
             setResult(null)
@@ -3945,7 +3982,7 @@ export default function App() {
                 }
                 // The Inspector reflects the last-focused main window; focusing
                 // the auxiliary Inspector / Variable Explorer edge panels must not change it.
-                if (active && active.kind !== 'inspector' && active.kind !== 'workspace') {
+                if (active && active.kind !== 'inspector' && active.kind !== 'workspace' && active.kind !== 'terminal') {
                   setFocusedWindow(active)
                 }
               }}
@@ -4206,6 +4243,26 @@ export default function App() {
           setShareOffer(null)
           if (doc === null) return
           openSharedDocument(doc)
+        }}
+      />
+
+      <ConfirmModal
+        opened={confirmDelete !== null}
+        title={confirmDelete?.kind === 'plot' ? 'Delete plot' : 'Delete table'}
+        message={`Delete “${confirmDelete?.name ?? ''}”? Closing its window keeps it; deleting removes it from the project.`}
+        confirmLabel="Delete"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          const target = confirmDelete
+          setConfirmDelete(null)
+          if (!target) return
+          const exists = target.kind === 'table' ? tablesRef.current.some((t) => t.id === target.id) : plots.some((p) => p.id === target.id)
+          if (!exists) {
+            notifications.show({ color: 'orange', title: 'Nothing deleted', message: `“${target.name}” no longer exists.` })
+            return
+          }
+          if (target.kind === 'table') setTables((prev) => prev.filter((t) => t.id !== target.id))
+          else handlePlotsChange(plots.filter((p) => p.id !== target.id))
         }}
       />
 

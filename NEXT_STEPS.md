@@ -1132,7 +1132,7 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
     - the badges: "Lookup function — one curve" and "— multiple parameter values".
   - **Fluid state tables.** The rail's "Add fluid state table" opens the Fluid States window. The palette's item of the same name inserts a `STATE TABLE` block. `insertFunction` does not open a closed Editor, so that insert can fail silently.
   - **Delete paths.**
-    - The rail's Tables and Plots lists put a trash icon on the row that opens the window, with no confirmation and no undo. The workbook's own list delete has undo.
+    - The rail's Tables and Plots lists put a trash icon on the row that opens the window, with no confirmation. A deleted table could be brought back from the "Restore deleted tables" alert; a deleted plot could not. The workbook's own list delete has undo.
     - A parametric table in its own window can be deleted *only* from the rail.
     - The Inspector deletes plots but not tables.
     - Its "Remove Row" removes the last row (`slice(0, -1)`).
@@ -1154,14 +1154,15 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
   - Function-catalogue and documentation entries stay data-driven; schematic canvas commands keep `schematic/commands.ts`, and the palette maps them.
   - A command that is not available stays listed, greyed, with its reason as visible text, not hover-only. Example: Print Report reads "Solve first: the report prints the last successful solve."
   - Palette rows show their location and shortcut.
-- **N2 — one run-target resolver.**
+- **N2 — one run-target resolver.** *Done (2026-11-13).* `solveTarget`/`checkTarget` in `App.tsx` serve the toolbar and F2/F4; the Terminal joins the Inspector and Variables as a utility panel; `TopBar` shows the target (`data-testid="run-target"`) and Stop follows `runBusy`; the palette lists "Solve Model" and "Solve Table: ‹name›", and a table deleted after the palette was built is reported (`solveTableById`). `e2e/commands.spec.ts` covers focus → Inspector → F2.
+  - **Found while testing (open):** code-defined `PARAMETRIC` blocks never reach the browser. `api.ts` maps a check's `parametricTables` (and `codeTables`) to `[]` ("not produced by the wasm boundary yet"), and `crates/frees` emits neither. So the model-Check fallback to "the first code-defined parametric table" (`checkThenSolve`, `checkWithFallback`) never fires, and the gallery's PARAMETRIC examples (`projectile-trajectory`, `damped-oscillator`) show "Underspecified" with no table to run. This is an engine-boundary gap, not a Phase N change; it needs its own item.
   - The target is a focused parametric table, else the model. Utility panels (Inspector, Variables, Terminal) keep the last document's target.
   - The toolbar, F2 and F4, and the palette all use it. Solve always checks first. Check uses one fallback rule on every path.
   - The target is shown in text beside Check and Solve and named in their tooltips. The buttons keep their accessible names "Check" and "Solve".
   - The palette offers "Solve Model" plus "Solve Table: ‹name›" for each parametric table.
   - Stop follows the running job, not the focused window.
   - A menu captures its target when it opens. If that object is gone when the command runs, the command reports it and does nothing; it never redirects.
-- **N3 — names and destructive actions.**
+- **N3 — names and destructive actions.** *Done (2026-11-13).* `insertFunction` now opens the Editor window and waits for the lazily loaded editor, which fixes every insert, not only the fluid-state one. Delete table and Delete plot share a `ConfirmModal` (`dialogs.tsx`) that re-checks the captured target on confirm.
   - The canonical table labels above apply everywhere.
   - **New Fluid State Table** opens the Editor and inserts the block. **Open Fluid States** opens the window.
   - Trash leaves the rail rows. **Delete table** joins the Inspector for every user table, and both Delete table and Delete plot confirm.

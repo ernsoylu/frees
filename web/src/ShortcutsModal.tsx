@@ -17,8 +17,9 @@ interface Shortcut {
 }
 
 const SHORTCUTS: Shortcut[] = [
-  { keys: ['F2'], action: 'Check & Solve the system (or every table run)' },
-  { keys: ['F4'], action: 'Check — validate syntax and solvability' },
+  { keys: ['F2'], action: 'Check & Solve the run target: the focused parametric table, else the model' },
+  { keys: ['F4'], action: 'Check the run target — validate syntax and solvability' },
+  { keys: ['Esc'], action: 'Stop the running solve or table run' },
   { keys: [mod, 'K'], action: 'Open the command palette' },
   { keys: [mod, 'Space'], action: 'Autocomplete functions & variables (in the editor)' },
   { keys: ['?'], action: 'Show this shortcuts list' },
