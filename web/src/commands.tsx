@@ -239,7 +239,8 @@ export const MOBILE_MENU: readonly MenuEntry[] = [
 // --- The ribbon (Phase O): permanent tabs, then the contextual ones. ---
 
 export interface RibbonGroup { label: string; items: readonly CommandId[] }
-export interface RibbonTab { id: string; label: string; groups: readonly RibbonGroup[] }
+/** `slot` names a place after the groups where a window portals its own (Phase P, `ribbonSlots.ts`). */
+export interface RibbonTab { id: string; label: string; groups: readonly RibbonGroup[]; slot?: string }
 
 export const RIBBON_TABS: readonly RibbonTab[] = [
   { id: 'home', label: 'Home', groups: [
@@ -270,7 +271,7 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
     { label: 'Panels', items: ['view.variables', 'view.inspector', 'view.terminal'] },
     { label: 'Layouts', items: ['layout.default', 'layout.results', 'layout.split'] },
     { label: 'Appearance', items: ['view.theme', 'view.ribbon', 'app.preferences'] },
-  ] },
+  ], slot: 'view-schematic' },
   { id: 'help', label: 'Help', groups: [
     { label: 'Learn', items: ['help.gettingStarted', 'file.example', 'help.docs'] },
     { label: 'Reference', items: ['help.shortcuts', 'app.palette', 'app.about'] },
@@ -278,7 +279,7 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
 ]
 
 /** Contextual tabs: shown only while a window of their kind is focused. */
-export const CONTEXT_TABS: Record<'table' | 'plot' | 'digitizer', RibbonTab> = {
+export const CONTEXT_TABS: Record<'table' | 'plot' | 'schematic' | 'digitizer', RibbonTab> = {
   table: { id: 'ctx-table', label: 'Table', groups: [
     { label: 'Structure', items: ['table.configure', 'table.addRow', 'table.removeLastRow', 'table.fillColumn'] },
     { label: 'Edit', items: ['edit.undo', 'edit.redo'] },
@@ -289,6 +290,9 @@ export const CONTEXT_TABS: Record<'table' | 'plot' | 'digitizer', RibbonTab> = {
   plot: { id: 'ctx-plot', label: 'Plot', groups: [
     { label: 'Plot', items: ['plot.configure', 'plot.export', 'plot.inspect', 'plot.delete'] },
   ] },
+  // The canvas portals its own controls here: Sheets, Model, Edit, Arrange,
+  // Overlay, Annotate, Drawing Views, Zoom (schematic/SchematicTab.tsx).
+  schematic: { id: 'ctx-schematic', label: 'Schematic', groups: [], slot: 'schematic' },
   digitizer: { id: 'ctx-digitizer', label: 'Digitizer', groups: [
     { label: 'Steps', items: ['digitizer.image', 'digitizer.calibrate', 'digitizer.extract', 'digitizer.review', 'digitizer.useData'] },
   ] },

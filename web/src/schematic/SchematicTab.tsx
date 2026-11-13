@@ -1,5 +1,7 @@
-import { flushSync } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import { usePublishContext } from '../contextActions'
+import { RibbonGroup } from '../Ribbon'
+import { useRibbonSlots } from '../ribbonSlots'
 import { defaultSeries, SERIES_LABELS, seriesOptions, stepPreferred, type SeriesId } from '../preferredValues'
 import { createElement, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import {
@@ -1052,6 +1054,7 @@ export default function SchematicTab({
   }
 
   // Phase O: the ribbon's Undo and Redo reach the canvas timeline.
+  const { on: ribbonOn, slots: ribbonSlots } = useRibbonSlots()
   usePublishContext('schematic', {
     'edit.undo': { run: () => replay('undo'), unavailable: history.done.length ? null : 'Nothing to undo on the schematic.', description: history.done.length ? `Undo ${history.done.at(-1)!.label} on the schematic` : undefined },
     'edit.redo': { run: () => replay('redo'), unavailable: history.undone.length ? null : 'Nothing to redo on the schematic.', description: history.undone.length ? `Redo ${history.undone.at(-1)!.label} on the schematic` : undefined },
@@ -2464,6 +2467,498 @@ export default function SchematicTab({
   }
 
   const listNodes = layout.nodes.filter((n) => n.kind === 'instance')
+  // Toolbar controls, named so the ribbon (Phase P) can place them in its groups.
+  const sheetCtl = onPresentationChange && (
+      // Sheets apply at the top level; inside a subsystem the button stays, disabled, so the toolbar keeps its rows.
+      <Menu position="bottom-start" withinPortal disabled={!!scope}>
+        <Menu.Target>
+          {/* A badge-height button, so the toolbar row and the canvas keep their size. */}
+          <Badge component="button" size="xs" variant={sheet === MAIN ? 'default' : 'light'} color={sheet === MAIN ? 'gray' : 'teal'} data-testid="sheet-menu"
+            disabled={!!scope} title={scope ? 'Sheets apply to the top level of the model' : undefined} style={{ cursor: scope ? 'default' : 'pointer' }}>
+            Sheet: {sheetName(sheetState, sheet)}
+          </Badge>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Label>Sheets</Menu.Label>
+          {[MAIN, ...pres.sheets.map((sh) => sh.id)].map((id) => (
+            <Menu.Item key={id} onClick={() => showSheet(id)} aria-current={id === sheet ? 'page' : undefined} fw={id === sheet ? 700 : undefined}>
+              {sheetName(sheetState, id)}
+            </Menu.Item>
+          ))}
+          <Menu.Item onClick={() => setSheetDraft({ mode: 'new', name: `Sheet ${pres.sheets.length + 2}` })}>
+            {sheetBlocks().length ? 'New sheet from selection…' : 'New sheet…'}
+          </Menu.Item>
+          {sheet !== MAIN && <Menu.Item onClick={() => setSheetDraft({ mode: 'rename', name: sheetName(sheetState, sheet) })}>Rename sheet…</Menu.Item>}
+          {sheet !== MAIN && (
+            <Menu.Item color="red" onClick={() => { updatePres((p) => deleteSheet(p, sheet), `Delete sheet ${sheetName(sheetState, sheet)}`); showSheet(MAIN) }}>
+              Delete sheet (components stay)
+            </Menu.Item>
+          )}
+          <Menu.Divider />
+          <Menu.Label>Selected components ({sheetBlocks().length})</Menu.Label>
+          {[MAIN, ...pres.sheets.map((sh) => sh.id)].filter((id) => id !== sheet).flatMap((id) => [
+            <Menu.Item key={`move-${id}`} disabled={sheetBlocks().length === 0} onClick={() => sendToSheet(id, false)}>Move to {sheetName(sheetState, id)}</Menu.Item>,
+            <Menu.Item key={`also-${id}`} disabled={sheetBlocks().length === 0} onClick={() => sendToSheet(id, true)}>Also show on {sheetName(sheetState, id)}</Menu.Item>,
+          ])}
+          <Menu.Item disabled={sheetBlocks().length === 0} onClick={removeOccurrences}>Remove from this sheet</Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+  )
+  const connectCtl = onEmitStatement && (
+      <Group gap={6} wrap="nowrap">
+        <Select
+          size="xs"
+          placeholder="From port"
+          data={portChoices}
+          value={selectFrom}
+          onChange={setSelectFrom}
+          searchable
+          w={160}
+          aria-label="Connect from port"
+        />
+        <Select
+          size="xs"
+          placeholder="To port"
+          data={portChoices}
+          value={selectTo}
+          onChange={setSelectTo}
+          searchable
+          w={160}
+          aria-label="Connect to port"
+        />
+        <Button
+          size="compact-xs"
+          disabled={!selectFrom || !selectTo}
+          onClick={() => {
+            const a = parseChoice(selectFrom)
+            const b = parseChoice(selectTo)
+            if (a && b) tryConnect(endpointOf(a.instance, a.port), endpointOf(b.instance, b.port))
+          }}
+        >
+          Connect
+        </Button>
+      </Group>
+  )
+  const overlayCtl = (
+    <Popover position="bottom-end" withinPortal shadow="md">
+      <Popover.Target>
+        <Button size="compact-xs" variant={metric || overlaySet.arrows || overlaySet.particles || overlaySet.power ? 'light' : 'subtle'} color="gray">
+          Overlay
+        </Button>
+      </Popover.Target>
+      <Popover.Dropdown p={8}>
+        <Stack gap={6} w={220} data-testid="overlay-settings">
+          <Select
+            size="xs"
+            label="Colour wires by"
+            data={[{ value: '', label: 'Nothing' }, ...metrics.map((m) => ({ value: m.key, label: `${m.label} [${m.units || '-'}]` }))]}
+            value={metric?.key ?? ''}
+            onChange={(v) => setOverlay({ metric: v ?? '' })}
+            comboboxProps={{ withinPortal: false }}
+          />
+          {metric && !byPhase && canDiverge(metric) && (
+            <NumberInput
+              size="xs"
+              label={`Reference [${metric.units || '-'}]`}
+              description={overlayRead?.reference === null ? 'None for this unit: a plain range' : 'The neutral middle of the scale'}
+              value={scaleSet.reference ?? overlayRead?.reference ?? ''}
+              onChange={(v) => setScale({ ...scaleSet, reference: typeof v === 'number' ? v : undefined })}
+            />
+          )}
+          {metric && !byPhase && (
+            <Switch
+              size="xs"
+              label="Fixed range"
+              checked={scaleSet.min !== undefined}
+              onChange={(e) => {
+                const { min: _min, max: _max, ...rest } = scaleSet
+                const [lo, hi] = [overlayRead?.min, overlayRead?.max]
+                setScale(e.currentTarget.checked && Number.isFinite(lo) && Number.isFinite(hi) && lo! < hi! ? { ...rest, min: lo, max: hi } : rest)
+              }}
+            />
+          )}
+          {metric && !byPhase && scaleSet.min !== undefined && (
+            <Group gap={6} grow>
+              <NumberInput size="xs" label="From" value={scaleSet.min} onChange={(v) => typeof v === 'number' && v < scaleSet.max! && setScale({ ...scaleSet, min: v })} />
+              <NumberInput size="xs" label="To" value={scaleSet.max} onChange={(v) => typeof v === 'number' && v > scaleSet.min! && setScale({ ...scaleSet, max: v })} />
+            </Group>
+          )}
+          <Switch size="xs" label="Measured flow arrows" checked={overlaySet.arrows} onChange={(e) => setOverlay({ arrows: e.currentTarget.checked })} />
+          <Switch size="xs" label="Flow particles" checked={overlaySet.particles === true} onChange={(e) => setOverlay({ particles: e.currentTarget.checked })} />
+          <Switch size="xs" label="Fill blocks by power" checked={overlaySet.power === true} onChange={(e) => setOverlay({ power: e.currentTarget.checked })} />
+          {overlaySet.particles && (
+            <Select
+              size="xs"
+              label="Schematic speed (not a physical velocity)"
+              data={PARTICLE_SPEEDS.map((v) => ({ value: String(v), label: `×${v}` }))}
+              value={String(particleSpeed)}
+              onChange={(v) => setOverlay({ speed: Number(v ?? 1) })}
+              comboboxProps={{ withinPortal: false }}
+            />
+          )}
+          {overlaySet.particles && reducedMotion && (
+            <Text size="xs" c="dimmed" data-testid="particles-reduced">
+              Reduced motion is on: no moving particles; colour and arrows show the flow.
+            </Text>
+          )}
+          {metrics.length === 0 && (
+            <Text size="xs" c="dimmed">
+              Solve to colour wires by a result.
+            </Text>
+          )}
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
+  )
+  const annotateCtl = (
+    <Menu position="bottom-end" withinPortal>
+      <Menu.Target>
+        <Button size="compact-xs" variant="subtle" color="gray">
+          Annotate
+        </Button>
+      </Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Item onClick={() => annotate('note')}>Note</Menu.Item>
+        <Menu.Item
+          disabled={!(selection.length === 1 && positioned.has(selection[0]))}
+          onClick={() => {
+            const n = positioned.get(selection[0])!
+            annotate('callout', selection[0], { x: n.x + n.w + 30, y: n.y - 50 })
+          }}
+        >
+          {selection.length === 1 && positioned.has(selection[0]) ? `Callout to ${positioned.get(selection[0])!.label}` : 'Callout — select one block first'}
+        </Menu.Item>
+        <Menu.Item disabled={legendRows.length === 0} onClick={() => annotate('legend')}>
+          Legend
+        </Menu.Item>
+        <Menu.Label>Insight on the selected blocks</Menu.Label>
+        {selectedInsights.length === 0 ? (
+          <Menu.Item disabled>{selection.length ? 'None fits these blocks' : 'Select blocks first'}</Menu.Item>
+        ) : (
+          selectedInsights.map((i) => (
+            <Menu.Item
+              key={i.kind}
+              onClick={() => {
+                const n = positioned.get(selection[0])!
+                annotate('insight', `${i.kind}:${[...selection].sort((a, b) => a.localeCompare(b)).join(',')}`, { x: n.x + n.w + 30, y: n.y - 60 })
+              }}
+            >
+              {i.label}
+            </Menu.Item>
+          ))
+        )}
+      </Menu.Dropdown>
+    </Menu>
+  )
+  const viewsCtl = (
+    <Popover position="bottom-end" withinPortal shadow="md">
+      <Popover.Target>
+        <Button size="compact-xs" variant="subtle" color="gray">
+          Views
+        </Button>
+      </Popover.Target>
+      <Popover.Dropdown p={8}>
+        <Stack gap={6} w={240} data-testid="views">
+          <Text size="xs" fw={600}>Presets</Text>
+          <Group gap={4}>
+            {(['names', 'engineering', 'debug', 'presentation'] as ViewPreset[]).map((k) => (
+              <Button key={k} size="compact-xs" variant="default" onClick={() => updatePres((p) => applyPreset(p, k), `Apply ${k} preset`)}>
+                {k[0].toUpperCase() + k.slice(1)}
+              </Button>
+            ))}
+          </Group>
+          <Text size="xs" fw={600}>Saved views</Text>
+          {savedViews.length === 0 && (
+            <Text size="xs" c="dimmed">
+              None yet.
+            </Text>
+          )}
+          {savedViews.map((v) => (
+            <Group key={v.name} gap={4} wrap="nowrap">
+              <Button size="compact-xs" variant="subtle" color="gray" justify="flex-start" style={{ flex: 1 }} disabled={viewGone(v)} title={viewGone(v) ? 'What it looked at is no longer in the model.' : undefined} onClick={() => applyView(v)}>
+                {v.name}
+              </Button>
+              <ActionIcon size="xs" variant="subtle" color="gray" aria-label={`Delete view ${v.name}`} onClick={() => updatePres((p) => ({ ...p, views: (p.views ?? []).filter((x) => x.name !== v.name) }), `Delete view ${v.name}`)}>
+                <IconTrash size={12} />
+              </ActionIcon>
+            </Group>
+          ))}
+          <Group gap={4} wrap="nowrap">
+            <TextInput size="xs" style={{ flex: 1 }} placeholder="Name this view" aria-label="View name" maxLength={60} value={viewName} onChange={(e) => setViewName(e.currentTarget.value)} />
+            <Button
+              size="compact-xs"
+              disabled={!viewName.trim()}
+              onClick={() => {
+                saveView(viewName.trim())
+                setViewName('')
+              }}
+            >
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
+  )
+  const listCtl = (
+    <Button size="compact-xs" variant={listOpen ? 'light' : 'subtle'} color="gray" aria-pressed={listOpen} onClick={() => setListOpen((o) => !o)}>
+      List
+    </Button>
+  )
+  const editCtl = onSourceEdit && (
+      <Menu position="bottom-end" withinPortal>
+        <Menu.Target>
+          <Button size="compact-xs" variant="subtle" color="gray" aria-label="Edit components">
+            Edit
+          </Button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item onClick={() => pasteHere(fragmentOf(), 'Duplicate')} disabled={selection.length === 0} rightSection={<Kbd size="xs">Ctrl D</Kbd>}>Duplicate</Menu.Item>
+          <Menu.Item onClick={copySelection} disabled={selection.length === 0} rightSection={<Kbd size="xs">Ctrl C</Kbd>}>Copy</Menu.Item>
+          <Menu.Item onClick={() => copySelection() && requestDelete()} disabled={selection.length === 0} rightSection={<Kbd size="xs">Ctrl X</Kbd>}>Cut</Menu.Item>
+          <Menu.Item onClick={() => pasteHere(loadFragment(), 'Paste')} rightSection={<Kbd size="xs">Ctrl V</Kbd>}>Paste</Menu.Item>
+          <Menu.Item onClick={startExtract} disabled={selection.length === 0}>Extract subsystem…</Menu.Item>
+          <Menu.Item onClick={() => exportType && setExporting({ type: exportType, description: '' })} disabled={!exportType}>Export component…</Menu.Item>
+          <Menu.Item onClick={() => importInput.current?.click()}>Import components…</Menu.Item>
+          <Menu.Divider />
+          <Menu.Item color="red" onClick={() => requestDelete()} disabled={selection.length === 0} rightSection={<Kbd size="xs">Del</Kbd>}>Delete…</Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+  )
+  const selectCtl = (
+    <Menu position="bottom-end" withinPortal>
+      <Menu.Target>
+        <Button size="compact-xs" variant="subtle" color="gray">
+          Select
+        </Button>
+      </Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Label>Shift+click or Shift+drag adds</Menu.Label>
+        <Menu.Item onClick={selectAll} rightSection={<Kbd size="xs">Ctrl A</Kbd>}>
+          All
+        </Menu.Item>
+        <Menu.Item onClick={selectConnected} disabled={selection.length === 0}>
+          Connected
+        </Menu.Item>
+        <Menu.Item onClick={selectDomain} disabled={selection.length === 0}>
+          Same domain
+        </Menu.Item>
+        <Menu.Item onClick={clearSelection} disabled={selection.length === 0} rightSection={<Kbd size="xs">Esc</Kbd>}>
+          None
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
+  )
+  const arrangeCtl = (
+    <Menu position="bottom-end" withinPortal>
+      <Menu.Target>
+        <Button size="compact-xs" variant="subtle" color="gray">
+          Arrange
+        </Button>
+      </Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Item onClick={() => previewArrange('selection')} disabled={selection.length === 0}>Arrange selection</Menu.Item>
+        <Menu.Item onClick={() => previewArrange('circuit')} disabled={selection.length === 0}>Arrange circuit</Menu.Item>
+        <Menu.Item onClick={() => previewArrange('all')}>Arrange all</Menu.Item>
+        <Menu.Divider />
+        {ARRANGE_ITEMS.map((item) =>
+          item === null ? (
+            <Menu.Divider key="divider" />
+          ) : (
+            <Menu.Item
+              key={item.op}
+              onClick={() => arrange(item.op)}
+              disabled={selection.length < (item.op.startsWith('spread') ? 3 : 2)}
+            >
+              {item.label}
+            </Menu.Item>
+          )
+        )}
+        <Menu.Divider />
+        {selection.length > 0 && selection.every((id) => lockedIds.has(id)) ? (
+          <Menu.Item onClick={() => lockSelection(false)}>Unlock position</Menu.Item>
+        ) : (
+          <Menu.Item onClick={() => lockSelection(true)} disabled={selection.length === 0}>Lock position</Menu.Item>
+        )}
+        <Menu.Item onClick={() => setAreaName(`Area ${pres.areas.length + 1}`)} disabled={selection.length === 0}>Frame as area…</Menu.Item>
+        <Menu.Item onClick={removeAreas} disabled={!pres.areas.some((a) => a.members.some((m) => selection.includes(m)))}>
+          Remove area
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
+  )
+  const viewSettingsCtl = (
+    <Popover position="bottom-end" withinPortal shadow="md">
+      <Popover.Target>
+        <ActionIcon size="sm" variant="subtle" aria-label="View settings" title="View settings">
+          <IconAdjustments size={15} />
+        </ActionIcon>
+      </Popover.Target>
+      <Popover.Dropdown>
+        <Stack gap={6} w={270}>
+          {VIEW_CHOICES.map((c) => (
+            <div key={c.key}>
+              <Text size="xs" c="dimmed" mb={2}>
+                {c.label}
+              </Text>
+              <SegmentedControl
+                size="xs"
+                fullWidth
+                aria-label={c.label}
+                value={String(settings[c.key])}
+                data={c.data.map(([value, label]) => ({ value, label }))}
+                onChange={(v) => setSettings((s) => ({ ...s, [c.key]: c.key === 'grid' ? Number(v) : v }) as ViewSettings)}
+              />
+            </div>
+          ))}
+          <Switch size="xs" label="Snap to grid" checked={settings.snap} onChange={(e) => toggle('snap', e.currentTarget.checked)} />
+          <Switch size="xs" label="Alignment guides" checked={settings.guides} onChange={(e) => toggle('guides', e.currentTarget.checked)} />
+          <Switch size="xs" label="Port names" checked={settings.portLabels} onChange={(e) => toggle('portLabels', e.currentTarget.checked)} />
+          <Text size="xs" c="dimmed">
+            Keys on the drawing (this browser)
+          </Text>
+          <Group gap={6} grow>
+            {(Object.keys(REMAPPABLE) as Remappable[]).map((id) => (
+              <TextInput
+                key={id}
+                size="xs"
+                label={{ add: 'Add', list: 'List', search: 'Search' }[id]}
+                aria-label={`Key for ${CANVAS_COMMANDS.find((c) => c.id === id)!.label}`}
+                value={keys[id].toUpperCase()}
+                error={keyNote?.id === id ? keyNote.text : undefined}
+                onKeyDown={(e) => {
+                  // The pressed key is the binding; Tab and Escape keep their jobs.
+                  if (e.key === 'Tab' || e.key === 'Escape' || e.ctrlKey || e.metaKey || e.altKey) return
+                  e.preventDefault()
+                  rebind(id, e.key)
+                }}
+                onChange={() => {}}
+              />
+            ))}
+          </Group>
+          {lineKinds.length > 0 && (
+            <Text size="xs" c="dimmed">
+              Line colours (the dash pattern stays)
+            </Text>
+          )}
+          {lineKinds.map((kind) => {
+            const chosen = pres.lineColors?.[kind]
+            return (
+              <div key={kind}>
+                <ColorInput
+                  size="xs"
+                  label={kind}
+                  aria-label={`${kind} line colour`}
+                  placeholder="Default"
+                  format="hex"
+                  value={chosen ?? ''}
+                  onChange={(v) => {
+                    const next = /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : undefined
+                    if (next === chosen) return
+                    updatePres((p) => {
+                      const { [kind]: _, ...rest } = p.lineColors ?? {}
+                      return { ...p, lineColors: next ? { ...rest, [kind]: next } : rest }
+                    }, `Colour ${kind} lines`)
+                  }}
+                />
+                {chosen && !fits(chosen, scheme) && (
+                  <Text size="xs" c="orange" data-line-faint={kind}>
+                    Too faint on this theme; the default is drawn here.
+                  </Text>
+                )}
+              </div>
+            )
+          })}
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
+  )
+  const zoomOutCtl = (
+    <Tooltip label="Zoom out">
+      <ActionIcon size="sm" variant="subtle" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.25)}>
+        <IconZoomOut size={15} />
+      </ActionIcon>
+    </Tooltip>
+  )
+  const zoomInCtl = (
+    <Tooltip label="Zoom in">
+      <ActionIcon size="sm" variant="subtle" aria-label="Zoom in" onClick={() => zoomBy(1.25)}>
+        <IconZoomIn size={15} />
+      </ActionIcon>
+    </Tooltip>
+  )
+  const zoomLevelCtl = (
+    <Menu position="bottom-end" withinPortal>
+      <Menu.Target>
+        <Button size="compact-xs" variant="subtle" color="gray" aria-label="Zoom level" miw={48}>
+          {Math.round(zoom * 100)}%
+        </Button>
+      </Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Item onClick={fit} rightSection={<Kbd size="xs">⇧1</Kbd>}>Fit all</Menu.Item>
+        <Menu.Item onClick={fitSelection} disabled={selection.length === 0} rightSection={<Kbd size="xs">⇧2</Kbd>}>
+          Fit selection
+        </Menu.Item>
+        <Menu.Divider />
+        {[0.5, 1, 2].map((z) => (
+          <Menu.Item
+            key={z}
+            onClick={() => zoomBy(z / zoom)}
+            rightSection={z === 1 ? <Kbd size="xs">⇧0</Kbd> : undefined}
+          >
+            {z * 100}%
+          </Menu.Item>
+        ))}
+      </Menu.Dropdown>
+    </Menu>
+  )
+  const undoCtl = (
+    <Tooltip label={history.done.length ? `Undo ${history.done.at(-1)!.label} (Ctrl+Z)` : 'Nothing to undo'}>
+      <ActionIcon size="sm" variant="subtle" aria-label="Undo" disabled={!history.done.length} onClick={() => replay('undo')}>
+        <IconArrowBackUp size={15} />
+      </ActionIcon>
+    </Tooltip>
+  )
+  const redoCtl = (
+    <Tooltip label={history.undone.length ? `Redo ${history.undone.at(-1)!.label} (Ctrl+Shift+Z)` : 'Nothing to redo'}>
+      <ActionIcon size="sm" variant="subtle" aria-label="Redo" disabled={!history.undone.length} onClick={() => replay('redo')}>
+        <IconArrowForwardUp size={15} />
+      </ActionIcon>
+    </Tooltip>
+  )
+  const addCtl = onSourceEdit && !sourceBroken && (
+      <Tooltip label="Add component (A, or double-click the canvas)">
+        <ActionIcon size="sm" variant="subtle" aria-label="Add component" onClick={() => openQuickAdd()}>
+          <IconPlus size={15} />
+        </ActionIcon>
+      </Tooltip>
+  )
+  const fitCtl = (
+    <Tooltip label="Fit all (Shift+1)">
+      <ActionIcon size="sm" variant="subtle" aria-label="Fit to window" onClick={fit}>
+        <IconArrowsMaximize size={15} />
+      </ActionIcon>
+    </Tooltip>
+  )
+  const resetCtl = (
+    <Tooltip label="Reset layout (Arrange all)">
+      <ActionIcon
+        size="sm"
+        variant="subtle"
+        aria-label="Reset layout"
+        onClick={() => previewArrange('all')}
+      >
+        <IconLayoutGrid size={15} />
+      </ActionIcon>
+    </Tooltip>
+  )
+  const exportCtl = (
+    <Tooltip label="Export drawing (SVG, PNG, print)">
+      <ActionIcon size="sm" variant="subtle" aria-label="Export…" onClick={() => setExportOpts((o) => o ?? { ...EXPORT_DEFAULTS, region: selection.length > 0 ? 'selection' : 'model' })}>
+        <IconDownload size={15} />
+      </ActionIcon>
+    </Tooltip>
+  )
 
   return (
     <Stack gap={4} h="100%" style={{ minHeight: 0, position: 'relative' }}>
@@ -2482,42 +2977,7 @@ export default function SchematicTab({
             </Group>
           )
         })}
-        {onPresentationChange && (
-          // Sheets apply at the top level; inside a subsystem the button stays, disabled, so the toolbar keeps its rows.
-          <Menu position="bottom-start" withinPortal disabled={!!scope}>
-            <Menu.Target>
-              {/* A badge-height button, so the toolbar row and the canvas keep their size. */}
-              <Badge component="button" size="xs" variant={sheet === MAIN ? 'default' : 'light'} color={sheet === MAIN ? 'gray' : 'teal'} data-testid="sheet-menu"
-                disabled={!!scope} title={scope ? 'Sheets apply to the top level of the model' : undefined} style={{ cursor: scope ? 'default' : 'pointer' }}>
-                Sheet: {sheetName(sheetState, sheet)}
-              </Badge>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Sheets</Menu.Label>
-              {[MAIN, ...pres.sheets.map((sh) => sh.id)].map((id) => (
-                <Menu.Item key={id} onClick={() => showSheet(id)} aria-current={id === sheet ? 'page' : undefined} fw={id === sheet ? 700 : undefined}>
-                  {sheetName(sheetState, id)}
-                </Menu.Item>
-              ))}
-              <Menu.Item onClick={() => setSheetDraft({ mode: 'new', name: `Sheet ${pres.sheets.length + 2}` })}>
-                {sheetBlocks().length ? 'New sheet from selection…' : 'New sheet…'}
-              </Menu.Item>
-              {sheet !== MAIN && <Menu.Item onClick={() => setSheetDraft({ mode: 'rename', name: sheetName(sheetState, sheet) })}>Rename sheet…</Menu.Item>}
-              {sheet !== MAIN && (
-                <Menu.Item color="red" onClick={() => { updatePres((p) => deleteSheet(p, sheet), `Delete sheet ${sheetName(sheetState, sheet)}`); showSheet(MAIN) }}>
-                  Delete sheet (components stay)
-                </Menu.Item>
-              )}
-              <Menu.Divider />
-              <Menu.Label>Selected components ({sheetBlocks().length})</Menu.Label>
-              {[MAIN, ...pres.sheets.map((sh) => sh.id)].filter((id) => id !== sheet).flatMap((id) => [
-                <Menu.Item key={`move-${id}`} disabled={sheetBlocks().length === 0} onClick={() => sendToSheet(id, false)}>Move to {sheetName(sheetState, id)}</Menu.Item>,
-                <Menu.Item key={`also-${id}`} disabled={sheetBlocks().length === 0} onClick={() => sendToSheet(id, true)}>Also show on {sheetName(sheetState, id)}</Menu.Item>,
-              ])}
-              <Menu.Item disabled={sheetBlocks().length === 0} onClick={removeOccurrences}>Remove from this sheet</Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        )}
+        {sheetCtl}
         {netDraft && (
           <Group gap={4} wrap="nowrap">
             <TextInput
@@ -2702,41 +3162,7 @@ export default function SchematicTab({
             connections appear after Check
           </Text>
         ))}
-        {onEmitStatement && (
-          <Group gap={6} wrap="nowrap">
-            <Select
-              size="xs"
-              placeholder="From port"
-              data={portChoices}
-              value={selectFrom}
-              onChange={setSelectFrom}
-              searchable
-              w={160}
-              aria-label="Connect from port"
-            />
-            <Select
-              size="xs"
-              placeholder="To port"
-              data={portChoices}
-              value={selectTo}
-              onChange={setSelectTo}
-              searchable
-              w={160}
-              aria-label="Connect to port"
-            />
-            <Button
-              size="compact-xs"
-              disabled={!selectFrom || !selectTo}
-              onClick={() => {
-                const a = parseChoice(selectFrom)
-                const b = parseChoice(selectTo)
-                if (a && b) tryConnect(endpointOf(a.instance, a.port), endpointOf(b.instance, b.port))
-              }}
-            >
-              Connect
-            </Button>
-          </Group>
-        )}
+        {!ribbonOn && connectCtl}
         {areaName !== null && (
           <Group gap={4} wrap="nowrap">
             <TextInput
@@ -2834,161 +3260,9 @@ export default function SchematicTab({
               {selection.length} selected
             </Badge>
           )}
-          <Popover position="bottom-end" withinPortal shadow="md">
-            <Popover.Target>
-              <Button size="compact-xs" variant={metric || overlaySet.arrows || overlaySet.particles || overlaySet.power ? 'light' : 'subtle'} color="gray">
-                Overlay
-              </Button>
-            </Popover.Target>
-            <Popover.Dropdown p={8}>
-              <Stack gap={6} w={220} data-testid="overlay-settings">
-                <Select
-                  size="xs"
-                  label="Colour wires by"
-                  data={[{ value: '', label: 'Nothing' }, ...metrics.map((m) => ({ value: m.key, label: `${m.label} [${m.units || '-'}]` }))]}
-                  value={metric?.key ?? ''}
-                  onChange={(v) => setOverlay({ metric: v ?? '' })}
-                  comboboxProps={{ withinPortal: false }}
-                />
-                {metric && !byPhase && canDiverge(metric) && (
-                  <NumberInput
-                    size="xs"
-                    label={`Reference [${metric.units || '-'}]`}
-                    description={overlayRead?.reference === null ? 'None for this unit: a plain range' : 'The neutral middle of the scale'}
-                    value={scaleSet.reference ?? overlayRead?.reference ?? ''}
-                    onChange={(v) => setScale({ ...scaleSet, reference: typeof v === 'number' ? v : undefined })}
-                  />
-                )}
-                {metric && !byPhase && (
-                  <Switch
-                    size="xs"
-                    label="Fixed range"
-                    checked={scaleSet.min !== undefined}
-                    onChange={(e) => {
-                      const { min: _min, max: _max, ...rest } = scaleSet
-                      const [lo, hi] = [overlayRead?.min, overlayRead?.max]
-                      setScale(e.currentTarget.checked && Number.isFinite(lo) && Number.isFinite(hi) && lo! < hi! ? { ...rest, min: lo, max: hi } : rest)
-                    }}
-                  />
-                )}
-                {metric && !byPhase && scaleSet.min !== undefined && (
-                  <Group gap={6} grow>
-                    <NumberInput size="xs" label="From" value={scaleSet.min} onChange={(v) => typeof v === 'number' && v < scaleSet.max! && setScale({ ...scaleSet, min: v })} />
-                    <NumberInput size="xs" label="To" value={scaleSet.max} onChange={(v) => typeof v === 'number' && v > scaleSet.min! && setScale({ ...scaleSet, max: v })} />
-                  </Group>
-                )}
-                <Switch size="xs" label="Measured flow arrows" checked={overlaySet.arrows} onChange={(e) => setOverlay({ arrows: e.currentTarget.checked })} />
-                <Switch size="xs" label="Flow particles" checked={overlaySet.particles === true} onChange={(e) => setOverlay({ particles: e.currentTarget.checked })} />
-                <Switch size="xs" label="Fill blocks by power" checked={overlaySet.power === true} onChange={(e) => setOverlay({ power: e.currentTarget.checked })} />
-                {overlaySet.particles && (
-                  <Select
-                    size="xs"
-                    label="Schematic speed (not a physical velocity)"
-                    data={PARTICLE_SPEEDS.map((v) => ({ value: String(v), label: `×${v}` }))}
-                    value={String(particleSpeed)}
-                    onChange={(v) => setOverlay({ speed: Number(v ?? 1) })}
-                    comboboxProps={{ withinPortal: false }}
-                  />
-                )}
-                {overlaySet.particles && reducedMotion && (
-                  <Text size="xs" c="dimmed" data-testid="particles-reduced">
-                    Reduced motion is on: no moving particles; colour and arrows show the flow.
-                  </Text>
-                )}
-                {metrics.length === 0 && (
-                  <Text size="xs" c="dimmed">
-                    Solve to colour wires by a result.
-                  </Text>
-                )}
-              </Stack>
-            </Popover.Dropdown>
-          </Popover>
-          <Menu position="bottom-end" withinPortal>
-            <Menu.Target>
-              <Button size="compact-xs" variant="subtle" color="gray">
-                Annotate
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item onClick={() => annotate('note')}>Note</Menu.Item>
-              <Menu.Item
-                disabled={!(selection.length === 1 && positioned.has(selection[0]))}
-                onClick={() => {
-                  const n = positioned.get(selection[0])!
-                  annotate('callout', selection[0], { x: n.x + n.w + 30, y: n.y - 50 })
-                }}
-              >
-                {selection.length === 1 && positioned.has(selection[0]) ? `Callout to ${positioned.get(selection[0])!.label}` : 'Callout — select one block first'}
-              </Menu.Item>
-              <Menu.Item disabled={legendRows.length === 0} onClick={() => annotate('legend')}>
-                Legend
-              </Menu.Item>
-              <Menu.Label>Insight on the selected blocks</Menu.Label>
-              {selectedInsights.length === 0 ? (
-                <Menu.Item disabled>{selection.length ? 'None fits these blocks' : 'Select blocks first'}</Menu.Item>
-              ) : (
-                selectedInsights.map((i) => (
-                  <Menu.Item
-                    key={i.kind}
-                    onClick={() => {
-                      const n = positioned.get(selection[0])!
-                      annotate('insight', `${i.kind}:${[...selection].sort((a, b) => a.localeCompare(b)).join(',')}`, { x: n.x + n.w + 30, y: n.y - 60 })
-                    }}
-                  >
-                    {i.label}
-                  </Menu.Item>
-                ))
-              )}
-            </Menu.Dropdown>
-          </Menu>
-          <Popover position="bottom-end" withinPortal shadow="md">
-            <Popover.Target>
-              <Button size="compact-xs" variant="subtle" color="gray">
-                Views
-              </Button>
-            </Popover.Target>
-            <Popover.Dropdown p={8}>
-              <Stack gap={6} w={240} data-testid="views">
-                <Text size="xs" fw={600}>Presets</Text>
-                <Group gap={4}>
-                  {(['names', 'engineering', 'debug', 'presentation'] as ViewPreset[]).map((k) => (
-                    <Button key={k} size="compact-xs" variant="default" onClick={() => updatePres((p) => applyPreset(p, k), `Apply ${k} preset`)}>
-                      {k[0].toUpperCase() + k.slice(1)}
-                    </Button>
-                  ))}
-                </Group>
-                <Text size="xs" fw={600}>Saved views</Text>
-                {savedViews.length === 0 && (
-                  <Text size="xs" c="dimmed">
-                    None yet.
-                  </Text>
-                )}
-                {savedViews.map((v) => (
-                  <Group key={v.name} gap={4} wrap="nowrap">
-                    <Button size="compact-xs" variant="subtle" color="gray" justify="flex-start" style={{ flex: 1 }} disabled={viewGone(v)} title={viewGone(v) ? 'What it looked at is no longer in the model.' : undefined} onClick={() => applyView(v)}>
-                      {v.name}
-                    </Button>
-                    <ActionIcon size="xs" variant="subtle" color="gray" aria-label={`Delete view ${v.name}`} onClick={() => updatePres((p) => ({ ...p, views: (p.views ?? []).filter((x) => x.name !== v.name) }), `Delete view ${v.name}`)}>
-                      <IconTrash size={12} />
-                    </ActionIcon>
-                  </Group>
-                ))}
-                <Group gap={4} wrap="nowrap">
-                  <TextInput size="xs" style={{ flex: 1 }} placeholder="Name this view" aria-label="View name" maxLength={60} value={viewName} onChange={(e) => setViewName(e.currentTarget.value)} />
-                  <Button
-                    size="compact-xs"
-                    disabled={!viewName.trim()}
-                    onClick={() => {
-                      saveView(viewName.trim())
-                      setViewName('')
-                    }}
-                  >
-                    Save
-                  </Button>
-                </Group>
-              </Stack>
-            </Popover.Dropdown>
-          </Popover>
+          {!ribbonOn && overlayCtl}
+          {!ribbonOn && annotateCtl}
+          {!ribbonOn && viewsCtl}
           <Popover opened={searchOpen} onChange={setSearchOpen} position="bottom-end" withinPortal shadow="md">
             <Popover.Target>
               <Button size="compact-xs" variant={searchOpen ? 'light' : 'subtle'} color="gray" onClick={() => setSearchOpen((o) => !o)}>
@@ -3027,242 +3301,42 @@ export default function SchematicTab({
               </Stack>
             </Popover.Dropdown>
           </Popover>
-          <Button size="compact-xs" variant={listOpen ? 'light' : 'subtle'} color="gray" aria-pressed={listOpen} onClick={() => setListOpen((o) => !o)}>
-            List
-          </Button>
-          {onSourceEdit && (
-            <Menu position="bottom-end" withinPortal>
-              <Menu.Target>
-                <Button size="compact-xs" variant="subtle" color="gray" aria-label="Edit components">
-                  Edit
-                </Button>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item onClick={() => pasteHere(fragmentOf(), 'Duplicate')} disabled={selection.length === 0} rightSection={<Kbd size="xs">Ctrl D</Kbd>}>Duplicate</Menu.Item>
-                <Menu.Item onClick={copySelection} disabled={selection.length === 0} rightSection={<Kbd size="xs">Ctrl C</Kbd>}>Copy</Menu.Item>
-                <Menu.Item onClick={() => copySelection() && requestDelete()} disabled={selection.length === 0} rightSection={<Kbd size="xs">Ctrl X</Kbd>}>Cut</Menu.Item>
-                <Menu.Item onClick={() => pasteHere(loadFragment(), 'Paste')} rightSection={<Kbd size="xs">Ctrl V</Kbd>}>Paste</Menu.Item>
-                <Menu.Item onClick={startExtract} disabled={selection.length === 0}>Extract subsystem…</Menu.Item>
-                <Menu.Item onClick={() => exportType && setExporting({ type: exportType, description: '' })} disabled={!exportType}>Export component…</Menu.Item>
-                <Menu.Item onClick={() => importInput.current?.click()}>Import components…</Menu.Item>
-                <Menu.Divider />
-                <Menu.Item color="red" onClick={() => requestDelete()} disabled={selection.length === 0} rightSection={<Kbd size="xs">Del</Kbd>}>Delete…</Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          )}
-          <Menu position="bottom-end" withinPortal>
-            <Menu.Target>
-              <Button size="compact-xs" variant="subtle" color="gray">
-                Select
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>Shift+click or Shift+drag adds</Menu.Label>
-              <Menu.Item onClick={selectAll} rightSection={<Kbd size="xs">Ctrl A</Kbd>}>
-                All
-              </Menu.Item>
-              <Menu.Item onClick={selectConnected} disabled={selection.length === 0}>
-                Connected
-              </Menu.Item>
-              <Menu.Item onClick={selectDomain} disabled={selection.length === 0}>
-                Same domain
-              </Menu.Item>
-              <Menu.Item onClick={clearSelection} disabled={selection.length === 0} rightSection={<Kbd size="xs">Esc</Kbd>}>
-                None
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-          <Menu position="bottom-end" withinPortal>
-            <Menu.Target>
-              <Button size="compact-xs" variant="subtle" color="gray">
-                Arrange
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item onClick={() => previewArrange('selection')} disabled={selection.length === 0}>Arrange selection</Menu.Item>
-              <Menu.Item onClick={() => previewArrange('circuit')} disabled={selection.length === 0}>Arrange circuit</Menu.Item>
-              <Menu.Item onClick={() => previewArrange('all')}>Arrange all</Menu.Item>
-              <Menu.Divider />
-              {ARRANGE_ITEMS.map((item) =>
-                item === null ? (
-                  <Menu.Divider key="divider" />
-                ) : (
-                  <Menu.Item
-                    key={item.op}
-                    onClick={() => arrange(item.op)}
-                    disabled={selection.length < (item.op.startsWith('spread') ? 3 : 2)}
-                  >
-                    {item.label}
-                  </Menu.Item>
-                )
-              )}
-              <Menu.Divider />
-              {selection.length > 0 && selection.every((id) => lockedIds.has(id)) ? (
-                <Menu.Item onClick={() => lockSelection(false)}>Unlock position</Menu.Item>
-              ) : (
-                <Menu.Item onClick={() => lockSelection(true)} disabled={selection.length === 0}>Lock position</Menu.Item>
-              )}
-              <Menu.Item onClick={() => setAreaName(`Area ${pres.areas.length + 1}`)} disabled={selection.length === 0}>Frame as area…</Menu.Item>
-              <Menu.Item onClick={removeAreas} disabled={!pres.areas.some((a) => a.members.some((m) => selection.includes(m)))}>
-                Remove area
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-          <Popover position="bottom-end" withinPortal shadow="md">
-            <Popover.Target>
-              <ActionIcon size="sm" variant="subtle" aria-label="View settings" title="View settings">
-                <IconAdjustments size={15} />
-              </ActionIcon>
-            </Popover.Target>
-            <Popover.Dropdown>
-              <Stack gap={6} w={270}>
-                {VIEW_CHOICES.map((c) => (
-                  <div key={c.key}>
-                    <Text size="xs" c="dimmed" mb={2}>
-                      {c.label}
-                    </Text>
-                    <SegmentedControl
-                      size="xs"
-                      fullWidth
-                      aria-label={c.label}
-                      value={String(settings[c.key])}
-                      data={c.data.map(([value, label]) => ({ value, label }))}
-                      onChange={(v) => setSettings((s) => ({ ...s, [c.key]: c.key === 'grid' ? Number(v) : v }) as ViewSettings)}
-                    />
-                  </div>
-                ))}
-                <Switch size="xs" label="Snap to grid" checked={settings.snap} onChange={(e) => toggle('snap', e.currentTarget.checked)} />
-                <Switch size="xs" label="Alignment guides" checked={settings.guides} onChange={(e) => toggle('guides', e.currentTarget.checked)} />
-                <Switch size="xs" label="Port names" checked={settings.portLabels} onChange={(e) => toggle('portLabels', e.currentTarget.checked)} />
-                <Text size="xs" c="dimmed">
-                  Keys on the drawing (this browser)
-                </Text>
-                <Group gap={6} grow>
-                  {(Object.keys(REMAPPABLE) as Remappable[]).map((id) => (
-                    <TextInput
-                      key={id}
-                      size="xs"
-                      label={{ add: 'Add', list: 'List', search: 'Search' }[id]}
-                      aria-label={`Key for ${CANVAS_COMMANDS.find((c) => c.id === id)!.label}`}
-                      value={keys[id].toUpperCase()}
-                      error={keyNote?.id === id ? keyNote.text : undefined}
-                      onKeyDown={(e) => {
-                        // The pressed key is the binding; Tab and Escape keep their jobs.
-                        if (e.key === 'Tab' || e.key === 'Escape' || e.ctrlKey || e.metaKey || e.altKey) return
-                        e.preventDefault()
-                        rebind(id, e.key)
-                      }}
-                      onChange={() => {}}
-                    />
-                  ))}
-                </Group>
-                {lineKinds.length > 0 && (
-                  <Text size="xs" c="dimmed">
-                    Line colours (the dash pattern stays)
-                  </Text>
-                )}
-                {lineKinds.map((kind) => {
-                  const chosen = pres.lineColors?.[kind]
-                  return (
-                    <div key={kind}>
-                      <ColorInput
-                        size="xs"
-                        label={kind}
-                        aria-label={`${kind} line colour`}
-                        placeholder="Default"
-                        format="hex"
-                        value={chosen ?? ''}
-                        onChange={(v) => {
-                          const next = /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : undefined
-                          if (next === chosen) return
-                          updatePres((p) => {
-                            const { [kind]: _, ...rest } = p.lineColors ?? {}
-                            return { ...p, lineColors: next ? { ...rest, [kind]: next } : rest }
-                          }, `Colour ${kind} lines`)
-                        }}
-                      />
-                      {chosen && !fits(chosen, scheme) && (
-                        <Text size="xs" c="orange" data-line-faint={kind}>
-                          Too faint on this theme; the default is drawn here.
-                        </Text>
-                      )}
-                    </div>
-                  )
-                })}
-              </Stack>
-            </Popover.Dropdown>
-          </Popover>
-          <Tooltip label="Zoom out">
-            <ActionIcon size="sm" variant="subtle" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.25)}>
-              <IconZoomOut size={15} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Zoom in">
-            <ActionIcon size="sm" variant="subtle" aria-label="Zoom in" onClick={() => zoomBy(1.25)}>
-              <IconZoomIn size={15} />
-            </ActionIcon>
-          </Tooltip>
-          <Menu position="bottom-end" withinPortal>
-            <Menu.Target>
-              <Button size="compact-xs" variant="subtle" color="gray" aria-label="Zoom level" miw={48}>
-                {Math.round(zoom * 100)}%
-              </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item onClick={fit} rightSection={<Kbd size="xs">⇧1</Kbd>}>Fit all</Menu.Item>
-              <Menu.Item onClick={fitSelection} disabled={selection.length === 0} rightSection={<Kbd size="xs">⇧2</Kbd>}>
-                Fit selection
-              </Menu.Item>
-              <Menu.Divider />
-              {[0.5, 1, 2].map((z) => (
-                <Menu.Item
-                  key={z}
-                  onClick={() => zoomBy(z / zoom)}
-                  rightSection={z === 1 ? <Kbd size="xs">⇧0</Kbd> : undefined}
-                >
-                  {z * 100}%
-                </Menu.Item>
-              ))}
-            </Menu.Dropdown>
-          </Menu>
-          <Tooltip label={history.done.length ? `Undo ${history.done.at(-1)!.label} (Ctrl+Z)` : 'Nothing to undo'}>
-            <ActionIcon size="sm" variant="subtle" aria-label="Undo" disabled={!history.done.length} onClick={() => replay('undo')}>
-              <IconArrowBackUp size={15} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label={history.undone.length ? `Redo ${history.undone.at(-1)!.label} (Ctrl+Shift+Z)` : 'Nothing to redo'}>
-            <ActionIcon size="sm" variant="subtle" aria-label="Redo" disabled={!history.undone.length} onClick={() => replay('redo')}>
-              <IconArrowForwardUp size={15} />
-            </ActionIcon>
-          </Tooltip>
-          {onSourceEdit && !sourceBroken && (
-            <Tooltip label="Add component (A, or double-click the canvas)">
-              <ActionIcon size="sm" variant="subtle" aria-label="Add component" onClick={() => openQuickAdd()}>
-                <IconPlus size={15} />
-              </ActionIcon>
-            </Tooltip>
-          )}
-          <Tooltip label="Fit all (Shift+1)">
-            <ActionIcon size="sm" variant="subtle" aria-label="Fit to window" onClick={fit}>
-              <IconArrowsMaximize size={15} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Reset layout (Arrange all)">
-            <ActionIcon
-              size="sm"
-              variant="subtle"
-              aria-label="Reset layout"
-              onClick={() => previewArrange('all')}
-            >
-              <IconLayoutGrid size={15} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Export drawing (SVG, PNG, print)">
-            <ActionIcon size="sm" variant="subtle" aria-label="Export…" onClick={() => setExportOpts((o) => o ?? { ...EXPORT_DEFAULTS, region: selection.length > 0 ? 'selection' : 'model' })}>
-              <IconDownload size={15} />
-            </ActionIcon>
-          </Tooltip>
+          {!ribbonOn && listCtl}
+          {!ribbonOn && editCtl}
+          {!ribbonOn && selectCtl}
+          {!ribbonOn && arrangeCtl}
+          {!ribbonOn && viewSettingsCtl}
+          {zoomOutCtl}
+          {zoomInCtl}
+          {zoomLevelCtl}
+          {!ribbonOn && undoCtl}
+          {!ribbonOn && redoCtl}
+          {!ribbonOn && addCtl}
+          {fitCtl}
+          {!ribbonOn && resetCtl}
+          {!ribbonOn && exportCtl}
         </Group>
+        {/* Phase P: with the ribbon on, the canvas keeps this strip and its commands live on the Schematic tab. */}
+        {ribbonOn && ribbonSlots.schematic && createPortal(
+          <>
+            {sheetCtl && <RibbonGroup label="Sheets">{sheetCtl}</RibbonGroup>}
+            <RibbonGroup label="Model">
+              {addCtl}
+              {listCtl}
+              <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setSearchOpen(true)}>Search</Button>
+              {(nested || scope) && <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setTreeOpen(true)}>Model tree</Button>}
+              {connectCtl}
+            </RibbonGroup>
+            <RibbonGroup label="Edit">{undoCtl}{redoCtl}{editCtl}{selectCtl}</RibbonGroup>
+            <RibbonGroup label="Arrange">{arrangeCtl}{resetCtl}</RibbonGroup>
+            <RibbonGroup label="Overlay">{overlayCtl}</RibbonGroup>
+            <RibbonGroup label="Annotate">{annotateCtl}</RibbonGroup>
+            <RibbonGroup label="Drawing Views">{viewsCtl}{exportCtl}</RibbonGroup>
+            <RibbonGroup label="Zoom">{zoomOutCtl}{zoomInCtl}{zoomLevelCtl}{fitCtl}</RibbonGroup>
+          </>,
+          ribbonSlots.schematic,
+        )}
+        {ribbonOn && ribbonSlots['view-schematic'] && createPortal(<RibbonGroup label="Schematic">{viewSettingsCtl}</RibbonGroup>, ribbonSlots['view-schematic'])}
       </Group>
 
       <div

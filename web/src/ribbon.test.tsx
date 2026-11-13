@@ -1,10 +1,12 @@
 // Phase O: the ribbon's behaviour — tabs from the registry, the contextual tab,
-// unavailable and toggle states, arrow keys, collapse and peek.
+// unavailable and toggle states, arrow keys, collapse and peek; Phase P's slots.
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { MantineProvider } from '@mantine/core'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Ribbon } from './Ribbon'
+import { Ribbon, RibbonGroup } from './Ribbon'
+import { useRibbonSlots } from './ribbonSlots'
 import { COMMAND_SPECS, resolveCommands, type CommandHandlers, type CommandId } from './commands'
 import { contextHandler, publishContext, usePublishContext, withdrawContext } from './contextActions'
 import { readRibbonDensity } from './ribbonPrefs'
@@ -71,6 +73,31 @@ describe('Ribbon', () => {
     expect(screen.queryByRole('button', { name: 'New X-Y Plot' })).toBeNull()
     fireEvent.click(screen.getByRole('tab', { name: 'Insert' }))
     expect(screen.getByRole('button', { name: 'New X-Y Plot' })).toBeTruthy()
+  })
+
+  it('takes a window\'s own groups into a tab slot', () => {
+    function Canvas() {
+      const { on, slots } = useRibbonSlots()
+      const own = <button type="button">Arrange</button>
+      if (!on) return own
+      return slots.schematic ? createPortal(<RibbonGroup label="Arrange">{own}</RibbonGroup>, slots.schematic) : null
+    }
+    const r = (ribbon: boolean) => (
+      <>
+        {ribbon && <Ribbon commands={cmds()} context="schematic" density="expanded" onDensityChange={vi.fn()} />}
+        <Canvas />
+      </>
+    )
+    const { rerender } = render(r(false), { wrapper: wrap })
+    expect(screen.getByRole('button', { name: 'Arrange' })).toBeTruthy()
+    rerender(r(true))
+    // On, but the Schematic tab is not shown: the control has no place yet.
+    expect(screen.queryByRole('button', { name: 'Arrange' })).toBeNull()
+    fireEvent.click(screen.getByRole('tab', { name: 'Schematic' }))
+    const arrange = screen.getByRole('group', { name: 'Arrange' }).querySelector('button')!
+    expect(arrange.textContent).toBe('Arrange')
+    rerender(r(false))
+    expect(screen.getByRole('button', { name: 'Arrange' })).toBeTruthy()
   })
 
   it('defaults to collapsed below 900 px of height', () => {

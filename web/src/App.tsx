@@ -3254,7 +3254,7 @@ export default function App() {
       actions: CANVAS_COMMANDS.map((c) => ({
         id: `canvas-${c.id}`,
         label: c.label,
-        description: c.keys.length ? `${keysOf(c).join('+')} on the drawing` : undefined,
+        description: [ribbonOn && `Schematic ▸ ${c.group}`, c.keys.length && `${keysOf(c).join('+')} on the drawing`].filter(Boolean).join(' · ') || undefined,
         leftSection: <IconSitemap size={18} />,
         onClick: () => {
           dockRef.current?.open('schematic')
@@ -4017,7 +4017,7 @@ export default function App() {
           ribbon={ribbonOn ? {
             density: ribbonDensity,
             onDensityChange: changeRibbonDensity,
-            context: fw?.kind === 'table' || fw?.kind === 'plot' || fw?.kind === 'digitizer' ? fw.kind : null,
+            context: fw?.kind === 'table' || fw?.kind === 'plot' || fw?.kind === 'schematic' || fw?.kind === 'digitizer' ? fw.kind : null,
             contextNote: codeTable ? 'Defined in equations' : null,
           } : undefined}
         />
