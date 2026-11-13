@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import MobileLayout from './MobileLayout'
 import Workspace from './Workspace'
 import { Rail, TopBar } from './WorkspaceChrome'
+import { COMMAND_SPECS, resolveCommands, type CommandHandlers, type CommandId } from './commands'
 import { newFunctionTable, newParamTable } from './tables'
 import { TABLES_WORKBOOK_WINDOW_ID } from './tablesGrid/tablesWorkbookBridge'
 
@@ -23,15 +24,17 @@ function shell(children: ReactNode) {
   return <MantineProvider env="test">{children}</MantineProvider>
 }
 
+function testCommands() {
+  return resolveCommands(Object.fromEntries((Object.keys(COMMAND_SPECS) as CommandId[]).map((id) => [id, { run: vi.fn() }])) as unknown as CommandHandlers)
+}
+
 function mobileProps(): ComponentProps<typeof MobileLayout> {
   return {
     panelContent: { equations: 'Equation editor', workspace: 'Solved variables', [TABLES_WORKBOOK_WINDOW_ID]: 'Workbook' },
     tables: [], stateTables: [], activeTableId: null, plots: [], projectName: 'Test project',
     checking: false, solving: false, checkingTableId: null, solvingTableId: null,
     onActiveTableId: vi.fn(), onCheck: vi.fn(), onSolve: vi.fn(), onStop: vi.fn(),
-    onCheckTable: vi.fn(), onSolveTable: vi.fn(), onSaveProject: vi.fn(), onSaveProjectAs: vi.fn(),
-    onNewProject: vi.fn(), onOpenProject: vi.fn(), onOpenLibrary: vi.fn(), onPreferences: vi.fn(),
-    onRenameProject: vi.fn(), onOpenExamples: vi.fn(), onOpenUrl: vi.fn(),
+    onCheckTable: vi.fn(), onSolveTable: vi.fn(), onRenameProject: vi.fn(), commands: testCommands(),
   }
 }
 
@@ -130,11 +133,8 @@ function topBarProps(over: Partial<ComponentProps<typeof TopBar>> = {}): Compone
     tableCheckResult: null, tableCheckMessage: '', tableResults: [], projectName: 'Test project', canPrintReport: false,
   }
   for (const k of ['onCheck', 'onSolve', 'onStop', 'onCheckTable', 'onSolveTable', 'onFindAllChange', 'onComplexModeChange',
-    'onRenameProject', 'onNewProject', 'onOpenProject', 'onOpenLibrary', 'onSaveProject', 'onSaveProjectAs', 'onExportEquations',
-    'onInsertFunction', 'onInsertComponent', 'onOpenExamples', 'onOpenUrl', 'onShareLink', 'onPrintReport', 'onOpenInspector',
-    'onOpenWorkspace', 'onOpenTerminal', 'onVariableInfo', 'onMonteCarlo', 'onSensitivity', 'onMinMax', 'onCurveFit',
-    'onParameterFit', 'onPidTuner']) props[k] = vi.fn()
-  return { ...(props as ComponentProps<typeof TopBar>), ...over }
+    'onRenameProject', 'onInsertFunction']) props[k] = vi.fn()
+  return { ...(props as ComponentProps<typeof TopBar>), commands: testCommands(), ...over }
 }
 
 it('names the run target beside Check and Solve, and keeps Stop while any job runs (N2)', () => {

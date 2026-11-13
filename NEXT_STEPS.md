@@ -1148,7 +1148,7 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
   - **No new colour, font, spacing or icon family**, and no RustGIS assets.
 
 **Phase N — command consistency** (Doc A P0; Doc B phase 1 core). It builds no new chrome; every later phase consumes it.
-- **N1 — the registry.**
+- **N1 — the registry.** *Done (2026-11-13).* `web/src/commands.tsx` declares 51 commands (`COMMAND_SPECS`); App supplies a handler and an unavailable reason per id (`CommandHandlers` makes a missing one a type error). The File and Tools menus, the rail's create and Layout menus, the mobile menu (`CommandMenuItems.tsx`), the palette (`commandPaletteGroups`), the `?` sheet (`shortcutRows`) and the global keys (`commandForKey`) are built from it. Thirteen commands the palette lacked are now in it: the six analysis tools, Variable Explorer, Terminal, both Function Tables and the three layouts. `commands.test.ts` is the parity test.
   - One module holds every command. Each entry has a stable id (`model.solve`, `table.solve`, `panel.open`, …), a label, aliases, a Tabler icon, a location (the menu path today, the ribbon path from O), a shortcut, an unavailable reason and a handler.
   - The TopBar File and Tools menus, the rail's create actions and layout menu, the palette groups, the mobile menu and the `?` sheet are all built from it.
   - Function-catalogue and documentation entries stay data-driven; schematic canvas commands keep `schematic/commands.ts`, and the palette maps them.
@@ -1169,7 +1169,7 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
   - "Remove Row" becomes **Remove Last Row**.
   - The false Inspector hint goes.
   - The workbook's Redo tooltip reads Ctrl+Shift+Z / Ctrl+Y.
-- **N4 — shortcuts.**
+- **N4 — shortcuts.** *Done (2026-11-13).* Ctrl/⌘+S, +Shift+S, +O and the conditional +P dispatch from the registry; an unavailable command leaves its key to the browser. `?` still never fires inside a text field.
   - Ctrl+S and Ctrl+Shift+S save and save as; Ctrl+O opens a project; Ctrl+P is the conditional Print Report.
   - The `?` sheet is generated from the registry plus the canvas keys. It lists the editor's Ctrl+Space and the schematic keys, which it partly omits today.
 - **Acceptance.**

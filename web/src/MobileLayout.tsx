@@ -1,4 +1,3 @@
-import { helpUrl } from './helpUrl'
 import { useState, useEffect, ReactNode } from 'react'
 import { Flex, Group, Title, UnstyledButton, Text, Box, Paper, ActionIcon, Menu, Button, Select } from '@mantine/core'
 import {
@@ -7,19 +6,13 @@ import {
   IconChartLine,
   IconTable,
   IconTerminal2,
-  IconSettings,
-  IconDatabase,
-  IconDeviceFloppy,
   IconChecks,
-  IconFolderOpen,
-  IconFilePlus,
-  IconHelp,
-  IconBook,
   IconMenu2,
   IconPlayerPlayFilled,
   IconPlayerStopFilled,
-  IconWorld,
 } from '@tabler/icons-react'
+import { CommandMenuItems } from './CommandMenuItems'
+import { MOBILE_MENU, type Commands } from './commands'
 import { TableSpec } from './tables'
 import { TABLES_WORKBOOK_WINDOW_ID } from './tablesGrid/tablesWorkbookBridge'
 
@@ -112,16 +105,9 @@ interface MobileLayoutProps {
   solvingTableId: string | null
   onCheckTable: (id: string) => void
   onSolveTable: (id: string) => Promise<boolean> | void
-  onSaveProject: () => void
-  onSaveProjectAs: () => void
-  onNewProject: () => void
-  onOpenProject: () => void
-  /** The browser-resident project library (Phase 11, D4). */
-  onOpenLibrary: () => void
-  onPreferences: () => void
   onRenameProject: () => void
-  onOpenExamples: () => void
-  onOpenUrl: () => void
+  /** The command registry: the menu is built from it (N1). */
+  commands: Commands
 }
 
 export default function MobileLayout({
@@ -141,15 +127,8 @@ export default function MobileLayout({
   solvingTableId,
   onCheckTable,
   onSolveTable,
-  onSaveProject,
-  onSaveProjectAs,
-  onNewProject,
-  onOpenProject,
-  onOpenLibrary,
-  onPreferences,
   onRenameProject,
-  onOpenExamples,
-  onOpenUrl,
+  commands,
 }: MobileLayoutProps) {
   const [activeTab, setActiveTab] = useState<'equations' | 'workspace' | 'plots' | 'table' | 'terminal'>(
     'equations',
@@ -214,7 +193,7 @@ export default function MobileLayout({
           <Text c="dimmed" size="sm">
             Start with an example to explore tables, or define a TABLE or PARAMETRIC block in the editor.
           </Text>
-          <Button variant="light" mt="md" onClick={onOpenExamples}>Explore examples</Button>
+          <Button variant="light" mt="md" onClick={commands['file.example'].run}>Explore examples</Button>
         </Box>
       )
     } else {
@@ -269,64 +248,7 @@ export default function MobileLayout({
                 </ActionIcon>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Item
-                  leftSection={<IconFilePlus size={14} />}
-                  onClick={onNewProject}
-                >
-                  New Project
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconFolderOpen size={14} />}
-                  onClick={onOpenProject}
-                >
-                  Open Project
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconDatabase size={14} />}
-                  onClick={onOpenLibrary}
-                >
-                  Browser Projects
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconWorld size={14} />}
-                  onClick={onOpenUrl}
-                >
-                  Open URL…
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconDeviceFloppy size={14} />}
-                  onClick={onSaveProject}
-                >
-                  Save Project
-                </Menu.Item>
-                <Menu.Item
-                  leftSection={<IconDeviceFloppy size={14} />}
-                  onClick={onSaveProjectAs}
-                >
-                  Save Project As...
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item
-                  leftSection={<IconSettings size={14} />}
-                  onClick={onPreferences}
-                >
-                  Preferences
-                </Menu.Item>
-                <Menu.Divider />
-                <Menu.Item
-                  leftSection={<IconBook size={14} />}
-                  onClick={onOpenExamples}
-                >
-                  Examples
-                </Menu.Item>
-                <Menu.Item
-                  component="a"
-                  href={helpUrl()}
-                  target="_blank"
-                  leftSection={<IconHelp size={14} />}
-                >
-                  Help
-                </Menu.Item>
+                <CommandMenuItems cmds={commands} entries={MOBILE_MENU} />
               </Menu.Dropdown>
             </Menu>
           </Group>
