@@ -2755,6 +2755,15 @@ export default function App() {
         if (typing) return
       }
       e.preventDefault()
+      // A form field may hold an uncommitted edit (scenario values commit on
+      // blur or Enter): commit it first, then run the command from the next
+      // task, once React has re-rendered with that edit in its handlers.
+      const el = document.activeElement
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+        el.blur()
+        setTimeout(() => commandsRef.current?.[c.id].run(), 0)
+        return
+      }
       c.run()
     }
     globalThis.addEventListener('keydown', onKeyDown)

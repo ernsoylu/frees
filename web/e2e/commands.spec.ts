@@ -3,6 +3,7 @@
 // Inspector) keep that target.
 //
 // Run:  npm run build && npx playwright test e2e/commands.spec.ts --project=chromium
+import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 
 test.use({ serviceWorkers: 'block', viewport: { width: 1440, height: 960 } })
@@ -92,4 +93,28 @@ test('N1/N4: palette rows name their place, an unavailable command says why, and
   await page.locator('body').click({ position: { x: 5, y: 5 } })
   await page.keyboard.press('Control+P').catch(() => {})
   await expect(page.getByRole('dialog', { name: /report/i })).toHaveCount(0)
+})
+
+test('N4: Ctrl+S from inside a scenario value saves the value being typed', async ({ page }, testInfo) => {
+  await page.addInitScript(() => {
+    delete (window as { showSaveFilePicker?: unknown }).showSaveFilePicker
+  })
+  const source = 'https://raw.example/room.frees'
+  await page.route(source, (route) => route.fulfill({ contentType: 'text/plain', body: 'L = 4 [m]\nW = 3 [m]\nA = L*W\n' }))
+  await page.goto('/?url=' + encodeURIComponent(source))
+  await expect(page.locator('.cm-content')).toContainText('A = L*W', { timeout: 60_000 })
+  await page.getByRole('button', { name: 'Solve', exact: true }).click()
+  await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 60_000 })
+  const panel = page.getByTestId('runs-panel')
+  await panel.getByRole('button', { name: 'New', exact: true }).click()
+  await panel.getByLabel('Scenario name').fill('Wide room')
+  await page.keyboard.press('Enter')
+  await panel.getByRole('combobox', { name: 'Add input' }).click()
+  await page.getByRole('option', { name: 'W', exact: true }).click()
+  // Typed, not yet committed (the field commits on blur or Enter), then saved from the keyboard.
+  await panel.getByLabel('Value of W').fill('7')
+  const [saved] = await Promise.all([page.waitForEvent('download'), page.keyboard.press('Control+S')])
+  const path = testInfo.outputPath('room.frees')
+  await saved.saveAs(path)
+  expect(readFileSync(path, 'utf-8')).toMatch(/"name":\s*"W"[^}]*"value":\s*7\b/)
 })
