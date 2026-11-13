@@ -1112,10 +1112,10 @@ fn flatten_tf2ss<H: Host + ?Sized>(
     entries.extend(den.elements);
 
     host.reserve(n * n + 2 * n + 1)?;
-    for i in 0..n {
-        for j in 0..n {
+    for (i, row) in a.elements.iter().take(n).enumerate() {
+        for (j, aij) in row.iter().take(n).enumerate() {
             host.emit(Equation::new(
-                a.elements[i][j].clone(),
+                aij.clone(),
                 Expr::Call {
                     function: format!("tf2ss$a${i}${j}${n}"),
                     args: entries.clone(),
@@ -2189,9 +2189,9 @@ fn flatten_time_response<H: Host + ?Sized>(
     // case reuses that evaluator layout.
     let tag = model_inputs + 1;
     host.reserve(n_pts)?;
-    for i in 0..n_pts {
+    for (i, yi) in y.elements.iter().take(n_pts).enumerate() {
         host.emit(Equation::new(
-            y.elements[i].clone(),
+            yi.clone(),
             Expr::Call {
                 function: format!("{name}${i}${tag}${n_pts}"),
                 args: entries.clone(),
@@ -2256,9 +2256,9 @@ fn flatten_lsim<H: Host + ?Sized>(
 
     register_slice_shape(host, &outputs[0], n_pts, 1);
     host.reserve(n_pts)?;
-    for i in 0..n_pts {
+    for (i, yi) in y.elements.iter().take(n_pts).enumerate() {
         host.emit(Equation::new(
-            y.elements[i].clone(),
+            yi.clone(),
             Expr::Call {
                 function: format!("lsim${i}${num_inputs}${n_pts}"),
                 args: entries.clone(),
@@ -2411,9 +2411,9 @@ fn flatten_rlocus<H: Host + ?Sized>(
     let suffix = format!("${num_size}${den_size}${m}${n}");
 
     host.reserve(m + 2 * m * n)?;
-    for i in 0..m {
+    for (i, ki) in k_out.elements.iter().take(m).enumerate() {
         host.emit(Equation::new(
-            k_out.elements[i].clone(),
+            ki.clone(),
             Expr::Call {
                 function: format!("rlocus$k${i}{suffix}"),
                 args: entries.clone(),
