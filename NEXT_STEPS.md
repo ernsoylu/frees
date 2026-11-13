@@ -1162,7 +1162,7 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
   - The palette offers "Solve Model" plus "Solve Table: ‹name›" for each parametric table.
   - Stop follows the running job, not the focused window.
   - A menu captures its target when it opens. If that object is gone when the command runs, the command reports it and does nothing; it never redirects.
-- **N3 — names and destructive actions.** *Done (2026-11-13).* `insertFunction` now opens the Editor window and waits for the lazily loaded editor, which fixes every insert, not only the fluid-state one. Delete table and Delete plot share a `ConfirmModal` (`dialogs.tsx`) that re-checks the captured target on confirm.
+- **N3 — names and destructive actions.** *Done (2026-11-13).* `insertFunction` now opens the Editor window; with the Editor closed there is no caret, so the snippet is appended to the document before the editor mounts. That fixes every insert, not only the fluid-state one. Delete table and Delete plot share a `ConfirmModal` (`dialogs.tsx`) that re-checks the captured target on confirm.
   - The canonical table labels above apply everywhere.
   - **New Fluid State Table** opens the Editor and inserts the block. **Open Fluid States** opens the window.
   - Trash leaves the rail rows. **Delete table** joins the Inspector for every user table, and both Delete table and Delete plot confirm.
