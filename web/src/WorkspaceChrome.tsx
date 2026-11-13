@@ -53,6 +53,8 @@ import { useState } from 'react'
 import { CheckResponse, SolveResponse, TableRowResult, TableStats } from './api'
 import { withStableKeys } from './format'
 import { FUNCTION_CATEGORIES } from './functionCatalog'
+import { Ribbon, RibbonButton, type RibbonContext } from './Ribbon'
+import type { RibbonDensity } from './ribbonPrefs'
 
 // ---------------------------------------------------------------------------
 // Left icon rail: views on top, tool windows at the bottom (VS Code style).
@@ -705,6 +707,13 @@ interface TopBarProps {
   onInsertFunction: (snippet: string) => void
   /** The command registry: the File and Tools menus are built from it (N1). */
   commands: Commands
+  /** Phase O: the ribbon replaces the Functions and Tools menus (behind the Preferences flag). */
+  ribbon?: {
+    density: RibbonDensity
+    onDensityChange: (d: RibbonDensity) => void
+    context: RibbonContext | null
+    contextNote?: string | null
+  }
 }
 
 function solveTooltipFor(canSolve: boolean, isTable: boolean, target: string): string {
@@ -751,7 +760,7 @@ export function TopBar(props: Readonly<TopBarProps>) {
     ? 'Configure columns, fill values, then Check (F4) · Solve (F2)'
     : 'Check (F4) · Solve (F2)'
 
-  return (
+  const header = (
     // Wrap (not nowrap) so the Check/Solve action group drops to a second row
     // on narrow viewports instead of overflowing off-screen — the solver
     // trigger must always stay reachable.
@@ -778,6 +787,31 @@ export function TopBar(props: Readonly<TopBarProps>) {
           </Menu.Dropdown>
         </Menu>
 
+        {props.ribbon ? (
+          <>
+            {/* Quick Access: Save, then Undo and Redo of the focused document's history. */}
+            <Group gap={2} wrap="nowrap" role="toolbar" aria-label="Quick Access">
+              <RibbonButton cmd={props.commands['file.save']} density="icon" />
+              <RibbonButton cmd={props.commands['edit.undo']} density="icon" />
+              <RibbonButton cmd={props.commands['edit.redo']} density="icon" />
+            </Group>
+            <UnstyledButton
+              onClick={spotlight.open}
+              aria-label="Search commands"
+              aria-keyshortcuts="Control+K"
+              visibleFrom="sm"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', minWidth: 180,
+                borderRadius: 'var(--mantine-radius-sm)', border: '1px solid var(--mantine-color-default-border)',
+              }}
+            >
+              <IconSearch size={14} color="var(--mantine-color-dimmed)" />
+              <Text size="xs" c="dimmed" style={{ flex: 1 }}>Search commands…</Text>
+              <Text size="xs" c="dimmed" aria-hidden>Ctrl+K</Text>
+            </UnstyledButton>
+          </>
+        ) : (
+          <>
         <Menu position="bottom-start" shadow="md" width={250}>
           <Menu.Target>
             <Button
@@ -791,6 +825,7 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
+            <CommandMenuItems cmds={props.commands} entries={['insert.function', '-']} />
             {FUNCTION_CATEGORIES.map((cat) => (
               <Menu.Sub key={cat.category}>
                 <Menu.Sub.Target>
@@ -859,6 +894,9 @@ export function TopBar(props: Readonly<TopBarProps>) {
           </ActionIcon>
         </Tooltip>
 
+          </>
+        )}
+
         <Tooltip label="Rename project">
           <UnstyledButton
             onClick={props.onRenameProject}
@@ -883,13 +921,16 @@ export function TopBar(props: Readonly<TopBarProps>) {
             <IconPencil size={12} color="var(--mantine-color-dimmed)" />
           </UnstyledButton>
         </Tooltip>
-        <Text c="dimmed" size="xs" visibleFrom="lg">
-          free solver
-        </Text>
+        {!props.ribbon && (
+          <Text c="dimmed" size="xs" visibleFrom="lg">
+            free solver
+          </Text>
+        )}
       </Group>
 
       <Group gap="xs" wrap="nowrap">
-        <StatusPill pill={pill} hint={hint} />
+        {/* With the ribbon, the hint's keys are on the buttons' tooltips and the state is on the status bar. */}
+        {(pill || !props.ribbon) && <StatusPill pill={pill} hint={hint} />}
         {props.targetLabel && (
           <Text size="xs" c="dimmed" maw={180} truncate="end" data-testid="run-target" title={props.targetLabel}>
             {props.targetLabel}
@@ -989,5 +1030,18 @@ export function TopBar(props: Readonly<TopBarProps>) {
         )}
       </Group>
     </Group>
+  )
+  if (!props.ribbon) return header
+  return (
+    <Stack gap={4}>
+      {header}
+      <Ribbon
+        commands={props.commands}
+        context={props.ribbon.context}
+        contextNote={props.ribbon.contextNote}
+        density={props.ribbon.density}
+        onDensityChange={props.ribbon.onDensityChange}
+      />
+    </Stack>
   )
 }

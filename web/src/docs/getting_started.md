@@ -75,9 +75,9 @@ Results come back in SI; convert or label them for display (see *Units & Consist
 A system is solvable only when the number of equations equals the number of unknowns — the **degrees of freedom (DoF)** are zero. Press **F4** (Check) to verify this *before* solving: it reports the DoF and any unit mismatches instantly, so you fix structural problems before the solver ever runs. Make F4-before-F2 a habit.
 
 ### Guesses make nonlinear solves converge
-For nonlinear or transcendental equations, the Newton solver iterates from a **guess**. Open **Variable Info** (`Ctrl + I`) to set a starting guess and physical bounds (e.g. `T ≥ 0`, `0 ≤ x ≤ 1`). A good guess is usually the difference between convergence and divergence.
+For nonlinear or transcendental equations, the Newton solver iterates from a **guess**. Open **Variable Settings** (**Tools → Variable Settings…**) to set a starting guess and physical bounds (e.g. `T ≥ 0`, `0 ≤ x ≤ 1`). A good guess is usually the difference between convergence and divergence.
 
-> **Tip:** If a solve fails to converge, the cause is almost always a missing guess or a wrong unit annotation — not a bug. Check the Solution panel's diagnostics and the Variable Info guesses first.
+> **Tip:** If a solve fails to converge, the cause is almost always a missing guess or a wrong unit annotation — not a bug. Check the Solution panel's diagnostics and the Variable Settings guesses first.
 
 [Related: gs-plots, units, variables]
 
@@ -268,14 +268,32 @@ The REPL evaluates a single expression per line, so multi-line block constructs 
 
 | Hotkey | Action |
 | --- | --- |
-| `F2` or `Ctrl + Enter` | **Solve** — runs the Newton-Raphson solver |
-| `F4` or `Ctrl + K` | **Check** — validates syntax, degrees of freedom, and expands blocks |
-| `Ctrl + I` | Open the **Variable Information** panel (guesses & bounds) |
-| `Ctrl + T` | Open the **Parametric Table** panel |
-| `F9` | **Solve selected block only** — ignores all other lines |
+| `F2` | **Solve** the run target: the focused parametric table, else the model (Check runs first) |
+| `F4` | **Check** the run target — syntax, degrees of freedom and block expansion |
+| `Esc` | **Stop** a running solve or table run |
+| `Ctrl + K` | **Command palette** — every command, panel, function and guide, with where it lives |
+| `Ctrl + S` / `Ctrl + Shift + S` | **Save** / **Save As** the project |
+| `Ctrl + O` | **Open** a project |
+| `Ctrl + P` | **Print Report** (after a successful solve; otherwise the browser prints) |
+| `Ctrl + Space` | **Autocomplete** functions and variables in the Editor |
+| `Ctrl + F1` | **Collapse or expand the ribbon** (when the ribbon is on; double-clicking a tab does the same) |
 | `F1` | **Contextual help** — opens the reference page for the symbol under the cursor |
+| `?` | **Keyboard Shortcuts** — the full list, including the schematic's keys |
 
-> **Tip:** make `F4` (Check) a habit before `F2` (Solve). It reports the DoF and any unit mismatches instantly, so you fix problems before the solver runs. For parametric-table examples, use **Solve Table** in the Tables tab instead of `F2`.
+On a Mac, `⌘` replaces `Ctrl`.
+
+> **Tip:** make `F4` (Check) a habit before `F2` (Solve). It reports the DoF and any unit mismatches instantly, so you fix problems before the solver runs. With a parametric table focused, `F2` solves every run of that table; the text beside **Check** and **Solve** names the target.
+
+## The ribbon (preview)
+Turn on **Preferences → Ribbon (preview)** to replace the Functions and Tools menus with tabs of labelled commands:
+
+- **Home** — project, Check and Solve, solve setup (Find All Solutions, Complex Mode, Stop Criteria…), panels and layouts.
+- **Insert** — tables, plots, the Component Wizard, **Insert Function…** (a searchable browser over every built-in function, with its reference page) and the Graph Digitizer.
+- **Data** — CSV import and the two table exports (full-precision data, formatted report), equation text, Table Operations….
+- **Analysis** — Optimization…, Curve Fit…, Parameter Estimation…, Monte Carlo…, Global Sensitivity…, PID Tuner… and Variable Settings….
+- **View** and **Help** — every window, the theme, Preferences, guides and this sheet.
+
+Focusing a table, a plot or the digitizer adds its own tab (**Table**, **Plot**, **Digitizer**) without switching to it. A greyed command stays focusable and its tooltip says why it is unavailable. **Save**, **Undo** and **Redo** sit beside the File menu; Undo and Redo act on the focused Editor, Tables workbook or schematic. The ribbon collapses with `Ctrl + F1` or a double-click on a tab (it starts collapsed on windows under 900 px tall); a click on a tab then opens it over the workspace. A status bar along the bottom shows where Save writes, the solve state and time, the unit system, warnings, the layout and the engine.
 
 [Related: gs-units-check, variables, repl]
 

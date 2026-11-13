@@ -108,7 +108,7 @@ END
 Use the `| Log` suffix instead of `| Linear` for logarithmic spacing (handy for Bode frequency sweeps). Whole-table aggregates like `TableAvg('range_m')` or `IntegralValue('P','t')` are computed once and are identical in every row.
 
 ## Single-objective optimization
-**Tools → Minimize / Maximize** (or the sidebar optimization panel) finds the value of one decision variable that minimizes or maximizes an objective, subject to your equation system. Set bounds on the decision variable in Variable Info (`Ctrl + I`) to keep the search in a physical region.
+**Tools → Optimization…** (or the sidebar optimization panel) finds the value of one decision variable that minimizes or maximizes an objective, subject to your equation system. Set bounds on the decision variable in Variable Settings (**Tools → Variable Settings…**) to keep the search in a physical region.
 
 ## Multi-objective optimization (Pareto front)
 When objectives conflict (minimise mass *and* maximise efficiency, say) there is no single optimum — only a **Pareto front** of non-dominated trade-offs. frees traces it with **NSGA-II**: supply two or more objectives (each flagged minimise or maximise) plus the decision variables and their bounds. Each candidate solves the equation system with the decisions fixed; the result is a list of `(decisions, objectives)` points where no objective improves without worsening another. Plot one objective against the other to see the trade-off curve.
@@ -130,11 +130,11 @@ The fastest way to localize a failure is to *not* type the whole model and hit S
 frees groups the equations into strongly-connected **blocks** (Tarjan) and solves them in order. When a solve fails, the error message names *which block* stalled and its **residual**, and the **Diagnostics** section at the top of the Variable Explorer opens with the full picture: every equation's residual — the difference between its two sides — evaluated at the exact point the solver gave up, sorted by magnitude, with the failing block highlighted. The block that fails to converge, and the equation with the largest residual, is where to look first.
 
 ## Seed a guess for nonlinear blocks
-Newton iterates from the guess in **Variable Info** (`Ctrl + I`); a guess near the expected magnitude is often the difference between converging and diverging. For a tightly coupled nonlinear block (radiation, simultaneous property inversions), bootstrap it with a **temporary equation**:
+Newton iterates from the guess in **Variable Settings** (**Tools → Variable Settings…**); a guess near the expected magnitude is often the difference between converging and diverging. For a tightly coupled nonlinear block (radiation, simultaneous property inversions), bootstrap it with a **temporary equation**:
 
 1. Temporarily replace the hard constraint with a rough explicit estimate, e.g. `T = (T_hot + T_cold) / 2`.
 2. Solve — every variable now gets a physically sensible value.
-3. Copy those values into the guesses (Variable Info), restore the real equation, and solve again from the good starting point.
+3. Copy those values into the guesses (Variable Settings), restore the real equation, and solve again from the good starting point.
 
 [Diagram: GuessConvergence]
 
@@ -173,14 +173,14 @@ The system is under- or over-determined; the Check message reports both counts.
 Newton's step could not be computed — the equation block is rank-deficient at the current point.
 
 - **Dependent equations**: two equations carry the same information (see the duplicate-physics cases above).
-- **A guess on a flat spot**: the derivative vanishes at the guess (e.g. `x` starting exactly at a function's extremum). Nudge the guess in Variable Info (`Ctrl + I`).
+- **A guess on a flat spot**: the derivative vanishes at the guess (e.g. `x` starting exactly at a function's extremum). Nudge the guess in Variable Settings (**Tools → Variable Settings…**).
 - In component networks: a **re-equated mixer pressure** or a **loop with no pinned pressure level** — see *Troubleshooting Networks*.
 
 ## Newton iteration stalled / Max iterations
 
 The solver ran but did not converge; the diagnostic names the failing **block** and its largest **residual**.
 
-1. Set a **guess** near the expected magnitude for the block's variables (`Ctrl + I`), and **bounds** to keep the iteration physical (`T ≥ 0`, `0 ≤ x ≤ 1`).
+1. Set a **guess** near the expected magnitude for the block's variables (**Tools → Variable Settings…**), and **bounds** to keep the iteration physical (`T ≥ 0`, `0 ≤ x ≤ 1`).
 2. If the block contains property calls, check the *property error* appended to the message — the iteration usually walked a state out of the fluid's valid range (next entry).
 3. Bootstrap a stubborn block with a temporary explicit estimate, solve, copy values into guesses, restore the real equation (*Debugging a Solve* shows the pattern).
 
@@ -218,7 +218,7 @@ Knowing the execution pipeline helps you read convergence diagnostics and diagno
 1. **Lex/parse (ANTLR4)** — tokenizes variables, symbols, constants, and `[unit]` annotations.
 2. **AST construction** — inlines functions/modules, expands array indices and matrix slices, and converts every unit to its SI base value.
 3. **Dependency analysis (Tarjan SCC)** — builds the variable↔equation graph and groups coupled variables into minimal strongly-connected blocks.
-4. **Newton–Raphson solve** — solves each block in topological order using finite-difference Jacobians and backtracking line search. Guesses (Variable Info) seed the iteration; bounds keep it physical.
+4. **Newton–Raphson solve** — solves each block in topological order using finite-difference Jacobians and backtracking line search. Guesses (Variable Settings) seed the iteration; bounds keep it physical.
 5. **DYNAMIC pass** — integrates ODE blocks using the solved analytic variables as parameters. Accessor values feed back and the system re-solves until it converges globally.
 
 ## Reading convergence output

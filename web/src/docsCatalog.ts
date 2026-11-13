@@ -107,7 +107,7 @@ END
 Use the \`| Log\` suffix instead of \`| Linear\` for logarithmic spacing (handy for Bode frequency sweeps). Whole-table aggregates like \`TableAvg('range_m')\` or \`IntegralValue('P','t')\` are computed once and are identical in every row.
 
 ## Single-objective optimization
-**Tools → Minimize / Maximize** (or the sidebar optimization panel) finds the value of one decision variable that minimizes or maximizes an objective, subject to your equation system. Set bounds on the decision variable in Variable Info (\`Ctrl + I\`) to keep the search in a physical region.
+**Tools → Optimization…** (or the sidebar optimization panel) finds the value of one decision variable that minimizes or maximizes an objective, subject to your equation system. Set bounds on the decision variable in Variable Settings (**Tools → Variable Settings…**) to keep the search in a physical region.
 
 ## Multi-objective optimization (Pareto front)
 When objectives conflict (minimise mass *and* maximise efficiency, say) there is no single optimum — only a **Pareto front** of non-dominated trade-offs. frees traces it with **NSGA-II**: supply two or more objectives (each flagged minimise or maximise) plus the decision variables and their bounds. Each candidate solves the equation system with the decisions fixed; the result is a list of \`(decisions, objectives)\` points where no objective improves without worsening another. Plot one objective against the other to see the trade-off curve.
@@ -127,11 +127,11 @@ The fastest way to localize a failure is to *not* type the whole model and hit S
 frees groups the equations into strongly-connected **blocks** (Tarjan) and solves them in order. When a solve fails, the error message names *which block* stalled and its **residual**, and the **Diagnostics** section at the top of the Variable Explorer opens with the full picture: every equation's residual — the difference between its two sides — evaluated at the exact point the solver gave up, sorted by magnitude, with the failing block highlighted. The block that fails to converge, and the equation with the largest residual, is where to look first.
 
 ## Seed a guess for nonlinear blocks
-Newton iterates from the guess in **Variable Info** (\`Ctrl + I\`); a guess near the expected magnitude is often the difference between converging and diverging. For a tightly coupled nonlinear block (radiation, simultaneous property inversions), bootstrap it with a **temporary equation**:
+Newton iterates from the guess in **Variable Settings** (**Tools → Variable Settings…**); a guess near the expected magnitude is often the difference between converging and diverging. For a tightly coupled nonlinear block (radiation, simultaneous property inversions), bootstrap it with a **temporary equation**:
 
 1. Temporarily replace the hard constraint with a rough explicit estimate, e.g. \`T = (T_hot + T_cold) / 2\`.
 2. Solve — every variable now gets a physically sensible value.
-3. Copy those values into the guesses (Variable Info), restore the real equation, and solve again from the good starting point.
+3. Copy those values into the guesses (Variable Settings), restore the real equation, and solve again from the good starting point.
 
 [Diagram: GuessConvergence]
 
@@ -168,14 +168,14 @@ The system is under- or over-determined; the Check message reports both counts.
 Newton's step could not be computed — the equation block is rank-deficient at the current point.
 
 - **Dependent equations**: two equations carry the same information (see the duplicate-physics cases above).
-- **A guess on a flat spot**: the derivative vanishes at the guess (e.g. \`x\` starting exactly at a function's extremum). Nudge the guess in Variable Info (\`Ctrl + I\`).
+- **A guess on a flat spot**: the derivative vanishes at the guess (e.g. \`x\` starting exactly at a function's extremum). Nudge the guess in Variable Settings (**Tools → Variable Settings…**).
 - In component networks: a **re-equated mixer pressure** or a **loop with no pinned pressure level** — see *Troubleshooting Networks*.
 
 ## Newton iteration stalled / Max iterations
 
 The solver ran but did not converge; the diagnostic names the failing **block** and its largest **residual**.
 
-1. Set a **guess** near the expected magnitude for the block's variables (\`Ctrl + I\`), and **bounds** to keep the iteration physical (\`T ≥ 0\`, \`0 ≤ x ≤ 1\`).
+1. Set a **guess** near the expected magnitude for the block's variables (**Tools → Variable Settings…**), and **bounds** to keep the iteration physical (\`T ≥ 0\`, \`0 ≤ x ≤ 1\`).
 2. If the block contains property calls, check the *property error* appended to the message — the iteration usually walked a state out of the fluid's valid range (next entry).
 3. Bootstrap a stubborn block with a temporary explicit estimate, solve, copy values into guesses, restore the real equation (*Debugging a Solve* shows the pattern).
 
@@ -211,7 +211,7 @@ Knowing the execution pipeline helps you read convergence diagnostics and diagno
 1. **Lex/parse (ANTLR4)** — tokenizes variables, symbols, constants, and \`[unit]\` annotations.
 2. **AST construction** — inlines functions/modules, expands array indices and matrix slices, and converts every unit to its SI base value.
 3. **Dependency analysis (Tarjan SCC)** — builds the variable↔equation graph and groups coupled variables into minimal strongly-connected blocks.
-4. **Newton–Raphson solve** — solves each block in topological order using finite-difference Jacobians and backtracking line search. Guesses (Variable Info) seed the iteration; bounds keep it physical.
+4. **Newton–Raphson solve** — solves each block in topological order using finite-difference Jacobians and backtracking line search. Guesses (Variable Settings) seed the iteration; bounds keep it physical.
 5. **DYNAMIC pass** — integrates ODE blocks using the solved analytic variables as parameters. Accessor values feed back and the system re-solves until it converges globally.
 
 ## Reading convergence output
@@ -915,7 +915,7 @@ A coupled cycle (a refrigeration loop, a pump network) can be structurally perfe
 
 ## Working method
 
-Build the network **one leg at a time**: source → component → sink, solve, extend. Select a subsystem and press **F9** to solve only it. Diagnostics are source-mapped (component and stream names), so the failing block names the device to look at. Set guesses on stream members (they appear under their display names, e.g. \`s2.P\`) in Variable Info exactly as for scalar variables. And inside the vapor dome, remember the two-phase rule: identify a state by quality \`x\` with \`T\` *or* \`P\`, never both.
+Build the network **one leg at a time**: source → component → sink, solve, extend. Diagnostics are source-mapped (component and stream names), so the failing block names the device to look at. Set guesses on stream members (they appear under their display names, e.g. \`s2.P\`) in Variable Settings exactly as for scalar variables. And inside the vapor dome, remember the two-phase rule: identify a state by quality \`x\` with \`T\` *or* \`P\`, never both.
 
 [Related: debugging, comp-connections, comp-transient]`,
   "plot-code": `# Plots in Code (PLOT)
@@ -1290,9 +1290,9 @@ Results come back in SI; convert or label them for display (see *Units & Consist
 A system is solvable only when the number of equations equals the number of unknowns — the **degrees of freedom (DoF)** are zero. Press **F4** (Check) to verify this *before* solving: it reports the DoF and any unit mismatches instantly, so you fix structural problems before the solver ever runs. Make F4-before-F2 a habit.
 
 ### Guesses make nonlinear solves converge
-For nonlinear or transcendental equations, the Newton solver iterates from a **guess**. Open **Variable Info** (\`Ctrl + I\`) to set a starting guess and physical bounds (e.g. \`T ≥ 0\`, \`0 ≤ x ≤ 1\`). A good guess is usually the difference between convergence and divergence.
+For nonlinear or transcendental equations, the Newton solver iterates from a **guess**. Open **Variable Settings** (**Tools → Variable Settings…**) to set a starting guess and physical bounds (e.g. \`T ≥ 0\`, \`0 ≤ x ≤ 1\`). A good guess is usually the difference between convergence and divergence.
 
-> **Tip:** If a solve fails to converge, the cause is almost always a missing guess or a wrong unit annotation — not a bug. Check the Solution panel's diagnostics and the Variable Info guesses first.
+> **Tip:** If a solve fails to converge, the cause is almost always a missing guess or a wrong unit annotation — not a bug. Check the Solution panel's diagnostics and the Variable Settings guesses first.
 
 [Related: gs-plots, units, variables]`,
   "gs-plots": `# 4. See It: Tables & Plots
@@ -1471,14 +1471,32 @@ The REPL evaluates a single expression per line, so multi-line block constructs 
 
 | Hotkey | Action |
 | --- | --- |
-| \`F2\` or \`Ctrl + Enter\` | **Solve** — runs the Newton-Raphson solver |
-| \`F4\` or \`Ctrl + K\` | **Check** — validates syntax, degrees of freedom, and expands blocks |
-| \`Ctrl + I\` | Open the **Variable Information** panel (guesses & bounds) |
-| \`Ctrl + T\` | Open the **Parametric Table** panel |
-| \`F9\` | **Solve selected block only** — ignores all other lines |
+| \`F2\` | **Solve** the run target: the focused parametric table, else the model (Check runs first) |
+| \`F4\` | **Check** the run target — syntax, degrees of freedom and block expansion |
+| \`Esc\` | **Stop** a running solve or table run |
+| \`Ctrl + K\` | **Command palette** — every command, panel, function and guide, with where it lives |
+| \`Ctrl + S\` / \`Ctrl + Shift + S\` | **Save** / **Save As** the project |
+| \`Ctrl + O\` | **Open** a project |
+| \`Ctrl + P\` | **Print Report** (after a successful solve; otherwise the browser prints) |
+| \`Ctrl + Space\` | **Autocomplete** functions and variables in the Editor |
+| \`Ctrl + F1\` | **Collapse or expand the ribbon** (when the ribbon is on; double-clicking a tab does the same) |
 | \`F1\` | **Contextual help** — opens the reference page for the symbol under the cursor |
+| \`?\` | **Keyboard Shortcuts** — the full list, including the schematic's keys |
 
-> **Tip:** make \`F4\` (Check) a habit before \`F2\` (Solve). It reports the DoF and any unit mismatches instantly, so you fix problems before the solver runs. For parametric-table examples, use **Solve Table** in the Tables tab instead of \`F2\`.
+On a Mac, \`⌘\` replaces \`Ctrl\`.
+
+> **Tip:** make \`F4\` (Check) a habit before \`F2\` (Solve). It reports the DoF and any unit mismatches instantly, so you fix problems before the solver runs. With a parametric table focused, \`F2\` solves every run of that table; the text beside **Check** and **Solve** names the target.
+
+## The ribbon (preview)
+Turn on **Preferences → Ribbon (preview)** to replace the Functions and Tools menus with tabs of labelled commands:
+
+- **Home** — project, Check and Solve, solve setup (Find All Solutions, Complex Mode, Stop Criteria…), panels and layouts.
+- **Insert** — tables, plots, the Component Wizard, **Insert Function…** (a searchable browser over every built-in function, with its reference page) and the Graph Digitizer.
+- **Data** — CSV import and the two table exports (full-precision data, formatted report), equation text, Table Operations….
+- **Analysis** — Optimization…, Curve Fit…, Parameter Estimation…, Monte Carlo…, Global Sensitivity…, PID Tuner… and Variable Settings….
+- **View** and **Help** — every window, the theme, Preferences, guides and this sheet.
+
+Focusing a table, a plot or the digitizer adds its own tab (**Table**, **Plot**, **Digitizer**) without switching to it. A greyed command stays focusable and its tooltip says why it is unavailable. **Save**, **Undo** and **Redo** sit beside the File menu; Undo and Redo act on the focused Editor, Tables workbook or schematic. The ribbon collapses with \`Ctrl + F1\` or a double-click on a tab (it starts collapsed on windows under 900 px tall); a click on a tab then opens it over the workspace. A status bar along the bottom shows where Save writes, the solve state and time, the unit system, warnings, the layout and the engine.
 
 [Related: gs-units-check, variables, repl]`,
   "reports": `# Notes & Narrative
@@ -1724,10 +1742,10 @@ A system is solvable only when the number of equations equals the number of unkn
 ## Bounds versus units
 \`T = 25 [C]\` is a **unit annotation**: the compiler converts the literal to SI (298.15 K) before solving. \`GUESS T [250, 400]\` is a **solver bound** on that same SI value — it does not convert, and it is not a unit. Mixing the two (\`GUESS T [0, 100]\` intending Celsius) boxes the Newton iterate in kelvin.
 
-In-text \`GUESS\` wins over Variable Information on conflict; the window is a view of the same scalars, including public member paths such as \`HX.in.P\`.
+In-text \`GUESS\` wins over Variable Settings on conflict; the window is a view of the same scalars, including public member paths such as \`HX.in.P\`.
 
-## The Variable Information panel
-Open it with \`Ctrl + I\`. For every variable you can set:
+## The Variable Settings window
+Open it from **Tools → Variable Settings…** (the Analysis tab with the ribbon on), or search the palette (\`Ctrl + K\`) for *Variable Settings*. For every variable you can set:
 
 - **Guess** — the starting point for the Newton-Raphson solver. Required for nonlinear equations; a poor guess is the most common cause of non-convergence.
 - **Lower / Upper bounds** — physical limits that keep the solver out of invalid domains (e.g. \`T ≥ 0\`, \`0 ≤ x ≤ 1\` for a quality or fraction, \`P > 0\`).
@@ -1743,7 +1761,7 @@ The Colebrook friction equation is transcendental — it has no closed form, so 
 Re = 1e5
 eps = 0.00015
 D = 0.25 [m]
-{ ff is unknown — set a guess of ~0.02 in Variable Info }
+{ ff is unknown — set a guess of ~0.02 in Variable Settings }
 1/sqrt(ff) = -2*log10(eps/(3.7*D) + 2.51/(Re*sqrt(ff)))
 \`\`\`
 A guess near \`0.02\` converges in a few iterations; a guess of \`0.5\` may stall. As a rule of thumb, guess dimensionless ratios near \`0.5\`, temperatures/pressures near the expected magnitude, and flow rates near the order of magnitude you expect.
@@ -1794,7 +1812,7 @@ T = 25 [C]         { stored as 298.15 K }
 The full list of recognized units and built-in constants lives in the reference table below (\`[Component: UnitsReference]\`).
 
 ## Results are SI
-A computed result has the SI unit of its expression — \`P * Vol = m * R * T\` gives \`m\` in kg, \`q = k*A*dT/L\` gives watts. To display in engineering units, either convert explicitly, set display units in the Variable Information window, or use the \`Convert\` function:
+A computed result has the SI unit of its expression — \`P * Vol = m * R * T\` gives \`m\` in kg, \`q = k*A*dT/L\` gives watts. To display in engineering units, either convert explicitly, set display units in the Variable Settings window, or use the \`Convert\` function:
 \`\`\`
 P_kPa  = P / 1000                { kPa, by division }
 P_kPa2 = P * Convert(Pa, kPa)    { using Convert }
@@ -2068,7 +2086,7 @@ written, and asserts its results; eighteen also carry a verified optimization
   effectiveness ε = 1 − exp(−UA/ṁc_p): the outlet stays between the inlet and
   wall temperatures at any NTU, and a shut branch (ṁ → 0) stays solvable.
 - **Optimizing a model.** The independent variable must be free: remove its
-  \`x = …\` line, then run **Tools → Minimize / Maximize**. A constraint is written
+  \`x = …\` line, then run **Tools → Optimization…**. A constraint is written
   \`expression <= value\`. Transient models optimize too — \`FinalValue\`,
   \`MaxValue\` and \`TimeAt\` outputs follow every decision value.
 
@@ -2155,7 +2173,7 @@ Minimise pump power while keeping the pack at or below 40 °C.
 | Constraints | \`T_cell <= 313.15\` |
 | **Optimum** | \`mdot_c\` = **0.0786**, \`W_pump\` = **0.3104** |
 
-In the app: delete (or comment out) the \`mdot_c = …\` line so \`mdot_c\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`mdot_c = …\` line so \`mdot_c\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -2294,7 +2312,7 @@ Minimise compressor power while still delivering 5.5 kW of cooling.
 | Constraints | \`Q_cool >= 5500\` |
 | **Optimum** | \`rpm\` = **1,412.7**, \`W_comp\` = **1,606.5** |
 
-In the app: delete (or comment out) the \`rpm = …\` line so \`rpm\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`rpm = …\` line so \`rpm\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -2432,7 +2450,7 @@ Maximise electrical output with the coolant leaving the stack at or below 85 °C
 | Constraints | \`T_c_out <= 358.15\` |
 | **Optimum** | \`I_st\` = **321.4**, \`P_el\` = **65,366.1** |
 
-In the app: delete (or comment out) the \`I_st = …\` line so \`I_st\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`I_st = …\` line so \`I_st\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -2542,7 +2560,7 @@ Find the supply voltage that gives the coldest plate — then trace the full tem
 | Constraints | none |
 | **Optimum** | \`V_supply\` = **13.052**, \`T_plate\` = **269.7** |
 
-In the app: delete (or comment out) the \`V_supply = …\` line so \`V_supply\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`V_supply = …\` line so \`V_supply\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -2575,7 +2593,7 @@ In the app: delete (or comment out) the \`V_supply = …\` line so \`V_supply\` 
 }
 \`\`\`
 
-**Pareto front.** Colder costs power: tracing both objectives with NSGA-II (**Tools → Minimize / Maximize → Multi-objective**) gives the trade-off curve between plate temperature and electrical input.
+**Pareto front.** Colder costs power: tracing both objectives with NSGA-II (**Tools → Optimization… → Multi-objective**) gives the trade-off curve between plate temperature and electrical input.
 
 \`\`\`json
 {
@@ -2697,7 +2715,7 @@ Minimise fin mass with the liner at or below 200 °C.
 | Constraints | \`T_liner <= 473.15\` |
 | **Optimum** | \`L_f\` = **0.0423**, \`m_fins\` = **1.425** |
 
-In the app: delete (or comment out) the \`L_f = …\` line so \`L_f\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`L_f = …\` line so \`L_f\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -2807,7 +2825,7 @@ Tune Kp for the fastest warm-up with at most 0.3 K overshoot.
 | Constraints | \`overshoot <= 0.3\` |
 | **Optimum** | \`Kp\` = **80.469**, \`t_reach\` = **2,985.2** |
 
-In the app: delete (or comment out) the \`Kp = …\` line so \`Kp\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`Kp = …\` line so \`Kp\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -2922,7 +2940,7 @@ Choose the gear ratio that extracts the most hydraulic power from the 24 V suppl
 | Constraints | none |
 | **Optimum** | \`ratio\` = **1.609**, \`P_hyd\` = **1,165.8** |
 
-In the app: delete (or comment out) the \`ratio = …\` line so \`ratio\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`ratio = …\` line so \`ratio\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -3031,7 +3049,7 @@ Minimise fan power with supply air at or below 25.5 °C.
 | Constraints | \`T_supply <= 298.65\` |
 | **Optimum** | \`m_sec\` = **1.761**, \`W_fans\` = **2,477.6** |
 
-In the app: delete (or comment out) the \`m_sec = …\` line so \`m_sec\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`m_sec = …\` line so \`m_sec\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -3171,7 +3189,7 @@ Maximise heating COP while delivering water at 45 °C or hotter.
 | Constraints | \`T_hot >= 318.15\` |
 | **Optimum** | \`mdot_w\` = **0.0201**, \`COP_h\` = **3.575** |
 
-In the app: delete (or comment out) the \`mdot_w = …\` line so \`mdot_w\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`mdot_w = …\` line so \`mdot_w\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -3287,7 +3305,7 @@ Find the high-side pressure that maximises COP — the textbook transcritical op
 | Constraints | none |
 | **Optimum** | \`P_gc\` = **8.796e+06**, \`COP\` = **2.383** |
 
-In the app: delete (or comment out) the \`P_gc = …\` line so \`P_gc\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`P_gc = …\` line so \`P_gc\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -3473,7 +3491,7 @@ Choose the coil apparatus dew point that maximises moisture removal per kWh.
 | Constraints | none |
 | **Optimum** | \`T_adp\` = **289.5**, \`MRE\` = **3.867** |
 
-In the app: delete (or comment out) the \`T_adp = …\` line so \`T_adp\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`T_adp = …\` line so \`T_adp\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -3658,7 +3676,7 @@ Choose the gear ratio that pumps the most water at 850 W/m² without an MPPT.
 | Constraints | none |
 | **Optimum** | \`ratio\` = **1.717**, \`Q_lph\` = **470.4** |
 
-In the app: delete (or comment out) the \`ratio = …\` line so \`ratio\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`ratio = …\` line so \`ratio\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -3787,7 +3805,7 @@ Minimise coolant pumping power with the stator jacket at or below 80 °C.
 | Constraints | \`T_stator <= 353.15\` |
 | **Optimum** | \`mdot_c\` = **0.0865**, \`W_cpump\` = **9.789** |
 
-In the app: delete (or comment out) the \`mdot_c = …\` line so \`mdot_c\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`mdot_c = …\` line so \`mdot_c\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -3890,7 +3908,7 @@ Find the lightest module that keeps the cells at or below 45 °C during a 2C dis
 | Constraints | \`T_max <= 318.15\` |
 | **Optimum** | \`m_pcm\` = **2.084**, \`m_module\` = **16.397** |
 
-In the app: delete (or comment out) the \`m_pcm = …\` line so \`m_pcm\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`m_pcm = …\` line so \`m_pcm\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -4014,7 +4032,7 @@ Choose the tower air flow that minimises total plant power (chiller + fan + pump
 | Constraints | none |
 | **Optimum** | \`mdot_a\` = **12.999**, \`W_plant\` = **74,159.9** |
 
-In the app: delete (or comment out) the \`mdot_a = …\` line so \`mdot_a\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`mdot_a = …\` line so \`mdot_a\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -4110,7 +4128,7 @@ Find the lightest rotor that stays at or below 700 K in a hot stop from 100 km/h
 | Constraints | \`T_peak <= 700\` |
 | **Optimum** | \`C_rotor\` = **3,781.5**, \`m_rotor\` = **7.563** |
 
-In the app: delete (or comment out) the \`C_rotor = …\` line so \`C_rotor\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`C_rotor = …\` line so \`C_rotor\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -4228,7 +4246,7 @@ Choose the bridge excitation that minimises the combined measurement error.
 | Constraints | none |
 | **Optimum** | \`V_ex\` = **0.3906**, \`e_total\` = **0.2018** |
 
-In the app: delete (or comment out) the \`V_ex = …\` line so \`V_ex\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`V_ex = …\` line so \`V_ex\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -4328,7 +4346,7 @@ Maximise cooling while keeping the panel 2 K above the room dew point.
 | Constraints | \`margin >= 2\` |
 | **Optimum** | \`T_sup\` = **282.5**, \`Q_cool\` = **2,368.6** |
 
-In the app: delete (or comment out) the \`T_sup = …\` line so \`T_sup\` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the \`T_sup = …\` line so \`T_sup\` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 \`\`\`json
 {
@@ -4492,12 +4510,12 @@ One rule holds for all three: if the document already defines a \`TABLE\` with t
 | --- | --- | --- |
 | \`TABLE\` / \`FUNCTION\` in the document | equation text | **Wins** over a GUI table of the same name |
 | GUI Function Table, CSV import, digitizer map | Tables window / project file | Used only when the document does not define that name |
-| \`GUESS\` in the document | equation text | **Wins** over Variable Information on conflict |
-| Variable Information | project file | Fills in where the text is silent |
+| \`GUESS\` in the document | equation text | **Wins** over Variable Settings on conflict |
+| Variable Settings | project file | Fills in where the text is silent |
 | Workspace sliders | project file | Applied as overrides on each solve (last write wins among overrides) |
 | REPL assignments | this session only | Override the solved workspace until \`clear\`; not in Export equation text |
 
-**Save project** writes a \`.frees\` JSON file: equation text plus Variable Information, GUI tables, maps, plots, schematic layout, sliders, and opaque legacy slices (spreadsheets / analyzer sessions) so a reload reproduces the effective model.
+**Save project** writes a \`.frees\` JSON file: equation text plus Variable Settings, GUI tables, maps, plots, schematic layout, sliders, and opaque legacy slices (spreadsheets / analyzer sessions) so a reload reproduces the effective model.
 
 **Export equation text** writes only the editor document. Anything in the table above that is not in the text is listed in the export notice — those inputs will not travel with a copy-paste of the equations.
 
@@ -5449,7 +5467,7 @@ P_shaft  = P_hyd / eta_pump
 ## Pitfalls
 
 - **Digitize past the region you expect to operate in** — interpolation is honest, extrapolation off the end of a table is not.
-- **If the intersection solve stalls**, set a guess for \`V_op\` near the middle of the table's flow range in Variable Info (\`Ctrl + I\`) — an intersection far from the default guess is the classic case for one.
+- **If the intersection solve stalls**, set a guess for \`V_op\` near the middle of the table's flow range in Variable Settings (**Tools → Variable Settings…**) — an intersection far from the default guess is the classic case for one.
 - **Keep the table in SI-consistent columns** (or annotate the units, as here) so the system-curve pascals and the table pascals actually meet.
 
 ## Go further

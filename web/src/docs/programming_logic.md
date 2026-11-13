@@ -117,12 +117,12 @@ One rule holds for all three: if the document already defines a `TABLE` with tha
 | --- | --- | --- |
 | `TABLE` / `FUNCTION` in the document | equation text | **Wins** over a GUI table of the same name |
 | GUI Function Table, CSV import, digitizer map | Tables window / project file | Used only when the document does not define that name |
-| `GUESS` in the document | equation text | **Wins** over Variable Information on conflict |
-| Variable Information | project file | Fills in where the text is silent |
+| `GUESS` in the document | equation text | **Wins** over Variable Settings on conflict |
+| Variable Settings | project file | Fills in where the text is silent |
 | Workspace sliders | project file | Applied as overrides on each solve (last write wins among overrides) |
 | REPL assignments | this session only | Override the solved workspace until `clear`; not in Export equation text |
 
-**Save project** writes a `.frees` JSON file: equation text plus Variable Information, GUI tables, maps, plots, schematic layout, sliders, and opaque legacy slices (spreadsheets / analyzer sessions) so a reload reproduces the effective model.
+**Save project** writes a `.frees` JSON file: equation text plus Variable Settings, GUI tables, maps, plots, schematic layout, sliders, and opaque legacy slices (spreadsheets / analyzer sessions) so a reload reproduces the effective model.
 
 **Export equation text** writes only the editor document. Anything in the table above that is not in the text is listed in the export notice — those inputs will not travel with a copy-paste of the equations.
 

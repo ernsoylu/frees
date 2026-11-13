@@ -50,7 +50,7 @@ written, and asserts its results; eighteen also carry a verified optimization
   effectiveness ε = 1 − exp(−UA/ṁc_p): the outlet stays between the inlet and
   wall temperatures at any NTU, and a shut branch (ṁ → 0) stays solvable.
 - **Optimizing a model.** The independent variable must be free: remove its
-  `x = …` line, then run **Tools → Minimize / Maximize**. A constraint is written
+  `x = …` line, then run **Tools → Optimization…**. A constraint is written
   `expression <= value`. Transient models optimize too — `FinalValue`,
   `MaxValue` and `TimeAt` outputs follow every decision value.
 
@@ -139,7 +139,7 @@ Minimise pump power while keeping the pack at or below 40 °C.
 | Constraints | `T_cell <= 313.15` |
 | **Optimum** | `mdot_c` = **0.0786**, `W_pump` = **0.3104** |
 
-In the app: delete (or comment out) the `mdot_c = …` line so `mdot_c` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `mdot_c = …` line so `mdot_c` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -280,7 +280,7 @@ Minimise compressor power while still delivering 5.5 kW of cooling.
 | Constraints | `Q_cool >= 5500` |
 | **Optimum** | `rpm` = **1,412.7**, `W_comp` = **1,606.5** |
 
-In the app: delete (or comment out) the `rpm = …` line so `rpm` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `rpm = …` line so `rpm` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -420,7 +420,7 @@ Maximise electrical output with the coolant leaving the stack at or below 85 °C
 | Constraints | `T_c_out <= 358.15` |
 | **Optimum** | `I_st` = **321.4**, `P_el` = **65,366.1** |
 
-In the app: delete (or comment out) the `I_st = …` line so `I_st` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `I_st = …` line so `I_st` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -532,7 +532,7 @@ Find the supply voltage that gives the coldest plate — then trace the full tem
 | Constraints | none |
 | **Optimum** | `V_supply` = **13.052**, `T_plate` = **269.7** |
 
-In the app: delete (or comment out) the `V_supply = …` line so `V_supply` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `V_supply = …` line so `V_supply` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -565,7 +565,7 @@ In the app: delete (or comment out) the `V_supply = …` line so `V_supply` is f
 }
 ```
 
-**Pareto front.** Colder costs power: tracing both objectives with NSGA-II (**Tools → Minimize / Maximize → Multi-objective**) gives the trade-off curve between plate temperature and electrical input.
+**Pareto front.** Colder costs power: tracing both objectives with NSGA-II (**Tools → Optimization… → Multi-objective**) gives the trade-off curve between plate temperature and electrical input.
 
 ```json
 {
@@ -689,7 +689,7 @@ Minimise fin mass with the liner at or below 200 °C.
 | Constraints | `T_liner <= 473.15` |
 | **Optimum** | `L_f` = **0.0423**, `m_fins` = **1.425** |
 
-In the app: delete (or comment out) the `L_f = …` line so `L_f` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `L_f = …` line so `L_f` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -801,7 +801,7 @@ Tune Kp for the fastest warm-up with at most 0.3 K overshoot.
 | Constraints | `overshoot <= 0.3` |
 | **Optimum** | `Kp` = **80.469**, `t_reach` = **2,985.2** |
 
-In the app: delete (or comment out) the `Kp = …` line so `Kp` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `Kp = …` line so `Kp` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -918,7 +918,7 @@ Choose the gear ratio that extracts the most hydraulic power from the 24 V suppl
 | Constraints | none |
 | **Optimum** | `ratio` = **1.609**, `P_hyd` = **1,165.8** |
 
-In the app: delete (or comment out) the `ratio = …` line so `ratio` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `ratio = …` line so `ratio` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -1029,7 +1029,7 @@ Minimise fan power with supply air at or below 25.5 °C.
 | Constraints | `T_supply <= 298.65` |
 | **Optimum** | `m_sec` = **1.761**, `W_fans` = **2,477.6** |
 
-In the app: delete (or comment out) the `m_sec = …` line so `m_sec` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `m_sec = …` line so `m_sec` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -1171,7 +1171,7 @@ Maximise heating COP while delivering water at 45 °C or hotter.
 | Constraints | `T_hot >= 318.15` |
 | **Optimum** | `mdot_w` = **0.0201**, `COP_h` = **3.575** |
 
-In the app: delete (or comment out) the `mdot_w = …` line so `mdot_w` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `mdot_w = …` line so `mdot_w` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -1289,7 +1289,7 @@ Find the high-side pressure that maximises COP — the textbook transcritical op
 | Constraints | none |
 | **Optimum** | `P_gc` = **8.796e+06**, `COP` = **2.383** |
 
-In the app: delete (or comment out) the `P_gc = …` line so `P_gc` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `P_gc = …` line so `P_gc` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -1479,7 +1479,7 @@ Choose the coil apparatus dew point that maximises moisture removal per kWh.
 | Constraints | none |
 | **Optimum** | `T_adp` = **289.5**, `MRE` = **3.867** |
 
-In the app: delete (or comment out) the `T_adp = …` line so `T_adp` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `T_adp = …` line so `T_adp` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -1668,7 +1668,7 @@ Choose the gear ratio that pumps the most water at 850 W/m² without an MPPT.
 | Constraints | none |
 | **Optimum** | `ratio` = **1.717**, `Q_lph` = **470.4** |
 
-In the app: delete (or comment out) the `ratio = …` line so `ratio` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `ratio = …` line so `ratio` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -1799,7 +1799,7 @@ Minimise coolant pumping power with the stator jacket at or below 80 °C.
 | Constraints | `T_stator <= 353.15` |
 | **Optimum** | `mdot_c` = **0.0865**, `W_cpump` = **9.789** |
 
-In the app: delete (or comment out) the `mdot_c = …` line so `mdot_c` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `mdot_c = …` line so `mdot_c` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -1904,7 +1904,7 @@ Find the lightest module that keeps the cells at or below 45 °C during a 2C dis
 | Constraints | `T_max <= 318.15` |
 | **Optimum** | `m_pcm` = **2.084**, `m_module` = **16.397** |
 
-In the app: delete (or comment out) the `m_pcm = …` line so `m_pcm` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `m_pcm = …` line so `m_pcm` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -2030,7 +2030,7 @@ Choose the tower air flow that minimises total plant power (chiller + fan + pump
 | Constraints | none |
 | **Optimum** | `mdot_a` = **12.999**, `W_plant` = **74,159.9** |
 
-In the app: delete (or comment out) the `mdot_a = …` line so `mdot_a` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `mdot_a = …` line so `mdot_a` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -2128,7 +2128,7 @@ Find the lightest rotor that stays at or below 700 K in a hot stop from 100 km/h
 | Constraints | `T_peak <= 700` |
 | **Optimum** | `C_rotor` = **3,781.5**, `m_rotor` = **7.563** |
 
-In the app: delete (or comment out) the `C_rotor = …` line so `C_rotor` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `C_rotor = …` line so `C_rotor` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -2248,7 +2248,7 @@ Choose the bridge excitation that minimises the combined measurement error.
 | Constraints | none |
 | **Optimum** | `V_ex` = **0.3906**, `e_total` = **0.2018** |
 
-In the app: delete (or comment out) the `V_ex = …` line so `V_ex` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `V_ex = …` line so `V_ex` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {
@@ -2350,7 +2350,7 @@ Maximise cooling while keeping the panel 2 K above the room dew point.
 | Constraints | `margin >= 2` |
 | **Optimum** | `T_sup` = **282.5**, `Q_cool` = **2,368.6** |
 
-In the app: delete (or comment out) the `T_sup = …` line so `T_sup` is free, then use **Tools → Minimize / Maximize** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
+In the app: delete (or comment out) the `T_sup = …` line so `T_sup` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
 ```json
 {

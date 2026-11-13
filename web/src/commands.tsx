@@ -7,17 +7,42 @@
 //
 // Function-catalogue and documentation palette entries stay data-driven, and
 // schematic canvas commands keep `schematic/commands.ts`.
+//
+// Phase O: the ribbon (`Ribbon.tsx`, behind the Preferences flag) is built from
+// `RIBBON_TABS` and `CONTEXT_TABS` below. A contextual command (a table's Add
+// Row, a plot's Export) is handled by whichever window is focused; the window
+// publishes it through `contextActions.ts`, and App reports "Focus a table
+// first" when none has.
 import type { SpotlightActionData, SpotlightActionGroupData } from '@mantine/spotlight'
 import { Kbd } from '@mantine/core'
 import {
   IconAdjustments,
+  IconArrowBackUp,
+  IconArrowForwardUp,
   IconBook,
   IconChartGridDots,
   IconChartHistogram,
   IconChartLine,
   IconChecks,
   IconCode,
+  IconColumnInsertRight,
+  IconColumns,
   IconCrosshair,
+  IconDownload,
+  IconFileSpreadsheet,
+  IconFilter,
+  IconFocus2,
+  IconLayoutNavbarCollapse,
+  IconListCheck,
+  IconMoon,
+  IconPhotoUp,
+  IconRefresh,
+  IconRowInsertBottom,
+  IconRowRemove,
+  IconRuler,
+  IconSquareRoot2,
+  IconTrash,
+  IconWand,
   IconDatabase,
   IconDeviceFloppy,
   IconFileExport,
@@ -61,6 +86,8 @@ export interface CommandSpec {
   ownedElsewhere?: boolean
   /** A short note under the item in a menu. */
   menuHint?: string
+  /** An on/off setting: the ribbon draws it as a pressed toggle. */
+  toggle?: boolean
 }
 
 export const COMMAND_SPECS = {
@@ -94,13 +121,13 @@ export const COMMAND_SPECS = {
   'plot.newPsychro': { label: 'New Psychrometric Chart', location: 'Rail ▸ Plots', group: 'Create', icon: IconTemperature, aliases: ['add psychrometric graph'] },
 
   'tool.componentWizard': { label: 'Component Wizard', location: 'Tools ▸ Modeling', group: 'Tools', icon: IconLayoutGrid, description: 'Browse the component library and insert a configured component' },
-  'tool.variableInfo': { label: 'Variable Information', location: 'Tools ▸ Equation tools', group: 'Tools', icon: IconVariable },
-  'tool.minMax': { label: 'Min / Max (optimize)', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconTargetArrow, aliases: ['optimize', 'minimize', 'maximize'] },
-  'tool.curveFit': { label: 'Curve Fit', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconMathFunction, aliases: ['regression'] },
-  'tool.monteCarlo': { label: 'Monte Carlo Uncertainty', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconChartHistogram, aliases: ['uncertainty'] },
-  'tool.sensitivity': { label: 'Global Sensitivity', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconChartGridDots, aliases: ['sobol', 'morris'] },
-  'tool.pidTuner': { label: 'PID Tuner', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconAdjustments },
-  'tool.parameterFit': { label: 'Parameter Estimation', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconCrosshair, aliases: ['calibration'] },
+  'tool.variableInfo': { label: 'Variable Settings…', location: 'Tools ▸ Equation tools', group: 'Tools', icon: IconVariable, aliases: ['variable information', 'guesses', 'bounds'], description: 'Guess values, bounds and units of every variable' },
+  'tool.minMax': { label: 'Optimization…', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconTargetArrow, aliases: ['min / max', 'optimize', 'minimize', 'maximize'] },
+  'tool.curveFit': { label: 'Curve Fit…', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconMathFunction, aliases: ['regression'] },
+  'tool.monteCarlo': { label: 'Monte Carlo…', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconChartHistogram, aliases: ['uncertainty', 'monte carlo uncertainty'] },
+  'tool.sensitivity': { label: 'Global Sensitivity…', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconChartGridDots, aliases: ['sobol', 'morris'] },
+  'tool.pidTuner': { label: 'PID Tuner…', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconAdjustments },
+  'tool.parameterFit': { label: 'Parameter Estimation…', location: 'Tools ▸ Analysis', group: 'Tools', icon: IconCrosshair, aliases: ['calibration'] },
   'app.preferences': { label: 'Preferences', location: 'Rail', group: 'Tools', icon: IconSettings, aliases: ['settings', 'units'] },
   'app.about': { label: 'About', location: 'Rail', group: 'Tools', icon: IconInfoCircle },
 
@@ -118,20 +145,59 @@ export const COMMAND_SPECS = {
 
   'help.gettingStarted': { label: 'Getting Started…', location: 'Help', group: 'Help', icon: IconHelp, description: 'What frees is, and four one-click ways in' },
   'help.shortcuts': { label: 'Keyboard Shortcuts', location: 'Help', group: 'Help', icon: IconKeyboard, shortcut: ['?'], description: 'Show the hotkey reference' },
-  'help.docs': { label: 'Help', location: 'Rail', group: 'Help', icon: IconBook, aliases: ['documentation'] },
+  'help.docs': { label: 'Documentation', location: 'Rail', group: 'Help', icon: IconBook, aliases: ['help', 'manual'] },
+
+  // Phase O: the ribbon's own commands.
+  'run.findAll': { label: 'Find All Solutions', location: 'Toolbar ▸ Solve options', group: 'Run', icon: IconListCheck, toggle: true, description: 'Bounded multiple-solution search (max 32 solutions)' },
+  'run.complex': { label: 'Complex Mode', location: 'Toolbar ▸ Solve options', group: 'Run', icon: IconSquareRoot2, toggle: true, description: 'Solve over the complex numbers' },
+  'app.stopCriteria': { label: 'Stop Criteria…', location: 'Rail ▸ Preferences', group: 'Run', icon: IconAdjustments, aliases: ['tolerance', 'iterations', 'residuals'], description: 'Iteration, residual and time limits, in Preferences' },
+  'edit.undo': { label: 'Undo', location: 'Quick Access', group: 'Edit', icon: IconArrowBackUp, description: 'Undo the last edit in the focused document' },
+  'edit.redo': { label: 'Redo', location: 'Quick Access', group: 'Edit', icon: IconArrowForwardUp, description: 'Redo the last undone edit in the focused document' },
+  'insert.function': { label: 'Insert Function…', location: 'Functions', group: 'Create', icon: IconMathFunction, aliases: ['functions', 'function browser', 'catalogue'], description: 'Search every built-in function and insert it at the caret' },
+  'view.theme': { label: 'Toggle Light/Dark Theme', location: 'Rail', group: 'Views', icon: IconMoon, aliases: ['theme', 'dark mode', 'light mode'] },
+  'view.ribbon': { label: 'Collapse or Expand Ribbon', location: 'Ribbon', group: 'Views', icon: IconLayoutNavbarCollapse, shortcut: ['Mod', 'F1'], description: 'Also: double-click a ribbon tab' },
+  'data.tableOps': { label: 'Table Operations…', location: 'Tables ▸ toolbar', group: 'Data', icon: IconFilter, aliases: ['wrangle', 'filter', 'join', 'group'], description: 'Filter rows, transform columns, group, roll and join tables' },
+  'data.functionFromColumns': { label: 'Create Function from Columns…', location: 'Tables ▸ toolbar', group: 'Data', icon: IconMathFunction, description: 'Turn two columns of the active table into a Function Table' },
+  'table.configure': { label: 'Configure Columns…', location: 'Inspector', group: 'Table', icon: IconColumns },
+  'table.addRow': { label: 'Add Row', location: 'Inspector', group: 'Table', icon: IconRowInsertBottom },
+  'table.removeLastRow': { label: 'Remove Last Row', location: 'Inspector', group: 'Table', icon: IconRowRemove },
+  'table.fillColumn': { label: 'Fill Column…', location: 'Tables ▸ column header', group: 'Table', icon: IconColumnInsertRight, aliases: ['alter values'], description: 'Fill an input column from a first to a last value' },
+  'table.plotSelected': { label: 'Plot Selected Columns', location: 'Tables ▸ selection', group: 'Table', icon: IconChartLine, description: 'The first selected column is X, the rest are Y' },
+  'table.retryFailed': { label: 'Retry Failed Runs', location: 'Tables ▸ status', group: 'Table', icon: IconRefresh },
+  'table.exportData': { label: 'Data Export — full precision', location: 'Tables ▸ Export', group: 'Table', icon: IconDownload, description: 'CSV with exact values (round-trip)' },
+  'table.exportReport': { label: 'Report Export — formatted', location: 'Tables ▸ Export', group: 'Table', icon: IconFileSpreadsheet, description: 'CSV with 6 significant digits' },
+  'table.goToDefinition': { label: 'Go to Definition', location: 'Tables', group: 'Table', icon: IconCode, description: 'Show the TABLE block in the Editor' },
+  'table.delete': { label: 'Delete Table…', location: 'Inspector', group: 'Table', icon: IconTrash },
+  'plot.configure': { label: 'Configure Plot…', location: 'Plot ▸ toolbar', group: 'Plot', icon: IconAdjustments },
+  'plot.export': { label: 'Export Plot…', location: 'Plot ▸ toolbar', group: 'Plot', icon: IconDownload, description: 'Image or data; the view scope is chosen in the menu' },
+  'plot.inspect': { label: 'Inspect Plot', location: 'Plot ▸ measurement bar', group: 'Plot', icon: IconFocus2, description: 'Move to the cursor and measurement bar (arrow keys step samples)' },
+  'plot.delete': { label: 'Delete Plot…', location: 'Inspector', group: 'Plot', icon: IconTrash },
+  'digitizer.image': { label: 'Load Image…', location: 'Digitizer', group: 'Digitizer', icon: IconPhotoUp },
+  'digitizer.calibrate': { label: 'Calibrate Axes', location: 'Digitizer', group: 'Digitizer', icon: IconRuler, description: 'Click X1, X2, Y1 and Y2 on the image' },
+  'digitizer.extract': { label: 'Extract Points', location: 'Digitizer', group: 'Digitizer', icon: IconWand, description: 'Pick a curve colour and auto-extract its points' },
+  'digitizer.review': { label: 'Review Points', location: 'Digitizer', group: 'Digitizer', icon: IconListCheck, description: 'Select and drag points to correct them' },
+  'digitizer.useData': { label: 'Use Data as Function Table', location: 'Digitizer', group: 'Digitizer', icon: IconTable },
   'app.palette': { label: 'Command Palette', location: 'Toolbar', group: null, icon: IconSearch, shortcut: ['Mod', 'K'], ownedElsewhere: true },
   'editor.complete': { label: 'Autocomplete functions & variables', location: 'Editor', group: null, icon: IconCode, shortcut: ['Mod', 'Space'], ownedElsewhere: true },
 } as const satisfies Record<string, CommandSpec>
 
 export type CommandId = keyof typeof COMMAND_SPECS
 
-/** What App supplies per command: the handler, and the reason it cannot run now (null when it can). */
-export type CommandHandlers = Record<CommandId, { run: () => void; unavailable?: string | null }>
+/** What App supplies per command: the handler, the reason it cannot run now
+ *  (null when it can), a toggle's state, and a description naming the target. */
+export interface CommandHandler {
+  run: () => void
+  unavailable?: string | null
+  checked?: boolean
+  description?: string
+}
+export type CommandHandlers = Record<CommandId, CommandHandler>
 
 export interface Command extends CommandSpec {
   id: CommandId
   run: () => void
   unavailable: string | null
+  checked?: boolean
 }
 
 export type Commands = Record<CommandId, Command>
@@ -140,7 +206,8 @@ export function resolveCommands(handlers: CommandHandlers): Commands {
   const out = {} as Commands
   for (const id of Object.keys(COMMAND_SPECS) as CommandId[]) {
     const h = handlers[id]
-    out[id] = { ...(COMMAND_SPECS[id] as CommandSpec), id, run: h.run, unavailable: h.unavailable ?? null }
+    const spec = COMMAND_SPECS[id] as CommandSpec
+    out[id] = { ...spec, id, run: h.run, unavailable: h.unavailable ?? null, checked: h.checked, description: h.description ?? spec.description }
   }
   return out
 }
@@ -163,8 +230,77 @@ export const RAIL_TABLES_NEW: readonly CommandId[] = ['table.newParametric', 'ta
 export const RAIL_PLOTS_NEW: readonly CommandId[] = ['plot.newXY', 'plot.newProperty', 'plot.newPsychro']
 export const LAYOUT_MENU: readonly CommandId[] = ['layout.default', 'layout.results', 'layout.split']
 export const MOBILE_MENU: readonly MenuEntry[] = [
-  'file.new', 'file.open', 'file.library', 'file.url', 'file.save', 'file.saveAs', '-', 'app.preferences', '-', 'file.example', 'help.docs',
+  'file.new', 'file.open', 'file.library', 'file.url', 'file.save', 'file.saveAs', '-',
+  { label: 'Insert' }, 'table.newParametric', 'table.newFunction1', 'table.newFunction2', 'state.newTable', 'plot.newXY', 'plot.newProperty', 'plot.newPsychro', 'tool.componentWizard', 'insert.function', '-',
+  { label: 'Analysis' }, 'tool.minMax', 'tool.curveFit', 'tool.parameterFit', 'tool.monteCarlo', 'tool.sensitivity', 'tool.pidTuner', 'tool.variableInfo', '-',
+  'app.preferences', '-', 'file.example', 'help.docs',
 ]
+
+// --- The ribbon (Phase O): permanent tabs, then the contextual ones. ---
+
+export interface RibbonGroup { label: string; items: readonly CommandId[] }
+export interface RibbonTab { id: string; label: string; groups: readonly RibbonGroup[] }
+
+export const RIBBON_TABS: readonly RibbonTab[] = [
+  { id: 'home', label: 'Home', groups: [
+    { label: 'Project', items: ['file.new', 'file.open', 'file.save', 'file.saveAs', 'file.library', 'file.share', 'file.print'] },
+    { label: 'Run', items: ['model.check', 'model.solve', 'run.stop'] },
+    { label: 'Solve Setup', items: ['run.findAll', 'run.complex', 'app.stopCriteria'] },
+    { label: 'Panels', items: ['view.editor', 'view.variables', 'view.inspector', 'view.terminal'] },
+    { label: 'Layout', items: ['layout.default', 'layout.results', 'layout.split'] },
+  ] },
+  { id: 'insert', label: 'Insert', groups: [
+    { label: 'Tables', items: ['table.newParametric', 'table.newFunction1', 'table.newFunction2', 'table.importCsv', 'state.newTable'] },
+    { label: 'Plots', items: ['plot.newXY', 'plot.newProperty', 'plot.newPsychro'] },
+    { label: 'Model', items: ['tool.componentWizard', 'insert.function'] },
+    { label: 'Digitizer', items: ['view.digitizer'] },
+  ] },
+  { id: 'data', label: 'Data', groups: [
+    { label: 'Import / Export', items: ['table.importCsv', 'table.exportData', 'table.exportReport', 'file.exportText', 'file.url'] },
+    { label: 'Transform', items: ['data.tableOps', 'data.functionFromColumns'] },
+  ] },
+  { id: 'analysis', label: 'Analysis', groups: [
+    { label: 'Optimize & Fit', items: ['tool.minMax', 'tool.curveFit', 'tool.parameterFit'] },
+    { label: 'Uncertainty', items: ['tool.monteCarlo', 'tool.sensitivity'] },
+    { label: 'Control', items: ['tool.pidTuner'] },
+    { label: 'Variables', items: ['tool.variableInfo'] },
+  ] },
+  { id: 'view', label: 'View', groups: [
+    { label: 'Documents', items: ['view.editor', 'view.tables', 'view.plots', 'view.states', 'view.schematic', 'view.digitizer'] },
+    { label: 'Panels', items: ['view.variables', 'view.inspector', 'view.terminal'] },
+    { label: 'Layouts', items: ['layout.default', 'layout.results', 'layout.split'] },
+    { label: 'Appearance', items: ['view.theme', 'view.ribbon', 'app.preferences'] },
+  ] },
+  { id: 'help', label: 'Help', groups: [
+    { label: 'Learn', items: ['help.gettingStarted', 'file.example', 'help.docs'] },
+    { label: 'Reference', items: ['help.shortcuts', 'app.palette', 'app.about'] },
+  ] },
+]
+
+/** Contextual tabs: shown only while a window of their kind is focused. */
+export const CONTEXT_TABS: Record<'table' | 'plot' | 'digitizer', RibbonTab> = {
+  table: { id: 'ctx-table', label: 'Table', groups: [
+    { label: 'Structure', items: ['table.configure', 'table.addRow', 'table.removeLastRow', 'table.fillColumn'] },
+    { label: 'Edit', items: ['edit.undo', 'edit.redo'] },
+    { label: 'Results', items: ['table.plotSelected', 'table.retryFailed'] },
+    { label: 'Export', items: ['table.exportData', 'table.exportReport'] },
+    { label: 'Table', items: ['table.goToDefinition', 'table.delete'] },
+  ] },
+  plot: { id: 'ctx-plot', label: 'Plot', groups: [
+    { label: 'Plot', items: ['plot.configure', 'plot.export', 'plot.inspect', 'plot.delete'] },
+  ] },
+  digitizer: { id: 'ctx-digitizer', label: 'Digitizer', groups: [
+    { label: 'Steps', items: ['digitizer.image', 'digitizer.calibrate', 'digitizer.extract', 'digitizer.review', 'digitizer.useData'] },
+  ] },
+}
+
+/** Where a command sits on the ribbon, e.g. "Analysis ▸ Optimize & Fit" (its first home). */
+export function ribbonLocation(id: CommandId): string | null {
+  for (const tab of [...RIBBON_TABS, ...Object.values(CONTEXT_TABS)]) {
+    for (const g of tab.groups) if (g.items.includes(id)) return `${tab.label} ▸ ${g.label}`
+  }
+  return null
+}
 
 /** Every id a menu surface shows, for the parity test. */
 export const MENU_SURFACES: Record<string, readonly MenuEntry[]> = {
@@ -199,17 +335,19 @@ export function commandForKey(cmds: Commands, e: KeyboardEvent): Command | null 
 
 // --- Renderers ---
 
-/** The palette groups for the registry's commands, each row naming its location and shortcut. */
-export function commandPaletteGroups(cmds: Commands): SpotlightActionGroupData[] {
+/** The palette groups for the registry's commands, each row naming its location
+ *  (its ribbon path when the ribbon is on) and shortcut. */
+export function commandPaletteGroups(cmds: Commands, ribbon = false): SpotlightActionGroupData[] {
   const groups = new Map<string, SpotlightActionData[]>()
   for (const c of Object.values(cmds)) {
     if (c.group === null) continue
     const Ico = c.icon
     const detail = c.unavailable ?? c.description
+    const location = (ribbon && ribbonLocation(c.id)) || c.location
     const action: SpotlightActionData = {
       id: c.id,
-      label: c.label,
-      description: detail ? `${c.location} · ${detail}` : c.location,
+      label: c.toggle ? `${c.label}: ${c.checked ? 'on' : 'off'}` : c.label,
+      description: detail ? `${location} · ${detail}` : location,
       keywords: c.aliases ? [...c.aliases] : undefined,
       leftSection: <Ico size={18} />,
       rightSection: c.shortcut ? <Kbd size="xs">{c.shortcut.map(keyLabel).join('+')}</Kbd> : undefined,

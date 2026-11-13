@@ -138,10 +138,10 @@ A system is solvable only when the number of equations equals the number of unkn
 ## Bounds versus units
 `T = 25 [C]` is a **unit annotation**: the compiler converts the literal to SI (298.15 K) before solving. `GUESS T [250, 400]` is a **solver bound** on that same SI value — it does not convert, and it is not a unit. Mixing the two (`GUESS T [0, 100]` intending Celsius) boxes the Newton iterate in kelvin.
 
-In-text `GUESS` wins over Variable Information on conflict; the window is a view of the same scalars, including public member paths such as `HX.in.P`.
+In-text `GUESS` wins over Variable Settings on conflict; the window is a view of the same scalars, including public member paths such as `HX.in.P`.
 
-## The Variable Information panel
-Open it with `Ctrl + I`. For every variable you can set:
+## The Variable Settings window
+Open it from **Tools → Variable Settings…** (the Analysis tab with the ribbon on), or search the palette (`Ctrl + K`) for *Variable Settings*. For every variable you can set:
 
 - **Guess** — the starting point for the Newton-Raphson solver. Required for nonlinear equations; a poor guess is the most common cause of non-convergence.
 - **Lower / Upper bounds** — physical limits that keep the solver out of invalid domains (e.g. `T ≥ 0`, `0 ≤ x ≤ 1` for a quality or fraction, `P > 0`).
@@ -157,7 +157,7 @@ The Colebrook friction equation is transcendental — it has no closed form, so 
 Re = 1e5
 eps = 0.00015
 D = 0.25 [m]
-{ ff is unknown — set a guess of ~0.02 in Variable Info }
+{ ff is unknown — set a guess of ~0.02 in Variable Settings }
 1/sqrt(ff) = -2*log10(eps/(3.7*D) + 2.51/(Re*sqrt(ff)))
 ```
 A guess near `0.02` converges in a few iterations; a guess of `0.5` may stall. As a rule of thumb, guess dimensionless ratios near `0.5`, temperatures/pressures near the expected magnitude, and flow rates near the order of magnitude you expect.
@@ -212,7 +212,7 @@ T = 25 [C]         { stored as 298.15 K }
 The full list of recognized units and built-in constants lives in the reference table below (`[Component: UnitsReference]`).
 
 ## Results are SI
-A computed result has the SI unit of its expression — `P * Vol = m * R * T` gives `m` in kg, `q = k*A*dT/L` gives watts. To display in engineering units, either convert explicitly, set display units in the Variable Information window, or use the `Convert` function:
+A computed result has the SI unit of its expression — `P * Vol = m * R * T` gives `m` in kg, `q = k*A*dT/L` gives watts. To display in engineering units, either convert explicitly, set display units in the Variable Settings window, or use the `Convert` function:
 ```
 P_kPa  = P / 1000                { kPa, by division }
 P_kPa2 = P * Convert(Pa, kPa)    { using Convert }

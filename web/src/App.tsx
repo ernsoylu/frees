@@ -19,10 +19,11 @@ import {
   TextInput,
   Title,
   useComputedColorScheme,
+  useMantineColorScheme,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { Spotlight, SpotlightActionGroupData, spotlight } from '@mantine/spotlight'
-import { commandForKey, commandPaletteGroups, resolveCommands, type Commands } from './commands'
+import { commandForKey, commandPaletteGroups, resolveCommands, type CommandId, type Commands } from './commands'
 import {
   IconSitemap,
   IconHelp,
@@ -51,6 +52,7 @@ import {
   SolveResponse,
   StopCriteria,
   UnitSystem,
+  UNIT_SYSTEM_OPTIONS,
   VariableInfo,
   VariableResult,
 } from './api'
@@ -63,7 +65,10 @@ import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, withS
 import type { SeriesId } from './preferredValues'
 import { compareRuns, describeRun, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
 import { playbackVariables, timeLabel, timelineOf, type Timeline } from './playback'
-import { wasmUnitConversions } from './wasm/engineClient'
+import { getWorkerPoolConcurrency, wasmUnitConversions } from './wasm/engineClient'
+import { contextHandler, useContextVersion } from './contextActions'
+import { readRibbon, readRibbonDensity, writeRibbonDensity, type RibbonDensity } from './ribbonPrefs'
+import { StatusBar } from './StatusBar'
 const PreferencesModal = lazy(() => import('./PreferencesModal'))
 const AboutModal = lazy(() => import('./AboutModal'))
 import VariableInfoModal, {
@@ -158,6 +163,7 @@ const ReplTerminal = lazy(() => import('./ReplTerminal'))
 const MobileLayout = lazy(() => import('./MobileLayout'))
 import { DOCS_TOPICS } from './docsTopics'
 const ShortcutsModal = lazy(() => import('./ShortcutsModal'))
+const FunctionBrowserModal = lazy(() => import('./FunctionBrowserModal'))
 const GettingStartedModal = lazy(() => import('./GettingStartedModal'))
 import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
 import type { Example } from './examples'
@@ -174,7 +180,7 @@ import {
   SharedLinkModal,
   TextPromptModal,
 } from './dialogs'
-import { Rail, TopBar } from './WorkspaceChrome'
+import { Rail, TopBar, tablePill } from './WorkspaceChrome'
 import type { WorkspaceDockHandle, OpenWindow } from './workspace/WorkspaceDock'
 const WorkspaceDock = lazy(() => import('./workspace/WorkspaceDock').then(m => ({ default: m.WorkspaceDock })))
 import { detectStates } from './plots/stateTable'
@@ -716,6 +722,9 @@ export default function App() {
   // Tracks unsaved changes; suppressed for one render-cycle after a project
   // load / new / save so the dirty-tracking effect doesn't fire falsely.
   const isDirtyRef = useRef(false)
+  // Phase O's status bar shows both; the refs stay the source the save paths read.
+  const [dirty, setDirty] = useState(false)
+  const [saveWhere, setSaveWhere] = useState<SaveProvenance>(null)
   const suppressDirtyRef = useRef(false)
   // Stores the action to run once the save-check dialog is resolved.
   const pendingActionRef = useRef<(() => void) | null>(null)
@@ -781,6 +790,20 @@ export default function App() {
   const [showOpenUrl, setShowOpenUrl] = useState(false)
   const [showComponentWizard, setShowComponentWizard] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showFunctionBrowser, setShowFunctionBrowser] = useState(false)
+  // Phase O: the ribbon flag and its density are device preferences.
+  const [ribbonOn, setRibbonOn] = useState(readRibbon)
+  const [ribbonDensity, setRibbonDensity] = useState<RibbonDensity>(() => readRibbonDensity())
+  const ribbonLastOpenRef = useRef<RibbonDensity>('expanded')
+  const changeRibbonDensity = (d: RibbonDensity) => {
+    if (d !== 'collapsed') ribbonLastOpenRef.current = d
+    setRibbonDensity(d)
+    writeRibbonDensity(d)
+  }
+  const [layoutName, setLayoutName] = useState('Restored')
+  const { setColorScheme } = useMantineColorScheme()
+  // Windows publish their contextual commands (contextActions.ts); re-render when they change.
+  useContextVersion()
   const [activeTab, setActiveTab] = useState<string>('equations')
 
   const editorRef = useRef<EquationEditorHandle>(null)
@@ -1057,9 +1080,11 @@ export default function App() {
     if (suppressDirtyRef.current) {
       suppressDirtyRef.current = false
       isDirtyRef.current = false
+      setDirty(false)
       return
     }
     isDirtyRef.current = true
+    setDirty(true)
 
   }, [text, tables, plots, varDrafts, pinnedSliders, schematic])
 
@@ -1069,6 +1094,7 @@ export default function App() {
   const applyProject = useCallback((p: FreesProject) => {
     suppressDirtyRef.current = true
     isDirtyRef.current = false
+    setDirty(false)
     // Whatever is now in the workspace, it is not the library row this tab was
     // tracking. Every load path funnels through here, so clearing it here (and
     // re-arming it only in the two library paths) is the one place that has to
@@ -1194,6 +1220,7 @@ export default function App() {
       if (cancelled || link === null) return
       if (projectSourceRef.current !== null) return
       projectSourceRef.current = 'file'
+      setSaveWhere('file')
       projectHandleRef.current = link.handle
       setProjectName(link.name)
     })
@@ -1226,7 +1253,9 @@ export default function App() {
       if (outcome.status === 'saved') {
         libraryRevRef.current = { name, rev: outcome.meta.rev }
         isDirtyRef.current = false
+        setDirty(false)
         projectSourceRef.current = 'browser'
+        setSaveWhere('browser')
         // The library is the project's home now; drop any stale file link.
         adoptFileHandle(null, name)
       } else if (outcome.status === 'conflict') {
@@ -1258,6 +1287,7 @@ export default function App() {
       const outcome = await saveProjectToHandle(project, handle)
       if (outcome === 'saved') {
         isDirtyRef.current = false
+        setDirty(false)
         void writeFileLink(projectName, handle)
         notifications.show({
           color: 'teal',
@@ -1278,7 +1308,9 @@ export default function App() {
     const saved = await saveProject(project, projectName)
     if (saved.saved) {
       isDirtyRef.current = false
+      setDirty(false)
       projectSourceRef.current = 'file'
+      setSaveWhere('file')
       adoptFileHandle(saved.handle, projectName)
     }
     return saved.saved
@@ -1309,6 +1341,7 @@ export default function App() {
   const onSaveCheckDiscard = useCallback(() => {
     setShowSaveCheck(false)
     isDirtyRef.current = false
+    setDirty(false)
     pendingActionRef.current?.()
     pendingActionRef.current = null
   }, [])
@@ -1374,7 +1407,9 @@ export default function App() {
       const saved = await saveProject(buildProject(currentSlices()), clean)
       if (saved.saved) {
         isDirtyRef.current = false
+        setDirty(false)
         projectSourceRef.current = 'file'
+        setSaveWhere('file')
         adoptFileHandle(saved.handle, clean)
       }
       setSaveAsOpen(false)
@@ -1412,6 +1447,7 @@ export default function App() {
           const name = file.name.replace(/\.frees$/i, '')
           setProjectName(name)
           projectSourceRef.current = 'file'
+          setSaveWhere('file')
           adoptFileHandle(handle, name)
         } catch (err) {
           setDialogError(err instanceof Error ? err.message : 'Could not open project file.')
@@ -1498,6 +1534,7 @@ export default function App() {
     applyProject(loaded.project)
     setProjectName(conflict.name)
     projectSourceRef.current = 'browser'
+    setSaveWhere('browser')
     libraryRevRef.current = { name: conflict.name, rev: loaded.rev }
     adoptFileHandle(null, conflict.name)
     notifications.show({
@@ -1519,6 +1556,7 @@ export default function App() {
             applyProject(loaded.project)
             setProjectName(name)
             projectSourceRef.current = 'browser'
+            setSaveWhere('browser')
             // Remember the revision read, so this tab's next save is checked
             // against exactly what it opened.
             libraryRevRef.current = { name, rev: loaded.rev }
@@ -1548,6 +1586,7 @@ export default function App() {
         const name = file.name.replace(/\.frees$/i, '')
         setProjectName(name)
         projectSourceRef.current = 'file'
+        setSaveWhere('file')
         // An <input type=file> read has no handle — any kept one is stale.
         adoptFileHandle(null, name)
       } catch (err) {
@@ -1559,10 +1598,12 @@ export default function App() {
 
   const performNewProject = useCallback(() => {
     projectSourceRef.current = null
+    setSaveWhere(null)
     libraryRevRef.current = null
     adoptFileHandle(null, 'untitled')
     suppressDirtyRef.current = true
     isDirtyRef.current = false
+    setDirty(false)
     clearProjectLocal()
     void clearAutosaveMirror()
     writeBridgedKeys({
@@ -1763,6 +1804,7 @@ export default function App() {
   function actuallyLoadExample(example: Example) {
     suppressDirtyRef.current = true
     isDirtyRef.current = false
+    setDirty(false)
     // I4: an embed leaves the visitor's stored workspace exactly as it was.
     if (!EMBED.embed) persistLoadedExample(example)
     applyText(example.text)
@@ -3037,6 +3079,70 @@ export default function App() {
     if (first) dockRef.current?.openInstance(`state:${first.name}`, 'states', first.name)
     else dockRef.current?.open('states')
   }
+  const changeFindAll = (checked: boolean) => {
+    setFindAll(checked)
+    setResult(null)
+    setLastSolvedWithFillMissing(false)
+  }
+  const changeComplexMode = (checked: boolean) => {
+    setComplexMode(checked)
+    setCheckResult(null)
+    setResult(null)
+    setLastSolvedWithFillMissing(false)
+    invalidateTable()
+  }
+  // Phase O: contextual commands run in the focused window, which publishes
+  // them (contextActions.ts); App names the reason when it has not. A code
+  // table or plot is "defined in the equations" and is never redirected.
+  const fw = focusedWindow
+  const focusedTable = fw?.kind === 'table'
+    ? fw.id === TABLES_WORKBOOK_WINDOW_ID
+      ? (activeTable && isHostedTable(activeTable) ? activeTable : undefined)
+      : tables.find((x) => `table:${x.id}` === fw.id)
+    : undefined
+  const focusedPlot = fw?.kind === 'plot' ? mergedPlots.find((x) => `plot:${x.id}` === fw.id) : undefined
+  const codeTable = focusedTable?.source === 'code' && fw?.id !== TABLES_WORKBOOK_WINDOW_ID
+  const noop = () => {}
+  const inWindow = (windowId: string | undefined, id: CommandId, none: string) =>
+    contextHandler(windowId, id) ?? { run: noop, unavailable: none }
+  const onTable = (id: CommandId) => {
+    if (fw?.kind !== 'table') return { run: noop, unavailable: 'Focus a table first.' }
+    if (codeTable) return { run: noop, unavailable: 'Defined in the equations: edit its block in the Editor.' }
+    return inWindow(fw.id, id, 'Open the Tables workbook first.')
+  }
+  const onWorkbook = (id: CommandId) =>
+    codeTable ? { run: noop, unavailable: 'Defined in the equations: edit its block in the Editor.' } : inWindow(TABLES_WORKBOOK_WINDOW_ID, id, 'Open the Tables workbook first.')
+  const onPlot = (id: CommandId) => (fw?.kind === 'plot' ? inWindow(fw.id, id, 'This plot has not loaded yet.') : { run: noop, unavailable: 'Focus a plot first.' })
+  const onDigitizer = (id: CommandId) => inWindow('digitizer', id, 'Open the Graph Digitizer first.')
+  // The Variable Explorer is a utility panel, so it never becomes the focused
+  // document; while it is the active panel, Undo and Redo reach its scenarios.
+  const onHistory = (id: CommandId) => {
+    if (activeTab === 'workspace') {
+      const undo = id === 'edit.undo'
+      const steps = undo ? scenarioHistory.done.length : scenarioHistory.undone.length
+      return {
+        run: () => stepScenarios(undo ? 'undo' : 'redo'),
+        unavailable: steps ? null : `Nothing to ${undo ? 'undo' : 'redo'} in the scenarios.`,
+        description: `${undo ? 'Undo' : 'Redo'} the last scenario edit`,
+      }
+    }
+    return inWindow(fw?.id, id, 'No undo history here: focus the Editor, the Tables workbook, the schematic or the scenarios.')
+  }
+  const toggleRibbon = () => changeRibbonDensity(ribbonDensity === 'collapsed' ? ribbonLastOpenRef.current : 'collapsed')
+  const perspective = (name: 'default' | 'results' | 'split', label: string) => () => {
+    dockRef.current?.applyPerspective(name)
+    setLayoutName(label)
+  }
+  // With a parametric table focused, the status bar reads that table, as the status pill does.
+  const statusSolveText = focusedParam
+    ? `${focusedParam.name}: ${solvingTableId === focusedParam.id ? 'running…' : checkingTableId === focusedParam.id ? 'checking…' : (tablePill(focusedParam.results, tableCheckResult, tableCheckMessage, focusedParam.stats)?.label ?? 'not run yet')}`
+    : solving ? 'Solving…'
+    : checking ? 'Checking…'
+    : solvingTableId !== null || checkingTableId !== null ? 'Table running…'
+    : stopped ? 'Stopped'
+    : result ? (result.success ? `Solved${result.stats ? ` in ${result.stats.elapsedMillis < 1000 ? `${Math.round(result.stats.elapsedMillis)} ms` : `${(result.stats.elapsedMillis / 1000).toFixed(1)} s`}` : ''}` : 'Did not converge')
+    : checkResult ? (checkResult.solvable ? 'Checked: solvable' : 'Checked: not solvable')
+    : 'Not solved yet'
   const commands = resolveCommands({
     'run.check': { run: () => { void checkTarget() } },
     'run.solve': { run: () => { void solveTarget() } },
@@ -3052,9 +3158,9 @@ export default function App() {
     'view.variables': { run: () => dockRef.current?.open('workspace') },
     'view.terminal': { run: () => dockRef.current?.open('terminal') },
     'view.inspector': { run: () => dockRef.current?.open('inspector') },
-    'layout.default': { run: () => dockRef.current?.applyPerspective('default') },
-    'layout.results': { run: () => dockRef.current?.applyPerspective('results') },
-    'layout.split': { run: () => dockRef.current?.applyPerspective('split') },
+    'layout.default': { run: perspective('default', 'Default View') },
+    'layout.results': { run: perspective('results', 'Results Focused') },
+    'layout.split': { run: perspective('split', 'Split View') },
     'table.newParametric': { run: () => createTable('parametric') },
     'table.newFunction1': { run: () => createTable('function-1d') },
     'table.newFunction2': { run: () => createTable('function-2d') },
@@ -3089,12 +3195,47 @@ export default function App() {
     'help.docs': { run: () => globalThis.open(helpUrl(), '_blank') },
     'app.palette': { run: spotlight.open },
     'editor.complete': { run: () => {} },
+    'run.findAll': { run: () => changeFindAll(!findAll), checked: findAll },
+    'run.complex': { run: () => changeComplexMode(!complexMode), checked: complexMode },
+    'app.stopCriteria': { run: () => setShowPreferences(true) },
+    'edit.undo': onHistory('edit.undo'),
+    'edit.redo': onHistory('edit.redo'),
+    'insert.function': { run: () => setShowFunctionBrowser(true) },
+    'view.theme': { run: () => setColorScheme(computedScheme === 'dark' ? 'light' : 'dark'), description: computedScheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' },
+    'view.ribbon': { run: toggleRibbon, unavailable: ribbonOn ? null : 'Turn the ribbon on in Preferences first.' },
+    'data.tableOps': onWorkbook('data.tableOps'),
+    'data.functionFromColumns': onWorkbook('data.functionFromColumns'),
+    'table.configure': onTable('table.configure'),
+    'table.addRow': onTable('table.addRow'),
+    'table.removeLastRow': onTable('table.removeLastRow'),
+    'table.fillColumn': onTable('table.fillColumn'),
+    'table.plotSelected': onTable('table.plotSelected'),
+    'table.retryFailed': onTable('table.retryFailed'),
+    'table.exportData': onWorkbook('table.exportData'),
+    'table.exportReport': onWorkbook('table.exportReport'),
+    'table.goToDefinition': focusedTable?.source === 'code'
+      ? { run: () => handleGoToTableDeclaration(focusedTable.name) }
+      : { run: noop, unavailable: focusedTable ? 'This table is defined in the workbook, not in the equations.' : 'Focus a table first.' },
+    'table.delete': focusedTable && focusedTable.source !== 'code'
+      ? { run: () => setConfirmDelete({ kind: 'table', id: focusedTable.id, name: focusedTable.name }) }
+      : { run: noop, unavailable: focusedTable ? 'Defined in the equations: delete its block in the Editor.' : 'Focus a table first.' },
+    'plot.configure': onPlot('plot.configure'),
+    'plot.export': onPlot('plot.export'),
+    'plot.inspect': onPlot('plot.inspect'),
+    'plot.delete': focusedPlot && !focusedPlot.fromCode
+      ? { run: () => setConfirmDelete({ kind: 'plot', id: focusedPlot.id, name: focusedPlot.name }) }
+      : { run: noop, unavailable: focusedPlot ? 'Defined in the equations: delete its PLOT block in the Editor.' : 'Focus a plot first.' },
+    'digitizer.image': onDigitizer('digitizer.image'),
+    'digitizer.calibrate': onDigitizer('digitizer.calibrate'),
+    'digitizer.extract': onDigitizer('digitizer.extract'),
+    'digitizer.review': onDigitizer('digitizer.review'),
+    'digitizer.useData': onDigitizer('digitizer.useData'),
   })
   commandsRef.current = commands
 
   // Command palette (Ctrl/Cmd+K): the registry's commands, one "Solve Table"
   // per parametric table, the canvas commands, the guides and the functions.
-  const paletteGroups = commandPaletteGroups(commands)
+  const paletteGroups = commandPaletteGroups(commands, ribbonOn)
   paletteGroups.find((g) => g.group === 'Run')?.actions.push(
     ...tables.filter((t) => t.kind === 'parametric').map((t) => ({
       id: `solve-table:${t.id}`,
@@ -3867,22 +4008,18 @@ export default function App() {
           runBusy={solving || checking || solvingTableId !== null || checkingTableId !== null}
           onCheckTable={() => { void checkTarget() }}
           onSolveTable={() => { void solveTarget() }}
-          onFindAllChange={(checked) => {
-            setFindAll(checked)
-            setResult(null)
-            setLastSolvedWithFillMissing(false)
-          }}
-          onComplexModeChange={(checked) => {
-            setComplexMode(checked)
-            setCheckResult(null)
-            setResult(null)
-            setLastSolvedWithFillMissing(false)
-            invalidateTable()
-          }}
+          onFindAllChange={changeFindAll}
+          onComplexModeChange={changeComplexMode}
           projectName={projectName}
           onRenameProject={handleRenameProject}
           onInsertFunction={insertFunction}
           commands={commands}
+          ribbon={ribbonOn ? {
+            density: ribbonDensity,
+            onDensityChange: changeRibbonDensity,
+            context: fw?.kind === 'table' || fw?.kind === 'plot' || fw?.kind === 'digitizer' ? fw.kind : null,
+            contextNote: codeTable ? 'Defined in equations' : null,
+          } : undefined}
         />
         <input
           ref={projectFileRef}
@@ -3923,6 +4060,24 @@ export default function App() {
             />
           </Suspense>
         </div>
+        {ribbonOn && (
+          <StatusBar
+            save={`${dirty ? 'Unsaved changes' : 'All changes saved'} · Save writes to ${saveWhere === 'file' ? `${projectName}.frees` : saveWhere === 'browser' ? 'this browser' : 'a new file'}`}
+            solve={statusSolveText}
+            units={UNIT_SYSTEM_OPTIONS.find((o) => o.value === unitSystem)?.label ?? unitSystem}
+            onUnits={() => setShowPreferences(true)}
+            warnings={(focusedParam ? tableCheckResult : (result ?? checkResult))?.unitWarnings.length ?? 0}
+            onWarnings={() => {
+              // The warnings carry no position of their own: show the Editor at
+              // the reported line, and the list in the status pill's details.
+              dockRef.current?.open('equations')
+              if (errorLine !== null) editorRef.current?.goToLine(errorLine)
+              document.querySelector<HTMLElement>('[aria-label="Status details"]')?.click()
+            }}
+            layout={layoutName}
+            engine={`Engine: ${runBusy ? 'busy' : 'idle'} · ${getWorkerPoolConcurrency()} workers`}
+          />
+        )}
       </Flex>
 
         </Flex>
@@ -4099,6 +4254,11 @@ export default function App() {
       </Suspense>
 
       <ShortcutsModal opened={showShortcuts} onClose={() => setShowShortcuts(false)} commands={commands} />
+      {showFunctionBrowser && (
+        <Suspense fallback={null}>
+          <FunctionBrowserModal onInsert={insertFunction} onClose={() => setShowFunctionBrowser(false)} />
+        </Suspense>
+      )}
 
       <GettingStartedModal
         opened={showGettingStarted}
@@ -4234,6 +4394,8 @@ export default function App() {
           fillMissing={fillMissing}
           onSave={savePreferences}
           onClose={() => setShowPreferences(false)}
+          ribbon={ribbonOn}
+          onRibbonChange={setRibbonOn}
         />
       )}
 

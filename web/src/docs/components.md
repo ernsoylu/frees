@@ -519,6 +519,6 @@ A coupled cycle (a refrigeration loop, a pump network) can be structurally perfe
 
 ## Working method
 
-Build the network **one leg at a time**: source → component → sink, solve, extend. Select a subsystem and press **F9** to solve only it. Diagnostics are source-mapped (component and stream names), so the failing block names the device to look at. Set guesses on stream members (they appear under their display names, e.g. `s2.P`) in Variable Info exactly as for scalar variables. And inside the vapor dome, remember the two-phase rule: identify a state by quality `x` with `T` *or* `P`, never both.
+Build the network **one leg at a time**: source → component → sink, solve, extend. Diagnostics are source-mapped (component and stream names), so the failing block names the device to look at. Set guesses on stream members (they appear under their display names, e.g. `s2.P`) in Variable Settings exactly as for scalar variables. And inside the vapor dome, remember the two-phase rule: identify a state by quality `x` with `T` *or* `P`, never both.
 
 [Related: debugging, comp-connections, comp-transient]

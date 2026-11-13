@@ -523,7 +523,7 @@ P_shaft  = P_hyd / eta_pump
 ## Pitfalls
 
 - **Digitize past the region you expect to operate in** — interpolation is honest, extrapolation off the end of a table is not.
-- **If the intersection solve stalls**, set a guess for `V_op` near the middle of the table's flow range in Variable Info (`Ctrl + I`) — an intersection far from the default guess is the classic case for one.
+- **If the intersection solve stalls**, set a guess for `V_op` near the middle of the table's flow range in Variable Settings (**Tools → Variable Settings…**) — an intersection far from the default guess is the classic case for one.
 - **Keep the table in SI-consistent columns** (or annotate the units, as here) so the system-curve pascals and the table pascals actually meet.
 
 ## Go further

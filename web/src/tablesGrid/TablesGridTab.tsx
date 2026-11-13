@@ -73,7 +73,8 @@ import {
   TableSpec,
 } from '../tables'
 import { useGlideTheme } from '../DataGridReadOnly'
-import { tablesWorkbookSync } from './tablesWorkbookBridge'
+import { TABLES_WORKBOOK_WINDOW_ID, tablesWorkbookSync } from './tablesWorkbookBridge'
+import { usePublishContext } from '../contextActions'
 import { downloadValuesAsCsv } from './csv'
 import { applyFunctionSpecs } from './composeTables'
 import CreateFunctionModal from './CreateFunctionModal'
@@ -692,6 +693,39 @@ export default function TablesGridTab({
       }
     }
   }
+
+  // Phase O: the ribbon's Table and Data commands run here, on the active sheet.
+  const noTable = 'Open or create a table first.'
+  const paramOnly = active ? 'A Function Table has no columns to configure or runs to repeat.' : noTable
+  const selectedVar = activeParam?.vars[(selectedColIndices.find((c) => c > 0) ?? 0) - 1]
+  usePublishContext(TABLES_WORKBOOK_WINDOW_ID, {
+    'edit.undo': { run: undo, unavailable: canUndo ? null : 'Nothing to undo in the Tables workbook.', description: 'Undo the last edit in the Tables workbook' },
+    'edit.redo': { run: redo, unavailable: canRedo ? null : 'Nothing to redo in the Tables workbook.', description: 'Redo the last undone edit in the Tables workbook' },
+    'table.configure': { run: () => activeParam && onConfigureTable?.(activeParam.id), unavailable: activeParam && onConfigureTable ? null : paramOnly },
+    'table.addRow': { run: () => transformActive(appendRow), unavailable: activeParam ? null : paramOnly },
+    'table.removeLastRow': { run: () => transformActive(removeLastRow), unavailable: !activeParam ? paramOnly : activeParam.rows.length <= 1 ? 'A table keeps at least one row.' : null },
+    'table.fillColumn': {
+      run: () => activeParam && onAlterColumn?.(activeParam.id, selectedVar ?? activeParam.vars[0]),
+      unavailable: !activeParam ? paramOnly : activeParam.vars.length === 0 ? 'Add a column first (Configure Columns…).' : null,
+      description: activeParam?.vars.length ? `Fill column ${selectedVar ?? activeParam.vars[0]} (the selected column, else the first)` : undefined,
+    },
+    'table.plotSelected': { run: handlePlotSelectedColumns, unavailable: canPlotColumns ? null : 'Select the columns to plot first; the first is X.' },
+    'table.retryFailed': {
+      run: () => activeParam && onRetryFailedRows?.(activeParam.id),
+      unavailable: !activeParam ? paramOnly : activeParam.results.some((r) => !r.success) ? null : 'No failed runs to retry.',
+    },
+    'table.exportData': { run: () => handleExportCsv('exact'), unavailable: active ? null : noTable },
+    'table.exportReport': { run: () => handleExportCsv('display'), unavailable: active ? null : noTable },
+    'table.goToDefinition': {
+      run: () => active && onGoToDeclaration?.(active.name),
+      unavailable: active?.source === 'code' && onGoToDeclaration ? null : 'This table is defined in the workbook, not in the equations.',
+    },
+    'data.tableOps': { run: () => setOperationsModalOpen(true), unavailable: active ? null : noTable },
+    'data.functionFromColumns': {
+      run: () => activeParam && setCreateFnFor(activeParam.id),
+      unavailable: activeParam && activeParam.vars.length >= 2 ? null : 'Needs a parametric table with two or more columns.',
+    },
+  })
 
   return (
     <Group align="stretch" gap={0} style={{ flex: 1, minHeight: 0, height: '100%' }} wrap="nowrap">
