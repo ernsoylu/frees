@@ -732,10 +732,10 @@ export default function TablesGridTab({
                   Parametric Table — solve the system once per row
                 </Menu.Item>
                 <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={() => addTable('function-1d')}>
-                  Function Table (without Curve)
+                  Function Table (one input)
                 </Menu.Item>
                 <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={() => addTable('function-2d')}>
-                  Function Table (with Curve family)
+                  Function Table (curve family)
                 </Menu.Item>
                 <Menu.Divider />
                 <Menu.Item leftSection={<IconFileTypeCsv size={14} />} onClick={() => setImportCsvOpen(true)}>
@@ -849,10 +849,10 @@ export default function TablesGridTab({
                   Parametric Table
                 </Menu.Item>
                 <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={() => addTable('function-1d')}>
-                  Function Table (1D)
+                  Function Table (one input)
                 </Menu.Item>
                 <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={() => addTable('function-2d')}>
-                  Function Table (2D)
+                  Function Table (curve family)
                 </Menu.Item>
                 <Menu.Divider />
                 <Menu.Item leftSection={<IconFileTypeCsv size={14} />} onClick={() => setImportCsvOpen(true)}>
@@ -880,7 +880,7 @@ export default function TablesGridTab({
                 </Badge>
               ) : (
                 <Badge size="xs" variant="light" color={activeFn?.is1D ? 'teal' : 'cyan'}>
-                  {activeFn?.is1D ? 'Lookup function — one curve' : 'Lookup function — multiple parameter values'}
+                  {activeFn?.is1D ? 'Function Table — one input' : 'Function Table — curve family'}
                 </Badge>
               )}
               {active.source === 'code' && onGoToDeclaration && (
@@ -920,7 +920,7 @@ export default function TablesGridTab({
                     <IconArrowBackUp size={13} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label="Redo (Ctrl+Y)">
+                <Tooltip label="Redo (Ctrl+Shift+Z / Ctrl+Y)">
                   <ActionIcon
                     size="xs"
                     variant="default"
@@ -1138,7 +1138,7 @@ export default function TablesGridTab({
               disabled={activeParam.rows.length <= 1}
               onClick={() => transformActive(removeLastRow)}
             >
-              Remove Row
+              Remove Last Row
             </Button>
             {!readOnly && (
               <Group gap={4}>

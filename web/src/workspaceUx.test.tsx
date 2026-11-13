@@ -4,7 +4,8 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import MobileLayout from './MobileLayout'
 import Workspace from './Workspace'
-import { Rail } from './WorkspaceChrome'
+import { Rail, TopBar } from './WorkspaceChrome'
+import { COMMAND_SPECS, resolveCommands, type CommandHandlers, type CommandId } from './commands'
 import { newFunctionTable, newParamTable } from './tables'
 import { TABLES_WORKBOOK_WINDOW_ID } from './tablesGrid/tablesWorkbookBridge'
 
@@ -23,15 +24,17 @@ function shell(children: ReactNode) {
   return <MantineProvider env="test">{children}</MantineProvider>
 }
 
+function testCommands() {
+  return resolveCommands(Object.fromEntries((Object.keys(COMMAND_SPECS) as CommandId[]).map((id) => [id, { run: vi.fn() }])) as unknown as CommandHandlers)
+}
+
 function mobileProps(): ComponentProps<typeof MobileLayout> {
   return {
     panelContent: { equations: 'Equation editor', workspace: 'Solved variables', [TABLES_WORKBOOK_WINDOW_ID]: 'Workbook' },
     tables: [], stateTables: [], activeTableId: null, plots: [], projectName: 'Test project',
     checking: false, solving: false, checkingTableId: null, solvingTableId: null,
     onActiveTableId: vi.fn(), onCheck: vi.fn(), onSolve: vi.fn(), onStop: vi.fn(),
-    onCheckTable: vi.fn(), onSolveTable: vi.fn(), onSaveProject: vi.fn(), onSaveProjectAs: vi.fn(),
-    onNewProject: vi.fn(), onOpenProject: vi.fn(), onOpenLibrary: vi.fn(), onPreferences: vi.fn(),
-    onRenameProject: vi.fn(), onOpenExamples: vi.fn(), onOpenUrl: vi.fn(),
+    onCheckTable: vi.fn(), onSolveTable: vi.fn(), onRenameProject: vi.fn(), commands: testCommands(),
   }
 }
 
@@ -121,4 +124,28 @@ it('selects similarly named plots without relying on two-letter abbreviations', 
   fireEvent.click(screen.getByLabelText('Active plot', { selector: 'input' }))
   fireEvent.click(screen.getByText('Pressure outlet'))
   expect(screen.getByText('Outlet chart')).toBeInTheDocument()
+})
+
+function topBarProps(over: Partial<ComponentProps<typeof TopBar>> = {}): ComponentProps<typeof TopBar> {
+  const props: Record<string, unknown> = {
+    isTable: false, checking: false, solving: false, solveProgress: null, solvable: false, findAll: false,
+    complexMode: false, checkResult: null, result: null, tableChecking: false, tableSolving: false,
+    tableCheckResult: null, tableCheckMessage: '', tableResults: [], projectName: 'Test project', canPrintReport: false,
+  }
+  for (const k of ['onCheck', 'onSolve', 'onStop', 'onCheckTable', 'onSolveTable', 'onFindAllChange', 'onComplexModeChange',
+    'onRenameProject', 'onInsertFunction']) props[k] = vi.fn()
+  return { ...(props as ComponentProps<typeof TopBar>), commands: testCommands(), ...over }
+}
+
+it('names the run target beside Check and Solve, and keeps Stop while any job runs (N2)', () => {
+  const onSolveTable = vi.fn()
+  const view = render(shell(<TopBar {...topBarProps({ isTable: true, targetLabel: 'Table: Sweep', onSolveTable })} />))
+  expect(screen.getByTestId('run-target')).toHaveTextContent('Table: Sweep')
+  fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
+  expect(onSolveTable).toHaveBeenCalled()
+  expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument()
+  // A table run behind a focused Editor: the target is the model, but Stop stays.
+  view.rerender(shell(<TopBar {...topBarProps({ targetLabel: 'Model', runBusy: true })} />))
+  expect(screen.getByTestId('run-target')).toHaveTextContent('Model')
+  expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument()
 })

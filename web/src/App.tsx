@@ -21,32 +21,15 @@ import {
   useComputedColorScheme,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
-import { Spotlight, SpotlightActionGroupData } from '@mantine/spotlight'
+import { Spotlight, SpotlightActionGroupData, spotlight } from '@mantine/spotlight'
+import { commandForKey, commandPaletteGroups, resolveCommands, type Commands } from './commands'
 import {
-  IconChartGridDots,
   IconSitemap,
-  IconChartLine,
-  IconChecks,
-  IconCode,
-  IconDeviceFloppy,
-  IconFilePlus,
-  IconFolderOpen,
   IconHelp,
   IconInfoCircle,
-  IconKeyboard,
-  IconLayoutGrid,
   IconMathFunction,
   IconPlayerPlayFilled,
   IconSearch,
-  IconSettings,
-  IconTable,
-  IconTemperature,
-  IconVariable,
-  IconFileTypeCsv,
-  IconLink,
-  IconPrinter,
-  IconDatabase,
-  IconWorld,
 } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
 import { buildShareUrl, clearRawDocumentUrl, clearShareHash, deriveProjectTitle, fetchRawDocument, MAX_SHARE_URL_CHARS, readShareHash, sharedDocumentOf, timelineOfLog, type SharedDocument } from './share'
@@ -184,6 +167,7 @@ import { clearExampleParam, EMBED, fullAppUrl } from './embed'
 import type { EquationEditorHandle } from './EquationEditor'
 const EquationEditor = lazy(() => import('./EquationEditor'))
 import {
+  ConfirmModal,
   MessageModal,
   ProjectConflictModal,
   SaveCheckModal,
@@ -801,12 +785,20 @@ export default function App() {
 
   const editorRef = useRef<EquationEditorHandle>(null)
 
+  const dockRef = useRef<WorkspaceDockHandle | null>(null)
+
   // Insert a function template at the editor caret (Functions menu). "$0" in
-  // the snippet marks where the caret lands; selected text is replaced. The
-  // editor must be visible first, so switch to it before inserting.
+  // the snippet marks where the caret lands; selected text is replaced. With the
+  // Editor closed there is no caret: the snippet is appended on its own line
+  // before the editor mounts and reads the document, then its window opens.
+  const textChangeRef = useRef<(value: string) => void>(() => {})
   const insertFunction = useCallback((snippet: string) => {
     setActiveTab('equations')
-    setTimeout(() => editorRef.current?.insertSnippet(snippet), 50)
+    if (!editorRef.current?.insertSnippet(snippet)) {
+      const doc = textRef.current
+      textChangeRef.current(`${doc}${doc === '' || doc.endsWith('\n') ? '' : '\n'}${snippet.replace('$0', '')}`)
+    }
+    dockRef.current?.open('equations')
   }, [])
   // Component Browser/Wizard: append the generated `Type NAME(...)` block on its
   // own line in the equations editor (same path as bound-cell statements).
@@ -837,7 +829,6 @@ export default function App() {
 
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
-  const dockRef = useRef<WorkspaceDockHandle | null>(null)
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
   // Last-focused non-auxiliary window — drives the content-aware Inspector
   // (focusing the Inspector/Solution panels themselves doesn't change it).
@@ -856,6 +847,9 @@ export default function App() {
     return []
   })
   const [deletedTables, setDeletedTables] = useState<TableSpec[]>([])
+  // N3: Delete table / Delete plot ask first. The target is captured when the
+  // button is pressed; if it is gone by the time the user confirms, nothing is deleted.
+  const [confirmDelete, setConfirmDelete] = useState<{ kind: 'table' | 'plot'; id: string; name: string } | null>(null)
   const tablesRef = useRef(tables)
   function writeTables(update: React.SetStateAction<TableSpec[]>) {
     const next = typeof update === 'function' ? update(tablesRef.current) : update
@@ -1722,6 +1716,7 @@ export default function App() {
     })
   }
 
+  textChangeRef.current = onTextChange
   function onTextChange(value: string) {
     modelRevisionRef.current.bump()
     modelRevisionRef.current.invalidateCheck()
@@ -2526,6 +2521,9 @@ export default function App() {
 
   function onStop() {
     if (solving || checking) setStopped(true)
+    // A Solve queued behind the running check must not start once stopped.
+    solvePendingRef.current = false
+    tableSolvePendingRef.current = null
     stopSolve()
     setSolving(false)
     setSolvingTableId(null)
@@ -2607,6 +2605,24 @@ export default function App() {
   }
 
   checkThenSolveTableRef.current = (id) => { void checkThenSolveTable(id) }
+
+  // N2: one run target for the toolbar, F2/F4 and the palette — the focused
+  // parametric table, else the model. `focusedWindow` already ignores the
+  // utility panels (Inspector, Variables, Terminal), so they keep the target.
+  // Solve always checks first; Check falls back to a code-defined parametric
+  // table the same way on every path.
+  const solveTarget = () => (focusedParam ? checkThenSolveTable(focusedParam.id) : checkThenSolve())
+  const checkTarget = () => (focusedParam ? onCheckTable(focusedParam.id) : checkWithFallback())
+  // A palette or menu entry captures its table when it is built; if the table
+  // is gone when the command runs, say so and do nothing — never redirect.
+  const solveTableById = (id: string, name: string) => {
+    if (!tablesRef.current.some((t) => t.id === id && t.kind === 'parametric')) {
+      notifications.show({ color: 'orange', title: 'Table not found', message: `“${name}” no longer exists; nothing was solved.` })
+      return
+    }
+    openTableWindow(tablesRef.current.find((t) => t.id === id)!)
+    void checkThenSolveTable(id)
+  }
 
   // From a read-only table's column selection: open the New X-Y plot modal
   // pre-filled with the time column as x and the selected columns as y.
@@ -2724,36 +2740,31 @@ export default function App() {
     dockRef.current?.openInstance(TABLES_WORKBOOK_WINDOW_ID, 'table', 'Tables')
   }, [])
 
+  // Global keys come from the registry (N4). A command that cannot run now is
+  // left to the browser — Ctrl+P prints the page until there is a report — and
+  // a single printable key (`?`) never fires while the user is typing.
+  const commandsRef = useRef<Commands | null>(null)
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // Shortcuts act on the active section: equations vs parametric table.
-      if (e.key === 'Escape' && (solving || solvingTableId !== null)) {
-        e.preventDefault()
-        onStop()
-      }
-      if (e.key === 'F2') {
-        e.preventDefault()
-        void (activeTab === 'table' ? checkThenSolveTable() : checkThenSolve())
-      }
-      if (e.key === 'F4') {
-        e.preventDefault()
-        void (activeTab === 'table' ? onCheckTable() : onCheck())
-      }
-      // "?" opens the shortcuts overlay, but only when the user isn't typing
-      // into the editor, an input, or any text field.
-      if (e.key === '?') {
+      const cmds = commandsRef.current
+      const c = cmds && commandForKey(cmds, e)
+      if (!c || c.unavailable !== null) return
+      if (c.shortcut?.length === 1 && c.shortcut[0].length === 1) {
         const el = e.target as HTMLElement | null
-        const typing =
-          !!el &&
-          (el.tagName === 'INPUT' ||
-            el.tagName === 'TEXTAREA' ||
-            el.isContentEditable ||
-            el.closest('.cm-editor') !== null)
-        if (!typing) {
-          e.preventDefault()
-          setShowShortcuts(true)
-        }
+        const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable || el.closest('.cm-editor') !== null)
+        if (typing) return
       }
+      e.preventDefault()
+      // A form field may hold an uncommitted edit (scenario values commit on
+      // blur or Enter): commit it first, then run the command from the next
+      // task, once React has re-rendered with that edit in its handlers.
+      const el = document.activeElement
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) {
+        el.blur()
+        setTimeout(() => commandsRef.current?.[c.id].run(), 0)
+        return
+      }
+      c.run()
     }
     globalThis.addEventListener('keydown', onKeyDown)
     return () => globalThis.removeEventListener('keydown', onKeyDown)
@@ -3018,50 +3029,84 @@ export default function App() {
     else setNewPlotKind('xy')
   }
 
-  // Command palette (Ctrl/Cmd+K): jump to any view, open any tool window, run
-  // Check/Solve, or manage the project — all from one searchable list.
+  // N1: every app command, once. The TopBar menus, the rail, the mobile menu,
+  // the palette, the `?` sheet and the global keys are all built from this.
+  const runBusy = solving || checking || solvingTableId !== null || checkingTableId !== null
+  const openStates = () => {
+    const first = declaredStateDefs[0]
+    if (first) dockRef.current?.openInstance(`state:${first.name}`, 'states', first.name)
+    else dockRef.current?.open('states')
+  }
+  const commands = resolveCommands({
+    'run.check': { run: () => { void checkTarget() } },
+    'run.solve': { run: () => { void solveTarget() } },
+    'run.stop': { run: onStop, unavailable: runBusy ? null : 'Nothing is running.' },
+    'model.check': { run: () => { void checkWithFallback() } },
+    'model.solve': { run: () => { void checkThenSolve() } },
+    'view.editor': { run: () => dockRef.current?.open('equations') },
+    'view.tables': { run: openLatestOrNewTable },
+    'view.plots': { run: openLatestOrNewPlot },
+    'view.states': { run: openStates },
+    'view.digitizer': { run: () => dockRef.current?.open('digitizer') },
+    'view.schematic': { run: () => dockRef.current?.open('schematic') },
+    'view.variables': { run: () => dockRef.current?.open('workspace') },
+    'view.terminal': { run: () => dockRef.current?.open('terminal') },
+    'view.inspector': { run: () => dockRef.current?.open('inspector') },
+    'layout.default': { run: () => dockRef.current?.applyPerspective('default') },
+    'layout.results': { run: () => dockRef.current?.applyPerspective('results') },
+    'layout.split': { run: () => dockRef.current?.applyPerspective('split') },
+    'table.newParametric': { run: () => createTable('parametric') },
+    'table.newFunction1': { run: () => createTable('function-1d') },
+    'table.newFunction2': { run: () => createTable('function-2d') },
+    'table.importCsv': { run: importCsvAsFunctionTable },
+    'state.newTable': { run: () => insertFunction('STATE TABLE Circuit1(P1, T1, h2)\n  FLUID = Water\nEND\n') },
+    'plot.newXY': { run: () => setNewPlotKind('xy') },
+    'plot.newProperty': { run: () => setNewPlotKind('property') },
+    'plot.newPsychro': { run: () => setNewPlotKind('psychro') },
+    'tool.componentWizard': { run: () => setShowComponentWizard(true) },
+    'tool.variableInfo': { run: () => setShowVariableInfo(true) },
+    'tool.minMax': { run: () => setShowMinMax(true) },
+    'tool.curveFit': { run: () => setShowCurveFit(true) },
+    'tool.monteCarlo': { run: () => setShowMonteCarlo(true) },
+    'tool.sensitivity': { run: () => setShowSensitivity(true) },
+    'tool.pidTuner': { run: () => setPidTuner({}) },
+    'tool.parameterFit': { run: () => setShowParameterFit(true) },
+    'app.preferences': { run: () => setShowPreferences(true) },
+    'app.about': { run: () => setShowAbout(true) },
+    'file.new': { run: handleNewProject },
+    'file.open': { run: handleOpenProject },
+    'file.library': { run: () => setLibraryOpen(true) },
+    'file.example': { run: () => setShowExamples(true) },
+    'file.url': { run: handleOpenUrl },
+    'file.share': { run: handleShareLink },
+    'file.print': { run: handlePrintReport, unavailable: result?.success === true ? null : 'Solve first: the report prints the last successful solve.' },
+    'file.save': { run: handleSaveProject },
+    'file.saveAs': { run: handleSaveProjectAs },
+    'file.exportText': { run: handleExportEquations },
+    'file.saveBrowser': { run: () => { void handleSaveToBrowser().then((ok) => notifications.show(ok ? { color: 'teal', title: 'Saved to browser', message: `“${projectName}” is stored in this browser.` } : { color: 'yellow', title: 'Could not save to browser', message: 'Browser storage may be unavailable in this browsing mode.' })) } },
+    'help.gettingStarted': { run: () => setShowGettingStarted(true) },
+    'help.shortcuts': { run: () => setShowShortcuts(true) },
+    'help.docs': { run: () => globalThis.open(helpUrl(), '_blank') },
+    'app.palette': { run: spotlight.open },
+    'editor.complete': { run: () => {} },
+  })
+  commandsRef.current = commands
+
+  // Command palette (Ctrl/Cmd+K): the registry's commands, one "Solve Table"
+  // per parametric table, the canvas commands, the guides and the functions.
+  const paletteGroups = commandPaletteGroups(commands)
+  paletteGroups.find((g) => g.group === 'Run')?.actions.push(
+    ...tables.filter((t) => t.kind === 'parametric').map((t) => ({
+      id: `solve-table:${t.id}`,
+      label: `Solve Table: ${t.name}`,
+      keywords: ['solve', 'run', 'parametric'],
+      description: 'Toolbar ▸ Solve, with the table focused · Check & solve every run of this table',
+      leftSection: <IconPlayerPlayFilled size={16} />,
+      onClick: () => solveTableById(t.id, t.name),
+    })),
+  )
   const spotlightActions: SpotlightActionGroupData[] = [
-    {
-      group: 'Run',
-      actions: [
-        {
-          id: 'check',
-          label: 'Check',
-          description: 'Validate the system (F4)',
-          leftSection: <IconChecks size={18} />,
-          onClick: () => {
-            setActiveTab('equations')
-            void onCheck()
-          },
-        },
-        {
-          id: 'solve',
-          label: 'Solve',
-          description: 'Check & solve the system (F2)',
-          leftSection: <IconPlayerPlayFilled size={16} />,
-          onClick: () => {
-            setActiveTab('equations')
-            void checkThenSolve()
-          },
-        },
-      ],
-    },
-    {
-      group: 'Views',
-      actions: [
-        { id: 'view-editor', label: 'Editor', leftSection: <IconCode size={18} />, onClick: () => dockRef.current?.open('equations') },
-        { id: 'view-table', label: 'Tables', description: 'Open the latest table (or create one)', leftSection: <IconTable size={18} />, onClick: openLatestOrNewTable },
-        { id: 'view-plots', label: 'Plots', description: 'Open the latest plot (or create one)', leftSection: <IconChartLine size={18} />, onClick: openLatestOrNewPlot },
-        { id: 'view-states', label: 'Fluid States', leftSection: <IconTemperature size={18} />, onClick: () => {
-          const first = declaredStateDefs[0]
-          if (first) dockRef.current?.openInstance(`state:${first.name}`, 'states', first.name)
-          else dockRef.current?.open('states')
-        } },
-        { id: 'view-digitizer', label: 'Graph Digitizer', leftSection: <IconChartGridDots size={18} />, onClick: () => dockRef.current?.open('digitizer') },
-        { id: 'view-schematic', label: 'Schematic', description: 'Auto-rendered component network', leftSection: <IconSitemap size={18} />, onClick: () => dockRef.current?.open('schematic') },
-        { id: 'view-inspector', label: 'Inspector', leftSection: <IconSettings size={18} />, onClick: () => dockRef.current?.open('inspector') },
-      ],
-    },
+    ...paletteGroups,
     {
       // CFG-10: canvas commands; each opens the schematic, then runs there.
       group: 'Schematic',
@@ -3075,50 +3120,6 @@ export default function App() {
           runCanvasCommand(c.id)
         },
       })),
-    },
-    {
-      group: 'Create',
-      actions: [
-        { id: 'new-param-table', label: 'Add parametric table', leftSection: <IconTable size={18} />, onClick: () => createTable('parametric') },
-        { id: 'new-xy-plot', label: 'Add graph (X-Y)', leftSection: <IconChartLine size={18} />, onClick: () => setNewPlotKind('xy') },
-        { id: 'new-property-plot', label: 'Add property graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('property') },
-        { id: 'new-psychro-plot', label: 'Add psychrometric graph', leftSection: <IconTemperature size={18} />, onClick: () => setNewPlotKind('psychro') },
-        { id: 'import-csv', label: 'Import CSV as function table', description: 'Two columns of a .csv become a function callable in the equations', leftSection: <IconFileTypeCsv size={18} />, onClick: importCsvAsFunctionTable },
-        { id: 'new-state-table', label: 'Add fluid state table', description: 'Insert a STATE TABLE block (fluid-aware circuit) at the caret', leftSection: <IconTemperature size={18} />, onClick: () => insertFunction('STATE TABLE Circuit1(P1, T1, h2)\n  FLUID = Water\nEND\n') },
-      ],
-    },
-    {
-      group: 'Tools',
-      actions: [
-        { id: 'tool-variables', label: 'Variable Information', leftSection: <IconVariable size={18} />, onClick: () => setShowVariableInfo(true) },
-        { id: 'tool-preferences', label: 'Preferences', leftSection: <IconSettings size={18} />, onClick: () => setShowPreferences(true) },
-        { id: 'tool-about', label: 'About', leftSection: <IconInfoCircle size={18} />, onClick: () => setShowAbout(true) },
-      ],
-    },
-    {
-      group: 'Project',
-      actions: [
-        { id: 'proj-examples', label: 'Open Example…', description: 'Load a ready-to-solve worked example', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowExamples(true) },
-        { id: 'proj-url', label: 'Open URL…', description: 'Load an equation document from a raw text URL', leftSection: <IconWorld size={18} />, onClick: handleOpenUrl },
-        { id: 'proj-share', label: 'Copy Share Link', description: 'Self-contained URL carrying this document', leftSection: <IconLink size={18} />, onClick: handleShareLink },
-        { id: 'proj-report', label: 'Print Report…', description: 'Printable calculation report of the last solve (print to PDF)', leftSection: <IconPrinter size={18} />, onClick: handlePrintReport },
-        { id: 'help-getting-started', label: 'Getting Started…', description: 'What frees is, and four one-click ways in', leftSection: <IconHelp size={18} />, onClick: () => setShowGettingStarted(true) },
-        { id: 'proj-component', label: 'Component Wizard', description: 'Browse the component library and insert a configured component', leftSection: <IconLayoutGrid size={18} />, onClick: () => setShowComponentWizard(true) },
-        { id: 'proj-new', label: 'New Project', leftSection: <IconFilePlus size={18} />, onClick: handleNewProject },
-        { id: 'proj-open', label: 'Open Project…', leftSection: <IconFolderOpen size={18} />, onClick: handleOpenProject },
-        { id: 'proj-save', label: 'Save Project', leftSection: <IconDeviceFloppy size={18} />, onClick: handleSaveProject },
-        { id: 'proj-saveas', label: 'Save Project As…', leftSection: <IconDeviceFloppy size={18} />, onClick: handleSaveProjectAs },
-        { id: 'proj-export-text', label: 'Export equation text…', description: 'Download the editor document only — tables, maps, and layout stay in Save project', leftSection: <IconDeviceFloppy size={18} />, onClick: handleExportEquations },
-        { id: 'proj-library', label: 'Browser Projects…', description: 'Projects saved in this browser — no server, no files', leftSection: <IconDatabase size={18} />, onClick: () => setLibraryOpen(true) },
-        { id: 'proj-save-browser', label: 'Save to Browser', description: 'Keep this project in the browser under its current name', leftSection: <IconDatabase size={18} />, onClick: () => { void handleSaveToBrowser().then((ok) => notifications.show(ok ? { color: 'teal', title: 'Saved to browser', message: `“${projectName}” is stored in this browser.` } : { color: 'yellow', title: 'Could not save to browser', message: 'Browser storage may be unavailable in this browsing mode.' })) } },
-      ],
-    },
-    {
-      group: 'Help',
-      actions: [
-        { id: 'shortcuts', label: 'Keyboard shortcuts', description: 'Show the hotkey reference (?)', leftSection: <IconKeyboard size={18} />, onClick: () => setShowShortcuts(true) },
-        { id: 'help', label: 'Help', leftSection: <IconHelp size={18} />, onClick: () => globalThis.open(helpUrl(), '_blank') },
-      ],
     },
     // Every documentation guide page as a palette entry, deep-linked into the
     // /help portal (the compact id/label list is generated by compile-docs so
@@ -3393,8 +3394,8 @@ export default function App() {
                       <Button size="xs" variant="default" onClick={() => setTables((all) => all.map((pt) => pt.id === t.id && pt.kind === 'parametric' ? invalidateActiveParam({ ...pt, rows: [...pt.rows, newParamRow()] }) : pt))}>
                         Add Row
                       </Button>
-                      <Button size="xs" variant="default" onClick={() => setTables((all) => all.map((pt) => pt.id === t.id && pt.kind === 'parametric' ? invalidateActiveParam({ ...pt, rows: pt.rows.slice(0, -1) }) : pt))}>
-                        Remove Row
+                      <Button size="xs" variant="default" disabled={t.rows.length <= 1} onClick={() => setTables((all) => all.map((pt) => pt.id === t.id && pt.kind === 'parametric' ? invalidateActiveParam({ ...pt, rows: pt.rows.slice(0, -1) }) : pt))}>
+                        Remove Last Row
                       </Button>
                     </Group>
                     <Button size="xs" variant="default" color="gray" onClick={() => updateParamTable(t.id, (pt) => ({ ...pt, results: [] }))}>
@@ -3403,6 +3404,11 @@ export default function App() {
                   </>
                 ) : (
                   <Text size="xs" c="dimmed">Function table — edit values in the table window.</Text>
+                )}
+                {t && t.source !== 'code' && (
+                  <Button size="xs" variant="light" color="red" onClick={() => setConfirmDelete({ kind: 'table', id: t.id, name: t.name })}>
+                    Delete table
+                  </Button>
                 )}
               </Stack>
             </div>
@@ -3429,7 +3435,7 @@ export default function App() {
               />
               <Text size="xs" c="dimmed">Configure and Export are on the plot's toolbar.</Text>
               {p && !p.fromCode && (
-                <Button size="xs" variant="light" color="red" onClick={() => handlePlotsChange(plots.filter((x) => x.id !== p.id))}>
+                <Button size="xs" variant="light" color="red" onClick={() => setConfirmDelete({ kind: 'plot', id: p.id, name: p.name })}>
                   Delete plot
                 </Button>
               )}
@@ -3445,7 +3451,6 @@ export default function App() {
             <Stack gap="xs">
               <Text size="sm" fw={600} c="teal.4">Equations</Text>
               <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Results appear in the Variable Explorer on the right.</Text>
-              <Text size="xs" c="dimmed">Variable Information, Min / Max and Curve Fit are on the left rail and in the Tools menu.</Text>
             </Stack>
           </div>
         )
@@ -3794,15 +3799,8 @@ export default function App() {
             solvingTableId={solvingTableId}
             onCheckTable={onCheckTable}
             onSolveTable={checkThenSolveTable}
-            onSaveProject={handleSaveProject}
-            onSaveProjectAs={handleSaveProjectAs}
-            onNewProject={handleNewProject}
-            onOpenProject={handleOpenProject}
-            onOpenLibrary={() => setLibraryOpen(true)}
-            onPreferences={() => setShowPreferences(true)}
             onRenameProject={handleRenameProject}
-            onOpenExamples={() => setShowExamples(true)}
-            onOpenUrl={handleOpenUrl}
+            commands={commands}
           />
         </Suspense>
       ) : (
@@ -3811,23 +3809,20 @@ export default function App() {
         active={activeTab}
         openKinds={openKinds}
         openIds={openIds}
-        plots={mergedPlots.map((p) => ({ id: p.id, name: p.name, tag: PLOT_KIND_LABEL[p.kind], deletable: !p.fromCode }))}
+        plots={mergedPlots.map((p) => ({ id: p.id, name: p.name, tag: PLOT_KIND_LABEL[p.kind] }))}
         plotCount={mergedPlots.length}
         onOpenPlot={(id) => {
           const p = mergedPlots.find((x) => x.id === id)
           if (p) dockRef.current?.openInstance(`plot:${id}`, 'plot', p.name)
         }}
-        onNewPlot={(kind) => setNewPlotKind(kind)}
-        onDeletePlot={(id) => handlePlotsChange(plots.filter((p) => p.id !== id))}
         workspaceTables={[
-          ...tables.map((t) => ({ id: t.id, name: t.name, deletable: t.source !== 'code' })),
+          ...tables.map((t) => ({ id: t.id, name: t.name })),
           // Declared STATE TABLE blocks appear as read-only entries that open
           // the shared Fluid States window, tagged with their fluid.
           ...declaredStateDefs.map((s) => ({
             id: `state:${s.name}`,
             name: s.name,
             tag: s.fluid ?? 'States',
-            deletable: false,
           })),
         ]}
         tableCount={tables.length + declaredStateDefs.length}
@@ -3840,16 +3835,9 @@ export default function App() {
           const t = tables.find((x) => x.id === id)
           if (t) openTableWindow(t)
         }}
-        onDeleteTable={(id) => setTables((prev) => prev.filter((t) => t.id !== id))}
-        onOpenStates={() => {
-          const first = declaredStateDefs[0]
-          if (first) dockRef.current?.openInstance(`state:${first.name}`, 'states', first.name)
-          else dockRef.current?.open('states')
-        }}
-        onNewTable={(kind) => createTable(kind)}
         onSelect={(kind) => dockRef.current?.open(kind)}
         onClose={(kind) => dockRef.current?.close(kind)}
-        onApplyLayout={(p) => dockRef.current?.applyPerspective(p)}
+        commands={commands}
         onPreferences={() => setShowPreferences(true)}
         onAbout={() => setShowAbout(true)}
       />
@@ -3875,8 +3863,10 @@ export default function App() {
           onCheck={checkWithFallback}
           onSolve={checkThenSolve}
           onStop={onStop}
-          onCheckTable={() => { if (focusedParam) void onCheckTable(focusedParam.id) }}
-          onSolveTable={() => { if (focusedParam) void onSolveTable(focusedParam.id) }}
+          targetLabel={focusedParam ? `Table: ${focusedParam.name}` : 'Model'}
+          runBusy={solving || checking || solvingTableId !== null || checkingTableId !== null}
+          onCheckTable={() => { void checkTarget() }}
+          onSolveTable={() => { void solveTarget() }}
           onFindAllChange={(checked) => {
             setFindAll(checked)
             setResult(null)
@@ -3891,29 +3881,8 @@ export default function App() {
           }}
           projectName={projectName}
           onRenameProject={handleRenameProject}
-          onNewProject={handleNewProject}
-          onOpenProject={handleOpenProject}
-          onOpenLibrary={() => setLibraryOpen(true)}
-          onSaveProject={handleSaveProject}
-          onSaveProjectAs={handleSaveProjectAs}
-          onExportEquations={handleExportEquations}
           onInsertFunction={insertFunction}
-          onInsertComponent={() => setShowComponentWizard(true)}
-          onOpenExamples={() => setShowExamples(true)}
-          onOpenUrl={handleOpenUrl}
-          onShareLink={handleShareLink}
-          onPrintReport={handlePrintReport}
-          canPrintReport={result?.success === true}
-          onOpenInspector={() => dockRef.current?.open('inspector')}
-          onOpenWorkspace={() => dockRef.current?.open('workspace')}
-          onOpenTerminal={() => dockRef.current?.open('terminal')}
-          onVariableInfo={() => setShowVariableInfo(true)}
-          onMonteCarlo={() => setShowMonteCarlo(true)}
-          onSensitivity={() => setShowSensitivity(true)}
-          onMinMax={() => setShowMinMax(true)}
-          onCurveFit={() => setShowCurveFit(true)}
-          onParameterFit={() => setShowParameterFit(true)}
-          onPidTuner={() => setPidTuner({})}
+          commands={commands}
         />
         <input
           ref={projectFileRef}
@@ -3945,7 +3914,7 @@ export default function App() {
                 }
                 // The Inspector reflects the last-focused main window; focusing
                 // the auxiliary Inspector / Variable Explorer edge panels must not change it.
-                if (active && active.kind !== 'inspector' && active.kind !== 'workspace') {
+                if (active && active.kind !== 'inspector' && active.kind !== 'workspace' && active.kind !== 'terminal') {
                   setFocusedWindow(active)
                 }
               }}
@@ -4129,7 +4098,7 @@ export default function App() {
         )}
       </Suspense>
 
-      <ShortcutsModal opened={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <ShortcutsModal opened={showShortcuts} onClose={() => setShowShortcuts(false)} commands={commands} />
 
       <GettingStartedModal
         opened={showGettingStarted}
@@ -4206,6 +4175,26 @@ export default function App() {
           setShareOffer(null)
           if (doc === null) return
           openSharedDocument(doc)
+        }}
+      />
+
+      <ConfirmModal
+        opened={confirmDelete !== null}
+        title={confirmDelete?.kind === 'plot' ? 'Delete plot' : 'Delete table'}
+        message={`Delete “${confirmDelete?.name ?? ''}”? Closing its window keeps it; deleting removes it from the project.`}
+        confirmLabel="Delete"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          const target = confirmDelete
+          setConfirmDelete(null)
+          if (!target) return
+          const exists = target.kind === 'table' ? tablesRef.current.some((t) => t.id === target.id) : plots.some((p) => p.id === target.id)
+          if (!exists) {
+            notifications.show({ color: 'orange', title: 'Nothing deleted', message: `“${target.name}” no longer exists.` })
+            return
+          }
+          if (target.kind === 'table') setTables((prev) => prev.filter((t) => t.id !== target.id))
+          else handlePlotsChange(plots.filter((p) => p.id !== target.id))
         }}
       />
 

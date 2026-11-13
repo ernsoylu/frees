@@ -23,7 +23,8 @@ import {
 // Imperative handle the parent uses to drive the editor (insert at caret, jump
 // to a line) without reaching into the DOM, mirroring the old textareaRef ops.
 export interface EquationEditorHandle {
-  insertSnippet: (snippet: string) => void
+  /** Inserts at the caret; false when the editor has no view yet. */
+  insertSnippet: (snippet: string) => boolean
   /** Append `text` as its own line at the end of the document, guaranteeing a
    *  line break before and after so repeated calls each land on a fresh line. */
   insertStatement: (text: string, opts?: { focus?: boolean }) => void
@@ -543,7 +544,7 @@ function EquationEditorInner(
     () => ({
       insertSnippet(snippet: string) {
         const view = viewRef.current
-        if (!view) return
+        if (!view) return false
         const caretMark = snippet.indexOf('$0')
         const clean = snippet.replace('$0', '')
         const { from, to } = view.state.selection.main
@@ -553,6 +554,7 @@ function EquationEditorInner(
           selection: { anchor: caret },
         })
         view.focus()
+        return true
       },
       insertStatement(text: string, opts?: { focus?: boolean }) {
         const view = viewRef.current

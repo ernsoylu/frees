@@ -216,3 +216,36 @@ export function MessageModal({
     </Modal>
   )
 }
+
+/** Asks before a destructive action; Cancel is focused so Enter never deletes by accident. */
+export function ConfirmModal({
+  opened,
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: Readonly<{
+  opened: boolean
+  title: string
+  message: string
+  confirmLabel: string
+  onConfirm: () => void
+  onCancel: () => void
+}>) {
+  return (
+    <Modal opened={opened} onClose={onCancel} title={title} centered>
+      <Stack gap="md">
+        <Text size="sm">{message}</Text>
+        <Group justify="flex-end">
+          <Button size="xs" variant="default" onClick={onCancel} data-autofocus>
+            Cancel
+          </Button>
+          <Button size="xs" color="red" onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  )
+}

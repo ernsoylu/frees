@@ -1,3 +1,5 @@
+import { CommandMenuItems } from './CommandMenuItems'
+import { FILE_MENU, LAYOUT_MENU, RAIL_PLOTS_NEW, RAIL_TABLES_NEW, TOOLS_MENU, type CommandId, type Commands } from './commands'
 import { helpUrl } from './helpUrl'
 import {
   ActionIcon,
@@ -19,9 +21,6 @@ import {
 import {
   IconAdjustments,
   IconChartGridDots,
-  IconChartHistogram,
-  IconCrosshair,
-  IconTargetArrow,
   IconSitemap,
   IconChartLine,
   IconChecks,
@@ -29,15 +28,10 @@ import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconCode,
-  IconDatabase,
-  IconDeviceFloppy,
   IconFile,
-  IconFilePlus,
-  IconFolderOpen,
   IconHelp,
   IconInfoCircle,
   IconLayoutGrid,
-  IconLayoutColumns,
   IconMathFunction,
   IconPointFilled,
   IconX,
@@ -50,19 +44,13 @@ import {
   IconSettings,
   IconTable,
   IconTerminal2,
-  IconTrash,
   IconSearch,
   IconVariable,
-  IconLink,
-  IconPrinter,
-  IconFileExport,
-  IconWorld,
 } from '@tabler/icons-react'
 import { spotlight } from '@mantine/spotlight'
 import { useMediaQuery } from '@mantine/hooks'
 import { useState } from 'react'
 import { CheckResponse, SolveResponse, TableRowResult, TableStats } from './api'
-import type { LayoutPerspective } from './workspace/WorkspaceDock'
 import { withStableKeys } from './format'
 import { FUNCTION_CATEGORIES } from './functionCatalog'
 
@@ -101,25 +89,19 @@ interface RailProps {
   /** Specific window ids open (e.g. "diagram:<id>") for per-instance marks. */
   openIds?: string[]
   /** Plots (X-Y, property, psychrometric) available to open as windows. */
-  plots?: { id: string; name: string; tag?: string; deletable?: boolean }[]
+  plots?: { id: string; name: string; tag?: string }[]
   /** Number of plot windows currently open (badge on the Plots icon). */
   plotCount?: number
   /** Tables available to open as individual windows. */
-  workspaceTables?: { id: string; name: string; deletable?: boolean }[]
+  workspaceTables?: { id: string; name: string; tag?: string }[]
   /** Number of table windows currently open (badge on the Tables icon). */
   tableCount?: number
   onSelect: (view: string) => void
   onClose?: (view: string) => void
-  /** Rebuild the dock as a named layout preset (shows the Layout menu). */
-  onApplyLayout?: (perspective: LayoutPerspective) => void
+  /** The command registry: the rail's create and Layout menus are built from it (N1). */
+  commands?: Commands
   onOpenPlot?: (id: string) => void
-  onNewPlot?: (kind: 'xy' | 'property' | 'psychro') => void
-  onDeletePlot?: (id: string) => void
   onOpenTable?: (id: string) => void
-  onNewTable?: (kind: 'parametric' | 'function-1d' | 'function-2d') => void
-  onDeleteTable?: (id: string) => void
-  /** Open the singleton Fluid State table window. */
-  onOpenStates?: () => void
   onPreferences: () => void
   onAbout: () => void
 }
@@ -139,7 +121,6 @@ function InstanceLauncher({
   items,
   openIds,
   onOpen,
-  onDelete,
 }: Readonly<{
   expanded: boolean
   active: boolean
@@ -149,10 +130,9 @@ function InstanceLauncher({
   newActions: { label: string; onClick: () => void }[]
   emptyLabel: string
   icon: React.ReactNode
-  items: { id: string; name: string; tag?: string; deletable?: boolean }[]
+  items: { id: string; name: string; tag?: string }[]
   openIds: Set<string>
   onOpen?: (id: string) => void
-  onDelete?: (id: string) => void
 }>) {
   const variant = active ? 'light' : 'subtle'
   const color = active ? 'teal' : 'gray'
@@ -210,29 +190,14 @@ function InstanceLauncher({
                 <span style={{ display: 'inline-block', width: 10 }} />
               )
             }
+            // Opening is the row's only action: Delete lives in the Inspector,
+            // with a confirmation, so a slip never costs a table (N3).
             rightSection={
-              <Group gap={4} wrap="nowrap" align="center">
-                {it.tag && (
-                  <Text size="9px" c="dimmed">
-                    {it.tag}
-                  </Text>
-                )}
-                {it.deletable && onDelete && (
-                  <ActionIcon
-                    component="span"
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    aria-label={`Delete ${it.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(it.id)
-                    }}
-                  >
-                    <IconTrash size={12} />
-                  </ActionIcon>
-                )}
-              </Group>
+              it.tag && (
+                <Text size="9px" c="dimmed">
+                  {it.tag}
+                </Text>
+              )
             }
           >
             {it.name}
@@ -366,19 +331,15 @@ export function Rail({
   tableCount = 0,
   onSelect,
   onClose,
-  onApplyLayout,
+  commands,
   onOpenPlot,
-  onNewPlot,
-  onDeletePlot,
   onOpenTable,
-  onNewTable,
-  onDeleteTable,
-  onOpenStates,
   onPreferences,
   onAbout,
 }: Readonly<RailProps>) {
   const openSet = new Set(openKinds)
   const openIdSet = new Set(openIds)
+  const newActions = (ids: readonly CommandId[]) => (commands ? ids.map((id) => ({ label: commands[id].label, onClick: commands[id].run })) : [])
   const wideScreen = useMediaQuery('(min-width: 1100px)', false, { getInitialValueInEffect: false })
   const [expandedPreference, setExpandedPreference] = useState(() => localStorage.getItem(RAIL_EXPANDED_KEY))
   const expanded = expandedPreference === null ? wideScreen : expandedPreference === 'true'
@@ -433,17 +394,12 @@ export function Rail({
               count={plotCount}
               idPrefix="plot:"
               label="Plots"
-              newActions={[
-                { label: 'New X-Y plot', onClick: () => onNewPlot?.('xy') },
-                { label: 'New property diagram', onClick: () => onNewPlot?.('property') },
-                { label: 'New psychrometric chart', onClick: () => onNewPlot?.('psychro') },
-              ]}
+              newActions={newActions(RAIL_PLOTS_NEW)}
               emptyLabel="No plots yet"
               icon={<IconChartLine size={iconSize} stroke={1.6} />}
               items={plots}
               openIds={openIdSet}
               onOpen={onOpenPlot}
-              onDelete={onDeletePlot}
             />
           ) : view.value === 'table' && workspaceTables ? (
             <InstanceLauncher
@@ -453,18 +409,12 @@ export function Rail({
               count={tableCount}
               idPrefix="table:"
               label="Tables"
-              newActions={[
-                { label: 'New parametric table', onClick: () => onNewTable?.('parametric') },
-                { label: 'New function table (1-arg)', onClick: () => onNewTable?.('function-1d') },
-                { label: 'New function table (curve)', onClick: () => onNewTable?.('function-2d') },
-                { label: 'Add fluid state table', onClick: () => onOpenStates?.() },
-              ]}
+              newActions={newActions(RAIL_TABLES_NEW)}
               emptyLabel="No tables yet"
               icon={<IconTable size={iconSize} stroke={1.6} />}
               items={workspaceTables}
               openIds={openIdSet}
               onOpen={onOpenTable}
-              onDelete={onDeleteTable}
             />
           ) : (
             <RailEntry
@@ -482,7 +432,7 @@ export function Rail({
         )}
       </Stack>
       <Stack gap={4}>
-        {onApplyLayout && (
+        {commands && (
           <Menu position="right-start" shadow="md" width={220} withinPortal>
             <Menu.Target>
               {expanded ? (
@@ -506,24 +456,7 @@ export function Rail({
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Label>Window layout</Menu.Label>
-              <Menu.Item
-                leftSection={<IconLayoutGrid size={14} />}
-                onClick={() => onApplyLayout('default')}
-              >
-                Default view
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconChartLine size={14} />}
-                onClick={() => onApplyLayout('results')}
-              >
-                Results focused
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconLayoutColumns size={14} />}
-                onClick={() => onApplyLayout('split')}
-              >
-                Split view
-              </Menu.Item>
+              <CommandMenuItems cmds={commands} entries={LAYOUT_MENU} />
             </Menu.Dropdown>
           </Menu>
         )}
@@ -738,6 +671,10 @@ function StatusPill({ pill, hint }: Readonly<{ pill: PillContent | null; hint: s
 
 interface TopBarProps {
   isTable: boolean
+  /** What Check and Solve act on: "Model" or "Table: ‹name›" (N2). */
+  targetLabel?: string
+  /** Any solve, check or table run is in flight, whatever is focused — Stop follows the job. */
+  runBusy?: boolean
   checking: boolean
   solving: boolean
   /** Engine completion, 0…1, while a solve or a table run is in flight; `null`
@@ -765,46 +702,14 @@ interface TopBarProps {
   onComplexModeChange: (checked: boolean) => void
   projectName: string
   onRenameProject: () => void
-  onNewProject: () => void
-  onOpenProject: () => void
-  /** File menu: the browser-resident project library (Phase 11, D4). */
-  onOpenLibrary: () => void
-  onSaveProject: () => void
-  onSaveProjectAs: () => void
-  /** File menu: download equation text only (no project tables/layout). */
-  onExportEquations: () => void
   onInsertFunction: (snippet: string) => void
-  onInsertComponent: () => void
-  onOpenExamples: () => void
-  /** File menu: open a remote document via URL parameter. */
-  onOpenUrl: () => void
-  /** File menu: copy a self-contained #share= link carrying the document. */
-  onShareLink: () => void
-  /** File menu: open the printable calculation report (browser print-to-PDF). */
-  onPrintReport: () => void
-  /** Whether a successful solve exists for the report to print. */
-  canPrintReport: boolean
-  /** Tools menu: open the auxiliary Inspector edge panel. */
-  onOpenInspector: () => void
-  /** Tools menu: open the Variable Explorer and the REPL Terminal dock windows. */
-  onOpenWorkspace: () => void
-  onOpenTerminal: () => void
-  /** Tools menu: equation tools (also reachable from the left rail). */
-  onVariableInfo: () => void
-  /** Tools → Analysis: the D5-clipped affordances, re-added as their
-   *  surfaces wired (Monte Carlo in Wave B2; Min/Max, Curve Fit and
-   *  Parameter Estimation in Wave B3). */
-  onMonteCarlo: () => void
-  onSensitivity: () => void
-  onMinMax: () => void
-  onCurveFit: () => void
-  onParameterFit: () => void
-  onPidTuner: () => void
+  /** The command registry: the File and Tools menus are built from it (N1). */
+  commands: Commands
 }
 
-function solveTooltipFor(canSolve: boolean, isTable: boolean): string {
-  if (!canSolve) return 'Check & Solve (F2)'
-  return isTable ? 'Solve every table run (F2)' : 'Solve the system (F2)'
+function solveTooltipFor(canSolve: boolean, isTable: boolean, target: string): string {
+  if (!canSolve) return `Check & Solve ${target} (F2)`
+  return isTable ? `Solve every run of ${target} (F2)` : 'Solve the model (F2)'
 }
 
 function statusPillFor(props: Readonly<TopBarProps>) {
@@ -829,7 +734,8 @@ function statusPillFor(props: Readonly<TopBarProps>) {
 export function TopBar(props: Readonly<TopBarProps>) {
   const { isTable } = props
   const canSolve = isTable ? props.tableCheckResult?.solvable === true : props.solvable
-  const solveTooltip = solveTooltipFor(canSolve, isTable)
+  const target = props.targetLabel ?? (isTable ? 'the table' : 'Model')
+  const solveTooltip = solveTooltipFor(canSolve, isTable, target)
   const pill = statusPillFor(props)
   const solveBusy = isTable ? props.tableSolving : props.solving
   // `null` is "running, nothing reported yet" — an empty bar, not a missing
@@ -868,46 +774,7 @@ export function TopBar(props: Readonly<TopBarProps>) {
           </Menu.Target>
           <Menu.Dropdown>
             <Menu.Label>{props.projectName}.frees</Menu.Label>
-            <Menu.Item leftSection={<IconFilePlus size={14} />} onClick={props.onNewProject}>
-              New Project
-            </Menu.Item>
-            <Menu.Item leftSection={<IconFolderOpen size={14} />} onClick={props.onOpenProject}>
-              Open Project…
-            </Menu.Item>
-            <Menu.Item leftSection={<IconDatabase size={14} />} onClick={props.onOpenLibrary}>
-              Browser Projects…
-            </Menu.Item>
-            <Menu.Item leftSection={<IconLayoutGrid size={14} />} onClick={props.onOpenExamples}>
-              Open Example…
-            </Menu.Item>
-            <Menu.Item leftSection={<IconWorld size={14} />} onClick={props.onOpenUrl}>
-              Open URL…
-            </Menu.Item>
-            <Menu.Item leftSection={<IconLink size={14} />} onClick={props.onShareLink}>
-              Copy Share Link
-            </Menu.Item>
-            <Menu.Item leftSection={<IconPrinter size={14} />} onClick={props.onPrintReport} disabled={!props.canPrintReport}>
-              Print Report…
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item
-              leftSection={<IconDeviceFloppy size={14} />}
-              onClick={props.onSaveProject}
-            >
-              Save Project
-            </Menu.Item>
-            <Text size="xs" c="dimmed" px="sm" pb={4}>
-              .frees file: equations, tables, maps, plots, layout, guesses
-            </Text>
-            <Menu.Item leftSection={<IconDeviceFloppy size={14} />} onClick={props.onSaveProjectAs}>
-              Save Project As…
-            </Menu.Item>
-            <Menu.Item leftSection={<IconFileExport size={14} />} onClick={props.onExportEquations}>
-              Export equation text…
-            </Menu.Item>
-            <Text size="xs" c="dimmed" px="sm" pb={4}>
-              Editor document only — GUI tables, maps, and layout stay in the project
-            </Text>
+            <CommandMenuItems cmds={props.commands} entries={FILE_MENU} />
           </Menu.Dropdown>
         </Menu>
 
@@ -977,46 +844,7 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Label>Modeling</Menu.Label>
-            <Menu.Item leftSection={<IconLayoutGrid size={14} />} onClick={props.onInsertComponent}>
-              Component Wizard
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Label>Equation tools</Menu.Label>
-            <Menu.Item leftSection={<IconVariable size={14} />} onClick={props.onVariableInfo}>
-              Variable Information
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Label>Analysis</Menu.Label>
-            <Menu.Item leftSection={<IconTargetArrow size={14} />} onClick={props.onMinMax}>
-              Min / Max (optimize)
-            </Menu.Item>
-            <Menu.Item leftSection={<IconMathFunction size={14} />} onClick={props.onCurveFit}>
-              Curve Fit
-            </Menu.Item>
-            <Menu.Item leftSection={<IconChartHistogram size={14} />} onClick={props.onMonteCarlo}>
-              Monte Carlo Uncertainty
-            </Menu.Item>
-            <Menu.Item leftSection={<IconChartGridDots size={14} />} onClick={props.onSensitivity}>
-              Global Sensitivity
-            </Menu.Item>
-            <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onPidTuner}>
-              PID Tuner
-            </Menu.Item>
-            <Menu.Item leftSection={<IconCrosshair size={14} />} onClick={props.onParameterFit}>
-              Parameter Estimation
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Label>Auxiliary panels</Menu.Label>
-            <Menu.Item leftSection={<IconVariable size={14} />} onClick={props.onOpenWorkspace}>
-              Variable Explorer
-            </Menu.Item>
-            <Menu.Item leftSection={<IconTerminal2 size={14} />} onClick={props.onOpenTerminal}>
-              Terminal
-            </Menu.Item>
-            <Menu.Item leftSection={<IconAdjustments size={14} />} onClick={props.onOpenInspector}>
-              Inspector
-            </Menu.Item>
+            <CommandMenuItems cmds={props.commands} entries={TOOLS_MENU} />
           </Menu.Dropdown>
         </Menu>
 
@@ -1062,7 +890,12 @@ export function TopBar(props: Readonly<TopBarProps>) {
 
       <Group gap="xs" wrap="nowrap">
         <StatusPill pill={pill} hint={hint} />
-        <Tooltip label={`${isTable ? 'Check every table run' : 'Compile and check'} (F4)`}>
+        {props.targetLabel && (
+          <Text size="xs" c="dimmed" maw={180} truncate="end" data-testid="run-target" title={props.targetLabel}>
+            {props.targetLabel}
+          </Text>
+        )}
+        <Tooltip label={`${isTable ? `Check every run of ${target}` : 'Compile and check the model'} (F4)`}>
           <Button
             variant="default"
             size="xs"
@@ -1141,7 +974,7 @@ export function TopBar(props: Readonly<TopBarProps>) {
             </Menu>
           </Button.Group>
         </Tooltip>
-        {solveBusy && props.onStop && (
+        {(props.runBusy ?? solveBusy) && props.onStop && (
           <Tooltip label="Stop computation (cancels solve and resets worker)">
             <Button
               size="xs"
