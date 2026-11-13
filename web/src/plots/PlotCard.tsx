@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { usePublishContext } from '../contextActions'
 import {
   ActionIcon,
   Alert,
@@ -548,6 +549,16 @@ export default function PlotCard({
   const [publicationStyle, setPublicationStyle] = useState(true)
   const [viewResetKey, setViewResetKey] = useState(0)
   const [exportViewMode, setExportViewMode] = useState<'current' | 'full'>('current')
+  // Phase O: the ribbon's Plot tab opens this card's Configure and Export, and
+  // moves focus to its measurement bar.
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const inspectRef = useRef<HTMLDivElement>(null)
+  const hidden = hideHeader ? "This plot's toolbar is hidden here." : null
+  usePublishContext(`plot:${spec.id}`, {
+    'plot.configure': { run: onConfigure, unavailable: hidden ?? (spec.fromCode ? 'Defined in the equations: Duplicate as editable first.' : null) },
+    'plot.export': { run: () => setExportMenuOpen(true), unavailable: hidden },
+    'plot.inspect': { run: () => inspectRef.current?.focus() },
+  })
 
   // Phase 10D: Persistent 1-cursor & 2-cursor inspection, deltas/slope, raw data stats, and accessible table
   const [cursor1, setCursor1] = useState<PlotCursor | null>(null)
@@ -808,7 +819,7 @@ export default function PlotCard({
             <Button variant="default" size="xs" onClick={() => setViewResetKey((k) => k + 1)}>
               Fit data
             </Button>
-            <Menu shadow="md">
+            <Menu shadow="md" opened={exportMenuOpen} onChange={setExportMenuOpen}>
               <Menu.Target>
                 <Button variant="default" size="xs" loading={exporting}>
                   Export
@@ -902,6 +913,7 @@ export default function PlotCard({
             style={{ backgroundColor: 'var(--mantine-color-body)', fontSize: 12, flexShrink: 0 }}
             role="region"
             aria-label="Plot inspection and cursor measurement"
+            ref={inspectRef}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'ArrowLeft') {

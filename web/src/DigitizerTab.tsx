@@ -34,6 +34,7 @@ import {
   IconZoomOut,
 } from '@tabler/icons-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { usePublishContext } from './contextActions'
 import type { FunctionTableSpec, TableSpec } from './tables'
 
 // Digitizer → Fit → Function (Wave H): loaded on demand so the fit dialog
@@ -582,6 +583,7 @@ export function DigitizerTab({
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(saved?.imageDataUrl ?? null)
   const [scale, setScale] = useState(1)
   const [mode, setMode] = useState<Mode>('x1')
+  const loadImageRef = useRef<HTMLButtonElement>(null)
   const [calibration, setCalibration] = useState<Calibration>(
     saved?.calibration ?? { xLog: false, yLog: false, xName: 'X', yName: 'Y' },
   )
@@ -1113,6 +1115,20 @@ export function DigitizerTab({
     { label: 'Mask', value: 'mask' },
   ]
 
+  // Phase O: the ribbon's Digitizer tab walks Image → Calibrate → Extract → Review → Use Data.
+  const noImage = 'Load an image first.'
+  const hasPoints = datasets.some((ds) => ds.points.length > 0)
+  usePublishContext('digitizer', {
+    'digitizer.image': { run: () => loadImageRef.current?.click() },
+    'digitizer.calibrate': { run: () => setMode('x1'), unavailable: image ? null : noImage },
+    'digitizer.extract': { run: () => setMode('pick'), unavailable: !image ? noImage : resolved ? null : 'Calibrate the four axis points first.' },
+    'digitizer.review': { run: () => setMode('select'), unavailable: hasPoints ? null : 'Digitize at least one point first.' },
+    'digitizer.useData': {
+      run: sendToFunctionTable,
+      unavailable: !onSendToFunctionTable ? 'Not available here.' : !resolved ? 'Calibrate the four axis points first.' : hasPoints ? null : 'Digitize at least one curve first.',
+    },
+  })
+
   return (
     <Group align="stretch" gap="sm" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }} wrap="nowrap">
       {/* --- canvas area --- */}
@@ -1121,7 +1137,7 @@ export function DigitizerTab({
           <Group gap="xs" wrap="nowrap">
             <FileButton onChange={loadImageFile} accept="image/*">
               {(props) => (
-                <Button size="xs" leftSection={<IconPhotoUp size={14} />} {...props}>
+                <Button size="xs" leftSection={<IconPhotoUp size={14} />} {...props} ref={loadImageRef}>
                   Load Image
                 </Button>
               )}

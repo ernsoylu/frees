@@ -4,7 +4,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   COMMAND_SPECS,
+  CONTEXT_TABS,
+  FILE_MENU,
   MENU_SURFACES,
+  MOBILE_MENU,
+  RIBBON_TABS,
+  TOOLS_MENU,
+  ribbonLocation,
   commandForKey,
   commandPaletteGroups,
   matchesShortcut,
@@ -70,5 +76,59 @@ describe('keys', () => {
     expect(commandForKey(cmds, key('k', { ctrlKey: true }))).toBeNull()
     expect(commandForKey(cmds, key(' ', { ctrlKey: true }))).toBeNull()
     expect(matchesShortcut(key('F2', { ctrlKey: true }), ['F2'])).toBe(false)
+  })
+})
+
+describe('ribbon (Phase O)', () => {
+  const ribbonIds = new Set([...RIBBON_TABS, ...Object.values(CONTEXT_TABS)].flatMap((t) => t.groups.flatMap((g) => g.items)))
+  const permanent = new Set(RIBBON_TABS.flatMap((t) => t.groups.flatMap((g) => g.items)))
+
+  it('puts every File, Functions and Tools entry one click from a permanent tab (AC-02)', () => {
+    const menus = [...FILE_MENU, ...TOOLS_MENU].filter((e): e is CommandId => typeof e === 'string' && e !== '-')
+    for (const id of [...menus, 'insert.function' as const]) expect(permanent, id).toContain(id)
+  })
+
+  it('keeps every ribbon command in the palette, with its ribbon path when the ribbon is on', () => {
+    const palette = commandPaletteGroups(resolveCommands(handlers()), true).flatMap((g) => g.actions)
+    const byId = new Map(palette.map((a) => [a.id, a]))
+    for (const id of ribbonIds) {
+      if (spec(id).group === null) continue
+      expect(byId.get(id), id).toBeDefined()
+    }
+    expect(byId.get('tool.minMax')?.description).toMatch(/^Analysis ▸ Optimize & Fit/)
+    expect(ribbonLocation('table.addRow')).toBe('Table ▸ Structure')
+  })
+
+  it('keeps the old analysis names as search aliases', () => {
+    expect(spec('tool.minMax').aliases).toContain('min / max')
+    expect(spec('tool.variableInfo').aliases).toContain('variable information')
+  })
+
+  it('shows a toggle\'s state in the palette', () => {
+    const cmds = resolveCommands(handlers({ 'run.findAll': { run: vi.fn(), checked: true } }))
+    expect(commandPaletteGroups(cmds).flatMap((g) => g.actions).find((a) => a.id === 'run.findAll')?.label).toBe('Find All Solutions: on')
+  })
+
+  it('gives the mobile menu Insert and Analysis', () => {
+    const labels = MOBILE_MENU.filter((e): e is { label: string } => typeof e === 'object').map((e) => e.label)
+    expect(labels).toEqual(['Insert', 'Analysis'])
+    expect(MOBILE_MENU).toContain('insert.function')
+    expect(MOBILE_MENU).toContain('tool.pidTuner')
+  })
+
+  it('imports no Plotly and no analysis dialog (AC-13)', () => {
+    const sources = import.meta.glob<string>('./*.{ts,tsx}', { query: '?raw', import: 'default', eager: true })
+    const seen = new Set<string>()
+    const visit = (file: string) => {
+      if (seen.has(file)) return
+      seen.add(file)
+      for (const [, from] of sources[file].matchAll(/^import[^'"]*['"]([^'"]+)['"]/gm)) {
+        expect(from, `${file} imports ${from}`).not.toMatch(/plotly|Modal/i)
+        const local = ['.tsx', '.ts'].map((x) => from + x).find((f) => f in sources)
+        if (local) visit(local)
+      }
+    }
+    for (const f of ['./Ribbon.tsx', './StatusBar.tsx', './contextActions.ts', './ribbonPrefs.ts']) visit(f)
+    expect([...seen]).toContain('./commands.tsx')
   })
 })

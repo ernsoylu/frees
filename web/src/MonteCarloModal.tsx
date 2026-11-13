@@ -89,7 +89,7 @@ export default function MonteCarloModal({
     <Modal opened={opened} onClose={onClose} title="Monte Carlo Uncertainty" size="xl" centered>
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
-          Samples every variable with a declared uncertainty (Variable Information window) around
+          Samples every variable with a declared uncertainty (Variable Settings window) around
           its solved value, re-solves, and aggregates the distributions — the sampling counterpart
           of the first-order propagation shown in the Solution window.
         </Text>

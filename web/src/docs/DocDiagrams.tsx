@@ -215,7 +215,7 @@ export function DegreesOfFreedomDiagram() {
       <rect x="40" y="190" width="720" height="70" rx="6" fill="light-dark(#F8F9FA, #25262B)" stroke="light-dark(#E9ECEF, #373A40)" strokeWidth="1" />
       <text x="60" y="215" fill={THEME.textColor} fontSize="11" fontWeight="bold">DoF Calculation Equation: DoF = Variables - Equations</text>
       <text x="60" y="235" fill={THEME.textDimmed} fontSize="10.5">Use the compiler Check (F4) to query your degree of freedom count before running solves.</text>
-      <text x="60" y="248" fill={THEME.textDimmed} fontSize="10.5">Setting variable bounds or guess values in the Variable Info sheet (Ctrl+I) helps Newton convergence.</text>
+      <text x="60" y="248" fill={THEME.textDimmed} fontSize="10.5">Setting variable bounds or guess values in the Variable Settings sheet helps Newton convergence.</text>
     </svg>
   );
 }

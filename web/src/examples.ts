@@ -559,7 +559,7 @@ E0        = ODEValue('energy', 0) * 1 [J]  { initial energy }`,
 
   The apogee altitude is read back into the analytic solution with MaxValue('h').
   Change t_burn and re-solve to trade burn time for apogee — or, to SIZE the
-  rocket, open Variable Information, give t_burn a guess near 27 and bounds
+  rocket, open Variable Settings, give t_burn a guess near 27 and bounds
   [5, 55], add the equation  MaxValue('h') = h_target  and let frees solve for
   the burn time that reaches 100 km. }
 

@@ -10,7 +10,7 @@ references: []
 
 # GUESS
 
-Writes a variable's starting guess and bounds into the document, so the seed travels with the text instead of living only in Variable Info.
+Writes a variable's starting guess and bounds into the document, so the seed travels with the text instead of living only in Variable Settings.
 
 ## Syntax
 
@@ -23,7 +23,7 @@ guess(x, 2, lower = 0, upper = 10)
 
 ## Description
 
-A guess picks the root Newton converges to when an equation has several; bounds keep iteration in the physical range. Member paths (`HX.in.P`) are accepted. A `GUESS` in the text wins over Variable Information on conflict.
+A guess picks the root Newton converges to when an equation has several; bounds keep iteration in the physical range. Member paths (`HX.in.P`) are accepted. A `GUESS` in the text wins over Variable Settings on conflict.
 
 ## Examples
 

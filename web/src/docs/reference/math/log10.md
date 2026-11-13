@@ -40,7 +40,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 Re = 1e5
 eps = 0.00015 [m]
 D = 0.25 [m]
-{ ff is unknown — set a guess of ~0.02 in Variable Info }
+{ ff is unknown — set a guess of ~0.02 in Variable Settings }
 1/sqrt(ff) = -2*log10(eps/(3.7*D) + 2.51/(Re*sqrt(ff)))
 
 { CHECK ff 0.02072664385 2.0726643846400944e-8 }

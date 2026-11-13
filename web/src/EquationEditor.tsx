@@ -8,6 +8,8 @@ import { REFERENCE_SLUGS } from './docsTopics'
 import { Extension, StateEffect, StateField, Transaction } from '@codemirror/state'
 import { HighlightStyle, StreamLanguage, StringStream, syntaxHighlighting } from '@codemirror/language'
 import { CompletionContext, CompletionResult } from '@codemirror/autocomplete'
+import { redo, redoDepth, undo, undoDepth } from '@codemirror/commands'
+import { usePublishContext } from './contextActions'
 import { tags } from '@lezer/highlight'
 import { catalogFunctionNames, FUNCTION_CATEGORIES } from './functionCatalog'
 import { COMPONENT_NAMES } from './componentNames'
@@ -508,9 +510,19 @@ function EquationEditorInner(
     onCursorRef.current = onCursor
   })
   // Only the user's caret: a load or a canvas edit moves it unfocused.
+  // Phase O: the ribbon's Undo and Redo reach the Editor's own history.
+  const [history, setHistory] = useState({ undo: 0, redo: 0 })
   const reportCursor = useCallback((u: ViewUpdate) => {
     if (u.selectionSet && u.view.hasFocus) onCursorRef.current?.(u.state.selection.main.head)
+    if (u.transactions.length > 0) {
+      const next = { undo: undoDepth(u.state), redo: redoDepth(u.state) }
+      setHistory((h) => (h.undo === next.undo && h.redo === next.redo ? h : next))
+    }
   }, [])
+  usePublishContext('equations', {
+    'edit.undo': { run: () => viewRef.current && undo(viewRef.current), unavailable: history.undo > 0 ? null : 'Nothing to undo in the Editor.', description: 'Undo the last edit in the Editor' },
+    'edit.redo': { run: () => viewRef.current && redo(viewRef.current), unavailable: history.redo > 0 ? null : 'Nothing to redo in the Editor.', description: 'Redo the last undone edit in the Editor' },
+  })
   namesRef.current.variables = variables
 
   // Rebuild the theme/highlight when the Mantine colour scheme changes so the

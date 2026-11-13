@@ -67,7 +67,7 @@ interface Props {
   onWriteToDocument?: (nextText: string) => void
 }
 
-/** Mirrors the Options > Variable Information window. */
+/** Mirrors the Options > Variable Settings window. */
 /** Relative (%) uncertainty derived from an absolute value, or '' when not derivable. */
 function relUncFromAbs(value: string, val: number | undefined): string {
   if (val === undefined || val === 0 || value.trim() === '') return ''
@@ -247,7 +247,7 @@ export default function VariableInfoModal({ variables, drafts, solvedValues, sli
   }
 
   return (
-    <Modal opened onClose={onClose} title="Variable Information" size="xl" centered>
+    <Modal opened onClose={onClose} title="Variable Settings" size="xl" centered>
       <Text size="sm" c="dimmed" mb="md">
         Guess values steer Newton&apos;s method toward a root; leave a guess
         empty to let the solver choose and explore starts automatically.

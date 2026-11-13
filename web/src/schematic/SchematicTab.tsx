@@ -1,4 +1,5 @@
 import { flushSync } from 'react-dom'
+import { usePublishContext } from '../contextActions'
 import { defaultSeries, SERIES_LABELS, seriesOptions, stepPreferred, type SeriesId } from '../preferredValues'
 import { createElement, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import {
@@ -1050,6 +1051,11 @@ export default function SchematicTab({
     )
   }
 
+  // Phase O: the ribbon's Undo and Redo reach the canvas timeline.
+  usePublishContext('schematic', {
+    'edit.undo': { run: () => replay('undo'), unavailable: history.done.length ? null : 'Nothing to undo on the schematic.', description: history.done.length ? `Undo ${history.done.at(-1)!.label} on the schematic` : undefined },
+    'edit.redo': { run: () => replay('redo'), unavailable: history.undone.length ? null : 'Nothing to redo on the schematic.', description: history.undone.length ? `Redo ${history.undone.at(-1)!.label} on the schematic` : undefined },
+  })
   const commit = useCallback(() => {
     if (!onPresentationChange) {
       return

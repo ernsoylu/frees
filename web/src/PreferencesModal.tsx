@@ -7,6 +7,7 @@ import {
   UnitSystem,
 } from './api'
 import { dropPrecache, readDataSaver, writeDataSaver } from './dataSaver'
+import { writeRibbon } from './ribbonPrefs'
 
 interface Props {
   criteria: StopCriteria
@@ -14,6 +15,9 @@ interface Props {
   fillMissing: boolean
   onSave: (criteria: StopCriteria, unitSystem: UnitSystem, fillMissing: boolean) => void
   onClose: () => void
+  /** Phase O: the ribbon flag, a device setting like data saver. */
+  ribbon?: boolean
+  onRibbonChange?: (on: boolean) => void
 }
 
 type StopCriteriaField = Exclude<keyof StopCriteria, 'complexMode'>
@@ -43,7 +47,8 @@ const FIELDS: Field[] = [
   { key: 'elapsedTimeSeconds', label: 'Elapsed time (sec)', hint: 'Abort the solve after this many seconds' },
 ]
 
-export default function PreferencesModal({ criteria, unitSystem, fillMissing, onSave, onClose }: Readonly<Props>) {
+export default function PreferencesModal({ criteria, unitSystem, fillMissing, onSave, onClose, ribbon = false, onRibbonChange }: Readonly<Props>) {
+  const [ribbonDraft, setRibbonDraft] = useState(ribbon)
   const [draft, setDraft] = useState<Record<StopCriteriaField, string>>({
     maxIterations: String(criteria.maxIterations),
     relativeResiduals: String(criteria.relativeResiduals),
@@ -98,6 +103,10 @@ export default function PreferencesModal({ criteria, unitSystem, fillMissing, on
         void dropPrecache({ serviceWorker: navigator.serviceWorker, caches: globalThis.caches })
       }
     }
+    if (ribbonDraft !== ribbon) {
+      writeRibbon(ribbonDraft)
+      onRibbonChange?.(ribbonDraft)
+    }
     onSave({ ...criteria, ...parsed }, system, fillMissingState)
   }
 
@@ -118,6 +127,12 @@ export default function PreferencesModal({ criteria, unitSystem, fillMissing, on
           }
           checked={dataSaver}
           onChange={(e) => setDataSaver(e.currentTarget.checked)}
+        />
+        <Switch
+          label="Ribbon (preview)"
+          description="Replace the Functions and Tools menus with tabs of labelled commands, and add a status bar. Every command stays in the palette (Ctrl+K)."
+          checked={ribbonDraft}
+          onChange={(e) => setRibbonDraft(e.currentTarget.checked)}
         />
         <Divider />
         <Select

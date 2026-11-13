@@ -49437,7 +49437,7 @@ a = 55   b = 120   c = 1   d = 0.5
     tags: [`keyword`, `guess`, `bounds`, `initial value`, `newton`, `convergence`],
     references: [],
     guides: [],
-    body: `Writes a variable's starting guess and bounds into the document, so the seed travels with the text instead of living only in Variable Info.
+    body: `Writes a variable's starting guess and bounds into the document, so the seed travels with the text instead of living only in Variable Settings.
 
 ## Syntax
 
@@ -49450,7 +49450,7 @@ guess(x, 2, lower = 0, upper = 10)
 
 ## Description
 
-A guess picks the root Newton converges to when an equation has several; bounds keep iteration in the physical range. Member paths (\`HX.in.P\`) are accepted. A \`GUESS\` in the text wins over Variable Information on conflict.
+A guess picks the root Newton converges to when an equation has several; bounds keep iteration in the physical range. Member paths (\`HX.in.P\`) are accepted. A \`GUESS\` in the text wins over Variable Settings on conflict.
 
 ## Examples
 
@@ -52735,7 +52735,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 Re = 1e5
 eps = 0.00015 [m]
 D = 0.25 [m]
-{ ff is unknown — set a guess of ~0.02 in Variable Info }
+{ ff is unknown — set a guess of ~0.02 in Variable Settings }
 1/sqrt(ff) = -2*log10(eps/(3.7*D) + 2.51/(Re*sqrt(ff)))
 
 { CHECK ff 0.02072664385 2.0726643846400944e-8 }
