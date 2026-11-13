@@ -164,6 +164,14 @@ for (const size of [
       await page.getByRole('button', { name: 'Menu' }).click()
       await expect(page.getByRole('menuitem', { name: 'Insert Function…' })).toBeVisible()
       await expect(page.getByRole('menuitem', { name: 'Optimization…' })).toBeVisible()
+      // The Function Browser fits: on a phone the categories become a select; nothing runs off the side.
+      await page.getByRole('menuitem', { name: 'Insert Function…' }).click()
+      const browser = page.getByRole('dialog', { name: 'Insert Function' })
+      if (size.width <= 600) await expect(browser.getByLabel('Function category')).toBeVisible()
+      else await expect(browser.getByRole('navigation', { name: 'Function categories' })).toBeVisible()
+      await expect(browser.getByRole('button', { name: /^Insert / }).first()).toBeInViewport({ ratio: 1 })
+      expect(await browser.evaluate((d) => [...d.querySelectorAll('*')].every((el) => el.getBoundingClientRect().right <= window.innerWidth + 1))).toBe(true)
+      await page.keyboard.press('Escape')
     }
     await page.screenshot({ path: testInfo.outputPath(`ribbon-${size.width}x${size.height}.png`) })
   })

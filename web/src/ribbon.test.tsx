@@ -30,6 +30,16 @@ describe('Ribbon', () => {
     expect(screen.getByRole('tab', { name: 'Home' }).getAttribute('aria-selected')).toBe('true')
   })
 
+  it('falls back to Home when the contextual tab goes, and stays there when it returns', () => {
+    const r = (context: 'table' | null) => <Ribbon commands={cmds()} context={context} density="expanded" onDensityChange={vi.fn()} />
+    const { rerender } = render(r('table'), { wrapper: wrap })
+    fireEvent.click(screen.getByRole('tab', { name: 'Table' }))
+    expect(screen.getByRole('tab', { name: 'Table' }).getAttribute('aria-selected')).toBe('true')
+    rerender(r(null))
+    rerender(r('table'))
+    expect(screen.getByRole('tab', { name: 'Home' }).getAttribute('aria-selected')).toBe('true')
+  })
+
   it('labels each group, keeps an unavailable command focusable with its reason, and presses toggles', () => {
     const run = vi.fn()
     render(<Ribbon commands={cmds({ 'run.stop': { run, unavailable: 'Nothing is running.' }, 'run.findAll': { run: vi.fn(), checked: true } })} context={null} density="expanded" onDensityChange={vi.fn()} />, { wrapper: wrap })

@@ -180,7 +180,7 @@ import {
   SharedLinkModal,
   TextPromptModal,
 } from './dialogs'
-import { Rail, TopBar } from './WorkspaceChrome'
+import { Rail, TopBar, tablePill } from './WorkspaceChrome'
 import type { WorkspaceDockHandle, OpenWindow } from './workspace/WorkspaceDock'
 const WorkspaceDock = lazy(() => import('./workspace/WorkspaceDock').then(m => ({ default: m.WorkspaceDock })))
 import { detectStates } from './plots/stateTable'
@@ -3133,7 +3133,10 @@ export default function App() {
     dockRef.current?.applyPerspective(name)
     setLayoutName(label)
   }
-  const statusSolveText = solving ? 'Solving…'
+  // With a parametric table focused, the status bar reads that table, as the status pill does.
+  const statusSolveText = focusedParam
+    ? `${focusedParam.name}: ${solvingTableId === focusedParam.id ? 'running…' : checkingTableId === focusedParam.id ? 'checking…' : (tablePill(focusedParam.results, tableCheckResult, tableCheckMessage, focusedParam.stats)?.label ?? 'not run yet')}`
+    : solving ? 'Solving…'
     : checking ? 'Checking…'
     : solvingTableId !== null || checkingTableId !== null ? 'Table running…'
     : stopped ? 'Stopped'
@@ -4063,7 +4066,7 @@ export default function App() {
             solve={statusSolveText}
             units={UNIT_SYSTEM_OPTIONS.find((o) => o.value === unitSystem)?.label ?? unitSystem}
             onUnits={() => setShowPreferences(true)}
-            warnings={(result ?? checkResult)?.unitWarnings.length ?? 0}
+            warnings={(focusedParam ? tableCheckResult : (result ?? checkResult))?.unitWarnings.length ?? 0}
             onWarnings={() => {
               // The warnings carry no position of their own: show the Editor at
               // the reported line, and the list in the status pill's details.

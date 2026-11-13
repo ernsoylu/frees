@@ -168,8 +168,9 @@ export function Ribbon({ commands, context, contextNote, density, onDensityChang
 }>) {
   const tabs = context ? [...RIBBON_TABS, CONTEXT_TABS[context]] : RIBBON_TABS
   const [chosen, setChosen] = useState('home')
-  // A contextual tab that went away (its window lost focus) falls back to Home;
-  // focusing a window never switches tabs by itself.
+  // A contextual tab that went away (its window lost focus) falls back to Home,
+  // and stays there when the window is focused again: focusing never switches tabs.
+  if (!tabs.some((t) => t.id === chosen)) setChosen('home')
   const current = tabs.find((t) => t.id === chosen) ?? tabs[0]
   const [peek, setPeek] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
