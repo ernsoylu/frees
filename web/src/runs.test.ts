@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { compareRuns, sanitizeScenarios, scenarioOverrides, type Baseline, type RunIdentity } from './runs'
+import { compareRuns, runState, sanitizeScenarios, scenarioOverrides, type Baseline, type RunIdentity } from './runs'
 
 const run = (over: Partial<RunIdentity> = {}): RunIdentity => ({ revision: 1, scenario: 'Document inputs', sample: 'steady solution', status: 'solved', ...over })
 const v = (name: string, value: number, units: string) => ({ name, value, units })
@@ -45,4 +45,17 @@ it('compares only the same sample, solved, in convertible units; says why otherw
   const other = compareRuns(base, { ...now, run: run({ sample: 'solution 2 of 2' }) }, convert)
   expect(other[0].unavailable).toBe('different samples (steady solution vs solution 2 of 2)')
   expect(compareRuns({ ...base, run: run({ status: 'did not converge' }) }, now, convert)[0].unavailable).toBe('the baseline did not solve')
+})
+
+it('labels live, running, stopped, recorded, failed, stale and current in that order', () => {
+  const base = { live: false, busy: false, stopped: false, recorded: null, stale: false, run: run({ revision: 4 }) }
+  expect(runState({ ...base, live: true, busy: true }).kind).toBe('live')
+  expect(runState({ ...base, busy: true, stopped: true }).kind).toBe('running')
+  expect(runState({ ...base, stopped: true, stale: true }).label).toBe('Stopped: the values are still run 4')
+  expect(runState({ ...base, stopped: true, run: null }).label).toBe('Stopped: no result')
+  expect(runState({ ...base, recorded: 't = 1.5 s', stale: true }).label).toBe('Recorded time: t = 1.5 s, run 4 (stale)')
+  expect(runState({ ...base, stale: true, run: run({ revision: 4, status: 'did not converge' }) }).label).toBe('Failed: run 4 did not converge')
+  expect(runState({ ...base, stale: true }).label).toBe('Stale: the inputs changed since run 4')
+  expect(runState(base).label).toBe('Current: run 4')
+  expect(runState({ ...base, run: null }).label).toBe('Not solved yet')
 })

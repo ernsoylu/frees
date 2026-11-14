@@ -32,6 +32,8 @@ import {
 import { useComputedColorScheme } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import {
+  IconGitCompare,
+  IconAlertTriangle,
   IconChartGridDots,
   IconSitemap,
   IconSettings,
@@ -84,6 +86,8 @@ const KIND_ICONS: Record<string, FC<IconProps>> = {
   states: IconTemperature,
   solution: IconChecks,
   inspector: IconSettings,
+  problems: IconAlertTriangle,
+  runs: IconGitCompare,
 }
 
 /** Tab renderer: a per-kind icon, the live title, and a close button.
@@ -202,6 +206,8 @@ interface Props {
 }
 
 const RIGHT_EDGE_ID = 'edge-right'
+/** Kinds that open under the centre rather than as a tab of it. */
+const BELOW_KINDS = new Set(['problems'])
 
 export function WorkspaceDock({
   content,
@@ -378,8 +384,9 @@ export function WorkspaceDock({
     const centerRef = api.panels.find((p) => !edgeKindsRef.current.includes(kindOf(p)))
     let position: Parameters<DockviewApi['addPanel']>[0]['position']
     if (centerRef) {
-      // Tab it next to an existing center panel (e.g. the Editor).
-      position = { referencePanel: centerRef.id }
+      // Tab it next to an existing center panel (e.g. the Editor); a list that
+      // is read beside the source opens under it instead of covering it.
+      position = BELOW_KINDS.has(kind) ? { referencePanel: centerRef.id, direction: 'below' } : { referencePanel: centerRef.id }
     } else if (api.getEdgeGroup('right')) {
       // No center panels left (e.g. the Editor was closed): a bare `undefined`
       // position would drop the panel into the active group, which is now the

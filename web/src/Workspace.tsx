@@ -124,13 +124,14 @@ function uncertaintyText(v: VariableResult): string {
   return v.uncertainty != null && v.uncertainty !== 0 ? `± ${formatValue(v.uncertainty)}` : ''
 }
 
-function ScalarTable({ scalars, replNames, pinnedNames, pinnableNames, onPin, rowMenu }: Readonly<{
+function ScalarTable({ scalars, replNames, pinnedNames, pinnableNames, onPin, rowMenu, onInspect }: Readonly<{
   scalars: VariableResult[]
   replNames: Set<string>
   pinnedNames: Set<string>
   pinnableNames: Set<string>
   onPin?: (v: VariableResult) => void
   rowMenu?: (v: VariableResult) => Commands
+  onInspect?: (v: VariableResult) => void
 }>) {
   // The row whose menu is open: a right click, or the menu key or Shift+F10 on the focused row.
   const [menu, setMenu] = useState<{ v: VariableResult; x: number; y: number } | null>(null)
@@ -167,6 +168,8 @@ function ScalarTable({ scalars, replNames, pinnedNames, pinnableNames, onPin, ro
             key={v.name}
             tabIndex={rowMenu ? 0 : undefined}
             aria-haspopup={rowMenu ? 'menu' : undefined}
+            onClick={onInspect && (() => onInspect(v))}
+            onFocus={onInspect && ((e) => { if (e.target === e.currentTarget) onInspect(v) })}
             onContextMenu={(e) => openMenu(v, e)}
             onKeyDown={(e) => {
               if (e.target === e.currentTarget && isMenuKey(e)) openMenu(v, e)
@@ -439,6 +442,8 @@ interface Props {
   /** Pin a variable to the slider strip (absent = the affordance is hidden). */
   onPin?: (v: VariableResult) => void
   /** The commands of a scalar row's context menu, for that variable (Phase Q). */
+  /** Phase R: a row was chosen; the Inspector shows it. */
+  onInspect?: (v: VariableResult) => void
   rowMenu?: (v: VariableResult) => Commands
   /** The slider strip itself, rendered above the variable list. */
   sliderStrip?: React.ReactNode
@@ -464,6 +469,7 @@ export default function Workspace({
   pinnableNames,
   onPin,
   rowMenu,
+  onInspect,
   sliderStrip,
   solutionsCount,
   selectedSolutionIndex,
@@ -588,7 +594,7 @@ export default function Workspace({
                 <ScalarGrid scalars={plain} replNames={repl} />
               </Suspense>
             ) : (
-              <ScalarTable scalars={plain} replNames={repl} pinnedNames={pinnedNames ?? EMPTY_NAMES} pinnableNames={pinnableNames ?? EMPTY_NAMES} onPin={onPin} rowMenu={rowMenu} />
+              <ScalarTable scalars={plain} replNames={repl} pinnedNames={pinnedNames ?? EMPTY_NAMES} pinnableNames={pinnableNames ?? EMPTY_NAMES} onPin={onPin} rowMenu={rowMenu} onInspect={onInspect} />
             ))}
           {components.length > 0 && (
             <Stack gap="xs">

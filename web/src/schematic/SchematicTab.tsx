@@ -1,5 +1,6 @@
 import { createPortal, flushSync } from 'react-dom'
 import { usePublishContext } from '../contextActions'
+import { checkProblems } from '../problems'
 import { RibbonGroup } from '../Ribbon'
 import { useRibbonSlots } from '../ribbonSlots'
 import { defaultSeries, SERIES_LABELS, seriesOptions, stepPreferred, type SeriesId } from '../preferredValues'
@@ -156,7 +157,6 @@ import {
   compatibility,
   COMPONENT_DRAG_TYPE,
   connectStatement,
-  diagnosisOwners,
   endpointRef,
   joinedElsewhere,
   netConnections,
@@ -254,6 +254,8 @@ interface Props {
    *  network itself is regenerated from the document on every check. */
   presentation?: SchematicPresentation
   onPresentationChange?: (next: SchematicPresentation) => void
+  /** Phase R: the selected block ids, for the Inspector. */
+  onSelection?: (ids: string[]) => void
   /** Instance ids to emphasize from a Check diagnosis (free quantities). */
   highlightIds?: readonly string[]
   /** RUN-06: hand a solved variable to the app's windows; `reason` says why an action does not apply. */
@@ -414,6 +416,7 @@ export default function SchematicTab({
   presentation: saved,
   onPresentationChange,
   highlightIds = [],
+  onSelection,
   handoff,
   blocks,
   live,
@@ -546,23 +549,7 @@ export default function SchematicTab({
   // RUN-08: everything Check reported, each pointing at what it names. Only
   // what the engine attributes is attributed: the whole-system message points
   // nowhere, and each instance owning a free quantity gets its own item.
-  const issues = useMemo(() => {
-    const out: { severity: 'error' | 'warning'; text: string; line?: number; instance?: string }[] = []
-    for (const e of checkResult?.errors ?? []) out.push({ severity: 'error', text: e.message, line: e.line })
-    if (checkResult && !checkResult.solvable && !checkResult.errors?.length && checkResult.message) {
-      out.push({ severity: 'error', text: checkResult.message, line: checkResult.errorLine ?? undefined })
-      for (const o of diagnosisOwners(checkResult.diagnosis, checkResult.instances ?? [])) {
-        if (o.members.length) out.push({ severity: 'error', text: `No defining relation for ${o.members.join(', ')}`, instance: o.instance })
-      }
-    }
-    // A signal output left open is not a gap: its block computes it either
-    // way, and a binding or an equation may read it (`E = PID.out.sig`).
-    for (const p of drawnCheck?.ports ?? []) {
-      if (!p.connected && !(p.domain === 'signal' && p.port.toLowerCase() === 'out')) out.push({ severity: 'warning', text: `${p.instance}.${p.port} is not connected`, instance: p.instance })
-    }
-    for (const w of checkResult?.unitWarnings ?? []) out.push({ severity: 'warning', text: w })
-    return out
-  }, [checkResult, drawnCheck])
+  const issues = useMemo(() => checkProblems(checkResult, drawnCheck), [checkResult, drawnCheck])
   const [issueFilter, setIssueFilter] = useState<'all' | 'error' | 'warning'>('all')
 
   const labels = useMemo(() => {
@@ -976,6 +963,10 @@ export default function SchematicTab({
   )
   // Fit selection frames the shift-selected blocks, or the pinned one.
   const selection = [...selected, ...(pinned && !selected.has(pinned) ? [pinned] : [])]
+  const selectionKey = selection.join('\n')
+  useEffect(() => {
+    onSelection?.(selectionKey ? selectionKey.split('\n') : [])
+  }, [selectionKey, onSelection])
   const fitSelection = () =>
     frame(boxAround(selection.flatMap((id) => positioned.get(id) ?? []), CHIP_OVERHANG + 5, 20))
   // VIEW-07: a picked search hit is centred once its scope has drawn it, at

@@ -63,7 +63,7 @@ import type { LiveTable } from './wasm/liveClient'
 import type { LiveControl } from './schematic/LiveControls'
 import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, withSliderBounds, type PinnedSlider } from './sliders'
 import type { SeriesId } from './preferredValues'
-import { compareRuns, describeRun, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
+import { compareRuns, describeRun, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runState, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
 import { playbackVariables, timeLabel, timelineOf, type Timeline } from './playback'
 import { getWorkerPoolConcurrency, wasmUnitConversions } from './wasm/engineClient'
 import { contextHandler, useContextVersion } from './contextActions'
@@ -134,6 +134,9 @@ const OpenUrlModal = lazy(() => import('./OpenUrlModal'))
 const PlotTab = lazy(() => import('./PlotTab'))
 const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const SliderStrip = lazy(() => import('./SliderStrip'))
+import { InspectorTarget, SchematicInspector, VariableInspector } from './Inspector'
+import { ProblemsPanel } from './ProblemsPanel'
+import { allProblems, checkProblems, linesWriting, problemLine, problemSummary } from './problems'
 const RunsPanel = lazy(() => import('./RunsPanel'))
 const PlaybackBar = lazy(() => import('./PlaybackBar'))
 const LiveBar = lazy(() => import('./LiveBar'))
@@ -885,6 +888,9 @@ export default function App() {
   // Last-focused non-auxiliary window — drives the content-aware Inspector
   // (focusing the Inspector/Solution panels themselves doesn't change it).
   const [focusedWindow, setFocusedWindow] = useState<Pick<OpenWindow, 'id' | 'kind' | 'title'> | null>(null)
+  // Phase R: what the Inspector reads besides the focused window.
+  const [schematicSelection, setSchematicSelection] = useState<string[]>([])
+  const [inspectedVariable, setInspectedVariable] = useState<string | null>(null)
   // The dock's active window, utility panels included: what the window
   // commands act on (Phase Q).
   const [activeWindowId, setActiveWindowId] = useState<string | undefined>(undefined)
@@ -1693,6 +1699,11 @@ export default function App() {
     return t?.kind === 'parametric' ? t : null
   })()
   const tableCheckResult = focusedParam?.checkResult ?? null
+  // Phase R: one list for the Problems panel, the status bar and the Inspector.
+  const problems = useMemo(
+    () => (focusedParam ? checkProblems(tableCheckResult) : allProblems(checkResult, result)),
+    [focusedParam, tableCheckResult, checkResult, result],
+  )
   const tableCheckMessage = focusedParam?.checkMessage ?? ''
   // Function-table wire payloads. When the Tables workbook is mounted,
   // flush its pending sheet→spec sync first (contract b's pre-DTO scrape) and
@@ -3012,7 +3023,7 @@ export default function App() {
   // restored from a saved layout. Without this they'd render as blank panels.
   useEffect(() => {
     const valid = new Set<string>([
-      'equations', 'table', 'plots', 'digitizer', 'schematic', 'workspace', 'terminal', 'states', 'inspector',
+      'equations', 'table', 'plots', 'digitizer', 'schematic', 'workspace', 'terminal', 'states', 'inspector', 'problems', 'runs',
       TABLES_WORKBOOK_WINDOW_ID,
       ...mergedPlots.map((p) => `plot:${p.id}`),
       // Hosted tables (function + GUI parametric) live as sheets in the
@@ -3258,6 +3269,8 @@ export default function App() {
     'view.variables': { run: () => dockRef.current?.open('workspace') },
     'view.terminal': { run: () => dockRef.current?.open('terminal') },
     'view.inspector': { run: () => dockRef.current?.open('inspector') },
+    'view.problems': { run: () => dockRef.current?.open('problems') },
+    'view.runs': { run: () => dockRef.current?.open('runs') },
     'window.list': { run: () => setShowWindowList(true) },
     'window.close': onWindow('close'),
     'window.closeOthers': onWindow('closeOthers'),
@@ -3491,6 +3504,20 @@ export default function App() {
     </Suspense>
   ) : null
 
+  // Phase R: what the values on screen are; shown on the playback/live strip and in Runs & Scenarios.
+  const runNow = runState({ live: liveOpen, busy: runBusy, stopped, recorded: playSample, stale: scenarioStale || slidersStale, run: currentRun })
+  const runStateBadge = (
+    <Badge
+      size="sm"
+      variant="light"
+      color={{ live: 'teal', running: 'blue', stopped: 'orange', recorded: 'grape', failed: 'red', stale: 'orange', current: 'teal', none: 'gray' }[runNow.kind]}
+      data-testid="run-state"
+      data-kind={runNow.kind}
+      style={{ textTransform: 'none', alignSelf: 'flex-start', maxWidth: '100%' }}
+    >
+      {runNow.label}
+    </Badge>
+  )
   const panelContent: Record<string, ReactNode> = {
     equations: (
       <div style={editorPanelPad}>
@@ -3615,15 +3642,76 @@ export default function App() {
             presentation={schematic}
             onPresentationChange={setSchematic}
             handoff={{ reason: handoffReason, run: handoff }}
+            onSelection={setSchematicSelection}
             highlightIds={[...withEnclosing(diagnosisOwners(checkResult?.diagnosis, checkResult?.instances ?? []).map((o) => o.instance)), ...(cursorInstance ? [cursorInstance] : [])]}
             live={liveControls}
           />
         </Suspense>
       </div>
     ),
+    runs: (
+      <Stack gap="xs" p={10} style={{ height: '100%', minHeight: 0, overflow: 'auto' }}>
+        {runStateBadge}
+        <Suspense fallback={null}>
+          <RunsPanel
+            scenarios={scenarios}
+            onScenarios={changeScenarios}
+            canUndo={scenarioHistory.done.length > 0}
+            canRedo={scenarioHistory.undone.length > 0}
+            onUndo={() => stepScenarios('undo')}
+            onRedo={() => stepScenarios('redo')}
+            inputs={(result?.variables ?? []).filter((v) => pinnableNames.has(v.name.toLowerCase()))}
+            run={currentRun}
+            stale={scenarioStale}
+            baseline={baseline}
+            onSetBaseline={() => currentRun && setBaseline({ run: currentRun, variables: comparedVariables })}
+            onClearBaseline={() => setBaseline(null)}
+            rows={comparison}
+          />
+        </Suspense>
+      </Stack>
+    ),
+    problems: (
+      <ProblemsPanel
+        problems={problems}
+        target={focusedParam ? `Table ${focusedParam.name}` : 'Model'}
+        lineOf={(pr) => problemLine(pr, focusedParam ? [] : checkResult?.instances)}
+        onGoToLine={goToLine}
+      />
+    ),
     inspector: (() => {
       const fw = focusedWindow
       const bodyStyle: React.CSSProperties = { flex: 1, minHeight: 0, overflow: 'auto', padding: 10 }
+
+      // A variable chosen in the Variable Explorer, until a main window is focused again.
+      if (inspectedVariable !== null) {
+        const v = workspaceVariables.find((x) => x.name.toLowerCase() === inspectedVariable.toLowerCase())
+        return (
+          <div style={bodyStyle}>
+            <VariableInspector
+              variable={v}
+              name={inspectedVariable}
+              cmds={v ? variableRowMenu(v) : null}
+              lines={linesWriting(textRef.current ?? '', inspectedVariable)}
+              onGoToLine={goToLine}
+            />
+          </div>
+        )
+      }
+
+      if (fw?.kind === 'schematic') {
+        return (
+          <div style={bodyStyle}>
+            <SchematicInspector
+              selection={schematicSelection}
+              instances={checkResult?.instances ?? []}
+              components={result?.components}
+              problems={problems}
+              onGoToLine={goToLine}
+            />
+          </div>
+        )
+      }
 
       // Table: rename + the parametric table's quick actions. The Tables
       // workbook window inspects whichever hosted table is active in it.
@@ -3636,7 +3724,7 @@ export default function App() {
           <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ ...bodyStyle }}>
               <Stack gap="xs">
-                <Text size="sm" fw={600} c="teal.4">Table</Text>
+                <InspectorTarget kind="Table" name={t?.name} />
                 <TextInput
                   size="xs"
                   label="Table name"
@@ -3684,7 +3772,7 @@ export default function App() {
         return (
           <div style={bodyStyle}>
             <Stack gap="xs">
-              <Text size="sm" fw={600} c="teal.4">{p ? PLOT_KIND_LABEL[p.kind] : 'Plot'}</Text>
+              <InspectorTarget kind={p ? PLOT_KIND_LABEL[p.kind] : 'Plot'} name={p?.name} />
               <TextInput
                 size="xs"
                 label="Plot name"
@@ -3711,7 +3799,7 @@ export default function App() {
         return (
           <div style={bodyStyle}>
             <Stack gap="xs">
-              <Text size="sm" fw={600} c="teal.4">Equations</Text>
+              <InspectorTarget kind="Editor" name={projectName} />
               <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Results appear in the Variable Explorer on the right.</Text>
             </Stack>
           </div>
@@ -3720,7 +3808,10 @@ export default function App() {
 
       return (
         <div style={bodyStyle}>
-          <Text size="xs" c="dimmed">Focus a window (Table, Plot, Editor) to inspect it here.</Text>
+          <Stack gap="xs">
+            {fw && <InspectorTarget kind={fw.title} />}
+            <Text size="xs" c="dimmed">Focus a table, plot, the Editor or the Schematic, or choose a variable in the Variable Explorer, to inspect it here.</Text>
+          </Stack>
         </div>
       )
     })(),
@@ -3741,6 +3832,7 @@ export default function App() {
             pinnableNames={pinnableNames}
             onPin={pinSlider}
             rowMenu={variableRowMenu}
+            onInspect={(v) => setInspectedVariable(v.name)}
             solutionsCount={solutions.length}
             selectedSolutionIndex={selectedSolutionIndex}
             onSelectSolutionIndex={setSelectedSolutionIndex}
@@ -3760,6 +3852,7 @@ export default function App() {
                     />
                   </Suspense>
                 )}
+                {(timeline || liveBar) && runStateBadge}
                 {timeline && (
                   <Suspense fallback={null}>
                     <PlaybackBar
@@ -3779,23 +3872,6 @@ export default function App() {
                   </Suspense>
                 )}
                 {liveBar}
-                <Suspense fallback={null}>
-                  <RunsPanel
-                    scenarios={scenarios}
-                    onScenarios={changeScenarios}
-                    canUndo={scenarioHistory.done.length > 0}
-                    canRedo={scenarioHistory.undone.length > 0}
-                    onUndo={() => stepScenarios('undo')}
-                    onRedo={() => stepScenarios('redo')}
-                    inputs={(result?.variables ?? []).filter((v) => pinnableNames.has(v.name.toLowerCase()))}
-                    run={currentRun}
-                    stale={scenarioStale}
-                    baseline={baseline}
-                    onSetBaseline={() => currentRun && setBaseline({ run: currentRun, variables: comparedVariables })}
-                    onClearBaseline={() => setBaseline(null)}
-                    rows={comparison}
-                  />
-                </Suspense>
               </>
             }
           />
@@ -3854,6 +3930,8 @@ export default function App() {
     ),
   }
   const panelTitles: Record<string, string> = {
+    problems: 'Problems',
+    runs: 'Runs & Scenarios',
     equations: 'Editor',
     table: 'Tables',
     plots: 'Plots',
@@ -4165,8 +4243,8 @@ export default function App() {
             <WorkspaceDock
               content={panelContent}
               titles={panelTitles}
-              defaultOpen={['equations', 'inspector', 'workspace']}
-              edgeKinds={['workspace', 'inspector']}
+              defaultOpen={['equations', 'inspector', 'runs', 'workspace']}
+              edgeKinds={['workspace', 'inspector', 'runs']}
               onActiveChange={(active) => {
                 setActiveTab(active?.kind ?? '')
                 setActiveWindowId(active?.id)
@@ -4183,8 +4261,9 @@ export default function App() {
                 }
                 // The Inspector reflects the last-focused main window; focusing
                 // the auxiliary Inspector / Variable Explorer edge panels must not change it.
-                if (active && active.kind !== 'inspector' && active.kind !== 'workspace' && active.kind !== 'terminal') {
+                if (active && active.kind !== 'inspector' && active.kind !== 'workspace' && active.kind !== 'terminal' && active.kind !== 'problems' && active.kind !== 'runs') {
                   setFocusedWindow(active)
+                  setInspectedVariable(null)
                 }
               }}
               onOpenChange={setOpenWindows}
@@ -4200,14 +4279,8 @@ export default function App() {
             solve={statusSolveText}
             units={UNIT_SYSTEM_OPTIONS.find((o) => o.value === unitSystem)?.label ?? unitSystem}
             onUnits={() => setShowPreferences(true)}
-            warnings={(focusedParam ? tableCheckResult : (result ?? checkResult))?.unitWarnings.length ?? 0}
-            onWarnings={() => {
-              // The warnings carry no position of their own: show the Editor at
-              // the reported line, and the list in the status pill's details.
-              dockRef.current?.open('equations')
-              if (errorLine !== null) editorRef.current?.goToLine(errorLine)
-              document.querySelector<HTMLElement>('[aria-label="Status details"]')?.click()
-            }}
+            problems={problemSummary(problems)}
+            onProblems={() => dockRef.current?.open('problems')}
             layout={layoutName}
             engine={`Engine: ${runBusy ? 'busy' : 'idle'} · ${getWorkerPoolConcurrency()} workers`}
           />

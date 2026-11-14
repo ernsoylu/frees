@@ -1326,6 +1326,34 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
 - **Analysis tools** (Optimization, Curve Fit, Parameter Estimation, Monte Carlo, Sensitivity, PID Tuner) become dockable windows with one structure: Target → Inputs → Method → Advanced → Run → Results → Apply/Export. Each keeps every current setting and its own semantics.
 - **Help.** "Where is this command?" in Help and the palette opens the tab and highlights the control without running it. A short first-run workflow is added.
 - **Acceptance.** Stale, failed and stopped results are labelled right, and Stop stays bound to its job across focus changes (AC-12). Each migrated tool passes its existing tests unchanged.
+- **Done 2026-11-14: R1, the Inspector names its target.**
+  - **Target line.** Every Inspector view starts with the kind and the name of what it shows (`Inspector.tsx`, `InspectorTarget`): Table, the plot's kind, Editor with the project name, Block, Variable.
+  - **Schematic adapter.** The schematic reports its selected block ids (`onSelection`). One block shows its label, its type as the solve spells it, Go to Source at its statement, its own problems, and its parameter bindings with values once a solve has run. Several are listed by name.
+  - **Variable adapter.** Clicking or focusing a scalar row in the Variable Explorer makes that variable the target: its value at full precision, the row menu's commands as buttons (from `VARIABLE_ROW_MENU`, with the same reasons), and up to eight lines that write its name, each opening the Editor there. Focusing a main window hands the Inspector back to it.
+  - **Evidence.** `problems.test.ts` (whole-word line search). `e2e/inspection.spec.ts` (2 of 3, Chromium): a variable is named, its Pin command is enabled, a line button moves the Editor's cursor, and the Editor takes the Inspector back by name; a selected Resistor shows its type, its `R` binding and its source line.
+  - **Ceiling.**
+    - Array and component rows of the Variable Explorer are not targets.
+    - The Inspector and the Variable Explorer share the edge group by default, so the variable view is read after switching tabs unless one of them is moved.
+    - The block view is read-only: parameters are edited on the schematic's own card.
+- **Done 2026-11-14: R2, the Problems panel.**
+  - **One list** (`problems.ts`). `checkProblems` is the schematic issue list's own logic moved out of `SchematicTab.tsx`, so the canvas menu and the panel cannot disagree; `allProblems` adds a failed solve (with its block) and the solve's unit warnings, without repeating what Check already said. Each problem has a source (Check, Solve, Schematic, Units), a severity, the message, and a line or an instance when the engine attributed one.
+  - **Panel** (`ProblemsPanel.tsx`, dock kind `problems`, command Problems on the Tools menu, both ribbon Panels groups and the palette). Severity filter, and a Line button per row that opens the Editor there; an instance's problem goes to its statement. It opens under the centre group, not as a tab over the Editor. With a parametric table focused it lists that table's check, and says so.
+  - **Status bar.** The warning count became the problem count ("1 error, 2 warnings") and opens the panel. It no longer clicks the status pill open.
+  - **Inline marks stay:** the Editor's markers, the schematic's issue button and highlights, and the Diagnostics accordion in the Variable Explorer are unchanged.
+  - **Evidence.** `problems.test.ts` (4). `e2e/inspection.spec.ts` (1 of 3): a syntax error is listed as a Check error, the Editor is still on screen, the Line button moves its cursor to line 2, and the filter says when a severity has none.
+  - **Ceiling.**
+    - Unit warnings and whole-system messages carry no position, so they have no Line button.
+    - The residual table and the uncertainty breakdown stay in the Diagnostics accordion; the panel lists messages, not numbers.
+    - A parametric table's failed rows are not listed; its check is.
+- **Done 2026-11-14: R3, Runs & Scenarios as its own panel, and a run-state label.**
+  - **Panel.** `RunsPanel` left the Variable Explorer for the dock kind `runs` (command Runs & Scenarios, alias "scenario", "baseline"). It is in the default layout's edge group, behind the Variable Explorer; a layout saved earlier gets it from the command. Scenario, run identity, baseline, comparison and the stale badge are as they were.
+  - **Label** (`runs.ts`, `runState`). One phrase for what the values on screen are, in this order: Live, Running…, Stopped (still naming the run shown), Recorded time (with the sample and run), Failed, Stale, Current, Not solved yet. It heads the playback and live strip and the Runs & Scenarios panel (`data-testid="run-state"`).
+  - **The strip stays** in the Variable Explorer, above the values it steers. Taking it out as well would separate the scrubber from the numbers it changes.
+  - **Stop** was already one job: `run.stop` stops the model or table run in flight whichever window has focus, and reports "Nothing is running." otherwise.
+  - **Evidence.** `runs.test.ts` +1 (the order of the eight states). `e2e/runs.spec.ts`, `e2e/commands.spec.ts` and `e2e/playback.spec.ts` open the panel by its command and otherwise pass as written; the playback journey floats it to read run identity beside the strip.
+  - **Ceiling.**
+    - The panel and the playback strip are in the same edge group by default; comparing a baseline while scrubbing needs the panel moved or floated (the playback journey does exactly that).
+    - Live says a run is open, not its time: the live bar under it shows the time.
 
 **Validation (after O, and again after R).** Task sessions with five engineers of mixed experience:
 - open an example and solve;

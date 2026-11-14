@@ -16,6 +16,8 @@
 import type { SpotlightActionData, SpotlightActionGroupData } from '@mantine/spotlight'
 import { Kbd } from '@mantine/core'
 import {
+  IconGitCompare,
+  IconAlertTriangle,
   IconAdjustments,
   IconAdjustmentsHorizontal,
   IconClipboardText,
@@ -122,6 +124,8 @@ export const COMMAND_SPECS = {
   'view.variables': { label: 'Variable Explorer', location: 'Tools', group: 'Views', icon: IconVariable },
   'view.terminal': { label: 'Terminal', location: 'Tools', group: 'Views', icon: IconTerminal2, aliases: ['repl'] },
   'view.inspector': { label: 'Inspector', location: 'Tools', group: 'Views', icon: IconAdjustments },
+  'view.runs': { label: 'Runs & Scenarios', location: 'Tools', group: 'Views', icon: IconGitCompare, aliases: ['scenario', 'baseline', 'compare runs'], description: 'The run on screen, named scenarios and a comparison with a baseline' },
+  'view.problems': { label: 'Problems', location: 'Tools', group: 'Views', icon: IconAlertTriangle, aliases: ['errors', 'warnings', 'issues', 'diagnostics'], description: 'What the last Check and Solve reported, each with its source line' },
 
   'layout.default': { label: 'Reset Workspace Layout', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutGrid, aliases: ['default view', 'reset layout'], description: 'Rebuild the default windows; the drawing\'s own Reset layout is on the schematic' },
   'layout.results': { label: 'Results Focused', location: 'Rail ▸ Layout', group: 'Views', icon: IconChartLine },
@@ -264,7 +268,7 @@ export const TOOLS_MENU: readonly MenuEntry[] = [
   { label: 'Modeling' }, 'tool.componentWizard', '-',
   { label: 'Equation tools' }, 'tool.variableInfo', '-',
   { label: 'Analysis' }, 'tool.minMax', 'tool.curveFit', 'tool.monteCarlo', 'tool.sensitivity', 'tool.pidTuner', 'tool.parameterFit', '-',
-  { label: 'Auxiliary panels' }, 'view.variables', 'view.terminal', 'view.inspector',
+  { label: 'Auxiliary panels' }, 'view.variables', 'view.terminal', 'view.inspector', 'view.problems', 'view.runs',
 ]
 export const RAIL_TABLES_NEW: readonly CommandId[] = ['table.newParametric', 'table.newFunction1', 'table.newFunction2', 'view.states']
 export const RAIL_PLOTS_NEW: readonly CommandId[] = ['plot.newXY', 'plot.newProperty', 'plot.newPsychro']
@@ -287,7 +291,7 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
     { label: 'Project', items: ['file.new', 'file.open', 'file.save', 'file.saveAs', 'file.library', 'file.share', 'file.print'] },
     { label: 'Run', items: ['model.check', 'model.solve', 'run.stop'] },
     { label: 'Solve Setup', items: ['run.findAll', 'run.complex', 'app.stopCriteria'] },
-    { label: 'Panels', items: ['view.editor', 'view.variables', 'view.inspector', 'view.terminal'] },
+    { label: 'Panels', items: ['view.editor', 'view.variables', 'view.inspector', 'view.problems', 'view.runs', 'view.terminal'] },
     { label: 'Layout', items: ['layout.default', 'layout.results', 'layout.split'] },
   ] },
   { id: 'insert', label: 'Insert', groups: [
@@ -308,7 +312,7 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
   ] },
   { id: 'view', label: 'View', groups: [
     { label: 'Documents', items: ['view.editor', 'view.tables', 'view.plots', 'view.states', 'view.schematic', 'view.digitizer'] },
-    { label: 'Panels', items: ['view.variables', 'view.inspector', 'view.terminal'] },
+    { label: 'Panels', items: ['view.variables', 'view.inspector', 'view.problems', 'view.runs', 'view.terminal'] },
     { label: 'Windows', items: ['window.list', 'window.float', 'window.maximize', 'window.close', 'window.closeOthers', 'window.closeGroup'] },
     { label: 'Move', items: ['window.moveEdge', 'window.moveCentre', 'window.moveLeft', 'window.moveRight', 'window.moveBelow'] },
     { label: 'Layouts', items: ['layout.default', 'layout.results', 'layout.split', 'layout.saveAs', 'layout.manage', 'layout.undo'] },

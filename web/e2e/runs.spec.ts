@@ -2,6 +2,7 @@
 //
 // Run:  npm run build && npx playwright test e2e/runs.spec.ts --project=chromium
 import { expect, test } from '@playwright/test'
+import { runCommand } from './journey'
 
 const ROOM = `// A room's floor area for two widths
 L = 4 [m]
@@ -34,6 +35,8 @@ test('RUN-07: a named scenario solves without editing the document; the run says
   }
   await solve()
   const calls = () => page.evaluate(() => [...(window as unknown as { engineCalls: string[] }).engineCalls])
+  // Phase R: Runs & Scenarios is its own panel, beside the Variable Explorer.
+  await runCommand(page, 'Runs & Scenarios')
   const panel = page.getByTestId('runs-panel')
   const identity = panel.getByTestId('run-identity')
   await expect(identity).toHaveText(/^run \d+ · Document inputs · steady solution · solved$/)
