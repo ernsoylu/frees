@@ -1248,6 +1248,23 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
     - The tab is empty until the first Check draws a network.
 
 **Phase Q — windows and layouts** (Doc A P1b; Doc B phase 3 window parts).
+- **Q1 done 2026-11-14 (`ux-q-windows`): window commands, the tab menu and the Window List.** Named layouts, state outside panel lifetimes and the list context menus are still open.
+  - **Dock handle** (`workspace/WorkspaceDock.tsx`). It gains `focus` and `act(id, action)` for close, close-others, close-all-in-group, float / dock-back, maximize / restore, move to edge, move to centre and split left, right and below. Each uses dockview 7.0.4's own API (`addFloatingGroup`, `maximize`, `moveTo`, `addGroup`), checked against the pinned version. The window list it reports now carries each window's group, place (grid, floating, edge) and maximized state, and is re-sent on every structural change (`onDidMutateLayout`), only when it differs.
+  - **Reasons** (`workspace/windowActions.ts`). Whether an action can run, and why not, is a pure function of that list, shared by the commands, the tab menu and the Window List.
+  - **Registry.** Eleven `window.*` commands (89 in all), in the palette's Windows group and on **View › Windows** and **View › Move**. None has a default key: Ctrl+W, Ctrl+Tab and Ctrl+1–9 are the browser's.
+  - **Tab context menu.** A right click, the menu key or Shift+F10 on a tab opens the registry's commands for *that* tab, not the active window (`TAB_MENU`, `ContextMenu.tsx`). An action that cannot run is listed with its reason as text. One delegated handler on the dock serves every tab, because dockview re-parents a tab when it moves.
+  - **Window List…** (`WindowListModal.tsx`). Searchable, grouped by kind, the active window marked, each row with its full name and a Close view button. Enter goes to the first match.
+  - **Launchers.** The rail's Tables and Plots menus gain Focus All and Close All. Close All closes the views; the tables and plots stay.
+  - **Long names (AC-10).** A tab title is cut with an ellipsis at 220 px; the full name is its tooltip and accessible name.
+  - **Found and fixed.** dockview stacks floating windows at z-index 999, so a floated window covered every dialog and menu of the app (Mantine starts at 200). The dock is now its own stacking context (`isolation: isolate`). Its windows still order among themselves, and nothing in it outranks a portal.
+  - **Evidence.**
+    - `windowActions.test.ts` (4): the reason for every action, and the list's grouping and search.
+    - `commands.test.ts` +2: the tab menu is built from registry commands that are in the palette and on the View tab, every window action has a command (AC-06), and no window command takes a key.
+    - `e2e/windows.spec.ts` (2, Chromium), checked against dockview's own state: the tab menu moves, floats, docks back, maximizes, restores, moves to the edge and back, opens from the keyboard, closes others and closes the view, and the document is intact when the Editor is reopened (AC-05). The palette floats the active window; the Window List has one row per dockview panel, marks the active one, sits above a floating window, searches, goes to a match and closes exactly one view.
+  - **Ceiling.**
+    - Float or Dock Back and Maximize or Restore are one command each; the label does not change with the state.
+    - Move Left, Right and Below split a window out of its group, as dragging it to that edge does. A window alone in its group has nothing to split from, and says so.
+    - Focus All opens every table or plot and raises each in its group; with several in one group, the last is the one shown.
 - **Dock handle.** It gains focus, move, float/dock-back, maximize/restore and close-others/close-all-in-group, each through dockview's supported API (checked against the pinned version first).
 - **Tab context menu.** Close View, Close Others, Close All in Group, Float, Maximize, Move to Edge / Centre, Move Left/Right/Below. These are the keyboard equivalents of dragging.
 - **Window List…** View tab and palette: it is searchable, groups windows by kind, marks the active one and gives full names.

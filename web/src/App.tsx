@@ -182,6 +182,8 @@ import {
 } from './dialogs'
 import { Rail, TopBar, tablePill } from './WorkspaceChrome'
 import type { WorkspaceDockHandle, OpenWindow } from './workspace/WorkspaceDock'
+import { windowActionReason, type WindowAction } from './workspace/windowActions'
+import { WindowListModal } from './WindowListModal'
 const WorkspaceDock = lazy(() => import('./workspace/WorkspaceDock').then(m => ({ default: m.WorkspaceDock })))
 import { detectStates } from './plots/stateTable'
 import { formatValue, withStableKeys } from './format'
@@ -855,7 +857,11 @@ export default function App() {
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
   // Last-focused non-auxiliary window — drives the content-aware Inspector
   // (focusing the Inspector/Solution panels themselves doesn't change it).
-  const [focusedWindow, setFocusedWindow] = useState<OpenWindow | null>(null)
+  const [focusedWindow, setFocusedWindow] = useState<Pick<OpenWindow, 'id' | 'kind' | 'title'> | null>(null)
+  // The dock's active window, utility panels included: what the window
+  // commands act on (Phase Q).
+  const [activeWindowId, setActiveWindowId] = useState<string | undefined>(undefined)
+  const [showWindowList, setShowWindowList] = useState(false)
   // Tracks which state-table circuit triggered the last fill-missing solve so
   // only that circuit's button shows the loading spinner.
   const [fillMissingFor, setFillMissingFor] = useState<string | null>(null)
@@ -3128,6 +3134,10 @@ export default function App() {
     }
     return inWindow(fw?.id, id, 'No undo history here: focus the Editor, the Tables workbook, the schematic or the scenarios.')
   }
+  const onWindow = (action: WindowAction) => ({
+    run: () => { if (activeWindowId) dockRef.current?.act(activeWindowId, action) },
+    unavailable: windowActionReason(openWindows, activeWindowId, action),
+  })
   const toggleRibbon = () => changeRibbonDensity(ribbonDensity === 'collapsed' ? ribbonLastOpenRef.current : 'collapsed')
   const perspective = (name: 'default' | 'results' | 'split', label: string) => () => {
     dockRef.current?.applyPerspective(name)
@@ -3158,6 +3168,17 @@ export default function App() {
     'view.variables': { run: () => dockRef.current?.open('workspace') },
     'view.terminal': { run: () => dockRef.current?.open('terminal') },
     'view.inspector': { run: () => dockRef.current?.open('inspector') },
+    'window.list': { run: () => setShowWindowList(true) },
+    'window.close': onWindow('close'),
+    'window.closeOthers': onWindow('closeOthers'),
+    'window.closeGroup': onWindow('closeGroup'),
+    'window.float': onWindow('float'),
+    'window.maximize': onWindow('maximize'),
+    'window.moveEdge': onWindow('moveEdge'),
+    'window.moveCentre': onWindow('moveCentre'),
+    'window.moveLeft': onWindow('moveLeft'),
+    'window.moveRight': onWindow('moveRight'),
+    'window.moveBelow': onWindow('moveBelow'),
     'layout.default': { run: perspective('default', 'Default View') },
     'layout.results': { run: perspective('results', 'Results Focused') },
     'layout.split': { run: perspective('split', 'Split View') },
@@ -3967,6 +3988,9 @@ export default function App() {
           })),
         ]}
         tableCount={tables.length + declaredStateDefs.length}
+        onCloseWindows={(prefix) => {
+          for (const w of openWindows) if (w.id.startsWith(prefix)) dockRef.current?.close(w.id)
+        }}
         onOpenTable={(id) => {
           if (id.startsWith('state:')) {
             const name = id.slice('state:'.length)
@@ -4038,6 +4062,7 @@ export default function App() {
               edgeKinds={['workspace', 'inspector']}
               onActiveChange={(active) => {
                 setActiveTab(active?.kind ?? '')
+                setActiveWindowId(active?.id)
                 // Focusing a table window makes it the "active" table so the
                 // shared Solve-Table / Configure / Alter actions target it.
                 // The Tables workbook window is excluded: its nav list drives
@@ -4083,6 +4108,15 @@ export default function App() {
         </Flex>
       )}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {showWindowList && (
+        <WindowListModal
+          windows={openWindows}
+          activeId={activeWindowId}
+          onFocus={(id) => dockRef.current?.focus(id)}
+          onCloseWindow={(id) => dockRef.current?.close(id)}
+          onClose={() => setShowWindowList(false)}
+        />
+      )}
 
       {pidTuner !== null && (
         <Suspense fallback={null}>

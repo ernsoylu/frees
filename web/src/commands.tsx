@@ -18,6 +18,17 @@ import { Kbd } from '@mantine/core'
 import {
   IconAdjustments,
   IconArrowBackUp,
+  IconArrowBarDown,
+  IconArrowBarLeft,
+  IconArrowBarRight,
+  IconFocusCentered,
+  IconLayoutSidebarRight,
+  IconListSearch,
+  IconMaximize,
+  IconPictureInPicture,
+  IconSquareX,
+  IconStack2,
+  IconX,
   IconArrowForwardUp,
   IconBook,
   IconChartGridDots,
@@ -70,6 +81,7 @@ import {
   IconWorld,
   type Icon,
 } from '@tabler/icons-react'
+import type { WindowAction } from './workspace/windowActions'
 
 export interface CommandSpec {
   label: string
@@ -177,6 +189,20 @@ export const COMMAND_SPECS = {
   'digitizer.extract': { label: 'Extract Points', location: 'Digitizer', group: 'Digitizer', icon: IconWand, description: 'Pick a curve colour and auto-extract its points' },
   'digitizer.review': { label: 'Review Points', location: 'Digitizer', group: 'Digitizer', icon: IconListCheck, description: 'Select and drag points to correct them' },
   'digitizer.useData': { label: 'Use Data as Function Table', location: 'Digitizer', group: 'Digitizer', icon: IconTable },
+  // Phase Q: window commands. Each acts on the active window; a tab's context
+  // menu runs the same actions on the tab it was opened on. No default keys:
+  // Ctrl+W, Ctrl+Tab and Ctrl+1–9 belong to the browser.
+  'window.list': { label: 'Window List…', location: 'Palette', group: 'Windows', icon: IconListSearch, aliases: ['windows', 'switch window', 'open views'], description: 'Search the open windows and go to one' },
+  'window.close': { label: 'Close View', location: 'Tab menu', group: 'Windows', icon: IconX, aliases: ['close window', 'close tab'], description: 'Close the active window; its data stays in the project' },
+  'window.closeOthers': { label: 'Close Others', location: 'Tab menu', group: 'Windows', icon: IconSquareX, description: 'Close the other tabs of the active window\'s group' },
+  'window.closeGroup': { label: 'Close All in Group', location: 'Tab menu', group: 'Windows', icon: IconStack2, description: 'Close every tab of the active window\'s group' },
+  'window.float': { label: 'Float or Dock Back', location: 'Tab menu', group: 'Windows', icon: IconPictureInPicture, aliases: ['float', 'dock', 'detach'], description: 'Lift the active window out of the grid, or dock a floating one in the centre' },
+  'window.maximize': { label: 'Maximize or Restore', location: 'Tab menu', group: 'Windows', icon: IconMaximize, aliases: ['maximize', 'restore', 'full size'], description: 'Give the active window the whole workspace, or bring the others back' },
+  'window.moveEdge': { label: 'Move to Edge', location: 'Tab menu', group: 'Windows', icon: IconLayoutSidebarRight, description: 'Move the active window into the collapsible right edge panel' },
+  'window.moveCentre': { label: 'Move to Centre', location: 'Tab menu', group: 'Windows', icon: IconFocusCentered, aliases: ['move to center'], description: 'Dock the active window as a tab in the centre' },
+  'window.moveLeft': { label: 'Move Left', location: 'Tab menu', group: 'Windows', icon: IconArrowBarLeft, aliases: ['split left'], description: 'Split the active window out to the left of its group' },
+  'window.moveRight': { label: 'Move Right', location: 'Tab menu', group: 'Windows', icon: IconArrowBarRight, aliases: ['split right'], description: 'Split the active window out to the right of its group' },
+  'window.moveBelow': { label: 'Move Below', location: 'Tab menu', group: 'Windows', icon: IconArrowBarDown, aliases: ['split below', 'split down'], description: 'Split the active window out below its group' },
   'app.palette': { label: 'Command Palette', location: 'Toolbar', group: null, icon: IconSearch, shortcut: ['Mod', 'K'], ownedElsewhere: true },
   'editor.complete': { label: 'Autocomplete functions & variables', location: 'Editor', group: null, icon: IconCode, shortcut: ['Mod', 'Space'], ownedElsewhere: true },
 } as const satisfies Record<string, CommandSpec>
@@ -269,6 +295,8 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
   { id: 'view', label: 'View', groups: [
     { label: 'Documents', items: ['view.editor', 'view.tables', 'view.plots', 'view.states', 'view.schematic', 'view.digitizer'] },
     { label: 'Panels', items: ['view.variables', 'view.inspector', 'view.terminal'] },
+    { label: 'Windows', items: ['window.list', 'window.float', 'window.maximize', 'window.close', 'window.closeOthers', 'window.closeGroup'] },
+    { label: 'Move', items: ['window.moveEdge', 'window.moveCentre', 'window.moveLeft', 'window.moveRight', 'window.moveBelow'] },
     { label: 'Layouts', items: ['layout.default', 'layout.results', 'layout.split'] },
     { label: 'Appearance', items: ['view.theme', 'view.ribbon', 'app.preferences'] },
   ], slot: 'view-schematic' },
@@ -297,6 +325,13 @@ export const CONTEXT_TABS: Record<'table' | 'plot' | 'schematic' | 'digitizer', 
     { label: 'Steps', items: ['digitizer.image', 'digitizer.calibrate', 'digitizer.extract', 'digitizer.review', 'digitizer.useData'] },
   ] },
 }
+
+/** A dock tab's context menu (Phase Q): the command and the window action it runs on that tab. */
+export const TAB_MENU: readonly (readonly [CommandId, WindowAction] | '-')[] = [
+  ['window.close', 'close'], ['window.closeOthers', 'closeOthers'], ['window.closeGroup', 'closeGroup'], '-',
+  ['window.float', 'float'], ['window.maximize', 'maximize'], '-',
+  ['window.moveEdge', 'moveEdge'], ['window.moveCentre', 'moveCentre'], ['window.moveLeft', 'moveLeft'], ['window.moveRight', 'moveRight'], ['window.moveBelow', 'moveBelow'],
+]
 
 /** Where a command sits on the ribbon, e.g. "Analysis ▸ Optimize & Fit" (its first home). */
 export function ribbonLocation(id: CommandId): string | null {

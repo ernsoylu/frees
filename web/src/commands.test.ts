@@ -9,6 +9,7 @@ import {
   MENU_SURFACES,
   MOBILE_MENU,
   RIBBON_TABS,
+  TAB_MENU,
   TOOLS_MENU,
   ribbonLocation,
   commandForKey,
@@ -27,6 +28,8 @@ const handlers = (over: Partial<CommandHandlers> = {}) =>
   ({ ...Object.fromEntries(ids.map((id) => [id, { run: vi.fn() }])), ...over }) as unknown as CommandHandlers
 const key = (k: string, mods: Partial<Record<'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey', boolean>> = {}) =>
   ({ key: k, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...mods }) as KeyboardEvent
+
+import { WINDOW_ACTIONS } from './workspace/windowActions'
 
 describe('command parity', () => {
   const menuIds = Object.values(MENU_SURFACES).flat().filter((e): e is CommandId => typeof e === 'string' && e !== '-')
@@ -130,5 +133,26 @@ describe('ribbon (Phase O)', () => {
     }
     for (const f of ['./Ribbon.tsx', './StatusBar.tsx', './contextActions.ts', './ribbonPrefs.ts']) visit(f)
     expect([...seen]).toContain('./commands.tsx')
+  })
+})
+
+describe('windows (Phase Q)', () => {
+  it('builds the tab menu from registry commands that are also in the palette and on the View tab (AC-06)', () => {
+    const palette = new Set(commandPaletteGroups(resolveCommands(handlers())).flatMap((g) => g.actions.map((a) => a.id)))
+    const actions = new Set<string>()
+    for (const e of TAB_MENU) {
+      if (e === '-') continue
+      expect(ids).toContain(e[0])
+      expect(palette, e[0]).toContain(e[0])
+      expect(ribbonLocation(e[0]), e[0]).toMatch(/^View ▸ (Windows|Move)$/)
+      actions.add(e[1])
+    }
+    // Every window action has a command.
+    expect([...actions].sort()).toEqual([...WINDOW_ACTIONS].sort())
+    expect(ribbonLocation('window.list')).toBe('View ▸ Windows')
+  })
+
+  it('binds no window command to a key the browser owns', () => {
+    for (const id of ids.filter((i) => i.startsWith('window.'))) expect(spec(id).shortcut, id).toBeUndefined()
   })
 })
