@@ -78,7 +78,7 @@ describe('Ribbon', () => {
   it('takes a window\'s own groups into a tab slot', () => {
     function Canvas() {
       const { on, slots } = useRibbonSlots()
-      const own = <button type="button">Arrange</button>
+      const own = <><button type="button">Arrange</button><button type="button">Tidy</button></>
       if (!on) return own
       return slots.schematic ? createPortal(<RibbonGroup label="Arrange">{own}</RibbonGroup>, slots.schematic) : null
     }
@@ -96,6 +96,13 @@ describe('Ribbon', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Schematic' }))
     const arrange = screen.getByRole('group', { name: 'Arrange' }).querySelector('button')!
     expect(arrange.textContent).toBe('Arrange')
+    // Arrow keys move between portaled controls too: React bubbles their keys
+    // through the window that owns them, so the ribbon listens on the DOM.
+    arrange.focus()
+    fireEvent.keyDown(arrange, { key: 'ArrowRight' })
+    expect(document.activeElement?.textContent).toBe('Tidy')
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(arrange)
     rerender(r(false))
     expect(screen.getByRole('button', { name: 'Arrange' })).toBeTruthy()
   })

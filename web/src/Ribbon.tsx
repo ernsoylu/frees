@@ -8,7 +8,7 @@
 // portals in (`ribbonSlots.ts`, Phase P).
 //
 // It imports nothing heavy: no Plotly, no analysis dialog (AC-13).
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { ActionIcon, Button, Menu, Stack, Tabs, Text, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core'
 import { IconChevronDown, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { CONTEXT_TABS, keyLabel, RIBBON_TABS, type Command, type Commands, type RibbonTab } from './commands'
@@ -86,10 +86,13 @@ export function RibbonButton({ cmd, density, onRan }: Readonly<{ cmd: Command; d
   )
 }
 
-function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
+// A native listener, not React's onKeyDown: a slot's controls are portaled in
+// by their own window, so React bubbles their keys through that window's tree,
+// while the DOM bubbles them here.
+function moveFocus(panel: HTMLElement, e: KeyboardEvent) {
   const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
   if (!keys.includes(e.key)) return
-  const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[data-ribbon-item], [data-ribbon-slot] button:not(:disabled)')]
+  const items = [...panel.querySelectorAll<HTMLElement>('[data-ribbon-item], [data-ribbon-slot] button:not(:disabled)')]
   const at = items.indexOf(document.activeElement as HTMLElement)
   if (at < 0) return
   e.preventDefault()
@@ -134,9 +137,12 @@ function RibbonPanel({ tab, commands, density, note, onRan }: Readonly<{ tab: Ri
     // A slot's groups arrive a render later, through a portal; their width counts too.
     for (const c of el.children) ro.observe(c)
     el.addEventListener('scroll', measure, { passive: true })
+    const onKey = (e: KeyboardEvent) => moveFocus(el, e)
+    el.addEventListener('keydown', onKey)
     return () => {
       ro.disconnect()
       el.removeEventListener('scroll', measure)
+      el.removeEventListener('keydown', onKey)
     }
   }, [tab.id, density])
   const scroll = (dx: number) => scrollRef.current?.scrollBy({ left: dx, behavior: 'smooth' })
@@ -150,7 +156,7 @@ function RibbonPanel({ tab, commands, density, note, onRan }: Readonly<{ tab: Ri
           <IconChevronLeft size={14} />
         </ActionIcon>
       )}
-      <div ref={scrollRef} onKeyDown={moveFocus} style={{ display: 'flex', alignItems: 'stretch', overflowX: 'auto', scrollbarWidth: 'none', flex: 1, minWidth: 0 }}>
+      <div ref={scrollRef} style={{ display: 'flex', alignItems: 'stretch', overflowX: 'auto', scrollbarWidth: 'none', flex: 1, minWidth: 0 }}>
         {note && (
           <Text size="xs" c="dimmed" px="sm" style={{ alignSelf: 'center', whiteSpace: 'nowrap' }}>
             {note}
@@ -215,7 +221,7 @@ export function Ribbon({ commands, context, contextNote, density, onDensityChang
       const t = e.target as Element
       if (!rootRef.current?.contains(t) && !t.closest?.('[data-portal]')) setPeek(false)
     }
-    const esc = (e: globalThis.KeyboardEvent) => {
+    const esc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setPeek(false)
     }
     document.addEventListener('mousedown', close)
