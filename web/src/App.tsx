@@ -4094,7 +4094,7 @@ export default function App() {
         ]}
         tableCount={tables.length + declaredStateDefs.length}
         onCloseWindows={(prefixes) => {
-          for (const w of openWindows) if (prefixes.some((p) => w.id.startsWith(p))) dockRef.current?.close(w.id)
+          dockRef.current?.closeAll(openWindows.filter((w) => prefixes.some((p) => w.id.startsWith(p))).map((w) => w.id))
         }}
         onOpenTable={(id) => {
           if (id.startsWith('state:')) {
