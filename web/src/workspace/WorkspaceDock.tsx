@@ -156,6 +156,8 @@ export interface WorkspaceDockHandle {
   openInstance: (id: string, kind: string, title: string) => void
   /** Close a window by id. */
   close: (id: string) => void
+  /** Close several windows as one change to undo. */
+  closeAll: (ids: string[]) => void
   /** Update an open window's tab title (e.g. after a rename). */
   setTitle: (id: string, title: string) => void
   isOpen: (id: string) => boolean
@@ -492,6 +494,11 @@ export function WorkspaceDock({
           /* ignore */
         }
       },
+      closeAll: (ids) => {
+        const api = apiRef.current
+        const open = api ? ids.map((id) => api.getPanel(id)).filter((p) => p !== undefined) : []
+        if (api && open.length > 0) change(api, () => open.forEach((p) => api.removePanel(p)))
+      },
       setTitle: (id, title) => {
         try {
           const p = apiRef.current?.getPanel(id)
@@ -579,7 +586,9 @@ export function WorkspaceDock({
     if (saved) {
       try {
         api.fromJSON(JSON.parse(saved))
-        restored = api.panels.length > 0
+        // A layout that reads is the layout, even with every view closed: the
+        // rail and the View commands open any of them again.
+        restored = true
       } catch {
         restored = false
       }
