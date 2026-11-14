@@ -74,7 +74,9 @@ import {
 } from '../tables'
 import { useGlideTheme } from '../DataGridReadOnly'
 import { TABLES_WORKBOOK_WINDOW_ID, tablesWorkbookSync } from './tablesWorkbookBridge'
-import { usePublishContext } from '../contextActions'
+import { usePublishContext, type ContextHandlers } from '../contextActions'
+import { CommandContextMenu, isMenuKey, menuPoint } from '../ContextMenu'
+import { TABLE_ROW_MENU, menuCommands } from '../commands'
 import { downloadValuesAsCsv } from './csv'
 import { applyFunctionSpecs } from './composeTables'
 import CreateFunctionModal from './CreateFunctionModal'
@@ -119,6 +121,8 @@ interface Props {
   onReproduceRow?: (table: ParamTableSpec, rowIndex: number) => void
   /** Retry failed runs for a parametric table. */
   onRetryFailedRows?: (tableId: string) => void
+  /** Ask to delete a table (App confirms first). Without it, the list deletes with undo. */
+  onDeleteTable?: (tableId: string) => void
   /** Highlight and focus a specific row (e.g. linked from plot persistent cursor). */
   highlightedRowId?: string | null
 }
@@ -188,6 +192,7 @@ export default function TablesGridTab({
   onGoToDeclaration,
   onReproduceRow,
   onRetryFailedRows,
+  onDeleteTable,
   highlightedRowId,
 }: Readonly<Props>) {
   const hosted = hostedOf(tables)
@@ -698,7 +703,26 @@ export default function TablesGridTab({
   const noTable = 'Open or create a table first.'
   const paramOnly = active ? 'A Function Table has no columns to configure or runs to repeat.' : noTable
   const selectedVar = activeParam?.vars[(selectedColIndices.find((c) => c > 0) ?? 0) - 1]
-  usePublishContext(TABLES_WORKBOOK_WINDOW_ID, {
+  // The row whose context menu is open. Opening it makes that table the active
+  // one, so the commands below, which act on the active table, act on it.
+  const [rowMenu, setRowMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  const openRowMenu = (t: TableSpec, e: { preventDefault: () => void; clientX?: number; clientY?: number; currentTarget: Element }) => {
+    e.preventDefault()
+    const at = menuPoint(e)
+    onActiveTableIdChange(t.id)
+    // After this event: the key that opens the menu would otherwise close it.
+    setTimeout(() => setRowMenu({ id: t.id, ...at }))
+  }
+  const inEquations = 'Defined in the equations: edit its TABLE block in the Editor.'
+  const tableCommands: ContextHandlers = {
+    'table.rename': {
+      run: () => {
+        if (!active) return
+        setRenamingId(active.id)
+        setRenameDraft(active.name)
+      },
+      unavailable: !active ? noTable : active.source === 'code' ? inEquations : null,
+    },
     'edit.undo': { run: undo, unavailable: canUndo ? null : 'Nothing to undo in the Tables workbook.', description: 'Undo the last edit in the Tables workbook' },
     'edit.redo': { run: redo, unavailable: canRedo ? null : 'Nothing to redo in the Tables workbook.', description: 'Redo the last undone edit in the Tables workbook' },
     'table.configure': { run: () => activeParam && onConfigureTable?.(activeParam.id), unavailable: activeParam && onConfigureTable ? null : paramOnly },
@@ -725,10 +749,32 @@ export default function TablesGridTab({
       run: () => activeParam && setCreateFnFor(activeParam.id),
       unavailable: activeParam && activeParam.vars.length >= 2 ? null : 'Needs a parametric table with two or more columns.',
     },
-  })
+  }
+  usePublishContext(TABLES_WORKBOOK_WINDOW_ID, tableCommands)
+  const rowMenuTable = rowMenu && active?.id === rowMenu.id ? active : null
 
   return (
     <Group align="stretch" gap={0} style={{ flex: 1, minHeight: 0, height: '100%' }} wrap="nowrap">
+      {rowMenu && rowMenuTable && (
+        <CommandContextMenu
+          at={rowMenu}
+          label={`${rowMenuTable.name} table menu`}
+          onClose={() => setRowMenu(null)}
+          entries={TABLE_ROW_MENU}
+          cmds={menuCommands({
+            'table.rename': tableCommands['table.rename'],
+            'table.configure': tableCommands['table.configure'],
+            'table.plotSelected': tableCommands['table.plotSelected'],
+            'table.exportData': tableCommands['table.exportData'],
+            'table.exportReport': tableCommands['table.exportReport'],
+            'table.retryFailed': tableCommands['table.retryFailed'],
+            'table.delete': {
+              run: () => (onDeleteTable ? onDeleteTable(rowMenuTable.id) : removeTable(rowMenuTable.id)),
+              unavailable: rowMenuTable.source === 'code' ? 'Defined in the equations: delete its block in the Editor.' : null,
+            },
+          })}
+        />
+      )}
       {/* Navigation list of all hosted tables (hidden in narrow dock windows < 480px). */}
       {width >= 480 && (
         <Stack
@@ -795,6 +841,20 @@ export default function TablesGridTab({
                 background: active?.id === t.id ? 'var(--mantine-color-default-hover)' : undefined,
               }}
               onClick={() => onActiveTableIdChange(t.id)}
+              // Its menu: a right click, or the menu key or Shift+F10 on the focused row.
+              tabIndex={0}
+              role="button"
+              aria-label={`Table ${t.name}`}
+              aria-current={active?.id === t.id ? 'true' : undefined}
+              onContextMenu={(e) => openRowMenu(t, e)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return
+                if (isMenuKey(e)) openRowMenu(t, e)
+                else if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onActiveTableIdChange(t.id)
+                }
+              }}
               onDoubleClick={() => {
                 if (t.source !== 'code') {
                   setRenamingId(t.id)

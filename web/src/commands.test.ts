@@ -9,7 +9,11 @@ import {
   MENU_SURFACES,
   MOBILE_MENU,
   RIBBON_TABS,
+  PLOT_TAB_MENU,
+  TABLE_ROW_MENU,
   TAB_MENU,
+  VARIABLE_ROW_MENU,
+  menuCommands,
   TOOLS_MENU,
   ribbonLocation,
   commandForKey,
@@ -154,5 +158,34 @@ describe('windows (Phase Q)', () => {
 
   it('binds no window command to a key the browser owns', () => {
     for (const id of ids.filter((i) => i.startsWith('window.'))) expect(spec(id).shortcut, id).toBeUndefined()
+  })
+})
+
+describe('list context menus (Phase Q)', () => {
+  it('builds every row and tab menu from registry commands', () => {
+    for (const menu of [TABLE_ROW_MENU, PLOT_TAB_MENU, VARIABLE_ROW_MENU]) {
+      for (const e of menu) if (typeof e === 'string' && e !== '-') expect(ids, e).toContain(e)
+    }
+    // The commands the spec names, by the labels a user reads.
+    const labels = (menu: readonly unknown[]) => menu.filter((e): e is CommandId => typeof e === 'string' && e !== '-').map((e) => spec(e).label)
+    expect(labels(TABLE_ROW_MENU)).toEqual(['Rename Table…', 'Configure Columns…', 'Plot Selected Columns', 'Data Export — full precision', 'Report Export — formatted', 'Retry Failed Runs', 'Delete Table…'])
+    expect(labels(PLOT_TAB_MENU)).toEqual(['Rename Plot…', 'Configure Plot…', 'Export Plot…'])
+    expect(labels(VARIABLE_ROW_MENU)).toEqual(['Pin to Slider', 'Copy Value', 'Copy Name', 'Variable Settings…'])
+  })
+
+  it('gives a menu the handlers for its target, and a reason where there is none', () => {
+    const run = vi.fn()
+    const cmds = menuCommands({ 'variable.pin': { run, unavailable: 'Already pinned.' }, 'variable.copyName': { run }, 'table.rename': undefined })
+    expect(cmds['variable.pin'].unavailable).toBe('Already pinned.')
+    expect(cmds['variable.copyName'].unavailable).toBeNull()
+    expect(cmds['variable.copyName'].label).toBe('Copy Name')
+    expect(cmds['table.rename'].unavailable).toBe('Not available here.')
+    cmds['variable.copyName'].run()
+    expect(run).toHaveBeenCalledOnce()
+  })
+
+  it('keeps a row-only command out of the palette', () => {
+    const palette = commandPaletteGroups(resolveCommands(handlers())).flatMap((g) => g.actions.map((a) => a.id))
+    for (const id of ['variable.pin', 'variable.copyValue', 'variable.copyName']) expect(palette).not.toContain(id)
   })
 })

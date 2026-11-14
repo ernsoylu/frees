@@ -1248,7 +1248,8 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
     - The tab is empty until the first Check draws a network.
 
 **Phase Q — windows and layouts** (Doc A P1b; Doc B phase 3 window parts).
-- **Q1 done 2026-11-14 (`ux-q-windows`): window commands, the tab menu and the Window List.** Named layouts, state outside panel lifetimes and the list context menus are still open.
+- **Q done 2026-11-14 (`ux-q-windows`), in four parts.** The parts are below; the ceilings say what is not done.
+- **Q1: window commands, the tab menu and the Window List.**
   - **Dock handle** (`workspace/WorkspaceDock.tsx`). It gains `focus` and `act(id, action)` for close, close-others, close-all-in-group, float / dock-back, maximize / restore, move to edge, move to centre and split left, right and below. Each uses dockview 7.0.4's own API (`addFloatingGroup`, `maximize`, `moveTo`, `addGroup`), checked against the pinned version. The window list it reports now carries each window's group, place (grid, floating, edge) and maximized state, and is re-sent on every structural change (`onDidMutateLayout`), only when it differs.
   - **Reasons** (`workspace/windowActions.ts`). Whether an action can run, and why not, is a pure function of that list, shared by the commands, the tab menu and the Window List.
   - **Registry.** Eleven `window.*` commands (89 in all), in the palette's Windows group and on **View › Windows** and **View › Move**. None has a default key: Ctrl+W, Ctrl+Tab and Ctrl+1–9 are the browser's.
@@ -1265,6 +1266,37 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
     - Float or Dock Back and Maximize or Restore are one command each; the label does not change with the state.
     - Move Left, Right and Below split a window out of its group, as dragging it to that edge does. A window alone in its group has nothing to split from, and says so.
     - Focus All opens every table or plot and raises each in its group; with several in one group, the last is the one shown.
+- **Q2: named layouts and Undo Layout Change.**
+  - **Store** (`workspace/layouts.ts`, key `frees-layouts-v1`, `version: 1`). A layout is dockview's own `toJSON()` plus the ribbon tab and density, under a name. Layouts are kept per device and per screen form: `desktop`, or `compact` under 1,024 px of width. Corrupt storage or a newer version reads as empty; a malformed entry is dropped and the rest kept.
+  - **No reset.** The live layout stays at `frees-dock-layout-v3`, written by the dock on every change as before. The new store sits beside it, so nobody's arrangement is rebuilt by this change.
+  - **Commands.** Save Layout As… (a layout of the same name is replaced), Manage Layouts… (`LayoutsModal.tsx`: Apply, Rename…, Delete… with a second step), Undo Layout Change. **Default View is now Reset Workspace Layout**; "default view" and "reset layout" stay as aliases. All are on the rail's Layout menu, the palette and View › Layouts. The ribbon's chosen tab moved from the ribbon to App so a layout can record it.
+  - **Undo.** The dock remembers the layout before each structural change (`onWillMutateLayout`: a drag, a window command, a window opened or closed, a layout applied). A command that makes several changes is one step. Undo swaps to that layout and keeps the one it left, so running it again returns.
+  - **Missing windows.** After a saved or project layout is restored, a window whose table or plot no longer exists is closed, and a notice names it. A layout dockview cannot read builds the default and says so; Undo Layout Change returns to the windows as they were.
+  - **Project switch.** New Project resets to the default windows. A loaded project restores its own layout slice and drops the windows it no longer has. The device's named layouts stay.
+  - **Evidence.**
+    - `layouts.test.ts` (5): corrupt, foreign and newer storage; a malformed entry; save, replace, rename and delete per form; the form by width.
+    - `e2e/layouts.spec.ts` (3, Chromium), against dockview's own groups: save, reset, undo, undo again, apply, reload, New Project, rename (an empty name is refused), delete (asked twice). Corrupt `frees-layouts-v1` and `frees-dock-layout-v3` boot the default, and the Editor and every panel still open (AC-07, AC-08). A layout naming a plot window the project lacks leaves it out with the notice; an unreadable one builds the default with its notice.
+  - **Ceiling.**
+    - Undo is one step, not a history.
+    - A layout does not clamp a floating window to the screen itself; dockview keeps floating groups inside its bounds when it loads them.
+    - A project file's layout slice is still dockview's JSON alone. It carries no ribbon tab or density.
+    - Resizing the browser across 1,024 px does not swap layouts; the form is read when a layout is saved or listed.
+- **Q3: state outside panel lifetimes.**
+  - **`useKeptState`** (`keptState.ts`) is `useState` whose value is also held under a key for the page, so a view that unmounts shows its draft again when it returns. A project switch clears it, because a draft names that project's variables and tables. Nothing is saved to storage.
+  - **Where.** The inputs of Optimization (11 fields), Curve Fit (18), Monte Carlo (3), Global Sensitivity (7), Parameter Estimation (8) and the PID Tuner's manual plant and targets (4), and the Terminal's scrollback. Results, errors and running flags are not kept.
+  - **Already outside.** The Terminal's command history (`frees-repl-history`) and the Digitizer's image, calibration and datasets (its own saved state) were already kept across a close; they are unchanged. Model, table and live runs are owned by App and the live worker, not by a panel.
+  - **Evidence.** `keptState.test.tsx` (2). `e2e/kept-state.spec.ts` (1): an Optimization constraint survives closing the dialog, the Terminal's output survives Close View, and New Project starts both over (AC-05, AC-11).
+  - **Ceiling.** A run started inside an analysis dialog still belongs to that dialog: closing it mid-run drops the result. That moves with Phase R, when the tools become windows with one Run → Results structure.
+- **Q4: list context menus.**
+  - **Registry.** `table.rename`, `plot.rename`, and the row-only `variable.pin`, `variable.copyValue` and `variable.copyName` (97 commands in all, counted as Phase O counted its 78). `TABLE_ROW_MENU`, `PLOT_TAB_MENU` and `VARIABLE_ROW_MENU` list registry ids; `menuCommands` pairs them with the handlers for the row or tab the menu was opened on. The row-only three are off the palette, since they need a row.
+  - **Table rows** (the Tables list): Rename Table…, Configure Columns…, Plot Selected Columns, both exports, Retry Failed Runs, Delete Table…. Opening the menu makes that table the active one, so the workbook's own commands act on it. Delete goes through App's confirmation. Rows are now focusable, and the menu key or Shift+F10 opens the menu.
+  - **Plot tabs:** Rename Plot…, Configure Plot… and Export Plot… above the window commands. Configure and Export live in the plot's card, so the window is brought forward first and the command runs once the card has published it.
+  - **Variable rows:** Pin to Slider, Copy Value (full precision with its unit, not the six digits shown), Copy Name, Variable Settings….
+  - **Evidence.** `commands.test.ts` +3. `e2e/list-menus.spec.ts` (3, Chromium): a table row's menu acts on its own row, renames, shows "No failed runs to retry." as text, opens from the keyboard, and deletes only that table after the confirmation; a variable row copies `12 [m^2]` and its name, pins, and then says it is pinned; a plot tab renames its plot, and Close View leaves the plot in the rail's list.
+  - **Ceiling.**
+    - Only scalar variable rows have a menu; array and component rows do not.
+    - A parametric table in its own window has the tab menu's window commands, not the table commands.
+    - The Tables list's trash icon still deletes with the workbook's undo and no confirmation; the menu's Delete Table… confirms.
 - **Dock handle.** It gains focus, move, float/dock-back, maximize/restore and close-others/close-all-in-group, each through dockview's supported API (checked against the pinned version first).
 - **Tab context menu.** Close View, Close Others, Close All in Group, Float, Maximize, Move to Edge / Centre, Move Left/Right/Below. These are the keyboard equivalents of dragging.
 - **Window List…** View tab and palette: it is searchable, groups windows by kind, marks the active one and gives full names.
