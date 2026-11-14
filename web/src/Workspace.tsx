@@ -27,6 +27,8 @@ import { Button } from '@mantine/core'
 import { ComponentParamResult, ComponentResult, SolveResponse, VariableResult } from './api'
 import SolveDiagnostics from './SolveDiagnostics'
 import { formatValue } from './format'
+import { CommandContextMenu, isMenuKey, menuPoint } from './ContextMenu'
+import { VARIABLE_ROW_MENU, type Commands } from './commands'
 
 /**
  * The advanced Workspace (array-language-style variable window): a live, typed view of
@@ -122,13 +124,22 @@ function uncertaintyText(v: VariableResult): string {
   return v.uncertainty != null && v.uncertainty !== 0 ? `± ${formatValue(v.uncertainty)}` : ''
 }
 
-function ScalarTable({ scalars, replNames, pinnedNames, pinnableNames, onPin }: Readonly<{
+function ScalarTable({ scalars, replNames, pinnedNames, pinnableNames, onPin, rowMenu }: Readonly<{
   scalars: VariableResult[]
   replNames: Set<string>
   pinnedNames: Set<string>
   pinnableNames: Set<string>
   onPin?: (v: VariableResult) => void
+  rowMenu?: (v: VariableResult) => Commands
 }>) {
+  // The row whose menu is open: a right click, or the menu key or Shift+F10 on the focused row.
+  const [menu, setMenu] = useState<{ v: VariableResult; x: number; y: number } | null>(null)
+  const openMenu = (v: VariableResult, e: { preventDefault: () => void; clientX?: number; clientY?: number; currentTarget: Element }) => {
+    if (!rowMenu) return
+    e.preventDefault()
+    const at = menuPoint(e)
+    setTimeout(() => setMenu({ v, ...at }))
+  }
   return (
     // The variable names + 5 columns have an intrinsic min-width that exceeds a
     // narrow dock/edge panel; scroll horizontally inside the panel rather than
@@ -137,6 +148,9 @@ function ScalarTable({ scalars, replNames, pinnedNames, pinnableNames, onPin }: 
     // min-width can't push the (row-reverse) edge group wider than its slot and
     // clip the panel on the left.
     <Table.ScrollContainer type="native" minWidth={380}>
+    {menu && rowMenu && (
+      <CommandContextMenu at={menu} label={`${menu.v.name} variable menu`} onClose={() => setMenu(null)} entries={VARIABLE_ROW_MENU} cmds={rowMenu(menu.v)} />
+    )}
     <Table striped highlightOnHover>
       <Table.Thead>
         <Table.Tr>
@@ -149,7 +163,15 @@ function ScalarTable({ scalars, replNames, pinnedNames, pinnableNames, onPin }: 
       </Table.Thead>
       <Table.Tbody>
         {scalars.map((v) => (
-          <Table.Tr key={v.name}>
+          <Table.Tr
+            key={v.name}
+            tabIndex={rowMenu ? 0 : undefined}
+            aria-haspopup={rowMenu ? 'menu' : undefined}
+            onContextMenu={(e) => openMenu(v, e)}
+            onKeyDown={(e) => {
+              if (e.target === e.currentTarget && isMenuKey(e)) openMenu(v, e)
+            }}
+          >
             <Table.Td style={{ textTransform: 'none' }}>
               <Group gap={6} wrap="nowrap">
                 {onPin && pinnableNames.has(v.name.toLowerCase()) && (
@@ -416,6 +438,8 @@ interface Props {
   pinnableNames?: Set<string>
   /** Pin a variable to the slider strip (absent = the affordance is hidden). */
   onPin?: (v: VariableResult) => void
+  /** The commands of a scalar row's context menu, for that variable (Phase Q). */
+  rowMenu?: (v: VariableResult) => Commands
   /** The slider strip itself, rendered above the variable list. */
   sliderStrip?: React.ReactNode
   /** Total number of solutions found (for multi-solution exploration). */
@@ -439,6 +463,7 @@ export default function Workspace({
   pinnedNames,
   pinnableNames,
   onPin,
+  rowMenu,
   sliderStrip,
   solutionsCount,
   selectedSolutionIndex,
@@ -563,7 +588,7 @@ export default function Workspace({
                 <ScalarGrid scalars={plain} replNames={repl} />
               </Suspense>
             ) : (
-              <ScalarTable scalars={plain} replNames={repl} pinnedNames={pinnedNames ?? EMPTY_NAMES} pinnableNames={pinnableNames ?? EMPTY_NAMES} onPin={onPin} />
+              <ScalarTable scalars={plain} replNames={repl} pinnedNames={pinnedNames ?? EMPTY_NAMES} pinnableNames={pinnableNames ?? EMPTY_NAMES} onPin={onPin} rowMenu={rowMenu} />
             ))}
           {components.length > 0 && (
             <Stack gap="xs">

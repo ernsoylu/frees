@@ -23,7 +23,7 @@ import {
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { Spotlight, SpotlightActionGroupData, spotlight } from '@mantine/spotlight'
-import { commandForKey, commandPaletteGroups, resolveCommands, type CommandId, type Commands } from './commands'
+import { PLOT_TAB_MENU, commandForKey, commandPaletteGroups, menuCommands, resolveCommands, type CommandId, type Commands } from './commands'
 import {
   IconSitemap,
   IconHelp,
@@ -888,6 +888,7 @@ export default function App() {
   // commands act on (Phase Q).
   const [activeWindowId, setActiveWindowId] = useState<string | undefined>(undefined)
   const [showWindowList, setShowWindowList] = useState(false)
+  const [renamePlot, setRenamePlot] = useState<{ id: string; name: string } | null>(null)
   // Tracks which state-table circuit triggered the last fill-missing solve so
   // only that circuit's button shows the loading spinner.
   const [fillMissingFor, setFillMissingFor] = useState<string | null>(null)
@@ -3162,6 +3163,50 @@ export default function App() {
     }
     return inWindow(fw?.id, id, 'No undo history here: focus the Editor, the Tables workbook, the schematic or the scenarios.')
   }
+  // Phase Q: context menus run on the row or tab they were opened on. A plot's
+  // Configure and Export live in its card, which mounts when its window shows:
+  // bring the window forward, then run the command once the card has published it.
+  const runInWindow = (windowId: string, id: CommandId, tries = 60) => {
+    dockRef.current?.focus(windowId)
+    const h = contextHandler(windowId, id)
+    if (h) {
+      if (h.unavailable) notifications.show({ color: 'yellow', message: h.unavailable })
+      else h.run()
+    } else if (tries > 0) requestAnimationFrame(() => runInWindow(windowId, id, tries - 1))
+    else notifications.show({ color: 'yellow', message: 'That window has not loaded yet.' })
+  }
+  const plotTabMenu = (w: OpenWindow) => {
+    const p = w.kind === 'plot' ? mergedPlots.find((x) => `plot:${x.id}` === w.id) : undefined
+    if (!p) return null
+    return {
+      entries: PLOT_TAB_MENU,
+      cmds: menuCommands({
+        'plot.rename': { run: () => setRenamePlot({ id: p.id, name: p.name }), unavailable: p.fromCode ? 'Defined in the equations: rename its PLOT block in the Editor.' : null },
+        'plot.configure': { run: () => runInWindow(w.id, 'plot.configure'), unavailable: p.fromCode ? 'Defined in the equations: Duplicate as editable first.' : null },
+        'plot.export': { run: () => runInWindow(w.id, 'plot.export') },
+      }),
+    }
+  }
+  const copyText = (text: string, what: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => notifications.show({ message: `Copied ${what}.` }),
+      () => notifications.show({ color: 'red', message: 'The browser refused the clipboard.' }),
+    )
+  }
+  const variableRowMenu = (v: VariableResult) => {
+    const key = v.name.toLowerCase()
+    return menuCommands({
+      'variable.pin': {
+        run: () => pinSlider(v),
+        unavailable: pinnedSliderNames.has(key) ? 'It is already pinned to a slider.' : pinnableNames.has(key) ? null : 'Only a variable the equations set to a number can be pinned.',
+      },
+      // Full precision, not the six digits shown.
+      'variable.copyValue': { run: () => copyText(v.units ? `${v.value} [${v.units}]` : String(v.value), `the value of ${v.name}`) },
+      'variable.copyName': { run: () => copyText(v.name, 'the name') },
+      'tool.variableInfo': { run: () => setShowVariableInfo(true) },
+    })
+  }
+  const needsRow = { run: () => {}, unavailable: 'Right-click a variable in the Variable Explorer.' }
   const onWindow = (action: WindowAction) => ({
     run: () => { if (activeWindowId) dockRef.current?.act(activeWindowId, action) },
     unavailable: windowActionReason(openWindows, activeWindowId, action),
@@ -3286,6 +3331,13 @@ export default function App() {
     'table.goToDefinition': focusedTable?.source === 'code'
       ? { run: () => handleGoToTableDeclaration(focusedTable.name) }
       : { run: noop, unavailable: focusedTable ? 'This table is defined in the workbook, not in the equations.' : 'Focus a table first.' },
+    'table.rename': onTable('table.rename'),
+    'plot.rename': focusedPlot && !focusedPlot.fromCode
+      ? { run: () => setRenamePlot({ id: focusedPlot.id, name: focusedPlot.name }) }
+      : { run: noop, unavailable: focusedPlot ? 'Defined in the equations: rename its PLOT block in the Editor.' : 'Focus a plot first.' },
+    'variable.pin': needsRow,
+    'variable.copyValue': needsRow,
+    'variable.copyName': needsRow,
     'table.delete': focusedTable && focusedTable.source !== 'code'
       ? { run: () => setConfirmDelete({ kind: 'table', id: focusedTable.id, name: focusedTable.name }) }
       : { run: noop, unavailable: focusedTable ? 'Defined in the equations: delete its block in the Editor.' : 'Focus a table first.' },
@@ -3689,6 +3741,7 @@ export default function App() {
             pinnedNames={pinnedSliderNames}
             pinnableNames={pinnableNames}
             onPin={pinSlider}
+            rowMenu={variableRowMenu}
             solutionsCount={solutions.length}
             selectedSolutionIndex={selectedSolutionIndex}
             onSelectSolutionIndex={setSelectedSolutionIndex}
@@ -3908,6 +3961,10 @@ export default function App() {
             onGoToDeclaration={handleGoToTableDeclaration}
             onReproduceRow={handleReproduceRow}
             onRetryFailedRows={(id) => void checkThenSolveTable(id)}
+            onDeleteTable={(id) => {
+              const t = tables.find((x) => x.id === id)
+              if (t) setConfirmDelete({ kind: 'table', id, name: t.name })
+            }}
             highlightedRowId={highlightedRowId}
           />
         </Suspense>
@@ -4133,6 +4190,7 @@ export default function App() {
               }}
               onOpenChange={setOpenWindows}
               onUndoChange={setCanUndoLayout}
+              tabMenuFor={plotTabMenu}
               handleRef={dockRef}
             />
           </Suspense>
@@ -4174,6 +4232,22 @@ export default function App() {
           storeLayouts(saveLayout(layouts, form, { name, dock, ribbonTab, density: ribbonDensity }))
           setLayoutName(name)
           setShowSaveLayout(false)
+        }}
+      />
+      <TextPromptModal
+        opened={renamePlot !== null}
+        title="Rename Plot"
+        label="Plot name"
+        defaultValue={renamePlot?.name ?? ''}
+        confirmLabel="Rename"
+        onClose={() => setRenamePlot(null)}
+        onSubmit={(value) => {
+          const name = value.trim()
+          // The plot may have been deleted while the dialog was open.
+          if (renamePlot && name && plots.some((x) => x.id === renamePlot.id)) {
+            handlePlotsChange(plots.map((x) => (x.id === renamePlot.id ? { ...x, name } : x)))
+          }
+          setRenamePlot(null)
         }}
       />
       {showManageLayouts && (

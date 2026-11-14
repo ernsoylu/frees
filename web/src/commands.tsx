@@ -17,6 +17,10 @@ import type { SpotlightActionData, SpotlightActionGroupData } from '@mantine/spo
 import { Kbd } from '@mantine/core'
 import {
   IconAdjustments,
+  IconAdjustmentsHorizontal,
+  IconClipboardText,
+  IconCopy,
+  IconPencil,
   IconArrowBackUp,
   IconArrowBarDown,
   IconArrowBarLeft,
@@ -179,16 +183,22 @@ export const COMMAND_SPECS = {
   'table.exportData': { label: 'Data Export — full precision', location: 'Tables ▸ Export', group: 'Table', icon: IconDownload, description: 'CSV with exact values (round-trip)' },
   'table.exportReport': { label: 'Report Export — formatted', location: 'Tables ▸ Export', group: 'Table', icon: IconFileSpreadsheet, description: 'CSV with 6 significant digits' },
   'table.goToDefinition': { label: 'Go to Definition', location: 'Tables', group: 'Table', icon: IconCode, description: 'Show the TABLE block in the Editor' },
+  'table.rename': { label: 'Rename Table…', location: 'Tables ▸ list', group: 'Table', icon: IconPencil, description: 'Also: double-click its name in the Tables list' },
   'table.delete': { label: 'Delete Table…', location: 'Inspector', group: 'Table', icon: IconTrash },
   'plot.configure': { label: 'Configure Plot…', location: 'Plot ▸ toolbar', group: 'Plot', icon: IconAdjustments },
   'plot.export': { label: 'Export Plot…', location: 'Plot ▸ toolbar', group: 'Plot', icon: IconDownload, description: 'Image or data; the view scope is chosen in the menu' },
   'plot.inspect': { label: 'Inspect Plot', location: 'Plot ▸ measurement bar', group: 'Plot', icon: IconFocus2, description: 'Move to the cursor and measurement bar (arrow keys step samples)' },
+  'plot.rename': { label: 'Rename Plot…', location: 'Inspector', group: 'Plot', icon: IconPencil },
   'plot.delete': { label: 'Delete Plot…', location: 'Inspector', group: 'Plot', icon: IconTrash },
   'digitizer.image': { label: 'Load Image…', location: 'Digitizer', group: 'Digitizer', icon: IconPhotoUp },
   'digitizer.calibrate': { label: 'Calibrate Axes', location: 'Digitizer', group: 'Digitizer', icon: IconRuler, description: 'Click X1, X2, Y1 and Y2 on the image' },
   'digitizer.extract': { label: 'Extract Points', location: 'Digitizer', group: 'Digitizer', icon: IconWand, description: 'Pick a curve colour and auto-extract its points' },
   'digitizer.review': { label: 'Review Points', location: 'Digitizer', group: 'Digitizer', icon: IconListCheck, description: 'Select and drag points to correct them' },
   'digitizer.useData': { label: 'Use Data as Function Table', location: 'Digitizer', group: 'Digitizer', icon: IconTable },
+  // Phase Q: a variable row's own menu in the Variable Explorer. They need a row, so they are not in the palette.
+  'variable.pin': { label: 'Pin to Slider', location: 'Variable Explorer ▸ row menu', group: null, icon: IconAdjustmentsHorizontal },
+  'variable.copyValue': { label: 'Copy Value', location: 'Variable Explorer ▸ row menu', group: null, icon: IconClipboardText, description: 'The value at full precision, with its unit' },
+  'variable.copyName': { label: 'Copy Name', location: 'Variable Explorer ▸ row menu', group: null, icon: IconCopy },
   // Phase Q: named layouts, saved on this device.
   'layout.saveAs': { label: 'Save Layout As…', location: 'Rail ▸ Layout', group: 'Views', icon: IconDeviceFloppy, aliases: ['named layout', 'save workspace'], description: 'Keep this arrangement of windows under a name' },
   'layout.manage': { label: 'Manage Layouts…', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutGrid, aliases: ['apply layout', 'rename layout', 'delete layout', 'saved layouts'], description: 'Apply, rename or delete a saved layout' },
@@ -317,10 +327,10 @@ export const CONTEXT_TABS: Record<'table' | 'plot' | 'schematic' | 'digitizer', 
     { label: 'Edit', items: ['edit.undo', 'edit.redo'] },
     { label: 'Results', items: ['table.plotSelected', 'table.retryFailed'] },
     { label: 'Export', items: ['table.exportData', 'table.exportReport'] },
-    { label: 'Table', items: ['table.goToDefinition', 'table.delete'] },
+    { label: 'Table', items: ['table.rename', 'table.goToDefinition', 'table.delete'] },
   ] },
   plot: { id: 'ctx-plot', label: 'Plot', groups: [
-    { label: 'Plot', items: ['plot.configure', 'plot.export', 'plot.inspect', 'plot.delete'] },
+    { label: 'Plot', items: ['plot.rename', 'plot.configure', 'plot.export', 'plot.inspect', 'plot.delete'] },
   ] },
   // The canvas portals its own controls here: Sheets, Model, Edit, Arrange,
   // Overlay, Annotate, Drawing Views, Zoom (schematic/SchematicTab.tsx).
@@ -336,6 +346,23 @@ export const TAB_MENU: readonly (readonly [CommandId, WindowAction] | '-')[] = [
   ['window.float', 'float'], ['window.maximize', 'maximize'], '-',
   ['window.moveEdge', 'moveEdge'], ['window.moveCentre', 'moveCentre'], ['window.moveLeft', 'moveLeft'], ['window.moveRight', 'moveRight'], ['window.moveBelow', 'moveBelow'],
 ]
+
+// Phase Q: context menus of list rows and plot tabs. Each runs on the row or
+// tab it was opened on, through handlers its owner supplies (`menuCommands`).
+export const TABLE_ROW_MENU: readonly MenuEntry[] = ['table.rename', 'table.configure', 'table.plotSelected', '-', 'table.exportData', 'table.exportReport', 'table.retryFailed', '-', 'table.delete']
+export const PLOT_TAB_MENU: readonly MenuEntry[] = ['plot.rename', 'plot.configure', 'plot.export', '-']
+export const VARIABLE_ROW_MENU: readonly MenuEntry[] = ['variable.pin', 'variable.copyValue', 'variable.copyName', '-', 'tool.variableInfo']
+
+/** The commands of a context menu: the registry's entries with the handlers for its target. */
+export function menuCommands(handlers: Partial<Record<CommandId, CommandHandler | undefined>>): Commands {
+  const out: Partial<Commands> = {}
+  for (const id of Object.keys(handlers) as CommandId[]) {
+    const h = handlers[id]
+    const spec = COMMAND_SPECS[id] as CommandSpec
+    out[id] = { ...spec, id, run: h?.run ?? (() => {}), unavailable: h ? (h.unavailable ?? null) : 'Not available here.', checked: h?.checked, description: h?.description ?? spec.description }
+  }
+  return out as Commands
+}
 
 /** Where a command sits on the ribbon, e.g. "Analysis ▸ Optimize & Fit" (its first home). */
 export function ribbonLocation(id: CommandId): string | null {

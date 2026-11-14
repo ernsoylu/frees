@@ -47,9 +47,8 @@ import {
   type IconProps,
 } from '@tabler/icons-react'
 
-import { CommandMenuItems } from '../CommandMenuItems'
-import { ContextMenu } from '../ContextMenu'
-import { COMMAND_SPECS, TAB_MENU, type Commands } from '../commands'
+import { CommandContextMenu } from '../ContextMenu'
+import { COMMAND_SPECS, TAB_MENU, type Commands, type MenuEntry } from '../commands'
 import { windowActionReason, type DockWindow, type WindowAction } from './windowActions'
 
 const LAYOUT_KEY = 'frees-dock-layout-v3'
@@ -191,6 +190,8 @@ interface Props {
   edgeKinds?: string[]
   onActiveChange?: (active: Pick<OpenWindow, 'id' | 'kind' | 'title'> | null) => void
   onOpenChange?: (windows: OpenWindow[]) => void
+  /** Commands a window's tab menu shows above the window commands (a plot's Rename, Configure, Export). */
+  tabMenuFor?: (w: DockWindow) => { entries: readonly MenuEntry[]; cmds: Commands } | null
   /** Whether there is a layout change to undo. */
   onUndoChange?: (can: boolean) => void
   handleRef?: React.MutableRefObject<WorkspaceDockHandle | null>
@@ -206,6 +207,7 @@ export function WorkspaceDock({
   onActiveChange,
   onOpenChange,
   onUndoChange,
+  tabMenuFor,
   handleRef,
 }: Readonly<Props>) {
   const apiRef = useRef<DockviewApi | null>(null)
@@ -640,16 +642,19 @@ export function WorkspaceDock({
       ) as unknown as Commands)
     : null
 
+  const tabWindow = tabMenu?.windows.find((w) => w.id === tabMenu.id)
+  const tabExtras = tabWindow ? tabMenuFor?.(tabWindow) : null
+
   return (
     <PanelContentContext.Provider value={content}>
       {tabMenu && tabCommands && (
-        <ContextMenu
+        <CommandContextMenu
           at={tabMenu}
-          label={`${tabMenu.windows.find((w) => w.id === tabMenu.id)?.title ?? 'Window'} tab menu`}
+          label={`${tabWindow?.title ?? 'Window'} tab menu`}
           onClose={() => setTabMenu(null)}
-        >
-          <CommandMenuItems cmds={tabCommands} entries={TAB_MENU.map((e) => (e === '-' ? e : e[0]))} />
-        </ContextMenu>
+          cmds={{ ...tabCommands, ...tabExtras?.cmds }}
+          entries={[...(tabExtras?.entries ?? []), ...TAB_MENU.map((e) => (e === '-' ? e : e[0]))]}
+        />
       )}
       {/* Align dockview's surfaces with the app's Mantine color scale (these
           vars are theme-aware, so one block serves both light and dark). */}
