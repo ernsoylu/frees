@@ -1,3 +1,4 @@
+import { useKeptState } from './keptState'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { ActionIcon, Group, Tooltip } from '@mantine/core'
 import {
@@ -109,7 +110,7 @@ function longestCommonPrefix(words: string[]): string {
 export default function ReplTerminal({
   sessionId, variables, replNames = new Set(), functions = [], unitSystem, onAssign, onCheck, onSolve, onClear, onClearVar,
 }: Readonly<Props>) {
-  const [lines, setLines] = useState<Line[]>([{ kind: 'info', text: BANNER }])
+  const [lines, setLines] = useKeptState<Line[]>('terminal.lines', [{ kind: 'info', text: BANNER }])
   const [input, setInput] = useState('')
   const [history, setHistory] = useState<string[]>(() => {
     try {

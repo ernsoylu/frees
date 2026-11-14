@@ -1487,6 +1487,16 @@ On a Mac, \`⌘\` replaces \`Ctrl\`.
 
 > **Tip:** make \`F4\` (Check) a habit before \`F2\` (Solve). It reports the DoF and any unit mismatches instantly, so you fix problems before the solver runs. With a parametric table focused, \`F2\` solves every run of that table; the text beside **Check** and **Solve** names the target.
 
+## Windows
+Every view is a window you can drag: onto another to tab it, to an edge to split, or out of the grid to float. Each of those has a command too, so none needs a mouse.
+
+- **Right-click a tab** (or press the menu key or \`Shift + F10\` on a focused tab) for **Close View**, **Close Others**, **Close All in Group**, **Float or Dock Back**, **Maximize or Restore**, **Move to Edge**, **Move to Centre** and **Move Left / Right / Below**. The menu acts on the tab you opened it on. A command that cannot run now stays listed, with the reason under it.
+- The same commands are in the palette (\`Ctrl + K\`), where they act on the active window, and on **View → Windows** and **View → Move** with the ribbon on. They have no keys of their own: \`Ctrl + W\` and \`Ctrl + Tab\` belong to the browser.
+- **Window List…** (palette, or View → Windows) lists every open window by kind. Type to search, press \`Enter\` to go to the first match, or close a view from its row.
+- The rail's **Tables** and **Plots** menus have **Focus All** and **Close All**.
+
+Closing a view never deletes anything: the table, plot or document stays in the project, and opening the view again shows it as it was.
+
 ## The ribbon (preview)
 Turn on **Preferences → Ribbon (preview)** to replace the Functions and Tools menus with tabs of labelled commands:
 

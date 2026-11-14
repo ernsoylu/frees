@@ -3,6 +3,7 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import { clearKeptState } from '../keptState'
 
 // Node >=26 ships experimental Web Storage, which puts a `localStorage` GETTER on
 // globalThis that returns undefined unless the process was started with
@@ -35,4 +36,6 @@ if (globalThis.localStorage == null) {
 
 afterEach(() => {
   cleanup()
+  // Drafts kept past their dialog (Phase Q) must not pass from one test to the next.
+  clearKeptState()
 })

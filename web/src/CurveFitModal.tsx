@@ -1,3 +1,4 @@
+import { useKeptState } from './keptState'
 import { useState, useEffect, useRef } from 'react'
 import {
   Badge,
@@ -149,19 +150,19 @@ export default function CurveFitModal({
   onClose,
   onInsertEquation,
 }: Readonly<Props>) {
-  const [templateKey, setTemplateKey] = useState<string>('custom')
-  const [model, setModel] = useState('y = a * exp(-b * x) + c')
-  const [yVariable, setYVariable] = useState('y')
-  const [xVariable, setXVariable] = useState('x')
-  const [parameters, setParameters] = useState('a, b, c')
-  const [guesses, setGuesses] = useState('')
-  const [lowerBounds, setLowerBounds] = useState('')
-  const [upperBounds, setUpperBounds] = useState('')
-  const [loss, setLoss] = useState<LossName>('linear')
-  const [fScale, setFScale] = useState<number | ''>('')
-  const [confidence, setConfidence] = useState<number | ''>(0.95)
-  const [sigmaColumnName, setSigmaColumnName] = useState<string>('')
-  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [templateKey, setTemplateKey] = useKeptState<string>('curvefit.templateKey', 'custom')
+  const [model, setModel] = useKeptState('curvefit.model', 'y = a * exp(-b * x) + c')
+  const [yVariable, setYVariable] = useKeptState('curvefit.yVariable', 'y')
+  const [xVariable, setXVariable] = useKeptState('curvefit.xVariable', 'x')
+  const [parameters, setParameters] = useKeptState('curvefit.parameters', 'a, b, c')
+  const [guesses, setGuesses] = useKeptState('curvefit.guesses', '')
+  const [lowerBounds, setLowerBounds] = useKeptState('curvefit.lowerBounds', '')
+  const [upperBounds, setUpperBounds] = useKeptState('curvefit.upperBounds', '')
+  const [loss, setLoss] = useKeptState<LossName>('curvefit.loss', 'linear')
+  const [fScale, setFScale] = useKeptState<number | ''>('curvefit.fScale', '')
+  const [confidence, setConfidence] = useKeptState<number | ''>('curvefit.confidence', 0.95)
+  const [sigmaColumnName, setSigmaColumnName] = useKeptState<string>('curvefit.sigmaColumnName', '')
+  const [advancedOpen, setAdvancedOpen] = useKeptState('curvefit.advancedOpen', false)
   const [running, setRunning] = useState(false)
   const [validation, setValidation] = useState<string | null>(null)
   const [result, setResult] = useState<CurveFitResponse | null>(null)
@@ -176,11 +177,11 @@ export default function CurveFitModal({
   const [parameterUnits, setParameterUnits] = useState<Record<string, string>>({})
 
   // Table selection states
-  const [dataMode, setDataMode] = useState<'manual' | 'table'>('manual')
-  const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
-  const [xColumnName, setXColumnName] = useState<string>('')
-  const [yColumnName, setYColumnName] = useState<string>('')
-  const [data, setData] = useState('')
+  const [dataMode, setDataMode] = useKeptState<'manual' | 'table'>('curvefit.dataMode', 'manual')
+  const [selectedTableId, setSelectedTableId] = useKeptState<string | null>('curvefit.selectedTableId', null)
+  const [xColumnName, setXColumnName] = useKeptState<string>('curvefit.xColumnName', '')
+  const [yColumnName, setYColumnName] = useKeptState<string>('curvefit.yColumnName', '')
+  const [data, setData] = useKeptState('curvefit.data', '')
 
   useEffect(() => {
     if (defaultTableId && tables.length > 0) {

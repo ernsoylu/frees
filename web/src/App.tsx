@@ -184,6 +184,9 @@ import { Rail, TopBar, tablePill } from './WorkspaceChrome'
 import type { WorkspaceDockHandle, OpenWindow } from './workspace/WorkspaceDock'
 import { windowActionReason, type WindowAction } from './workspace/windowActions'
 import { WindowListModal } from './WindowListModal'
+import { clearKeptState } from './keptState'
+import { LayoutsModal } from './LayoutsModal'
+import { deleteLayout, layoutForm, readLayouts, renameLayout, saveLayout, writeLayouts, type LayoutStore } from './workspace/layouts'
 const WorkspaceDock = lazy(() => import('./workspace/WorkspaceDock').then(m => ({ default: m.WorkspaceDock })))
 import { detectStates } from './plots/stateTable'
 import { formatValue, withStableKeys } from './format'
@@ -392,6 +395,8 @@ export default function App() {
 
   const [projectName, setProjectName] = useState('untitled')
   const [workspaceEpoch, setWorkspaceEpoch] = useState(0)
+  // A draft kept past its dialog names this project's variables and tables: forget it with the project.
+  useEffect(() => clearKeptState, [workspaceEpoch])
   const projectFileRef = useRef<HTMLInputElement>(null)
 
   const [text, setText] = useState(sharedBoot ?? boot?.text ?? EXAMPLE)
@@ -803,6 +808,27 @@ export default function App() {
     writeRibbonDensity(d)
   }
   const [layoutName, setLayoutName] = useState('Restored')
+  // Phase Q: named layouts, saved on this device for this screen size.
+  const [layouts, setLayouts] = useState<LayoutStore>(() => readLayouts())
+  const [ribbonTab, setRibbonTab] = useState('home')
+  const [showSaveLayout, setShowSaveLayout] = useState(false)
+  const [showManageLayouts, setShowManageLayouts] = useState(false)
+  const [canUndoLayout, setCanUndoLayout] = useState(false)
+  // The window ids this project can show, kept by the effect that closes the
+  // rest. A restored layout is checked against it, so the windows it names
+  // that no longer exist are left out with a notice, not silently.
+  const validWindowIdsRef = useRef<Set<string>>(new Set())
+  const dropMissingWindows = () => {
+    const gone = (dockRef.current?.windows() ?? []).filter((w) => !validWindowIdsRef.current.has(w.id))
+    for (const w of gone) dockRef.current?.close(w.id)
+    if (gone.length > 0) {
+      notifications.show({
+        color: 'yellow',
+        title: 'Layout restored without some windows',
+        message: `${gone.map((w) => w.title).join(', ')}: no longer in this project, so left out.`,
+      })
+    }
+  }
   const { setColorScheme } = useMantineColorScheme()
   // Windows publish their contextual commands (contextActions.ts); re-render when they change.
   useContextVersion()
@@ -1144,6 +1170,7 @@ export default function App() {
     setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => {
       dockRef.current?.restore(p.dockLayout)
+      if (p.dockLayout != null) dropMissingWindows()
     })
   }, [applyText])
 
@@ -2992,6 +3019,7 @@ export default function App() {
       ...tables.filter((t) => !isHostedTable(t)).map((t) => `table:${t.id}`),
       ...(result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []).map((s) => `state:${s.name}`),
     ])
+    validWindowIdsRef.current = valid
     for (const w of openWindows) {
       if (!valid.has(w.id)) dockRef.current?.close(w.id)
     }
@@ -3143,6 +3171,24 @@ export default function App() {
     dockRef.current?.applyPerspective(name)
     setLayoutName(label)
   }
+  const form = layoutForm()
+  const storeLayouts = (next: LayoutStore) => {
+    setLayouts(next)
+    if (!writeLayouts(next)) notifications.show({ color: 'red', message: 'This browser would not store the layouts; they last until the page closes.' })
+  }
+  const applyLayout = (name: string) => {
+    const l = layouts[form].find((x) => x.name === name)
+    if (!l) return
+    if (dockRef.current?.restore(l.dock) === false) {
+      notifications.show({ color: 'red', title: `Layout "${l.name}" could not be read`, message: 'The default layout was built instead. Undo Layout Change returns to the windows as they were.' })
+      setLayoutName('Default')
+      return
+    }
+    dropMissingWindows()
+    if (l.density) changeRibbonDensity(l.density)
+    if (l.ribbonTab) setRibbonTab(l.ribbonTab)
+    setLayoutName(l.name)
+  }
   // With a parametric table focused, the status bar reads that table, as the status pill does.
   const statusSolveText = focusedParam
     ? `${focusedParam.name}: ${solvingTableId === focusedParam.id ? 'running…' : checkingTableId === focusedParam.id ? 'checking…' : (tablePill(focusedParam.results, tableCheckResult, tableCheckMessage, focusedParam.stats)?.label ?? 'not run yet')}`
@@ -3179,7 +3225,10 @@ export default function App() {
     'window.moveLeft': onWindow('moveLeft'),
     'window.moveRight': onWindow('moveRight'),
     'window.moveBelow': onWindow('moveBelow'),
-    'layout.default': { run: perspective('default', 'Default View') },
+    'layout.default': { run: perspective('default', 'Default') },
+    'layout.saveAs': { run: () => setShowSaveLayout(true) },
+    'layout.manage': { run: () => setShowManageLayouts(true) },
+    'layout.undo': { run: () => { dockRef.current?.undoLayout(); setLayoutName('Custom') }, unavailable: canUndoLayout ? null : 'No layout change to undo yet.' },
     'layout.results': { run: perspective('results', 'Results Focused') },
     'layout.split': { run: perspective('split', 'Split View') },
     'table.newParametric': { run: () => createTable('parametric') },
@@ -4043,6 +4092,8 @@ export default function App() {
             onDensityChange: changeRibbonDensity,
             context: fw?.kind === 'table' || fw?.kind === 'plot' || fw?.kind === 'schematic' || fw?.kind === 'digitizer' ? fw.kind : null,
             contextNote: codeTable ? 'Defined in equations' : null,
+            tab: ribbonTab,
+            onTabChange: setRibbonTab,
           } : undefined}
         />
         <input
@@ -4081,6 +4132,7 @@ export default function App() {
                 }
               }}
               onOpenChange={setOpenWindows}
+              onUndoChange={setCanUndoLayout}
               handleRef={dockRef}
             />
           </Suspense>
@@ -4108,6 +4160,38 @@ export default function App() {
         </Flex>
       )}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      <TextPromptModal
+        opened={showSaveLayout}
+        title="Save Layout As"
+        label="Layout name (a layout of the same name is replaced)"
+        defaultValue={layoutName === 'Restored' || layoutName === 'Custom' || layoutName === 'Default' ? '' : layoutName}
+        confirmLabel="Save layout"
+        onClose={() => setShowSaveLayout(false)}
+        onSubmit={(value) => {
+          const name = value.trim()
+          const dock = dockRef.current?.serialize()
+          if (!name || !dock) return
+          storeLayouts(saveLayout(layouts, form, { name, dock, ribbonTab, density: ribbonDensity }))
+          setLayoutName(name)
+          setShowSaveLayout(false)
+        }}
+      />
+      {showManageLayouts && (
+        <LayoutsModal
+          layouts={layouts[form]}
+          form={form}
+          onApply={applyLayout}
+          onRename={(from, to) => {
+            const next = renameLayout(layouts, form, from, to)
+            if (!next) return false
+            storeLayouts(next)
+            if (layoutName === from) setLayoutName(to.trim())
+            return true
+          }}
+          onDelete={(name) => storeLayouts(deleteLayout(layouts, form, name))}
+          onClose={() => setShowManageLayouts(false)}
+        />
+      )}
       {showWindowList && (
         <WindowListModal
           windows={openWindows}

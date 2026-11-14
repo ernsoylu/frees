@@ -1,3 +1,4 @@
+import { useKeptState } from './keptState'
 import { useMemo, useState } from 'react'
 import {
   Alert,
@@ -67,13 +68,13 @@ export default function SensitivityModal({
   /** The output to show first once the analysis has run (RUN-06 handoff). */
   initialOutput?: string
 }>) {
-  const [method, setMethod] = useState<'sobol' | 'morris'>('sobol')
-  const [samples, setSamples] = useState<number>(100)
-  const [design, setDesign] = useState<'sobol' | 'lhs' | 'random'>('sobol')
-  const [bootstrap, setBootstrap] = useState<number>(200)
-  const [trajectories, setTrajectories] = useState<number>(10)
-  const [levels, setLevels] = useState<number>(4)
-  const [seed, setSeed] = useState<number>(42)
+  const [method, setMethod] = useKeptState<'sobol' | 'morris'>('sensitivity.method', 'sobol')
+  const [samples, setSamples] = useKeptState<number>('sensitivity.samples', 100)
+  const [design, setDesign] = useKeptState<'sobol' | 'lhs' | 'random'>('sensitivity.design', 'sobol')
+  const [bootstrap, setBootstrap] = useKeptState<number>('sensitivity.bootstrap', 200)
+  const [trajectories, setTrajectories] = useKeptState<number>('sensitivity.trajectories', 10)
+  const [levels, setLevels] = useKeptState<number>('sensitivity.levels', 4)
+  const [seed, setSeed] = useKeptState<number>('sensitivity.seed', 42)
 
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)

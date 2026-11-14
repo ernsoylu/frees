@@ -730,6 +730,8 @@ interface TopBarProps {
     onDensityChange: (d: RibbonDensity) => void
     context: RibbonContext | null
     contextNote?: string | null
+    tab?: string
+    onTabChange?: (id: string) => void
   }
 }
 
@@ -1057,6 +1059,8 @@ export function TopBar(props: Readonly<TopBarProps>) {
         context={props.ribbon.context}
         contextNote={props.ribbon.contextNote}
         density={props.ribbon.density}
+        tab={props.ribbon.tab}
+        onTabChange={props.ribbon.onTabChange}
         onDensityChange={props.ribbon.onDensityChange}
       />
     </Stack>

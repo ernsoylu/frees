@@ -45,7 +45,7 @@ test('O: the Preferences switch turns the ribbon and status bar on, and every me
     ['Insert', ['New Parametric Table', 'New Function Table (one input)', 'New Function Table (curve family)', 'Import CSV as Function Table', 'New Fluid State Table', 'New X-Y Plot', 'Component Wizard', 'Insert Function…', 'Graph Digitizer']],
     ['Data', ['Export Equation Text…', 'Open URL…', 'Table Operations…']],
     ['Analysis', ['Optimization…', 'Curve Fit…', 'Parameter Estimation…', 'Monte Carlo…', 'Global Sensitivity…', 'PID Tuner…', 'Variable Settings…']],
-    ['View', ['Variable Explorer', 'Terminal', 'Inspector', 'Default View', 'Toggle Light/Dark Theme', 'Preferences']],
+    ['View', ['Variable Explorer', 'Terminal', 'Inspector', 'Reset Workspace Layout', 'Toggle Light/Dark Theme', 'Preferences']],
     ['Help', ['Getting Started…', 'Open Example…', 'Documentation', 'Keyboard Shortcuts', 'About']],
   ]
   for (const [name, buttons] of reach) {
