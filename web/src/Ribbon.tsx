@@ -3,14 +3,17 @@
 // built from the command registry. Expanded, compact or collapsed (a tab click
 // then peeks the panel over the workspace); double-click a tab or press
 // Ctrl+F1 to collapse or expand. Group labels name `role="group"` regions,
-// arrow keys move within the panel, and overflow scrolls behind chevrons.
+// arrow keys move within the panel, and overflow scrolls behind chevrons. A tab
+// with a `slot` (the Schematic tab, View › Schematic) holds groups its window
+// portals in (`ribbonSlots.ts`, Phase P).
 //
 // It imports nothing heavy: no Plotly, no analysis dialog (AC-13).
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { ActionIcon, Button, Menu, Stack, Tabs, Text, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core'
 import { IconChevronDown, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { CONTEXT_TABS, keyLabel, RIBBON_TABS, type Command, type Commands, type RibbonTab } from './commands'
 import type { RibbonDensity } from './ribbonPrefs'
+import { setRibbonOn, slotRef } from './ribbonSlots'
 
 export type RibbonContext = keyof typeof CONTEXT_TABS
 
@@ -83,10 +86,13 @@ export function RibbonButton({ cmd, density, onRan }: Readonly<{ cmd: Command; d
   )
 }
 
-function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
+// A native listener, not React's onKeyDown: a slot's controls are portaled in
+// by their own window, so React bubbles their keys through that window's tree,
+// while the DOM bubbles them here.
+function moveFocus(panel: HTMLElement, e: KeyboardEvent) {
   const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
   if (!keys.includes(e.key)) return
-  const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[data-ribbon-item]')]
+  const items = [...panel.querySelectorAll<HTMLElement>('[data-ribbon-item], [data-ribbon-slot] button:not(:disabled)')]
   const at = items.indexOf(document.activeElement as HTMLElement)
   if (at < 0) return
   e.preventDefault()
@@ -94,10 +100,33 @@ function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
   items[next].focus()
 }
 
+/** A labelled `role="group"` region of a ribbon panel. */
+export function RibbonGroup({ label, compact, children }: Readonly<{ label: string; compact?: boolean; children: ReactNode }>) {
+  const labelId = useId()
+  return (
+    <div
+      role="group"
+      aria-labelledby={labelId}
+      style={{
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexShrink: 0,
+        padding: '2px 6px', borderRight: '1px solid var(--mantine-color-default-border)',
+      }}
+    >
+      <div style={{ display: 'flex', gap: 2, alignItems: compact ? 'center' : 'flex-start', flexWrap: compact ? 'wrap' : 'nowrap', maxWidth: compact ? 420 : undefined }}>
+        {children}
+      </div>
+      <Text id={labelId} size="10px" c="dimmed" ta="center" mt={2} style={{ whiteSpace: 'nowrap' }}>
+        {label}
+      </Text>
+    </div>
+  )
+}
+
+const CHEVRON = { position: 'absolute', top: 0, bottom: 0, zIndex: 1, background: 'var(--mantine-color-body)' } as const
+
 function RibbonPanel({ tab, commands, density, note, onRan }: Readonly<{ tab: RibbonTab; commands: Commands; density: RibbonDensity; note?: string | null; onRan?: () => void }>) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [overflow, setOverflow] = useState({ left: false, right: false })
-  const baseId = useId()
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -105,53 +134,45 @@ function RibbonPanel({ tab, commands, density, note, onRan }: Readonly<{ tab: Ri
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
+    // A slot's groups arrive a render later, through a portal; their width counts too.
+    for (const c of el.children) ro.observe(c)
     el.addEventListener('scroll', measure, { passive: true })
+    const onKey = (e: KeyboardEvent) => moveFocus(el, e)
+    el.addEventListener('keydown', onKey)
     return () => {
       ro.disconnect()
       el.removeEventListener('scroll', measure)
+      el.removeEventListener('keydown', onKey)
     }
   }, [tab.id, density])
   const scroll = (dx: number) => scrollRef.current?.scrollBy({ left: dx, behavior: 'smooth' })
   const itemDensity = density === 'collapsed' ? 'expanded' : density
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', minWidth: 0 }}>
+    // The chevrons overlay the panel's edges: as flex siblings they would move and
+    // clip its items as they come and go, and a popover hides when its target is clipped.
+    <div style={{ display: 'flex', alignItems: 'stretch', minWidth: 0, position: 'relative' }}>
       {overflow.left && (
-        <ActionIcon variant="subtle" color="gray" h="auto" aria-label="Scroll ribbon left" onClick={() => scroll(-240)}>
+        <ActionIcon variant="subtle" color="gray" h="auto" style={{ ...CHEVRON, left: 0 }} aria-label="Scroll ribbon left" onClick={() => scroll(-240)}>
           <IconChevronLeft size={14} />
         </ActionIcon>
       )}
-      <div ref={scrollRef} onKeyDown={moveFocus} style={{ display: 'flex', alignItems: 'stretch', overflowX: 'auto', scrollbarWidth: 'none', flex: 1, minWidth: 0 }}>
+      <div ref={scrollRef} style={{ display: 'flex', alignItems: 'stretch', overflowX: 'auto', scrollbarWidth: 'none', flex: 1, minWidth: 0 }}>
         {note && (
           <Text size="xs" c="dimmed" px="sm" style={{ alignSelf: 'center', whiteSpace: 'nowrap' }}>
             {note}
           </Text>
         )}
-        {tab.groups.map((g, gi) => {
-          const labelId = `${baseId}-g${gi}`
-          return (
-            <div
-              key={g.label}
-              role="group"
-              aria-labelledby={labelId}
-              style={{
-                display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexShrink: 0,
-                padding: '2px 6px', borderRight: '1px solid var(--mantine-color-default-border)',
-              }}
-            >
-              <div style={{ display: 'flex', gap: 2, alignItems: density === 'compact' ? 'center' : 'flex-start', flexWrap: density === 'compact' ? 'wrap' : 'nowrap', maxWidth: density === 'compact' ? 420 : undefined }}>
-                {g.items.map((id) => (
-                  <RibbonButton key={id} cmd={commands[id]} density={itemDensity} onRan={onRan} />
-                ))}
-              </div>
-              <Text id={labelId} size="10px" c="dimmed" ta="center" mt={2} style={{ whiteSpace: 'nowrap' }}>
-                {g.label}
-              </Text>
-            </div>
-          )
-        })}
+        {tab.groups.map((g) => (
+          <RibbonGroup key={g.label} label={g.label} compact={density === 'compact'}>
+            {g.items.map((id) => (
+              <RibbonButton key={id} cmd={commands[id]} density={itemDensity} onRan={onRan} />
+            ))}
+          </RibbonGroup>
+        ))}
+        {tab.slot && <div ref={slotRef(tab.slot)} data-ribbon-slot={tab.slot} style={{ display: 'flex', alignItems: 'stretch', flexShrink: 0 }} />}
       </div>
       {overflow.right && (
-        <ActionIcon variant="subtle" color="gray" h="auto" aria-label="Scroll ribbon right" onClick={() => scroll(240)}>
+        <ActionIcon variant="subtle" color="gray" h="auto" style={{ ...CHEVRON, right: 0 }} aria-label="Scroll ribbon right" onClick={() => scroll(240)}>
           <IconChevronRight size={14} />
         </ActionIcon>
       )}
@@ -175,6 +196,10 @@ export function Ribbon({ commands, context, contextNote, density, onDensityChang
   const [peek, setPeek] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const collapsed = density === 'collapsed'
+  useEffect(() => {
+    setRibbonOn(true)
+    return () => setRibbonOn(false)
+  }, [])
   // Ctrl+F1 and double-click are one command, so App keeps the density to return to.
   const toggleCollapsed = () => {
     setPeek(false)
@@ -184,9 +209,11 @@ export function Ribbon({ commands, context, contextNote, density, onDensityChang
   useEffect(() => {
     if (!peek) return
     const close = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setPeek(false)
+      // A menu or popover a slotted control opened lives in a portal, outside the ribbon.
+      const t = e.target as Element
+      if (!rootRef.current?.contains(t) && !t.closest?.('[data-portal]')) setPeek(false)
     }
-    const esc = (e: globalThis.KeyboardEvent) => {
+    const esc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setPeek(false)
     }
     document.addEventListener('mousedown', close)

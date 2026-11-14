@@ -1,24 +1,25 @@
 // CFG-08/10: the canvas commands, listed once for the command palette and the
-// shortcuts sheet. Keys act only while the drawing has focus.
+// shortcuts sheet. Keys act only while the drawing has focus. `group` is the
+// command's group on the ribbon's Schematic tab (Phase P).
 
 export const CANVAS_COMMANDS = [
-  { id: 'add', label: 'Add component', keys: ['A'] },
-  { id: 'list', label: 'Component and connection list', keys: ['L'] },
-  { id: 'search', label: 'Search the model', keys: ['/'] },
-  { id: 'fit', label: 'Fit drawing', keys: ['Shift', '1'] },
-  { id: 'fit-selection', label: 'Fit selection', keys: ['Shift', '2'] },
-  { id: 'select-all', label: 'Select all components', keys: ['Ctrl', 'A'] },
-  { id: 'duplicate', label: 'Duplicate selection', keys: ['Ctrl', 'D'] },
-  { id: 'copy', label: 'Copy selection', keys: ['Ctrl', 'C'] },
-  { id: 'cut', label: 'Cut selection', keys: ['Ctrl', 'X'] },
-  { id: 'paste', label: 'Paste components', keys: ['Ctrl', 'V'] },
-  { id: 'delete', label: 'Delete selection…', keys: ['Del'] },
-  { id: 'undo', label: 'Undo schematic edit', keys: ['Ctrl', 'Z'] },
-  { id: 'redo', label: 'Redo schematic edit', keys: ['Ctrl', 'Shift', 'Z'] },
-  { id: 'arrange', label: 'Arrange all', keys: [] },
-  { id: 'extract', label: 'Extract subsystem…', keys: [] },
-  { id: 'tree', label: 'Model tree', keys: [] },
-  { id: 'export', label: 'Export drawing…', keys: [] },
+  { id: 'add', label: 'Add component', keys: ['A'], group: 'Model' },
+  { id: 'list', label: 'Component and connection list', keys: ['L'], group: 'Model' },
+  { id: 'search', label: 'Search the model', keys: ['/'], group: 'Model' },
+  { id: 'fit', label: 'Fit drawing', keys: ['Shift', '1'], group: 'Zoom' },
+  { id: 'fit-selection', label: 'Fit selection', keys: ['Shift', '2'], group: 'Zoom' },
+  { id: 'select-all', label: 'Select all components', keys: ['Ctrl', 'A'], group: 'Edit' },
+  { id: 'duplicate', label: 'Duplicate selection', keys: ['Ctrl', 'D'], group: 'Edit' },
+  { id: 'copy', label: 'Copy selection', keys: ['Ctrl', 'C'], group: 'Edit' },
+  { id: 'cut', label: 'Cut selection', keys: ['Ctrl', 'X'], group: 'Edit' },
+  { id: 'paste', label: 'Paste components', keys: ['Ctrl', 'V'], group: 'Edit' },
+  { id: 'delete', label: 'Delete selection…', keys: ['Del'], group: 'Edit' },
+  { id: 'undo', label: 'Undo schematic edit', keys: ['Ctrl', 'Z'], group: 'Edit' },
+  { id: 'redo', label: 'Redo schematic edit', keys: ['Ctrl', 'Shift', 'Z'], group: 'Edit' },
+  { id: 'arrange', label: 'Arrange all', keys: [], group: 'Arrange' },
+  { id: 'extract', label: 'Extract subsystem…', keys: [], group: 'Edit' },
+  { id: 'tree', label: 'Model tree', keys: [], group: 'Model' },
+  { id: 'export', label: 'Export drawing…', keys: [], group: 'Drawing Views' },
 ] as const
 
 export type CanvasCommand = (typeof CANVAS_COMMANDS)[number]['id']

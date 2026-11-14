@@ -1223,6 +1223,29 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
 - **Canvas strip.** The canvas keeps the compact strip. The view-settings popover moves to View › Schematic, with its persisted settings unchanged.
 - **Wording.** Arrange Drawing stays distinct from Reset Workspace Layout.
 - **Acceptance.** `e2e/schematic-baseline.spec.ts` passes. Any re-baselined screenshot is reviewed image by image, with the reason recorded. Every canvas command is reachable from the tab, the palette and its key.
+- **P done 2026-11-13 (`ux-p-schematic`).**
+  - **Slots.** A ribbon tab can carry a `slot` (`ribbonSlots.ts`). While the tab is shown, the ribbon registers the slot's element, and the window portals its own groups into it. Each control keeps its handler, icon, shortcut and state and changes parent only. With the ribbon off, the canvas toolbar is unchanged.
+  - **Schematic tab.** It is contextual and appears while the schematic is focused, without being selected. Its groups:
+    - **Sheets:** the sheet menu.
+    - **Model:** Add component, List, Search, Model tree (inside subsystems), and Connect from/to.
+    - **Edit:** Undo, Redo, the Edit menu and Select.
+    - **Arrange:** the Arrange menu and Reset layout.
+    - **Overlay.**
+    - **Annotate.**
+    - **Drawing Views:** saved views and Export drawing….
+    - **Zoom:** out, in, level and Fit.
+  - **Canvas strip.** The strip keeps the line legend, the sheet badge, the component count, the breadcrumb and Model tree, every transient prompt (wiring, drafts, Arrange preview, fixes), the issue and selection counts, Search (the `/` key opens it there), and zoom and fit.
+  - **View settings** moved to the **View › Schematic** group. Their settings ride the presentation as before.
+  - **Palette.** With the ribbon on, each canvas command's palette row names its group (e.g. "Schematic ▸ Model · L on the drawing").
+  - **Ribbon fix.** The overflow chevrons now overlay the panel edges. As flex siblings they moved and clipped items as they appeared, and Mantine hides a popover whose target is clipped (View › Schematic › View settings opened invisibly at 1440 px).
+  - **Evidence:**
+    - `e2e/schematic-ribbon.spec.ts` (3 tests): every group; every canvas command found in its group or menu; Select › All and Search run from the tab; the palette row; View settings applied from View › Schematic; a menu used from a peeked, collapsed tab; and ribbon off keeps every toolbar control.
+    - `ribbon.test.tsx`: the slot test.
+    - `e2e/schematic-baseline.spec.ts` passes with the ribbon off. No screenshot was re-baselined.
+  - **Ceiling:**
+    - Slotted controls keep their canvas size (compact buttons and icons), not the ribbon's tall labelled buttons.
+    - The sheet menu and the zoom controls appear on both the strip and the tab.
+    - The tab is empty until the first Check draws a network.
 
 **Phase Q — windows and layouts** (Doc A P1b; Doc B phase 3 window parts).
 - **Dock handle.** It gains focus, move, float/dock-back, maximize/restore and close-others/close-all-in-group, each through dockview's supported API (checked against the pinned version first).
