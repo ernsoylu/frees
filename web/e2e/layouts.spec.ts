@@ -137,3 +137,29 @@ test('Q: a layout naming a window the project no longer has leaves it out and sa
   await expect(page.getByText('Layout "Broken" could not be read')).toBeVisible()
   await expect.poll(async () => (await groups(page)).join('+')).toContain('equations')
 })
+
+test('Q: Close All is one change to undo, and a layout with every view closed stays so on reload', async ({ page }) => {
+  await open(page)
+  for (let i = 0; i < 2; i++) {
+    await runCommand(page, 'New X-Y Plot')
+    await page.getByRole('dialog', { name: 'New Plot' }).getByRole('button', { name: 'Add plot' }).click()
+  }
+  const plots = async () => (await groups(page)).join('+').split('+').filter((id) => id.startsWith('plot:')).length
+  await expect.poll(plots).toBe(2)
+  const before = await groups(page)
+  await page.getByRole('button', { name: 'Plots windows' }).click()
+  await page.getByRole('menuitem', { name: 'Close All' }).click()
+  await expect.poll(plots).toBe(0)
+  await runCommand(page, 'Undo Layout Change')
+  await expect.poll(() => groups(page)).toEqual(before)
+
+  // Every view closed is a layout too: it is what comes back, not the default.
+  await page.evaluate(() => (window as unknown as { __freesTest: { dockviewApi: { clear(): void } } }).__freesTest.dockviewApi.clear())
+  await expect.poll(() => groups(page)).toEqual([])
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Plots windows' })).toBeVisible()
+  await expect.poll(() => groups(page)).toEqual([])
+  // And any view opens again from the rail or the palette.
+  await runCommand(page, 'Editor')
+  await expect(page.locator('.cm-content')).toContainText('L = 4')
+})
