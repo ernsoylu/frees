@@ -104,8 +104,8 @@ interface RailProps {
   commands?: Commands
   onOpenPlot?: (id: string) => void
   onOpenTable?: (id: string) => void
-  /** Close every open window whose id starts with the prefix (Phase Q launchers). */
-  onCloseWindows?: (idPrefix: string) => void
+  /** Close every open window whose id starts with one of the prefixes (Phase Q launchers). */
+  onCloseWindows?: (idPrefixes: string[]) => void
   onPreferences: () => void
   onAbout: () => void
 }
@@ -126,6 +126,7 @@ function InstanceLauncher({
   openIds,
   onOpen,
   onCloseAll,
+  windowPrefixes,
 }: Readonly<{
   expanded: boolean
   active: boolean
@@ -139,8 +140,10 @@ function InstanceLauncher({
   openIds: Set<string>
   onOpen?: (id: string) => void
   onCloseAll?: () => void
+  /** The id prefixes of the windows this menu lists: the Tables menu lists fluid-state tables too. */
+  windowPrefixes: string[]
 }>) {
-  const anyOpen = [...openIds].some((id) => id.startsWith(idPrefix))
+  const anyOpen = [...openIds].some((id) => windowPrefixes.some((p) => id.startsWith(p)))
   const variant = active ? 'light' : 'subtle'
   const color = active ? 'teal' : 'gray'
   const target = expanded ? (
@@ -417,7 +420,8 @@ export function Rail({
               items={plots}
               openIds={openIdSet}
               onOpen={onOpenPlot}
-              onCloseAll={() => onCloseWindows?.('plot:')}
+              windowPrefixes={['plot:']}
+              onCloseAll={() => onCloseWindows?.(['plot:'])}
             />
           ) : view.value === 'table' && workspaceTables ? (
             <InstanceLauncher
@@ -433,7 +437,8 @@ export function Rail({
               items={workspaceTables}
               openIds={openIdSet}
               onOpen={onOpenTable}
-              onCloseAll={() => onCloseWindows?.('table:')}
+              windowPrefixes={['table:', 'state:']}
+              onCloseAll={() => onCloseWindows?.(['table:', 'state:'])}
             />
           ) : (
             <RailEntry

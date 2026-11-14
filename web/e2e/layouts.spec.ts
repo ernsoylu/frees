@@ -117,12 +117,19 @@ test('Q: a layout naming a window the project no longer has leaves it out and sa
   })
   await page.reload()
   await dismissWelcome(page)
+  await runCommand(page, 'Graph Digitizer')
+  await expect.poll(async () => (await groups(page)).join('+')).toContain('digitizer')
+  const before = await groups(page)
   await runCommand(page, 'Manage Layouts…')
   await page.getByRole('group', { name: 'With plot' }).getByRole('button', { name: 'Apply' }).click()
   await expect(page.getByText('Layout restored without some windows')).toBeVisible()
   await expect(page.getByText(/Ghost plot: no longer in this project/)).toBeVisible()
   await expect.poll(async () => (await groups(page)).join('+')).not.toContain('plot:ghost')
   await expect.poll(async () => (await groups(page)).join('+')).toContain('equations')
+  // Leaving the window out is part of applying the layout: one Undo returns to the windows before it.
+  expect((await groups(page)).join('+')).not.toContain('digitizer')
+  await runCommand(page, 'Undo Layout Change')
+  await expect.poll(() => groups(page)).toEqual(before)
 
   // A layout dockview cannot read builds the default and says so.
   await runCommand(page, 'Manage Layouts…')

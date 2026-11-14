@@ -162,8 +162,10 @@ export interface WorkspaceDockHandle {
   /** Discard the saved layout and reopen the default set. */
   reset: () => void
   /** Restore a previously-serialised dockview layout (from a project file or a
-   *  named layout). False when it could not be read and the default was built. */
-  restore: (layout: unknown) => boolean
+   *  named layout), leaving out the windows `keep` refuses, as one change to
+   *  undo. `ok` is false when it could not be read and the default was built;
+   *  `dropped` holds the titles of the windows left out. */
+  restore: (layout: unknown, keep?: (id: string) => boolean) => { ok: boolean; dropped: string[] }
   /** The open windows as dockview holds them now. */
   windows: () => DockWindow[]
   /** The dock's layout as dockview serialises it, for a named layout. */
@@ -508,18 +510,22 @@ export function WorkspaceDock({
         localStorage.removeItem(LAYOUT_KEY)
         change(api, () => buildDefault(api))
       },
-      restore: (layout) => {
+      restore: (layout, keep) => {
         const api = apiRef.current
-        if (!api || layout == null || typeof layout !== 'object') return true
+        if (!api || layout == null || typeof layout !== 'object') return { ok: true, dropped: [] }
         return change(api, () => {
           try {
             api.fromJSON(layout as Parameters<DockviewApi['fromJSON']>[0])
-            if (api.panels.length > 0) return true
           } catch {
-            // Corrupt or version-mismatched layout: fall through to the default.
+            // Corrupt or version-mismatched layout: the default instead.
+            buildDefault(api)
+            return { ok: false, dropped: [] }
           }
-          buildDefault(api)
-          return false
+          // A layout with every view closed is a layout, not a failure.
+          const gone = keep ? api.panels.filter((p) => !keep(p.id)) : []
+          const dropped = gone.map((p) => p.title ?? p.id)
+          for (const p of gone) api.removePanel(p)
+          return { ok: true, dropped }
         })
       },
       windows: () => (apiRef.current ? snapshot(apiRef.current) : []),

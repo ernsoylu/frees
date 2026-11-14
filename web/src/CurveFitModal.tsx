@@ -183,10 +183,15 @@ export default function CurveFitModal({
   const [yColumnName, setYColumnName] = useKeptState<string>('curvefit.yColumnName', '')
   const [data, setData] = useKeptState('curvefit.data', '')
 
+  // The table these defaults were last taken from. Opening the dialog again
+  // for the same table keeps the draft (its columns, or manual data); opening
+  // it for another table starts from that table.
+  const [seededFrom, setSeededFrom] = useKeptState<string | null>('curvefit.seededFrom', null)
   useEffect(() => {
-    if (defaultTableId && tables.length > 0) {
+    if (defaultTableId && tables.length > 0 && seededFrom !== defaultTableId) {
       const table = tables.find((t) => t.id === defaultTableId)
       if (table) {
+        setSeededFrom(defaultTableId)
         setSelectedTableId(defaultTableId)
         setDataMode('table')
         if (table.kind === 'parametric') {
@@ -199,6 +204,8 @@ export default function CurveFitModal({
         }
       }
     }
+    // The setters are stable; seededFrom is read, not watched, so a draft edit does not re-seed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultTableId, tables])
 
   function handleTemplateChange(val: string | null) {

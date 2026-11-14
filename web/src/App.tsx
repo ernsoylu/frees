@@ -818,16 +818,17 @@ export default function App() {
   // rest. A restored layout is checked against it, so the windows it names
   // that no longer exist are left out with a notice, not silently.
   const validWindowIdsRef = useRef<Set<string>>(new Set())
-  const dropMissingWindows = () => {
-    const gone = (dockRef.current?.windows() ?? []).filter((w) => !validWindowIdsRef.current.has(w.id))
-    for (const w of gone) dockRef.current?.close(w.id)
-    if (gone.length > 0) {
+  /** Restores a layout without the windows this project cannot show, as one change to undo. */
+  const restoreLayout = (layout: unknown): boolean => {
+    const r = dockRef.current?.restore(layout, (id) => validWindowIdsRef.current.has(id))
+    if (r && r.dropped.length > 0) {
       notifications.show({
         color: 'yellow',
         title: 'Layout restored without some windows',
-        message: `${gone.map((w) => w.title).join(', ')}: no longer in this project, so left out.`,
+        message: `${r.dropped.join(', ')}: no longer in this project, so left out.`,
       })
     }
+    return r?.ok ?? true
   }
   const { setColorScheme } = useMantineColorScheme()
   // Windows publish their contextual commands (contextActions.ts); re-render when they change.
@@ -1170,8 +1171,7 @@ export default function App() {
     void writeAutosaveMirror(p)
     setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => {
-      dockRef.current?.restore(p.dockLayout)
-      if (p.dockLayout != null) dropMissingWindows()
+      restoreLayout(p.dockLayout)
     })
   }, [applyText])
 
@@ -3224,12 +3224,11 @@ export default function App() {
   const applyLayout = (name: string) => {
     const l = layouts[form].find((x) => x.name === name)
     if (!l) return
-    if (dockRef.current?.restore(l.dock) === false) {
+    if (!restoreLayout(l.dock)) {
       notifications.show({ color: 'red', title: `Layout "${l.name}" could not be read`, message: 'The default layout was built instead. Undo Layout Change returns to the windows as they were.' })
       setLayoutName('Default')
       return
     }
-    dropMissingWindows()
     if (l.density) changeRibbonDensity(l.density)
     if (l.ribbonTab) setRibbonTab(l.ribbonTab)
     setLayoutName(l.name)
@@ -4094,8 +4093,8 @@ export default function App() {
           })),
         ]}
         tableCount={tables.length + declaredStateDefs.length}
-        onCloseWindows={(prefix) => {
-          for (const w of openWindows) if (w.id.startsWith(prefix)) dockRef.current?.close(w.id)
+        onCloseWindows={(prefixes) => {
+          for (const w of openWindows) if (prefixes.some((p) => w.id.startsWith(p))) dockRef.current?.close(w.id)
         }}
         onOpenTable={(id) => {
           if (id.startsWith('state:')) {
