@@ -162,8 +162,15 @@ export interface WorkspaceDockHandle {
   isOpen: (id: string) => boolean
   /** Discard the saved layout and reopen the default set. */
   reset: () => void
-  /** Restore a previously-serialised dockview layout (from a project file). */
-  restore: (layout: unknown) => void
+  /** Restore a previously-serialised dockview layout (from a project file or a
+   *  named layout). False when it could not be read and the default was built. */
+  restore: (layout: unknown) => boolean
+  /** The open windows as dockview holds them now. */
+  windows: () => DockWindow[]
+  /** The dock's layout as dockview serialises it, for a named layout. */
+  serialize: () => unknown
+  /** Go back to the layout before the last structural change; again to return (Phase Q). */
+  undoLayout: () => void
   /** Rebuild the dock as one of the named layout presets. */
   applyPerspective: (perspective: LayoutPerspective) => void
   /** Bring an open window to the front (expanding the edge panel if it is there). */
@@ -184,6 +191,8 @@ interface Props {
   edgeKinds?: string[]
   onActiveChange?: (active: Pick<OpenWindow, 'id' | 'kind' | 'title'> | null) => void
   onOpenChange?: (windows: OpenWindow[]) => void
+  /** Whether there is a layout change to undo. */
+  onUndoChange?: (can: boolean) => void
   handleRef?: React.MutableRefObject<WorkspaceDockHandle | null>
 }
 
@@ -196,6 +205,7 @@ export function WorkspaceDock({
   edgeKinds = [],
   onActiveChange,
   onOpenChange,
+  onUndoChange,
   handleRef,
 }: Readonly<Props>) {
   const apiRef = useRef<DockviewApi | null>(null)
@@ -209,14 +219,36 @@ export function WorkspaceDock({
   const titlesRef = useRef(titles)
   const defaultsRef = useRef(defaultOpen)
   const edgeKindsRef = useRef(edgeKinds)
-  const cbRef = useRef({ onActiveChange, onOpenChange })
+  const cbRef = useRef({ onActiveChange, onOpenChange, onUndoChange })
+  // Undo Layout Change: the layout as it was before the last structural change
+  // (a drag, a window command, a layout applied). `quiet` holds while one
+  // command makes several changes, so they undo as one.
+  const undoRef = useRef<unknown>(null)
+  const quietRef = useRef(false)
 
   useLayoutEffect(() => {
     titlesRef.current = titles
     defaultsRef.current = defaultOpen
     edgeKindsRef.current = edgeKinds
-    cbRef.current = { onActiveChange, onOpenChange }
+    cbRef.current = { onActiveChange, onOpenChange, onUndoChange }
   })
+
+  const remember = (layout: unknown) => {
+    const had = undoRef.current !== null
+    undoRef.current = layout
+    if (!had) cbRef.current.onUndoChange?.(true)
+  }
+  /** Runs one command's worth of changes, remembering the layout before them once. */
+  const change = <T,>(api: DockviewApi, fn: () => T): T => {
+    if (quietRef.current) return fn()
+    remember(api.toJSON())
+    quietRef.current = true
+    try {
+      return fn()
+    } finally {
+      quietRef.current = false
+    }
+  }
 
   const kindOf = (panel: { id: string; params?: Record<string, unknown> }): string =>
     (panel.params?.kind as string) ?? panel.id
@@ -469,28 +501,53 @@ export function WorkspaceDock({
       },
       isOpen: (id) => !!apiRef.current?.getPanel(id),
       reset: () => {
-        if (!apiRef.current) return
+        const api = apiRef.current
+        if (!api) return
         localStorage.removeItem(LAYOUT_KEY)
-        buildDefault(apiRef.current)
+        change(api, () => buildDefault(api))
       },
       restore: (layout) => {
-        if (!apiRef.current || layout == null || typeof layout !== 'object') return
+        const api = apiRef.current
+        if (!api || layout == null || typeof layout !== 'object') return true
+        return change(api, () => {
+          try {
+            api.fromJSON(layout as Parameters<DockviewApi['fromJSON']>[0])
+            if (api.panels.length > 0) return true
+          } catch {
+            // Corrupt or version-mismatched layout: fall through to the default.
+          }
+          buildDefault(api)
+          return false
+        })
+      },
+      windows: () => (apiRef.current ? snapshot(apiRef.current) : []),
+      serialize: () => apiRef.current?.toJSON() ?? null,
+      undoLayout: () => {
+        const api = apiRef.current
+        const before = undoRef.current
+        if (!api || before === null) return
+        const now = api.toJSON()
+        quietRef.current = true
         try {
-          apiRef.current.fromJSON(layout as Parameters<DockviewApi['fromJSON']>[0])
+          api.fromJSON(before as Parameters<DockviewApi['fromJSON']>[0])
         } catch {
-          // Corrupt or version-mismatched layout — fall back to default.
-          buildDefault(apiRef.current)
+          api.fromJSON(now)
+        } finally {
+          quietRef.current = false
         }
+        undoRef.current = now
       },
       applyPerspective: (perspective) => {
-        if (apiRef.current) buildPerspective(apiRef.current, perspective)
+        const api = apiRef.current
+        if (api) change(api, () => buildPerspective(api, perspective))
       },
       focus: (id) => {
         if (apiRef.current) focus(apiRef.current, id)
       },
       act: (id, action) => {
+        const api = apiRef.current
         try {
-          return !!apiRef.current && act(apiRef.current, id, action)
+          return !!api && change(api, () => act(api, id, action))
         } catch {
           // A move dockview refuses leaves the layout as it was.
           return true
@@ -521,6 +578,10 @@ export function WorkspaceDock({
     }
     if (!restored) buildDefault(api)
 
+    // Subscribed after the first layout is built, so opening the app is not a change to undo.
+    api.onWillMutateLayout(() => {
+      if (!quietRef.current) remember(api.toJSON())
+    })
     api.onDidLayoutChange(() => {
       try {
         localStorage.setItem(LAYOUT_KEY, JSON.stringify(api.toJSON()))
@@ -568,7 +629,8 @@ export function WorkspaceDock({
             ...COMMAND_SPECS[id],
             id,
             run: () => {
-              if (apiRef.current && !act(apiRef.current, tabMenu.id, action)) {
+              const api = apiRef.current
+              if (api && !change(api, () => act(api, tabMenu.id, action))) {
                 notifications.show({ color: 'yellow', message: 'That window is no longer open.' })
               }
             },

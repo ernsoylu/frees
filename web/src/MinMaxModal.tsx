@@ -1,3 +1,4 @@
+import { useKeptState } from './keptState'
 import { useState } from 'react'
 import {
   Alert,
@@ -406,17 +407,17 @@ export default function MinMaxModal({
   onClose,
   onApply,
 }: Readonly<Props>) {
-  const [mode, setMode] = useState<Mode>('single')
-  const [goal, setGoal] = useState<'minimize' | 'maximize'>('minimize')
-  const [objective, setObjective] = useState<string | null>(null)
-  const [objectives, setObjectives] = useState<string[]>([])
-  const [objGoals, setObjGoals] = useState<Record<string, 'min' | 'max'>>({})
-  const [population, setPopulation] = useState<number>(40)
-  const [generations, setGenerations] = useState<number>(40)
-  const [decisions, setDecisions] = useState<string[]>([])
-  const [bounds, setBounds] = useState<Record<string, Bounds>>({})
-  const [method, setMethod] = useState<OptimizeMethod>('brent')
-  const [constraints, setConstraints] = useState('')
+  const [mode, setMode] = useKeptState<Mode>('minmax.mode', 'single')
+  const [goal, setGoal] = useKeptState<'minimize' | 'maximize'>('minmax.goal', 'minimize')
+  const [objective, setObjective] = useKeptState<string | null>('minmax.objective', null)
+  const [objectives, setObjectives] = useKeptState<string[]>('minmax.objectives', [])
+  const [objGoals, setObjGoals] = useKeptState<Record<string, 'min' | 'max'>>('minmax.objGoals', {})
+  const [population, setPopulation] = useKeptState<number>('minmax.population', 40)
+  const [generations, setGenerations] = useKeptState<number>('minmax.generations', 40)
+  const [decisions, setDecisions] = useKeptState<string[]>('minmax.decisions', [])
+  const [bounds, setBounds] = useKeptState<Record<string, Bounds>>('minmax.bounds', {})
+  const [method, setMethod] = useKeptState<OptimizeMethod>('minmax.method', 'brent')
+  const [constraints, setConstraints] = useKeptState('minmax.constraints', '')
   const [running, setRunning] = useState(false)
   const [validation, setValidation] = useState<string | null>(null)
   const [result, setResult] = useState<OptimizeResponse | null>(null)

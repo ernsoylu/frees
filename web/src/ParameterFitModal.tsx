@@ -1,3 +1,4 @@
+import { useKeptState } from './keptState'
 import { useMemo, useState } from 'react'
 import {
   Alert,
@@ -134,13 +135,13 @@ export default function ParameterFitModal({
     return out
   }, [tables])
 
-  const [measSel, setMeasSel] = useState<string | null>(null)
+  const [measSel, setMeasSel] = useKeptState<string | null>('paramfit.measSel', null)
   const selectedTable = useMemo(
     () => eligibleTables.find((t) => t.id === measSel),
     [eligibleTables, measSel],
   )
-  const [timeCol, setTimeCol] = useState<string>('')
-  const [valCol, setValCol] = useState<string>('')
+  const [timeCol, setTimeCol] = useKeptState<string>('paramfit.timeCol', '')
+  const [valCol, setValCol] = useKeptState<string>('paramfit.valCol', '')
 
   const effectiveTimeCol =
     timeCol && selectedTable?.kind === 'parametric' && selectedTable.vars.includes(timeCol)
@@ -152,11 +153,11 @@ export default function ParameterFitModal({
       ? valCol
       : (selectedTable?.kind === 'parametric' ? (selectedTable.vars[1] ?? selectedTable.vars[0]) : '')
 
-  const [targetSel, setTargetSel] = useState<string | null>(null)
-  const [paramText, setParamText] = useState('')
-  const [bounds, setBounds] = useState<Record<string, Bounds>>({})
-  const [loss, setLoss] = useState<'linear' | 'soft_l1' | 'huber' | 'cauchy'>('linear')
-  const [fScale, setFScale] = useState('1.0')
+  const [targetSel, setTargetSel] = useKeptState<string | null>('paramfit.targetSel', null)
+  const [paramText, setParamText] = useKeptState('paramfit.paramText', '')
+  const [bounds, setBounds] = useKeptState<Record<string, Bounds>>('paramfit.bounds', {})
+  const [loss, setLoss] = useKeptState<'linear' | 'soft_l1' | 'huber' | 'cauchy'>('paramfit.loss', 'linear')
+  const [fScale, setFScale] = useKeptState('paramfit.fScale', '1.0')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ParameterFitResult | null>(null)

@@ -119,7 +119,7 @@ export const COMMAND_SPECS = {
   'view.terminal': { label: 'Terminal', location: 'Tools', group: 'Views', icon: IconTerminal2, aliases: ['repl'] },
   'view.inspector': { label: 'Inspector', location: 'Tools', group: 'Views', icon: IconAdjustments },
 
-  'layout.default': { label: 'Default View', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutGrid, aliases: ['reset layout'] },
+  'layout.default': { label: 'Reset Workspace Layout', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutGrid, aliases: ['default view', 'reset layout'], description: 'Rebuild the default windows; the drawing\'s own Reset layout is on the schematic' },
   'layout.results': { label: 'Results Focused', location: 'Rail ▸ Layout', group: 'Views', icon: IconChartLine },
   'layout.split': { label: 'Split View', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutColumns },
 
@@ -189,6 +189,10 @@ export const COMMAND_SPECS = {
   'digitizer.extract': { label: 'Extract Points', location: 'Digitizer', group: 'Digitizer', icon: IconWand, description: 'Pick a curve colour and auto-extract its points' },
   'digitizer.review': { label: 'Review Points', location: 'Digitizer', group: 'Digitizer', icon: IconListCheck, description: 'Select and drag points to correct them' },
   'digitizer.useData': { label: 'Use Data as Function Table', location: 'Digitizer', group: 'Digitizer', icon: IconTable },
+  // Phase Q: named layouts, saved on this device.
+  'layout.saveAs': { label: 'Save Layout As…', location: 'Rail ▸ Layout', group: 'Views', icon: IconDeviceFloppy, aliases: ['named layout', 'save workspace'], description: 'Keep this arrangement of windows under a name' },
+  'layout.manage': { label: 'Manage Layouts…', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutGrid, aliases: ['apply layout', 'rename layout', 'delete layout', 'saved layouts'], description: 'Apply, rename or delete a saved layout' },
+  'layout.undo': { label: 'Undo Layout Change', location: 'Rail ▸ Layout', group: 'Views', icon: IconArrowBackUp, aliases: ['restore layout', 'undo window move'], description: 'Go back to the windows as they were before the last change; again to return' },
   // Phase Q: window commands. Each acts on the active window; a tab's context
   // menu runs the same actions on the tab it was opened on. No default keys:
   // Ctrl+W, Ctrl+Tab and Ctrl+1–9 belong to the browser.
@@ -254,7 +258,7 @@ export const TOOLS_MENU: readonly MenuEntry[] = [
 ]
 export const RAIL_TABLES_NEW: readonly CommandId[] = ['table.newParametric', 'table.newFunction1', 'table.newFunction2', 'view.states']
 export const RAIL_PLOTS_NEW: readonly CommandId[] = ['plot.newXY', 'plot.newProperty', 'plot.newPsychro']
-export const LAYOUT_MENU: readonly CommandId[] = ['layout.default', 'layout.results', 'layout.split']
+export const LAYOUT_MENU: readonly MenuEntry[] = ['layout.default', 'layout.results', 'layout.split', '-', 'layout.saveAs', 'layout.manage', 'layout.undo']
 export const MOBILE_MENU: readonly MenuEntry[] = [
   'file.new', 'file.open', 'file.library', 'file.url', 'file.save', 'file.saveAs', '-',
   { label: 'Insert' }, 'table.newParametric', 'table.newFunction1', 'table.newFunction2', 'state.newTable', 'plot.newXY', 'plot.newProperty', 'plot.newPsychro', 'tool.componentWizard', 'insert.function', '-',
@@ -297,7 +301,7 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
     { label: 'Panels', items: ['view.variables', 'view.inspector', 'view.terminal'] },
     { label: 'Windows', items: ['window.list', 'window.float', 'window.maximize', 'window.close', 'window.closeOthers', 'window.closeGroup'] },
     { label: 'Move', items: ['window.moveEdge', 'window.moveCentre', 'window.moveLeft', 'window.moveRight', 'window.moveBelow'] },
-    { label: 'Layouts', items: ['layout.default', 'layout.results', 'layout.split'] },
+    { label: 'Layouts', items: ['layout.default', 'layout.results', 'layout.split', 'layout.saveAs', 'layout.manage', 'layout.undo'] },
     { label: 'Appearance', items: ['view.theme', 'view.ribbon', 'app.preferences'] },
   ], slot: 'view-schematic' },
   { id: 'help', label: 'Help', groups: [
