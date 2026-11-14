@@ -180,18 +180,26 @@ function RibbonPanel({ tab, commands, density, note, onRan }: Readonly<{ tab: Ri
   )
 }
 
-export function Ribbon({ commands, context, contextNote, density, onDensityChange }: Readonly<{
+export function Ribbon({ commands, context, contextNote, density, onDensityChange, tab, onTabChange }: Readonly<{
   commands: Commands
   context: RibbonContext | null
   contextNote?: string | null
   density: RibbonDensity
   onDensityChange: (d: RibbonDensity) => void
+  /** The chosen tab, when App keeps it (a named layout records it); else the ribbon does. */
+  tab?: string
+  onTabChange?: (id: string) => void
 }>) {
   const tabs = context ? [...RIBBON_TABS, CONTEXT_TABS[context]] : RIBBON_TABS
-  const [chosen, setChosen] = useState('home')
+  const [own, setOwn] = useState('home')
+  const chosen = tab ?? own
+  const setChosen = onTabChange ?? setOwn
   // A contextual tab that went away (its window lost focus) falls back to Home,
   // and stays there when the window is focused again: focusing never switches tabs.
-  if (!tabs.some((t) => t.id === chosen)) setChosen('home')
+  const stale = !tabs.some((t) => t.id === chosen)
+  useEffect(() => {
+    if (stale) setChosen('home')
+  }, [stale, setChosen])
   const current = tabs.find((t) => t.id === chosen) ?? tabs[0]
   const [peek, setPeek] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)

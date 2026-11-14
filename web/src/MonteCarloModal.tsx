@@ -1,3 +1,4 @@
+import { useKeptState } from './keptState'
 import { useMemo, useState } from 'react'
 import {
   Alert,
@@ -35,9 +36,9 @@ export default function MonteCarloModal({
   onClose: () => void
   onRun: (samples: number, seed: number, design: MonteCarloDesign) => Promise<MonteCarloResult>
 }>) {
-  const [samples, setSamples] = useState<number>(200)
-  const [seed, setSeed] = useState<number>(42)
-  const [design, setDesign] = useState<MonteCarloDesign>('iid')
+  const [samples, setSamples] = useKeptState<number>('montecarlo.samples', 200)
+  const [seed, setSeed] = useKeptState<number>('montecarlo.seed', 42)
+  const [design, setDesign] = useKeptState<MonteCarloDesign>('montecarlo.design', 'iid')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<MonteCarloResult | null>(null)

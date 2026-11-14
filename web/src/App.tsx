@@ -23,7 +23,7 @@ import {
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { Spotlight, SpotlightActionGroupData, spotlight } from '@mantine/spotlight'
-import { commandForKey, commandPaletteGroups, resolveCommands, type CommandId, type Commands } from './commands'
+import { PLOT_TAB_MENU, commandForKey, commandPaletteGroups, menuCommands, resolveCommands, type CommandId, type Commands } from './commands'
 import {
   IconSitemap,
   IconHelp,
@@ -182,6 +182,11 @@ import {
 } from './dialogs'
 import { Rail, TopBar, tablePill } from './WorkspaceChrome'
 import type { WorkspaceDockHandle, OpenWindow } from './workspace/WorkspaceDock'
+import { windowActionReason, type WindowAction } from './workspace/windowActions'
+import { WindowListModal } from './WindowListModal'
+import { clearKeptState } from './keptState'
+import { LayoutsModal } from './LayoutsModal'
+import { deleteLayout, layoutForm, readLayouts, renameLayout, saveLayout, writeLayouts, type LayoutStore } from './workspace/layouts'
 const WorkspaceDock = lazy(() => import('./workspace/WorkspaceDock').then(m => ({ default: m.WorkspaceDock })))
 import { detectStates } from './plots/stateTable'
 import { formatValue, withStableKeys } from './format'
@@ -390,6 +395,8 @@ export default function App() {
 
   const [projectName, setProjectName] = useState('untitled')
   const [workspaceEpoch, setWorkspaceEpoch] = useState(0)
+  // A draft kept past its dialog names this project's variables and tables: forget it with the project.
+  useEffect(() => clearKeptState, [workspaceEpoch])
   const projectFileRef = useRef<HTMLInputElement>(null)
 
   const [text, setText] = useState(sharedBoot ?? boot?.text ?? EXAMPLE)
@@ -801,6 +808,28 @@ export default function App() {
     writeRibbonDensity(d)
   }
   const [layoutName, setLayoutName] = useState('Restored')
+  // Phase Q: named layouts, saved on this device for this screen size.
+  const [layouts, setLayouts] = useState<LayoutStore>(() => readLayouts())
+  const [ribbonTab, setRibbonTab] = useState('home')
+  const [showSaveLayout, setShowSaveLayout] = useState(false)
+  const [showManageLayouts, setShowManageLayouts] = useState(false)
+  const [canUndoLayout, setCanUndoLayout] = useState(false)
+  // The window ids this project can show, kept by the effect that closes the
+  // rest. A restored layout is checked against it, so the windows it names
+  // that no longer exist are left out with a notice, not silently.
+  const validWindowIdsRef = useRef<Set<string>>(new Set())
+  /** Restores a layout without the windows this project cannot show, as one change to undo. */
+  const restoreLayout = (layout: unknown): boolean => {
+    const r = dockRef.current?.restore(layout, (id) => validWindowIdsRef.current.has(id))
+    if (r && r.dropped.length > 0) {
+      notifications.show({
+        color: 'yellow',
+        title: 'Layout restored without some windows',
+        message: `${r.dropped.join(', ')}: no longer in this project, so left out.`,
+      })
+    }
+    return r?.ok ?? true
+  }
   const { setColorScheme } = useMantineColorScheme()
   // Windows publish their contextual commands (contextActions.ts); re-render when they change.
   useContextVersion()
@@ -855,7 +884,12 @@ export default function App() {
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
   // Last-focused non-auxiliary window — drives the content-aware Inspector
   // (focusing the Inspector/Solution panels themselves doesn't change it).
-  const [focusedWindow, setFocusedWindow] = useState<OpenWindow | null>(null)
+  const [focusedWindow, setFocusedWindow] = useState<Pick<OpenWindow, 'id' | 'kind' | 'title'> | null>(null)
+  // The dock's active window, utility panels included: what the window
+  // commands act on (Phase Q).
+  const [activeWindowId, setActiveWindowId] = useState<string | undefined>(undefined)
+  const [showWindowList, setShowWindowList] = useState(false)
+  const [renamePlot, setRenamePlot] = useState<{ id: string; name: string } | null>(null)
   // Tracks which state-table circuit triggered the last fill-missing solve so
   // only that circuit's button shows the loading spinner.
   const [fillMissingFor, setFillMissingFor] = useState<string | null>(null)
@@ -1137,7 +1171,7 @@ export default function App() {
     void writeAutosaveMirror(p)
     setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => {
-      dockRef.current?.restore(p.dockLayout)
+      restoreLayout(p.dockLayout)
     })
   }, [applyText])
 
@@ -2986,6 +3020,7 @@ export default function App() {
       ...tables.filter((t) => !isHostedTable(t)).map((t) => `table:${t.id}`),
       ...(result?.stateTableDefs ?? checkResult?.stateTableDefs ?? []).map((s) => `state:${s.name}`),
     ])
+    validWindowIdsRef.current = valid
     for (const w of openWindows) {
       if (!valid.has(w.id)) dockRef.current?.close(w.id)
     }
@@ -3128,10 +3163,75 @@ export default function App() {
     }
     return inWindow(fw?.id, id, 'No undo history here: focus the Editor, the Tables workbook, the schematic or the scenarios.')
   }
+  // Phase Q: context menus run on the row or tab they were opened on. A plot's
+  // Configure and Export live in its card, which mounts when its window shows:
+  // bring the window forward, then run the command once the card has published it.
+  const runInWindow = (windowId: string, id: CommandId, tries = 60) => {
+    dockRef.current?.focus(windowId)
+    const h = contextHandler(windowId, id)
+    if (h) {
+      if (h.unavailable) notifications.show({ color: 'yellow', message: h.unavailable })
+      else h.run()
+    } else if (tries > 0) requestAnimationFrame(() => runInWindow(windowId, id, tries - 1))
+    else notifications.show({ color: 'yellow', message: 'That window has not loaded yet.' })
+  }
+  const plotTabMenu = (w: OpenWindow) => {
+    const p = w.kind === 'plot' ? mergedPlots.find((x) => `plot:${x.id}` === w.id) : undefined
+    if (!p) return null
+    return {
+      entries: PLOT_TAB_MENU,
+      cmds: menuCommands({
+        'plot.rename': { run: () => setRenamePlot({ id: p.id, name: p.name }), unavailable: p.fromCode ? 'Defined in the equations: rename its PLOT block in the Editor.' : null },
+        'plot.configure': { run: () => runInWindow(w.id, 'plot.configure'), unavailable: p.fromCode ? 'Defined in the equations: Duplicate as editable first.' : null },
+        'plot.export': { run: () => runInWindow(w.id, 'plot.export') },
+      }),
+    }
+  }
+  const copyText = (text: string, what: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => notifications.show({ message: `Copied ${what}.` }),
+      () => notifications.show({ color: 'red', message: 'The browser refused the clipboard.' }),
+    )
+  }
+  const variableRowMenu = (v: VariableResult) => {
+    const key = v.name.toLowerCase()
+    return menuCommands({
+      'variable.pin': {
+        run: () => pinSlider(v),
+        unavailable: pinnedSliderNames.has(key) ? 'It is already pinned to a slider.' : pinnableNames.has(key) ? null : 'Only a variable the equations set to a number can be pinned.',
+      },
+      // Full precision, not the six digits shown.
+      'variable.copyValue': { run: () => copyText(v.units ? `${v.value} [${v.units}]` : String(v.value), `the value of ${v.name}`) },
+      'variable.copyName': { run: () => copyText(v.name, 'the name') },
+      'tool.variableInfo': { run: () => setShowVariableInfo(true) },
+    })
+  }
+  const needsRow = { run: () => {}, unavailable: 'Right-click a variable in the Variable Explorer.' }
+  const onWindow = (action: WindowAction) => ({
+    run: () => { if (activeWindowId) dockRef.current?.act(activeWindowId, action) },
+    unavailable: windowActionReason(openWindows, activeWindowId, action),
+  })
   const toggleRibbon = () => changeRibbonDensity(ribbonDensity === 'collapsed' ? ribbonLastOpenRef.current : 'collapsed')
   const perspective = (name: 'default' | 'results' | 'split', label: string) => () => {
     dockRef.current?.applyPerspective(name)
     setLayoutName(label)
+  }
+  const form = layoutForm()
+  const storeLayouts = (next: LayoutStore) => {
+    setLayouts(next)
+    if (!writeLayouts(next)) notifications.show({ color: 'red', message: 'This browser would not store the layouts; they last until the page closes.' })
+  }
+  const applyLayout = (name: string) => {
+    const l = layouts[form].find((x) => x.name === name)
+    if (!l) return
+    if (!restoreLayout(l.dock)) {
+      notifications.show({ color: 'red', title: `Layout "${l.name}" could not be read`, message: 'The default layout was built instead. Undo Layout Change returns to the windows as they were.' })
+      setLayoutName('Default')
+      return
+    }
+    if (l.density) changeRibbonDensity(l.density)
+    if (l.ribbonTab) setRibbonTab(l.ribbonTab)
+    setLayoutName(l.name)
   }
   // With a parametric table focused, the status bar reads that table, as the status pill does.
   const statusSolveText = focusedParam
@@ -3158,7 +3258,21 @@ export default function App() {
     'view.variables': { run: () => dockRef.current?.open('workspace') },
     'view.terminal': { run: () => dockRef.current?.open('terminal') },
     'view.inspector': { run: () => dockRef.current?.open('inspector') },
-    'layout.default': { run: perspective('default', 'Default View') },
+    'window.list': { run: () => setShowWindowList(true) },
+    'window.close': onWindow('close'),
+    'window.closeOthers': onWindow('closeOthers'),
+    'window.closeGroup': onWindow('closeGroup'),
+    'window.float': onWindow('float'),
+    'window.maximize': onWindow('maximize'),
+    'window.moveEdge': onWindow('moveEdge'),
+    'window.moveCentre': onWindow('moveCentre'),
+    'window.moveLeft': onWindow('moveLeft'),
+    'window.moveRight': onWindow('moveRight'),
+    'window.moveBelow': onWindow('moveBelow'),
+    'layout.default': { run: perspective('default', 'Default') },
+    'layout.saveAs': { run: () => setShowSaveLayout(true) },
+    'layout.manage': { run: () => setShowManageLayouts(true) },
+    'layout.undo': { run: () => { dockRef.current?.undoLayout(); setLayoutName('Custom') }, unavailable: canUndoLayout ? null : 'No layout change to undo yet.' },
     'layout.results': { run: perspective('results', 'Results Focused') },
     'layout.split': { run: perspective('split', 'Split View') },
     'table.newParametric': { run: () => createTable('parametric') },
@@ -3216,6 +3330,13 @@ export default function App() {
     'table.goToDefinition': focusedTable?.source === 'code'
       ? { run: () => handleGoToTableDeclaration(focusedTable.name) }
       : { run: noop, unavailable: focusedTable ? 'This table is defined in the workbook, not in the equations.' : 'Focus a table first.' },
+    'table.rename': onTable('table.rename'),
+    'plot.rename': focusedPlot && !focusedPlot.fromCode
+      ? { run: () => setRenamePlot({ id: focusedPlot.id, name: focusedPlot.name }) }
+      : { run: noop, unavailable: focusedPlot ? 'Defined in the equations: rename its PLOT block in the Editor.' : 'Focus a plot first.' },
+    'variable.pin': needsRow,
+    'variable.copyValue': needsRow,
+    'variable.copyName': needsRow,
     'table.delete': focusedTable && focusedTable.source !== 'code'
       ? { run: () => setConfirmDelete({ kind: 'table', id: focusedTable.id, name: focusedTable.name }) }
       : { run: noop, unavailable: focusedTable ? 'Defined in the equations: delete its block in the Editor.' : 'Focus a table first.' },
@@ -3619,6 +3740,7 @@ export default function App() {
             pinnedNames={pinnedSliderNames}
             pinnableNames={pinnableNames}
             onPin={pinSlider}
+            rowMenu={variableRowMenu}
             solutionsCount={solutions.length}
             selectedSolutionIndex={selectedSolutionIndex}
             onSelectSolutionIndex={setSelectedSolutionIndex}
@@ -3838,6 +3960,10 @@ export default function App() {
             onGoToDeclaration={handleGoToTableDeclaration}
             onReproduceRow={handleReproduceRow}
             onRetryFailedRows={(id) => void checkThenSolveTable(id)}
+            onDeleteTable={(id) => {
+              const t = tables.find((x) => x.id === id)
+              if (t) setConfirmDelete({ kind: 'table', id, name: t.name })
+            }}
             highlightedRowId={highlightedRowId}
           />
         </Suspense>
@@ -3967,6 +4093,9 @@ export default function App() {
           })),
         ]}
         tableCount={tables.length + declaredStateDefs.length}
+        onCloseWindows={(prefixes) => {
+          for (const w of openWindows) if (prefixes.some((p) => w.id.startsWith(p))) dockRef.current?.close(w.id)
+        }}
         onOpenTable={(id) => {
           if (id.startsWith('state:')) {
             const name = id.slice('state:'.length)
@@ -4019,6 +4148,8 @@ export default function App() {
             onDensityChange: changeRibbonDensity,
             context: fw?.kind === 'table' || fw?.kind === 'plot' || fw?.kind === 'schematic' || fw?.kind === 'digitizer' ? fw.kind : null,
             contextNote: codeTable ? 'Defined in equations' : null,
+            tab: ribbonTab,
+            onTabChange: setRibbonTab,
           } : undefined}
         />
         <input
@@ -4038,6 +4169,7 @@ export default function App() {
               edgeKinds={['workspace', 'inspector']}
               onActiveChange={(active) => {
                 setActiveTab(active?.kind ?? '')
+                setActiveWindowId(active?.id)
                 // Focusing a table window makes it the "active" table so the
                 // shared Solve-Table / Configure / Alter actions target it.
                 // The Tables workbook window is excluded: its nav list drives
@@ -4056,6 +4188,8 @@ export default function App() {
                 }
               }}
               onOpenChange={setOpenWindows}
+              onUndoChange={setCanUndoLayout}
+              tabMenuFor={plotTabMenu}
               handleRef={dockRef}
             />
           </Suspense>
@@ -4083,6 +4217,63 @@ export default function App() {
         </Flex>
       )}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      <TextPromptModal
+        opened={showSaveLayout}
+        title="Save Layout As"
+        label="Layout name (a layout of the same name is replaced)"
+        defaultValue={layoutName === 'Restored' || layoutName === 'Custom' || layoutName === 'Default' ? '' : layoutName}
+        confirmLabel="Save layout"
+        onClose={() => setShowSaveLayout(false)}
+        onSubmit={(value) => {
+          const name = value.trim()
+          const dock = dockRef.current?.serialize()
+          if (!name || !dock) return
+          storeLayouts(saveLayout(layouts, form, { name, dock, ribbonTab, density: ribbonDensity }))
+          setLayoutName(name)
+          setShowSaveLayout(false)
+        }}
+      />
+      <TextPromptModal
+        opened={renamePlot !== null}
+        title="Rename Plot"
+        label="Plot name"
+        defaultValue={renamePlot?.name ?? ''}
+        confirmLabel="Rename"
+        onClose={() => setRenamePlot(null)}
+        onSubmit={(value) => {
+          const name = value.trim()
+          // The plot may have been deleted while the dialog was open.
+          if (renamePlot && name && plots.some((x) => x.id === renamePlot.id)) {
+            handlePlotsChange(plots.map((x) => (x.id === renamePlot.id ? { ...x, name } : x)))
+          }
+          setRenamePlot(null)
+        }}
+      />
+      {showManageLayouts && (
+        <LayoutsModal
+          layouts={layouts[form]}
+          form={form}
+          onApply={applyLayout}
+          onRename={(from, to) => {
+            const next = renameLayout(layouts, form, from, to)
+            if (!next) return false
+            storeLayouts(next)
+            if (layoutName === from) setLayoutName(to.trim())
+            return true
+          }}
+          onDelete={(name) => storeLayouts(deleteLayout(layouts, form, name))}
+          onClose={() => setShowManageLayouts(false)}
+        />
+      )}
+      {showWindowList && (
+        <WindowListModal
+          windows={openWindows}
+          activeId={activeWindowId}
+          onFocus={(id) => dockRef.current?.focus(id)}
+          onCloseWindow={(id) => dockRef.current?.close(id)}
+          onClose={() => setShowWindowList(false)}
+        />
+      )}
 
       {pidTuner !== null && (
         <Suspense fallback={null}>

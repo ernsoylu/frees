@@ -17,7 +17,22 @@ import type { SpotlightActionData, SpotlightActionGroupData } from '@mantine/spo
 import { Kbd } from '@mantine/core'
 import {
   IconAdjustments,
+  IconAdjustmentsHorizontal,
+  IconClipboardText,
+  IconCopy,
+  IconPencil,
   IconArrowBackUp,
+  IconArrowBarDown,
+  IconArrowBarLeft,
+  IconArrowBarRight,
+  IconFocusCentered,
+  IconLayoutSidebarRight,
+  IconListSearch,
+  IconMaximize,
+  IconPictureInPicture,
+  IconSquareX,
+  IconStack2,
+  IconX,
   IconArrowForwardUp,
   IconBook,
   IconChartGridDots,
@@ -70,6 +85,7 @@ import {
   IconWorld,
   type Icon,
 } from '@tabler/icons-react'
+import type { WindowAction } from './workspace/windowActions'
 
 export interface CommandSpec {
   label: string
@@ -107,7 +123,7 @@ export const COMMAND_SPECS = {
   'view.terminal': { label: 'Terminal', location: 'Tools', group: 'Views', icon: IconTerminal2, aliases: ['repl'] },
   'view.inspector': { label: 'Inspector', location: 'Tools', group: 'Views', icon: IconAdjustments },
 
-  'layout.default': { label: 'Default View', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutGrid, aliases: ['reset layout'] },
+  'layout.default': { label: 'Reset Workspace Layout', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutGrid, aliases: ['default view', 'reset layout'], description: 'Rebuild the default windows; the drawing\'s own Reset layout is on the schematic' },
   'layout.results': { label: 'Results Focused', location: 'Rail ▸ Layout', group: 'Views', icon: IconChartLine },
   'layout.split': { label: 'Split View', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutColumns },
 
@@ -167,16 +183,40 @@ export const COMMAND_SPECS = {
   'table.exportData': { label: 'Data Export — full precision', location: 'Tables ▸ Export', group: 'Table', icon: IconDownload, description: 'CSV with exact values (round-trip)' },
   'table.exportReport': { label: 'Report Export — formatted', location: 'Tables ▸ Export', group: 'Table', icon: IconFileSpreadsheet, description: 'CSV with 6 significant digits' },
   'table.goToDefinition': { label: 'Go to Definition', location: 'Tables', group: 'Table', icon: IconCode, description: 'Show the TABLE block in the Editor' },
+  'table.rename': { label: 'Rename Table…', location: 'Tables ▸ list', group: 'Table', icon: IconPencil, description: 'Also: double-click its name in the Tables list' },
   'table.delete': { label: 'Delete Table…', location: 'Inspector', group: 'Table', icon: IconTrash },
   'plot.configure': { label: 'Configure Plot…', location: 'Plot ▸ toolbar', group: 'Plot', icon: IconAdjustments },
   'plot.export': { label: 'Export Plot…', location: 'Plot ▸ toolbar', group: 'Plot', icon: IconDownload, description: 'Image or data; the view scope is chosen in the menu' },
   'plot.inspect': { label: 'Inspect Plot', location: 'Plot ▸ measurement bar', group: 'Plot', icon: IconFocus2, description: 'Move to the cursor and measurement bar (arrow keys step samples)' },
+  'plot.rename': { label: 'Rename Plot…', location: 'Inspector', group: 'Plot', icon: IconPencil },
   'plot.delete': { label: 'Delete Plot…', location: 'Inspector', group: 'Plot', icon: IconTrash },
   'digitizer.image': { label: 'Load Image…', location: 'Digitizer', group: 'Digitizer', icon: IconPhotoUp },
   'digitizer.calibrate': { label: 'Calibrate Axes', location: 'Digitizer', group: 'Digitizer', icon: IconRuler, description: 'Click X1, X2, Y1 and Y2 on the image' },
   'digitizer.extract': { label: 'Extract Points', location: 'Digitizer', group: 'Digitizer', icon: IconWand, description: 'Pick a curve colour and auto-extract its points' },
   'digitizer.review': { label: 'Review Points', location: 'Digitizer', group: 'Digitizer', icon: IconListCheck, description: 'Select and drag points to correct them' },
   'digitizer.useData': { label: 'Use Data as Function Table', location: 'Digitizer', group: 'Digitizer', icon: IconTable },
+  // Phase Q: a variable row's own menu in the Variable Explorer. They need a row, so they are not in the palette.
+  'variable.pin': { label: 'Pin to Slider', location: 'Variable Explorer ▸ row menu', group: null, icon: IconAdjustmentsHorizontal },
+  'variable.copyValue': { label: 'Copy Value', location: 'Variable Explorer ▸ row menu', group: null, icon: IconClipboardText, description: 'The value at full precision, with its unit' },
+  'variable.copyName': { label: 'Copy Name', location: 'Variable Explorer ▸ row menu', group: null, icon: IconCopy },
+  // Phase Q: named layouts, saved on this device.
+  'layout.saveAs': { label: 'Save Layout As…', location: 'Rail ▸ Layout', group: 'Views', icon: IconDeviceFloppy, aliases: ['named layout', 'save workspace'], description: 'Keep this arrangement of windows under a name' },
+  'layout.manage': { label: 'Manage Layouts…', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutGrid, aliases: ['apply layout', 'rename layout', 'delete layout', 'saved layouts'], description: 'Apply, rename or delete a saved layout' },
+  'layout.undo': { label: 'Undo Layout Change', location: 'Rail ▸ Layout', group: 'Views', icon: IconArrowBackUp, aliases: ['restore layout', 'undo window move'], description: 'Go back to the windows as they were before the last change; again to return' },
+  // Phase Q: window commands. Each acts on the active window; a tab's context
+  // menu runs the same actions on the tab it was opened on. No default keys:
+  // Ctrl+W, Ctrl+Tab and Ctrl+1–9 belong to the browser.
+  'window.list': { label: 'Window List…', location: 'Palette', group: 'Windows', icon: IconListSearch, aliases: ['windows', 'switch window', 'open views'], description: 'Search the open windows and go to one' },
+  'window.close': { label: 'Close View', location: 'Tab menu', group: 'Windows', icon: IconX, aliases: ['close window', 'close tab'], description: 'Close the active window; its data stays in the project' },
+  'window.closeOthers': { label: 'Close Others', location: 'Tab menu', group: 'Windows', icon: IconSquareX, description: 'Close the other tabs of the active window\'s group' },
+  'window.closeGroup': { label: 'Close All in Group', location: 'Tab menu', group: 'Windows', icon: IconStack2, description: 'Close every tab of the active window\'s group' },
+  'window.float': { label: 'Float or Dock Back', location: 'Tab menu', group: 'Windows', icon: IconPictureInPicture, aliases: ['float', 'dock', 'detach'], description: 'Lift the active window out of the grid, or dock a floating one in the centre' },
+  'window.maximize': { label: 'Maximize or Restore', location: 'Tab menu', group: 'Windows', icon: IconMaximize, aliases: ['maximize', 'restore', 'full size'], description: 'Give the active window the whole workspace, or bring the others back' },
+  'window.moveEdge': { label: 'Move to Edge', location: 'Tab menu', group: 'Windows', icon: IconLayoutSidebarRight, description: 'Move the active window into the collapsible right edge panel' },
+  'window.moveCentre': { label: 'Move to Centre', location: 'Tab menu', group: 'Windows', icon: IconFocusCentered, aliases: ['move to center'], description: 'Dock the active window as a tab in the centre' },
+  'window.moveLeft': { label: 'Move Left', location: 'Tab menu', group: 'Windows', icon: IconArrowBarLeft, aliases: ['split left'], description: 'Split the active window out to the left of its group' },
+  'window.moveRight': { label: 'Move Right', location: 'Tab menu', group: 'Windows', icon: IconArrowBarRight, aliases: ['split right'], description: 'Split the active window out to the right of its group' },
+  'window.moveBelow': { label: 'Move Below', location: 'Tab menu', group: 'Windows', icon: IconArrowBarDown, aliases: ['split below', 'split down'], description: 'Split the active window out below its group' },
   'app.palette': { label: 'Command Palette', location: 'Toolbar', group: null, icon: IconSearch, shortcut: ['Mod', 'K'], ownedElsewhere: true },
   'editor.complete': { label: 'Autocomplete functions & variables', location: 'Editor', group: null, icon: IconCode, shortcut: ['Mod', 'Space'], ownedElsewhere: true },
 } as const satisfies Record<string, CommandSpec>
@@ -228,7 +268,7 @@ export const TOOLS_MENU: readonly MenuEntry[] = [
 ]
 export const RAIL_TABLES_NEW: readonly CommandId[] = ['table.newParametric', 'table.newFunction1', 'table.newFunction2', 'view.states']
 export const RAIL_PLOTS_NEW: readonly CommandId[] = ['plot.newXY', 'plot.newProperty', 'plot.newPsychro']
-export const LAYOUT_MENU: readonly CommandId[] = ['layout.default', 'layout.results', 'layout.split']
+export const LAYOUT_MENU: readonly MenuEntry[] = ['layout.default', 'layout.results', 'layout.split', '-', 'layout.saveAs', 'layout.manage', 'layout.undo']
 export const MOBILE_MENU: readonly MenuEntry[] = [
   'file.new', 'file.open', 'file.library', 'file.url', 'file.save', 'file.saveAs', '-',
   { label: 'Insert' }, 'table.newParametric', 'table.newFunction1', 'table.newFunction2', 'state.newTable', 'plot.newXY', 'plot.newProperty', 'plot.newPsychro', 'tool.componentWizard', 'insert.function', '-',
@@ -269,7 +309,9 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
   { id: 'view', label: 'View', groups: [
     { label: 'Documents', items: ['view.editor', 'view.tables', 'view.plots', 'view.states', 'view.schematic', 'view.digitizer'] },
     { label: 'Panels', items: ['view.variables', 'view.inspector', 'view.terminal'] },
-    { label: 'Layouts', items: ['layout.default', 'layout.results', 'layout.split'] },
+    { label: 'Windows', items: ['window.list', 'window.float', 'window.maximize', 'window.close', 'window.closeOthers', 'window.closeGroup'] },
+    { label: 'Move', items: ['window.moveEdge', 'window.moveCentre', 'window.moveLeft', 'window.moveRight', 'window.moveBelow'] },
+    { label: 'Layouts', items: ['layout.default', 'layout.results', 'layout.split', 'layout.saveAs', 'layout.manage', 'layout.undo'] },
     { label: 'Appearance', items: ['view.theme', 'view.ribbon', 'app.preferences'] },
   ], slot: 'view-schematic' },
   { id: 'help', label: 'Help', groups: [
@@ -285,10 +327,10 @@ export const CONTEXT_TABS: Record<'table' | 'plot' | 'schematic' | 'digitizer', 
     { label: 'Edit', items: ['edit.undo', 'edit.redo'] },
     { label: 'Results', items: ['table.plotSelected', 'table.retryFailed'] },
     { label: 'Export', items: ['table.exportData', 'table.exportReport'] },
-    { label: 'Table', items: ['table.goToDefinition', 'table.delete'] },
+    { label: 'Table', items: ['table.rename', 'table.goToDefinition', 'table.delete'] },
   ] },
   plot: { id: 'ctx-plot', label: 'Plot', groups: [
-    { label: 'Plot', items: ['plot.configure', 'plot.export', 'plot.inspect', 'plot.delete'] },
+    { label: 'Plot', items: ['plot.rename', 'plot.configure', 'plot.export', 'plot.inspect', 'plot.delete'] },
   ] },
   // The canvas portals its own controls here: Sheets, Model, Edit, Arrange,
   // Overlay, Annotate, Drawing Views, Zoom (schematic/SchematicTab.tsx).
@@ -296,6 +338,30 @@ export const CONTEXT_TABS: Record<'table' | 'plot' | 'schematic' | 'digitizer', 
   digitizer: { id: 'ctx-digitizer', label: 'Digitizer', groups: [
     { label: 'Steps', items: ['digitizer.image', 'digitizer.calibrate', 'digitizer.extract', 'digitizer.review', 'digitizer.useData'] },
   ] },
+}
+
+/** A dock tab's context menu (Phase Q): the command and the window action it runs on that tab. */
+export const TAB_MENU: readonly (readonly [CommandId, WindowAction] | '-')[] = [
+  ['window.close', 'close'], ['window.closeOthers', 'closeOthers'], ['window.closeGroup', 'closeGroup'], '-',
+  ['window.float', 'float'], ['window.maximize', 'maximize'], '-',
+  ['window.moveEdge', 'moveEdge'], ['window.moveCentre', 'moveCentre'], ['window.moveLeft', 'moveLeft'], ['window.moveRight', 'moveRight'], ['window.moveBelow', 'moveBelow'],
+]
+
+// Phase Q: context menus of list rows and plot tabs. Each runs on the row or
+// tab it was opened on, through handlers its owner supplies (`menuCommands`).
+export const TABLE_ROW_MENU: readonly MenuEntry[] = ['table.rename', 'table.configure', 'table.plotSelected', '-', 'table.exportData', 'table.exportReport', 'table.retryFailed', '-', 'table.delete']
+export const PLOT_TAB_MENU: readonly MenuEntry[] = ['plot.rename', 'plot.configure', 'plot.export', '-']
+export const VARIABLE_ROW_MENU: readonly MenuEntry[] = ['variable.pin', 'variable.copyValue', 'variable.copyName', '-', 'tool.variableInfo']
+
+/** The commands of a context menu: the registry's entries with the handlers for its target. */
+export function menuCommands(handlers: Partial<Record<CommandId, CommandHandler | undefined>>): Commands {
+  const out: Partial<Commands> = {}
+  for (const id of Object.keys(handlers) as CommandId[]) {
+    const h = handlers[id]
+    const spec = COMMAND_SPECS[id] as CommandSpec
+    out[id] = { ...spec, id, run: h?.run ?? (() => {}), unavailable: h ? (h.unavailable ?? null) : 'Not available here.', checked: h?.checked, description: h?.description ?? spec.description }
+  }
+  return out as Commands
 }
 
 /** Where a command sits on the ribbon, e.g. "Analysis ▸ Optimize & Fit" (its first home). */

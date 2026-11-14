@@ -8,6 +8,7 @@
 // entry points — the Tools-menu tuner (manual plant) and the Inspector "Tune…"
 // button on a selected SigPID (plant supplied by the caller).
 
+import { useKeptState } from './keptState'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
@@ -84,11 +85,11 @@ export default function PidTunerModal({
 }: Readonly<Props>) {
   const [type, setType] = useState<PidType>(initial?.type ?? 'pi')
   // Manual plant entry (Tools-menu path) — ignored when `plant` is supplied.
-  const [numText, setNumText] = useState('1')
-  const [denText, setDenText] = useState('5, 1')
+  const [numText, setNumText] = useKeptState('pid.numText', '1')
+  const [denText, setDenText] = useKeptState('pid.denText', '5, 1')
   // Slider positions are log10(wc) and phase-margin degrees.
-  const [logWc, setLogWc] = useState(-0.3) // ~0.5 rad/s
-  const [pm, setPm] = useState(60)
+  const [logWc, setLogWc] = useKeptState('pid.logWc', -0.3) // ~0.5 rad/s
+  const [pm, setPm] = useKeptState('pid.pm', 60)
   const [result, setResult] = useState<PidTuneResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)

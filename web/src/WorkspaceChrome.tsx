@@ -104,6 +104,8 @@ interface RailProps {
   commands?: Commands
   onOpenPlot?: (id: string) => void
   onOpenTable?: (id: string) => void
+  /** Close every open window whose id starts with one of the prefixes (Phase Q launchers). */
+  onCloseWindows?: (idPrefixes: string[]) => void
   onPreferences: () => void
   onAbout: () => void
 }
@@ -123,6 +125,8 @@ function InstanceLauncher({
   items,
   openIds,
   onOpen,
+  onCloseAll,
+  windowPrefixes,
 }: Readonly<{
   expanded: boolean
   active: boolean
@@ -135,7 +139,11 @@ function InstanceLauncher({
   items: { id: string; name: string; tag?: string }[]
   openIds: Set<string>
   onOpen?: (id: string) => void
+  onCloseAll?: () => void
+  /** The id prefixes of the windows this menu lists: the Tables menu lists fluid-state tables too. */
+  windowPrefixes: string[]
 }>) {
+  const anyOpen = [...openIds].some((id) => windowPrefixes.some((p) => id.startsWith(p)))
   const variant = active ? 'light' : 'subtle'
   const color = active ? 'teal' : 'gray'
   const target = expanded ? (
@@ -205,6 +213,15 @@ function InstanceLauncher({
             {it.name}
           </Menu.Item>
         ))}
+        {items.length > 0 && (
+          <>
+            <Menu.Divider />
+            <Menu.Item onClick={() => items.forEach((it) => onOpen?.(it.id))}>Focus All</Menu.Item>
+            {/* Closes the views only: the tables and plots stay in the project. */}
+            <Menu.Item disabled={!anyOpen} onClick={onCloseAll}>Close All</Menu.Item>
+            {!anyOpen && <Text size="xs" c="dimmed" px="sm" pb={4}>No {label.toLowerCase()} window is open.</Text>}
+          </>
+        )}
         <Menu.Divider />
         {newActions.map((a) => (
           <Menu.Item key={a.label} leftSection={<IconPlus size={14} />} onClick={a.onClick}>
@@ -336,6 +353,7 @@ export function Rail({
   commands,
   onOpenPlot,
   onOpenTable,
+  onCloseWindows,
   onPreferences,
   onAbout,
 }: Readonly<RailProps>) {
@@ -402,6 +420,8 @@ export function Rail({
               items={plots}
               openIds={openIdSet}
               onOpen={onOpenPlot}
+              windowPrefixes={['plot:']}
+              onCloseAll={() => onCloseWindows?.(['plot:'])}
             />
           ) : view.value === 'table' && workspaceTables ? (
             <InstanceLauncher
@@ -417,6 +437,8 @@ export function Rail({
               items={workspaceTables}
               openIds={openIdSet}
               onOpen={onOpenTable}
+              windowPrefixes={['table:', 'state:']}
+              onCloseAll={() => onCloseWindows?.(['table:', 'state:'])}
             />
           ) : (
             <RailEntry
@@ -713,6 +735,8 @@ interface TopBarProps {
     onDensityChange: (d: RibbonDensity) => void
     context: RibbonContext | null
     contextNote?: string | null
+    tab?: string
+    onTabChange?: (id: string) => void
   }
 }
 
@@ -1040,6 +1064,8 @@ export function TopBar(props: Readonly<TopBarProps>) {
         context={props.ribbon.context}
         contextNote={props.ribbon.contextNote}
         density={props.ribbon.density}
+        tab={props.ribbon.tab}
+        onTabChange={props.ribbon.onTabChange}
         onDensityChange={props.ribbon.onDensityChange}
       />
     </Stack>

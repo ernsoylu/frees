@@ -1487,6 +1487,29 @@ On a Mac, \`⌘\` replaces \`Ctrl\`.
 
 > **Tip:** make \`F4\` (Check) a habit before \`F2\` (Solve). It reports the DoF and any unit mismatches instantly, so you fix problems before the solver runs. With a parametric table focused, \`F2\` solves every run of that table; the text beside **Check** and **Solve** names the target.
 
+## Windows
+Every view is a window you can drag: onto another to tab it, to an edge to split, or out of the grid to float. Each of those has a command too, so none needs a mouse.
+
+- **Right-click a tab** (or press the menu key or \`Shift + F10\` on a focused tab) for **Close View**, **Close Others**, **Close All in Group**, **Float or Dock Back**, **Maximize or Restore**, **Move to Edge**, **Move to Centre** and **Move Left / Right / Below**. The menu acts on the tab you opened it on. A command that cannot run now stays listed, with the reason under it.
+- The same commands are in the palette (\`Ctrl + K\`), where they act on the active window, and on **View → Windows** and **View → Move** with the ribbon on. They have no keys of their own: \`Ctrl + W\` and \`Ctrl + Tab\` belong to the browser.
+- **Window List…** (palette, or View → Windows) lists every open window by kind. Type to search, press \`Enter\` to go to the first match, or close a view from its row.
+- The rail's **Tables** and **Plots** menus have **Focus All** and **Close All**.
+
+Closing a view never deletes anything: the table, plot or document stays in the project, and opening the view again shows it as it was. A dialog you close keeps its draft too: the Optimization, Curve Fit, Parameter Estimation, Monte Carlo, Global Sensitivity and PID Tuner settings, and the Terminal's output, are as you left them until you open another project.
+
+### Layouts
+- **Save Layout As…** keeps the current arrangement under a name: the windows, their sizes, and the ribbon tab and density. **Manage Layouts…** applies, renames or deletes a saved layout. Both are in the rail's **Layout** menu, the palette and **View → Layouts**.
+- **Undo Layout Change** goes back to the windows as they were before the last change (a drag, a window command, a layout applied); run it again to return.
+- **Reset Workspace Layout** rebuilds the default windows. It is not the schematic's **Reset layout**, which re-arranges the drawing.
+- Layouts are saved in this browser, not in the project file, and separately for wide and narrow screens. If a layout names a table or plot window the project no longer has, that window is left out and a notice says which.
+
+### Right-click menus
+- A **table** in the Tables list: Rename Table…, Configure Columns…, Plot Selected Columns, both exports, Retry Failed Runs and Delete Table….
+- A **plot tab**: Rename Plot…, Configure Plot… and Export Plot…, above the window commands.
+- A **variable** in the Variable Explorer: Pin to Slider, Copy Value (full precision, with its unit), Copy Name and Variable Settings….
+
+Each menu acts on the row or tab you opened it on, and also opens with the menu key or \`Shift + F10\` on a focused row.
+
 ## The ribbon (preview)
 Turn on **Preferences → Ribbon (preview)** to replace the Functions and Tools menus with tabs of labelled commands:
 

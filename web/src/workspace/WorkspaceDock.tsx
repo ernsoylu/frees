@@ -24,11 +24,13 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
   useSyncExternalStore,
   type FC,
   type ReactNode,
 } from 'react'
 import { useComputedColorScheme } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import {
   IconChartGridDots,
   IconSitemap,
@@ -44,6 +46,10 @@ import {
   IconGrid4x4,
   type IconProps,
 } from '@tabler/icons-react'
+
+import { CommandContextMenu } from '../ContextMenu'
+import { COMMAND_SPECS, TAB_MENU, type Commands, type MenuEntry } from '../commands'
+import { windowActionReason, type DockWindow, type WindowAction } from './windowActions'
 
 const LAYOUT_KEY = 'frees-dock-layout-v3'
 
@@ -96,9 +102,17 @@ function WorkspaceTab(props: IDockviewPanelHeaderProps) {
     () => api.title,
   )
   return (
-    <div className="dv-default-tab" data-testid="dockview-dv-default-tab">
+    <div className="dv-default-tab" data-testid="dockview-dv-default-tab" data-panel-id={api.id}>
       {Icon && <Icon size={13} style={{ flexShrink: 0, marginRight: 4 }} aria-hidden />}
-      <span className="dv-default-tab-content">{title}</span>
+      {/* A long name is cut with an ellipsis; the full name is its tooltip and accessible name (AC-10). */}
+      <span
+        className="dv-default-tab-content"
+        title={title}
+        aria-label={title}
+        style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+      >
+        {title}
+      </span>
       <button
         type="button"
         aria-label="Close"
@@ -117,11 +131,7 @@ function WorkspaceTab(props: IDockviewPanelHeaderProps) {
 }
 
 /** A window currently open in the dock. */
-export interface OpenWindow {
-  id: string
-  kind: string
-  title: string
-}
+export type OpenWindow = DockWindow
 
 /** Named layout presets ("perspectives") a user can jump between without
  *  hand-rearranging panels after an accidental close/drag. */
@@ -151,10 +161,23 @@ export interface WorkspaceDockHandle {
   isOpen: (id: string) => boolean
   /** Discard the saved layout and reopen the default set. */
   reset: () => void
-  /** Restore a previously-serialised dockview layout (from a project file). */
-  restore: (layout: unknown) => void
+  /** Restore a previously-serialised dockview layout (from a project file or a
+   *  named layout), leaving out the windows `keep` refuses, as one change to
+   *  undo. `ok` is false when it could not be read and the default was built;
+   *  `dropped` holds the titles of the windows left out. */
+  restore: (layout: unknown, keep?: (id: string) => boolean) => { ok: boolean; dropped: string[] }
+  /** The open windows as dockview holds them now. */
+  windows: () => DockWindow[]
+  /** The dock's layout as dockview serialises it, for a named layout. */
+  serialize: () => unknown
+  /** Go back to the layout before the last structural change; again to return (Phase Q). */
+  undoLayout: () => void
   /** Rebuild the dock as one of the named layout presets. */
   applyPerspective: (perspective: LayoutPerspective) => void
+  /** Bring an open window to the front (expanding the edge panel if it is there). */
+  focus: (id: string) => void
+  /** Run a window action (Phase Q). False when the window is no longer open. */
+  act: (id: string, action: WindowAction) => boolean
 }
 
 interface Props {
@@ -167,8 +190,12 @@ interface Props {
   /** Kinds rendered in the collapsible right edge group (Solution, Inspector)
    *  rather than as center tabs. */
   edgeKinds?: string[]
-  onActiveChange?: (active: OpenWindow | null) => void
+  onActiveChange?: (active: Pick<OpenWindow, 'id' | 'kind' | 'title'> | null) => void
   onOpenChange?: (windows: OpenWindow[]) => void
+  /** Commands a window's tab menu shows above the window commands (a plot's Rename, Configure, Export). */
+  tabMenuFor?: (w: DockWindow) => { entries: readonly MenuEntry[]; cmds: Commands } | null
+  /** Whether there is a layout change to undo. */
+  onUndoChange?: (can: boolean) => void
   handleRef?: React.MutableRefObject<WorkspaceDockHandle | null>
 }
 
@@ -181,9 +208,14 @@ export function WorkspaceDock({
   edgeKinds = [],
   onActiveChange,
   onOpenChange,
+  onUndoChange,
+  tabMenuFor,
   handleRef,
 }: Readonly<Props>) {
   const apiRef = useRef<DockviewApi | null>(null)
+  // The tab whose context menu is open, with the window list as it was then.
+  const [tabMenu, setTabMenu] = useState<{ id: string; x: number; y: number; windows: DockWindow[] } | null>(null)
+  const lastEmitRef = useRef('')
   const scheme = useComputedColorScheme('dark')
 
   // Stable refs so the imperative handle and dockview callbacks always see the
@@ -191,14 +223,36 @@ export function WorkspaceDock({
   const titlesRef = useRef(titles)
   const defaultsRef = useRef(defaultOpen)
   const edgeKindsRef = useRef(edgeKinds)
-  const cbRef = useRef({ onActiveChange, onOpenChange })
+  const cbRef = useRef({ onActiveChange, onOpenChange, onUndoChange })
+  // Undo Layout Change: the layout as it was before the last structural change
+  // (a drag, a window command, a layout applied). `quiet` holds while one
+  // command makes several changes, so they undo as one.
+  const undoRef = useRef<unknown>(null)
+  const quietRef = useRef(false)
 
   useLayoutEffect(() => {
     titlesRef.current = titles
     defaultsRef.current = defaultOpen
     edgeKindsRef.current = edgeKinds
-    cbRef.current = { onActiveChange, onOpenChange }
+    cbRef.current = { onActiveChange, onOpenChange, onUndoChange }
   })
+
+  const remember = (layout: unknown) => {
+    const had = undoRef.current !== null
+    undoRef.current = layout
+    if (!had) cbRef.current.onUndoChange?.(true)
+  }
+  /** Runs one command's worth of changes, remembering the layout before them once. */
+  const change = <T,>(api: DockviewApi, fn: () => T): T => {
+    if (quietRef.current) return fn()
+    remember(api.toJSON())
+    quietRef.current = true
+    try {
+      return fn()
+    } finally {
+      quietRef.current = false
+    }
+  }
 
   const kindOf = (panel: { id: string; params?: Record<string, unknown> }): string =>
     (panel.params?.kind as string) ?? panel.id
@@ -211,10 +265,90 @@ export function WorkspaceDock({
     return api.addEdgeGroup('right', { id: RIGHT_EDGE_ID, initialSize: 400, minimumSize: 260 })
   }
 
+  const snapshot = (api: DockviewApi): DockWindow[] =>
+    api.panels.map((p) => {
+      const place = p.group.api.location.type
+      return {
+        id: p.id,
+        kind: kindOf(p),
+        title: p.title ?? p.id,
+        group: p.group.id,
+        place: place === 'grid' || place === 'edge' ? place : 'floating',
+        maximized: p.api.isMaximized(),
+      }
+    })
+
+  // Reports the window list only when it differs, so a mutation that changes
+  // nothing a consumer reads costs no render.
   const emitOpen = (api: DockviewApi) => {
-    cbRef.current.onOpenChange?.(
-      api.panels.map((p) => ({ id: p.id, kind: kindOf(p), title: p.title ?? p.id })),
-    )
+    const windows = snapshot(api)
+    const key = JSON.stringify(windows)
+    if (key === lastEmitRef.current) return
+    lastEmitRef.current = key
+    cbRef.current.onOpenChange?.(windows)
+  }
+
+  const focus = (api: DockviewApi, id: string) => {
+    const panel = api.getPanel(id)
+    if (!panel) return
+    if (panel.group.api.location.type === 'edge') panel.group.api.expand()
+    panel.api.setActive()
+  }
+
+  // Docks a window as a tab beside another centre window, or in a new centre
+  // group when there is none.
+  const toCentre = (api: DockviewApi, id: string) => {
+    const panel = api.getPanel(id)
+    if (!panel) return
+    const beside = api.panels.find((p) => p.id !== id && p.group.api.location.type === 'grid')
+    panel.api.moveTo({ group: beside ? beside.group : api.addGroup() })
+  }
+
+  const act = (api: DockviewApi, id: string, action: WindowAction): boolean => {
+    const panel = api.getPanel(id)
+    if (!panel) return false
+    const group = panel.group
+    // A move starts from the grid as it is, not from one maximized group.
+    if (action !== 'maximize' && api.hasMaximizedGroup()) api.exitMaximizedGroup()
+    switch (action) {
+      case 'close':
+        api.removePanel(panel)
+        return true
+      case 'closeOthers':
+        for (const p of [...group.panels]) if (p.id !== id) api.removePanel(p)
+        break
+      case 'closeGroup':
+        for (const p of [...group.panels]) api.removePanel(p)
+        return true
+      case 'float':
+        if (group.api.location.type === 'floating') toCentre(api, id)
+        else api.addFloatingGroup(panel, { x: 80, y: 80, width: 640, height: 420 })
+        break
+      case 'maximize':
+        if (panel.api.isMaximized()) panel.api.exitMaximized()
+        else panel.api.maximize()
+        break
+      case 'moveEdge': {
+        ensureRightEdge(api)
+        const edge = api.getGroup(RIGHT_EDGE_ID)
+        if (edge) panel.api.moveTo({ group: edge as typeof group })
+        break
+      }
+      case 'moveCentre':
+        toCentre(api, id)
+        break
+      case 'moveLeft':
+        panel.api.moveTo({ group, position: 'left' })
+        break
+      case 'moveRight':
+        panel.api.moveTo({ group, position: 'right' })
+        break
+      case 'moveBelow':
+        panel.api.moveTo({ group, position: 'bottom' })
+        break
+    }
+    focus(api, id)
+    return true
   }
 
   const openInstance = (api: DockviewApi, id: string, kind: string, title: string) => {
@@ -361,28 +495,71 @@ export function WorkspaceDock({
       setTitle: (id, title) => {
         try {
           const p = apiRef.current?.getPanel(id)
-          if (p && p.title !== title) p.api.setTitle(title)
+          if (p && p.title !== title) {
+            p.api.setTitle(title)
+            if (apiRef.current) emitOpen(apiRef.current)
+          }
         } catch {
           /* never let a tab-title update crash the app */
         }
       },
       isOpen: (id) => !!apiRef.current?.getPanel(id),
       reset: () => {
-        if (!apiRef.current) return
+        const api = apiRef.current
+        if (!api) return
         localStorage.removeItem(LAYOUT_KEY)
-        buildDefault(apiRef.current)
+        change(api, () => buildDefault(api))
       },
-      restore: (layout) => {
-        if (!apiRef.current || layout == null || typeof layout !== 'object') return
+      restore: (layout, keep) => {
+        const api = apiRef.current
+        if (!api || layout == null || typeof layout !== 'object') return { ok: true, dropped: [] }
+        return change(api, () => {
+          try {
+            api.fromJSON(layout as Parameters<DockviewApi['fromJSON']>[0])
+          } catch {
+            // Corrupt or version-mismatched layout: the default instead.
+            buildDefault(api)
+            return { ok: false, dropped: [] }
+          }
+          // A layout with every view closed is a layout, not a failure.
+          const gone = keep ? api.panels.filter((p) => !keep(p.id)) : []
+          const dropped = gone.map((p) => p.title ?? p.id)
+          for (const p of gone) api.removePanel(p)
+          return { ok: true, dropped }
+        })
+      },
+      windows: () => (apiRef.current ? snapshot(apiRef.current) : []),
+      serialize: () => apiRef.current?.toJSON() ?? null,
+      undoLayout: () => {
+        const api = apiRef.current
+        const before = undoRef.current
+        if (!api || before === null) return
+        const now = api.toJSON()
+        quietRef.current = true
         try {
-          apiRef.current.fromJSON(layout as Parameters<DockviewApi['fromJSON']>[0])
+          api.fromJSON(before as Parameters<DockviewApi['fromJSON']>[0])
         } catch {
-          // Corrupt or version-mismatched layout — fall back to default.
-          buildDefault(apiRef.current)
+          api.fromJSON(now)
+        } finally {
+          quietRef.current = false
         }
+        undoRef.current = now
       },
       applyPerspective: (perspective) => {
-        if (apiRef.current) buildPerspective(apiRef.current, perspective)
+        const api = apiRef.current
+        if (api) change(api, () => buildPerspective(api, perspective))
+      },
+      focus: (id) => {
+        if (apiRef.current) focus(apiRef.current, id)
+      },
+      act: (id, action) => {
+        const api = apiRef.current
+        try {
+          return !!api && change(api, () => act(api, id, action))
+        } catch {
+          // A move dockview refuses leaves the layout as it was.
+          return true
+        }
       },
     }
     return () => {
@@ -409,6 +586,10 @@ export function WorkspaceDock({
     }
     if (!restored) buildDefault(api)
 
+    // Subscribed after the first layout is built, so opening the app is not a change to undo.
+    api.onWillMutateLayout(() => {
+      if (!quietRef.current) remember(api.toJSON())
+    })
     api.onDidLayoutChange(() => {
       try {
         localStorage.setItem(LAYOUT_KEY, JSON.stringify(api.toJSON()))
@@ -426,12 +607,61 @@ export function WorkspaceDock({
     const sync = () => emitOpen(api)
     api.onDidAddPanel(sync)
     api.onDidRemovePanel(sync)
+    // Moves, floats, maximize and a loaded layout change a window's group and place.
+    api.onDidMutateLayout(sync)
+    api.onDidLayoutFromJSON(sync)
     sync()
     reportActive(api.activePanel ?? undefined)
   }
 
+  // One handler for every tab, wherever dockview has moved it: a right click,
+  // or the menu key or Shift+F10 on the focused tab. A key reports no pointer
+  // position, so the menu then opens under the tab.
+  const openTabMenu = (e: { target: EventTarget; preventDefault: () => void }, x = 0, y = 0) => {
+    const tab = (e.target as HTMLElement).closest<HTMLElement>('.dv-tab')
+    const id = tab?.querySelector<HTMLElement>('[data-panel-id]')?.dataset.panelId
+    if (!tab || !id || !apiRef.current) return
+    e.preventDefault()
+    const r = tab.getBoundingClientRect()
+    const menu = { id, x: x || r.left, y: y || r.bottom, windows: snapshot(apiRef.current) }
+    // After this event: Mantine closes a menu on any keydown outside it, and
+    // the key that opens this one would count.
+    setTimeout(() => setTabMenu(menu))
+  }
+  // The menu's rows are the registry's commands, run on the tab it was opened on.
+  const tabCommands = tabMenu
+    ? (Object.fromEntries(
+        TAB_MENU.filter((e) => e !== '-').map(([id, action]) => [
+          id,
+          {
+            ...COMMAND_SPECS[id],
+            id,
+            run: () => {
+              const api = apiRef.current
+              if (api && !change(api, () => act(api, tabMenu.id, action))) {
+                notifications.show({ color: 'yellow', message: 'That window is no longer open.' })
+              }
+            },
+            unavailable: windowActionReason(tabMenu.windows, tabMenu.id, action),
+          },
+        ]),
+      ) as unknown as Commands)
+    : null
+
+  const tabWindow = tabMenu?.windows.find((w) => w.id === tabMenu.id)
+  const tabExtras = tabWindow ? tabMenuFor?.(tabWindow) : null
+
   return (
     <PanelContentContext.Provider value={content}>
+      {tabMenu && tabCommands && (
+        <CommandContextMenu
+          at={tabMenu}
+          label={`${tabWindow?.title ?? 'Window'} tab menu`}
+          onClose={() => setTabMenu(null)}
+          cmds={{ ...tabCommands, ...tabExtras?.cmds }}
+          entries={[...(tabExtras?.entries ?? []), ...TAB_MENU.map((e) => (e === '-' ? e : e[0]))]}
+        />
+      )}
       {/* Align dockview's surfaces with the app's Mantine color scale (these
           vars are theme-aware, so one block serves both light and dark). */}
       <style>{`
@@ -583,7 +813,17 @@ export function WorkspaceDock({
           background-color: var(--mantine-color-body) !important;
         }
       `}</style>
-      <div style={{ width: '100%', height: '100%' }}>
+      <div
+        // Its own stacking context: dockview stacks floating windows and panel
+        // overlays at 999, which put a floating window on top of the app's
+        // dialogs and menus (Mantine starts at 200). Inside this context they
+        // still order among themselves, and nothing here outranks a portal.
+        style={{ width: '100%', height: '100%', isolation: 'isolate' }}
+        onContextMenu={(e) => openTabMenu(e, e.clientX, e.clientY)}
+        onKeyDown={(e) => {
+          if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) openTabMenu(e)
+        }}
+      >
         <DockviewReact
           className={scheme === 'light' ? 'dockview-theme-light' : 'dockview-theme-dark'}
           components={components}
