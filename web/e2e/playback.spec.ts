@@ -5,6 +5,7 @@
 // Run:  npm run build && npx playwright test e2e/playback.spec.ts --project=chromium
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
+import { runCommand } from './journey'
 
 // A 5 kJ/K mass cooling through a wall to 300 K: T = 300 + 100·exp(-t/250 s).
 // The event fires at 250·ln 2 = 173.3 s, between the recorded 100 s samples.
@@ -46,6 +47,10 @@ test('RUN-05: play, step and scrub a recorded run; an event reads at the sample 
   await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 120_000 })
   const calls = () => page.evaluate(() => [...(window as unknown as { engineCalls: string[] }).engineCalls])
 
+  // Phase R: Runs & Scenarios is its own panel. Floated, it is read beside the
+  // playback strip, which stays with the values in the Variable Explorer.
+  await runCommand(page, 'Runs & Scenarios')
+  await runCommand(page, 'Float or Dock Back')
   const bar = page.getByTestId('playback-bar')
   const time = bar.getByTestId('playback-time')
   await expect(time).toHaveText('time = 1000 s · sample 11 of 11')

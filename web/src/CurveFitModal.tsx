@@ -1,3 +1,4 @@
+import { ToolFrame, ToolSection } from './ToolFrame'
 import { useKeptState } from './keptState'
 import { useState, useEffect, useRef } from 'react'
 import {
@@ -5,7 +6,6 @@ import {
   Button,
   Collapse,
   Group,
-  Modal,
   NumberInput,
   Stack,
   Text,
@@ -163,18 +163,19 @@ export default function CurveFitModal({
   const [confidence, setConfidence] = useKeptState<number | ''>('curvefit.confidence', 0.95)
   const [sigmaColumnName, setSigmaColumnName] = useKeptState<string>('curvefit.sigmaColumnName', '')
   const [advancedOpen, setAdvancedOpen] = useKeptState('curvefit.advancedOpen', false)
-  const [running, setRunning] = useState(false)
-  const [validation, setValidation] = useState<string | null>(null)
-  const [result, setResult] = useState<CurveFitResponse | null>(null)
+  // Kept with the draft: a run that lands after the view closed still leaves its result.
+  const [running, setRunning] = useKeptState('curvefit.running', false)
+  const [validation, setValidation] = useKeptState<string | null>('curvefit.validation', null)
+  const [result, setResult] = useKeptState<CurveFitResponse | null>('curvefit.result', null)
   // The data the displayed result was actually fitted to. Editing the data box
   // after a fit must not silently re-point the plot at numbers the fit never
   // saw, so the plot reads this and not the live parse.
-  const [fitted, setFitted] = useState<FitData | null>(null)
+  const [fitted, setFitted] = useKeptState<FitData | null>('curvefit.fitted', null)
 
   // Units states
   const [inferredXUnit, setInferredXUnit] = useState<string>('')
   const [inferredYUnit, setInferredYUnit] = useState<string>('')
-  const [parameterUnits, setParameterUnits] = useState<Record<string, string>>({})
+  const [parameterUnits, setParameterUnits] = useKeptState<Record<string, string>>('curvefit.parameterUnits', {})
 
   // Table selection states
   const [dataMode, setDataMode] = useKeptState<'manual' | 'table'>('curvefit.dataMode', 'manual')
@@ -445,7 +446,7 @@ export default function CurveFitModal({
   }
 
   return (
-    <Modal opened onClose={onClose} title="Curve Fit — Least Squares (Levenberg-Marquardt)" centered size="xl">
+    <ToolFrame onClose={onClose} title="Curve Fit — Least Squares (Levenberg-Marquardt)" size="xl">
       <Text size="sm" c="dimmed" mb="md">
         Fits the model parameters to the observed data by minimizing the sum of
         squared residuals. Choose an equation template (or write your own custom one)
@@ -453,6 +454,7 @@ export default function CurveFitModal({
       </Text>
 
       <Stack gap="sm">
+        <ToolSection step="Target">
         <Select
           label="Model equation template"
           placeholder="Select a template or write custom"
@@ -527,7 +529,9 @@ export default function CurveFitModal({
           />
           <div style={{ flex: 1 }} />
         </Group>
+        </ToolSection>
 
+        <ToolSection step="Inputs">
         {/* Always offered, even with no tables in the project. Hiding the
             control entirely made the table source undiscoverable — you had to
             already know it existed to go and create a table first. */}
@@ -657,8 +661,10 @@ export default function CurveFitModal({
           spellCheck={false}
           styles={MONO_INPUT}
         />
+        </ToolSection>
 
-        <Group justify="space-between" align="center" mt="xs">
+        <ToolSection step="Advanced">
+        <Group justify="space-between" align="center">
           <Text size="sm" fw={500}>
             Weighting, bounds &amp; robustness
           </Text>
@@ -765,14 +771,26 @@ export default function CurveFitModal({
             </Group>
           </Stack>
         </Collapse>
+        </ToolSection>
 
+        <ToolSection step="Run">
         {validation && (
           <Text c="red" size="sm">
             {validation}
           </Text>
         )}
+        <Group justify="flex-end">
+          <Button variant="default" onClick={onClose}>
+            Close
+          </Button>
+          <Button onClick={run} loading={running}>
+            Fit
+          </Button>
+        </Group>
+        </ToolSection>
 
         {result && (
+          <ToolSection step="Results">
           <FitResultView
             result={result}
             parameterUnits={parameterUnits}
@@ -782,23 +800,20 @@ export default function CurveFitModal({
             xLabel={inferredXUnit ? `${xVariable} [${inferredXUnit}]` : xVariable}
             yLabel={inferredYUnit ? `${yVariable} [${inferredYUnit}]` : yVariable}
           />
+          </ToolSection>
         )}
 
-        <Group justify="flex-end" mt="xs">
-          <Button variant="default" onClick={onClose}>
-            Close
-          </Button>
-          {result && result.success && onInsertEquation && (
+        {result && result.success && onInsertEquation && (
+          <ToolSection step="Apply / Export">
+          <Group justify="flex-end">
             <Button color="teal" onClick={insertToEditor}>
               Copy to Editor
             </Button>
-          )}
-          <Button onClick={run} loading={running}>
-            Fit
-          </Button>
-        </Group>
+          </Group>
+          </ToolSection>
+        )}
       </Stack>
-    </Modal>
+    </ToolFrame>
   )
 }
 

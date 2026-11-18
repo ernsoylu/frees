@@ -1,10 +1,10 @@
 import { useKeptState } from './keptState'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { ToolFrame, ToolSection } from './ToolFrame'
 import {
   Alert,
   Button,
   Group,
-  Modal,
   NumberInput,
   ScrollArea,
   Select,
@@ -39,10 +39,11 @@ export default function MonteCarloModal({
   const [samples, setSamples] = useKeptState<number>('montecarlo.samples', 200)
   const [seed, setSeed] = useKeptState<number>('montecarlo.seed', 42)
   const [design, setDesign] = useKeptState<MonteCarloDesign>('montecarlo.design', 'iid')
-  const [running, setRunning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<MonteCarloResult | null>(null)
-  const [selected, setSelected] = useState<string | null>(null)
+  // Kept with the draft: a run that lands after the view closed still leaves its result.
+  const [running, setRunning] = useKeptState('montecarlo.running', false)
+  const [error, setError] = useKeptState<string | null>('montecarlo.error', null)
+  const [result, setResult] = useKeptState<MonteCarloResult | null>('montecarlo.result', null)
+  const [selected, setSelected] = useKeptState<string | null>('montecarlo.selected', null)
 
   const run = () => {
     setRunning(true)
@@ -87,13 +88,16 @@ export default function MonteCarloModal({
   const okSamples = result ? result.samples.length - result.failedSamples : 0
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Monte Carlo Uncertainty" size="xl" centered>
+    <ToolFrame opened={opened} onClose={onClose} title="Monte Carlo Uncertainty" size="xl">
       <Stack gap="sm">
+        <ToolSection step="Target">
         <Text size="sm" c="dimmed">
           Samples every variable with a declared uncertainty (Variable Settings window) around
           its solved value, re-solves, and aggregates the distributions — the sampling counterpart
           of the first-order propagation shown in the Solution window.
         </Text>
+        </ToolSection>
+        <ToolSection step="Method">
         <Group align="end" gap="sm">
           <Select
             label="Design"
@@ -123,6 +127,10 @@ export default function MonteCarloModal({
             min={0}
             w={90}
           />
+        </Group>
+        </ToolSection>
+        <ToolSection step="Run">
+        <Group>
           <Button onClick={run} loading={running}>
             Run
           </Button>
@@ -132,8 +140,9 @@ export default function MonteCarloModal({
             {error}
           </Alert>
         )}
+        </ToolSection>
         {result && (
-          <>
+          <ToolSection step="Results">
             <Text size="sm">
               {okSamples} of {result.requestedSamples} samples solved
               {result.failedSamples > 0 ? ` (${result.failedSamples} failed)` : ''}
@@ -180,9 +189,9 @@ export default function MonteCarloModal({
               </Table>
             </ScrollArea.Autosize>
             {histogram && <PlotlyChart figure={histogram} minHeight={280} />}
-          </>
+          </ToolSection>
         )}
       </Stack>
-    </Modal>
+    </ToolFrame>
   )
 }

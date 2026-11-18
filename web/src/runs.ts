@@ -50,6 +50,25 @@ export function sampleOf(solutions: number, selected: number): string {
 
 export const describeRun = (run: RunIdentity) => `run ${run.revision} · ${run.scenario} · ${run.sample} · ${run.status}`
 
+export type RunStateKind = 'live' | 'running' | 'stopped' | 'recorded' | 'failed' | 'stale' | 'current' | 'none'
+
+/**
+ * Phase R: what the values on screen are, in one phrase. A live run and a
+ * running solve come first because the values are moving; a stop, a recorded
+ * sample, a failure and stale inputs each qualify the run still shown.
+ */
+export function runState(s: { live: boolean; busy: boolean; stopped: boolean; recorded: string | null; stale: boolean; run: RunIdentity | null }): { kind: RunStateKind; label: string } {
+  const of = s.run ? `run ${s.run.revision}` : 'no run'
+  if (s.live) return { kind: 'live', label: 'Live: the values follow the open run' }
+  if (s.busy) return { kind: 'running', label: 'Running…' }
+  if (s.stopped) return { kind: 'stopped', label: s.run ? `Stopped: the values are still ${of}` : 'Stopped: no result' }
+  if (!s.run) return { kind: 'none', label: 'Not solved yet' }
+  if (s.recorded) return { kind: 'recorded', label: `Recorded time: ${s.recorded}, ${of}${s.stale ? ' (stale)' : ''}` }
+  if (s.run.status === 'did not converge' || s.run.status === 'engine failed') return { kind: 'failed', label: `Failed: ${of} ${s.run.status}` }
+  if (s.stale) return { kind: 'stale', label: `Stale: the model or its inputs changed since ${of}` }
+  return { kind: 'current', label: `Current: ${of}` }
+}
+
 export const activeScenario = (s: ScenarioState) => s.list.find((x) => x.name === s.active) ?? null
 
 /**

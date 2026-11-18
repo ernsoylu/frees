@@ -1,11 +1,11 @@
+import { ToolFrame, ToolSection } from './ToolFrame'
 import { useKeptState } from './keptState'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   Alert,
   Badge,
   Button,
   Group,
-  Modal,
   ScrollArea,
   Select,
   Stack,
@@ -158,9 +158,10 @@ export default function ParameterFitModal({
   const [bounds, setBounds] = useKeptState<Record<string, Bounds>>('paramfit.bounds', {})
   const [loss, setLoss] = useKeptState<'linear' | 'soft_l1' | 'huber' | 'cauchy'>('paramfit.loss', 'linear')
   const [fScale, setFScale] = useKeptState('paramfit.fScale', '1.0')
-  const [running, setRunning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<ParameterFitResult | null>(null)
+  // Kept with the draft: a run that lands after the view closed still leaves its result.
+  const [running, setRunning] = useKeptState('paramfit.running', false)
+  const [error, setError] = useKeptState<string | null>('paramfit.error', null)
+  const [result, setResult] = useKeptState<ParameterFitResult | null>('paramfit.result', null)
 
   const paramNames = paramText
     .split(',')
@@ -232,8 +233,9 @@ export default function ParameterFitModal({
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Parameter Estimation" size="lg" centered>
+    <ToolFrame opened={opened} onClose={onClose} title="Parameter Estimation" size="lg">
       <Stack gap="sm">
+        <ToolSection step="Target">
         <Text size="sm" c="dimmed">
           Fits the chosen document parameters so a DYNAMIC column matches a measured series —
           each trial re-solves the model and the residuals are reduced on the measured raster.
@@ -286,6 +288,8 @@ export default function ParameterFitModal({
             />
           </Group>
         )}
+        </ToolSection>
+        <ToolSection step="Inputs">
         <TextInput
           label="Parameters to fit (comma-separated document assignments)"
           placeholder="k, ua, x0"
@@ -321,6 +325,8 @@ export default function ParameterFitModal({
             </Table.Tbody>
           </Table>
         )}
+        </ToolSection>
+        <ToolSection step="Method">
         <Group grow align="end">
           <Select
             label="Loss function"
@@ -342,6 +348,8 @@ export default function ParameterFitModal({
             />
           )}
         </Group>
+        </ToolSection>
+        <ToolSection step="Run">
         <Group>
           <Button onClick={run} loading={running}>
             Fit
@@ -352,8 +360,10 @@ export default function ParameterFitModal({
             {error}
           </Alert>
         )}
+        </ToolSection>
         {result && (
           <>
+            <ToolSection step="Results">
             <Text size="sm">
               RMSE {formatValue(result.initialRmse)} → <b>{formatValue(result.rmse)}</b> in{' '}
               {result.evaluations} evaluations
@@ -467,6 +477,8 @@ export default function ParameterFitModal({
                 </ScrollArea>
               </Stack>
             )}
+            </ToolSection>
+            <ToolSection step="Apply / Export">
             <Group>
               <Button
                 variant="light"
@@ -478,9 +490,10 @@ export default function ParameterFitModal({
                 Apply to editor
               </Button>
             </Group>
+            </ToolSection>
           </>
         )}
       </Stack>
-    </Modal>
+    </ToolFrame>
   )
 }

@@ -307,6 +307,21 @@ Closing a view never deletes anything: the table, plot or document stays in the 
 
 Each menu acts on the row or tab you opened it on, and also opens with the menu key or `Shift + F10` on a focused row.
 
+### Inspector, Problems and Runs
+- The **Inspector** names what it is showing on its first line. It follows the main window you focused last (a table, a plot, the Editor), the block you select on the **Schematic** (its type, its parameter values after a solve, and **Go to Source**), and a variable you click in the **Variable Explorer** (its value, the row commands, and the lines that write it). Focusing a main window hands it back to that window.
+- **Problems** (palette, Tools menu, or the status bar's count with the ribbon on) lists what the last Check and Solve reported: severity, source (Check, Solve, Schematic or Units), the message, and a **Line** button that opens the Editor there when the engine gave a position. It opens under the Editor. The marks in the Editor and on the schematic stay; with a parametric table focused, the list is that table's.
+- **Runs & Scenarios** is its own panel, beside the Variable Explorer: the run on screen, named scenarios, and the comparison with a baseline. Dock or float it to read it next to the values.
+- The playback and live strip, and the Runs & Scenarios panel, start with one label that says what the values are: **Live**, **Running**, **Stopped**, **Recorded time**, **Failed**, **Stale** or **Current**, with the run's number.
+
+### Analysis tools as windows
+Optimization, Curve Fit, Parameter Estimation, Monte Carlo, Global Sensitivity and the PID Tuner each list their settings in the same order: **Target**, **Inputs**, **Method**, **Advanced**, **Run**, **Results**, **Apply / Export**. A tool leaves out a step it has nothing for.
+
+- **Dock as Window** (top of the tool) moves it into the workspace as a tab, beside the Editor and the results. **Open as Dialog** moves it back. The choice is remembered on this device, so the tool's command opens it where you left it.
+- Closing the tool's tab closes the tool. Its draft and its last result stay until you open another project, so a run you start and then close the view on is there when you open the tool again.
+
+### Where is a command?
+**Where Is a Command?…** (Help tab, or the palette) finds any command by name and says where it lives, with its key. With the ribbon on, **Show** brings that command's tab forward and outlines the button, without running it.
+
 ## The ribbon (preview)
 Turn on **Preferences → Ribbon (preview)** to replace the Functions and Tools menus with tabs of labelled commands:
 

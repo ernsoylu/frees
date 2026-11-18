@@ -23,4 +23,28 @@ describe('useKeptState', () => {
     clearKeptState()
     expect(renderHook(() => useKeptState('t.cleared', 1)).result.current[0]).toBe(1)
   })
+
+  it('keeps a value set after its view closed, tells the view open now, and drops one from before a switch', () => {
+    const closed = renderHook(() => useKeptState<string | null>('t.result', null))
+    const lateSet = closed.result.current[1]
+    closed.unmount()
+    const open = renderHook(() => useKeptState<string | null>('t.result', null))
+    act(() => lateSet('done'))
+    expect(open.result.current[0]).toBe('done')
+    open.unmount()
+    clearKeptState()
+    act(() => lateSet('from the old project'))
+    expect(renderHook(() => useKeptState<string | null>('t.result', null)).result.current[0]).toBeNull()
+  })
+
+  it('drops a write from a view mounted before a switch, and a view mounted after it works', () => {
+    const before = renderHook(() => useKeptState('t.mounted', 1))
+    clearKeptState()
+    act(() => before.result.current[1](5))
+    before.unmount()
+    const after = renderHook(() => useKeptState('t.mounted', 1))
+    expect(after.result.current[0]).toBe(1)
+    act(() => after.result.current[1]((v) => v + 1))
+    expect(after.result.current[0]).toBe(2)
+  })
 })

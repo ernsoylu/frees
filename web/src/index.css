@@ -55,3 +55,10 @@ body,
     animation: none;
   }
 }
+
+/* Phase R: "Where Is a Command?" marks the control it found, without running it. */
+[data-located] {
+  outline: 2px solid var(--mantine-color-yellow-5);
+  outline-offset: 1px;
+  border-radius: var(--mantine-radius-sm);
+}

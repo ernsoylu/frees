@@ -4,7 +4,7 @@ import { CANVAS_COMMANDS, keysOf, runCanvasCommand } from './schematic/commands'
 import type { SchematicHandoff } from './schematic/SchematicTab'
 import { flushSync } from 'react-dom'
 import { helpUrl } from './helpUrl'
-import { ChangeEvent, lazy, startTransition, Suspense, useCallback, useEffect, useEffectEvent, useMemo, useState, useRef, type ReactNode } from 'react'
+import { ChangeEvent, Fragment, lazy, startTransition, Suspense, useCallback, useEffect, useEffectEvent, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
   Alert,
   Anchor,
@@ -23,7 +23,7 @@ import {
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { Spotlight, SpotlightActionGroupData, spotlight } from '@mantine/spotlight'
-import { PLOT_TAB_MENU, commandForKey, commandPaletteGroups, menuCommands, resolveCommands, type CommandId, type Commands } from './commands'
+import { PLOT_TAB_MENU, commandForKey, commandHome, commandPaletteGroups, menuCommands, resolveCommands, type CommandId, type Commands } from './commands'
 import {
   IconSitemap,
   IconHelp,
@@ -63,7 +63,7 @@ import type { LiveTable } from './wasm/liveClient'
 import type { LiveControl } from './schematic/LiveControls'
 import { findPin, pinnableParameters, sliderOverrideEquation, sliderRange, withSliderBounds, type PinnedSlider } from './sliders'
 import type { SeriesId } from './preferredValues'
-import { compareRuns, describeRun, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
+import { compareRuns, describeRun, DOCUMENT_INPUTS, EMPTY_SCENARIOS, runState, runStatus, sampleOf, scenarioOverrides, type Baseline, type ScenarioState } from './runs'
 import { playbackVariables, timeLabel, timelineOf, type Timeline } from './playback'
 import { getWorkerPoolConcurrency, wasmUnitConversions } from './wasm/engineClient'
 import { contextHandler, useContextVersion } from './contextActions'
@@ -134,6 +134,11 @@ const OpenUrlModal = lazy(() => import('./OpenUrlModal'))
 const PlotTab = lazy(() => import('./PlotTab'))
 const ComponentWizardModal = lazy(() => import('./ComponentWizardModal'))
 const SliderStrip = lazy(() => import('./SliderStrip'))
+import { InspectorTarget, SchematicInspector, VariableInspector } from './Inspector'
+import { ProblemsPanel } from './ProblemsPanel'
+import { allProblems, checkProblems, linesWriting, problemLine, problemSummary } from './problems'
+import { ToolHostContext } from './toolHost'
+import { WhereIsModal } from './WhereIsModal'
 const RunsPanel = lazy(() => import('./RunsPanel'))
 const PlaybackBar = lazy(() => import('./PlaybackBar'))
 const LiveBar = lazy(() => import('./LiveBar'))
@@ -364,6 +369,24 @@ const carriesSettings = (d: SharedDocument) => d.lesson !== undefined || d.slide
 
 // Capture before effects consume the URL; valid #share= links take precedence.
 const RAW_DOCUMENT_URL = new URLSearchParams(globalThis.location.search).get('url')
+
+// Phase R: the analysis tools that can be docked, by the id of their `tool.*` command.
+const TOOL_IDS = ['minMax', 'curveFit', 'parameterFit', 'monteCarlo', 'sensitivity', 'pidTuner'] as const
+type ToolId = (typeof TOOL_IDS)[number]
+const TOOL_TITLES: Record<ToolId, string> = {
+  minMax: 'Optimization', curveFit: 'Curve Fit', parameterFit: 'Parameter Estimation',
+  monteCarlo: 'Monte Carlo', sensitivity: 'Global Sensitivity', pidTuner: 'PID Tuner',
+}
+const toolWindowId = (id: ToolId) => `tool:${id}`
+const DOCKED_TOOLS_KEY = 'frees-tools-docked-v1'
+function readDockedTools(): ToolId[] {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(DOCKED_TOOLS_KEY) ?? '[]')
+    return Array.isArray(raw) ? TOOL_IDS.filter((id) => raw.includes(id)) : []
+  } catch {
+    return []
+  }
+}
 
 export default function App() {
   const isMobile = useMediaQuery('(max-width: 768px)')
@@ -792,6 +815,50 @@ export default function App() {
     plantLoading?: boolean
     plantError?: string
   } | null>(null)
+  // Phase R: which tools open as dock windows (kept per device), and the sync
+  // between a tool being open and its dock window existing.
+  const [dockedTools, setDockedTools] = useState<ToolId[]>(readDockedTools)
+  const dockedToolsRef = useRef(dockedTools)
+  // The phone and embed layouts have no dock: there every tool is a dialog, and offers no docking.
+  const dockAvailable = isMobile === false && !EMBED.embed
+  const dockedNow = dockAvailable ? dockedTools : []
+  const setToolShown = (id: ToolId, on: boolean) => {
+    switch (id) {
+      case 'minMax': return setShowMinMax(on)
+      case 'curveFit': return setShowCurveFit(on)
+      case 'parameterFit': return setShowParameterFit(on)
+      case 'monteCarlo': return setShowMonteCarlo(on)
+      case 'sensitivity':
+        if (!on) setSensitivityOutput(null)
+        return setShowSensitivity(on)
+      case 'pidTuner': return setPidTuner((p) => (on ? p ?? {} : null))
+    }
+  }
+  const setToolDocked = (id: ToolId, docked: boolean) => {
+    const next = docked ? [...dockedToolsRef.current.filter((x) => x !== id), id] : dockedToolsRef.current.filter((x) => x !== id)
+    dockedToolsRef.current = next
+    setDockedTools(next)
+    try {
+      localStorage.setItem(DOCKED_TOOLS_KEY, JSON.stringify(next))
+    } catch {
+      /* quota: the choice just is not remembered */
+    }
+  }
+  const openTool = (id: ToolId) => {
+    setToolShown(id, true)
+    // Already open in the dock: bring it forward.
+    if (dockAvailable && dockedToolsRef.current.includes(id)) dockRef.current?.openInstance(toolWindowId(id), 'tool', TOOL_TITLES[id])
+  }
+  const closeTool = (id: ToolId) => {
+    setToolShown(id, false)
+    dockRef.current?.close(toolWindowId(id))
+  }
+  const toggleToolDock = (id: ToolId) => {
+    const docked = !dockedToolsRef.current.includes(id)
+    setToolDocked(id, docked)
+    if (!docked) dockRef.current?.close(toolWindowId(id))
+  }
+  const [showWhereIs, setShowWhereIs] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [showExamples, setShowExamples] = useState(false)
   const [showOpenUrl, setShowOpenUrl] = useState(false)
@@ -882,9 +949,31 @@ export default function App() {
   // Dockview workspace manager: imperative handle + set of currently-open
   // window kinds (drives the sidebar's open-state indicators).
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([])
+  // A tool's dock window and the tool follow each other. A window that appears
+  // (a restored layout) opens its tool docked; one that goes (its tab closed)
+  // closes the tool, unless it went because the tool moved back to a dialog.
+  const toolWindowsRef = useRef<ReadonlySet<ToolId>>(new Set())
+  useEffect(() => {
+    const now = new Set(TOOL_IDS.filter((id) => openWindows.some((w) => w.id === toolWindowId(id))))
+    for (const id of toolWindowsRef.current) if (!now.has(id) && dockedToolsRef.current.includes(id)) setToolShown(id, false)
+    for (const id of now) {
+      if (toolWindowsRef.current.has(id)) continue
+      if (!dockedToolsRef.current.includes(id)) setToolDocked(id, true)
+      setToolShown(id, true)
+    }
+    toolWindowsRef.current = now
+  }, [openWindows])
+  // A docked tool that is open has its window, however it was opened.
+  const shownDockedTools = TOOL_IDS.filter((id) => dockedNow.includes(id) && { minMax: showMinMax, curveFit: showCurveFit, parameterFit: showParameterFit, monteCarlo: showMonteCarlo, sensitivity: showSensitivity, pidTuner: pidTuner !== null }[id]).join(',')
+  useEffect(() => {
+    for (const id of shownDockedTools.split(',').filter(Boolean) as ToolId[]) dockRef.current?.openInstance(toolWindowId(id), 'tool', TOOL_TITLES[id])
+  }, [shownDockedTools])
   // Last-focused non-auxiliary window — drives the content-aware Inspector
   // (focusing the Inspector/Solution panels themselves doesn't change it).
   const [focusedWindow, setFocusedWindow] = useState<Pick<OpenWindow, 'id' | 'kind' | 'title'> | null>(null)
+  // Phase R: what the Inspector reads besides the focused window.
+  const [schematicSelection, setSchematicSelection] = useState<string[]>([])
+  const [inspectedVariable, setInspectedVariable] = useState<string | null>(null)
   // The dock's active window, utility panels included: what the window
   // commands act on (Phase Q).
   const [activeWindowId, setActiveWindowId] = useState<string | undefined>(undefined)
@@ -1693,6 +1782,11 @@ export default function App() {
     return t?.kind === 'parametric' ? t : null
   })()
   const tableCheckResult = focusedParam?.checkResult ?? null
+  // Phase R: one list for the Problems panel, the status bar and the Inspector.
+  const problems = useMemo(
+    () => (focusedParam ? checkProblems(tableCheckResult) : allProblems(checkResult, result)),
+    [focusedParam, tableCheckResult, checkResult, result],
+  )
   const tableCheckMessage = focusedParam?.checkMessage ?? ''
   // Function-table wire payloads. When the Tables workbook is mounted,
   // flush its pending sheet→spec sync first (contract b's pre-DTO scrape) and
@@ -3012,7 +3106,8 @@ export default function App() {
   // restored from a saved layout. Without this they'd render as blank panels.
   useEffect(() => {
     const valid = new Set<string>([
-      'equations', 'table', 'plots', 'digitizer', 'schematic', 'workspace', 'terminal', 'states', 'inspector',
+      'equations', 'table', 'plots', 'digitizer', 'schematic', 'workspace', 'terminal', 'states', 'inspector', 'problems', 'runs',
+      ...TOOL_IDS.map(toolWindowId),
       TABLES_WORKBOOK_WINDOW_ID,
       ...mergedPlots.map((p) => `plot:${p.id}`),
       // Hosted tables (function + GUI parametric) live as sheets in the
@@ -3258,6 +3353,8 @@ export default function App() {
     'view.variables': { run: () => dockRef.current?.open('workspace') },
     'view.terminal': { run: () => dockRef.current?.open('terminal') },
     'view.inspector': { run: () => dockRef.current?.open('inspector') },
+    'view.problems': { run: () => dockRef.current?.open('problems') },
+    'view.runs': { run: () => dockRef.current?.open('runs') },
     'window.list': { run: () => setShowWindowList(true) },
     'window.close': onWindow('close'),
     'window.closeOthers': onWindow('closeOthers'),
@@ -3285,12 +3382,12 @@ export default function App() {
     'plot.newPsychro': { run: () => setNewPlotKind('psychro') },
     'tool.componentWizard': { run: () => setShowComponentWizard(true) },
     'tool.variableInfo': { run: () => setShowVariableInfo(true) },
-    'tool.minMax': { run: () => setShowMinMax(true) },
-    'tool.curveFit': { run: () => setShowCurveFit(true) },
-    'tool.monteCarlo': { run: () => setShowMonteCarlo(true) },
-    'tool.sensitivity': { run: () => setShowSensitivity(true) },
-    'tool.pidTuner': { run: () => setPidTuner({}) },
-    'tool.parameterFit': { run: () => setShowParameterFit(true) },
+    'tool.minMax': { run: () => openTool('minMax') },
+    'tool.curveFit': { run: () => openTool('curveFit') },
+    'tool.monteCarlo': { run: () => openTool('monteCarlo') },
+    'tool.sensitivity': { run: () => openTool('sensitivity') },
+    'tool.pidTuner': { run: () => openTool('pidTuner') },
+    'tool.parameterFit': { run: () => openTool('parameterFit') },
     'app.preferences': { run: () => setShowPreferences(true) },
     'app.about': { run: () => setShowAbout(true) },
     'file.new': { run: handleNewProject },
@@ -3306,6 +3403,7 @@ export default function App() {
     'file.saveBrowser': { run: () => { void handleSaveToBrowser().then((ok) => notifications.show(ok ? { color: 'teal', title: 'Saved to browser', message: `“${projectName}” is stored in this browser.` } : { color: 'yellow', title: 'Could not save to browser', message: 'Browser storage may be unavailable in this browsing mode.' })) } },
     'help.gettingStarted': { run: () => setShowGettingStarted(true) },
     'help.shortcuts': { run: () => setShowShortcuts(true) },
+    'help.whereIs': { run: () => setShowWhereIs(true) },
     'help.docs': { run: () => globalThis.open(helpUrl(), '_blank') },
     'app.palette': { run: spotlight.open },
     'editor.complete': { run: () => {} },
@@ -3357,6 +3455,22 @@ export default function App() {
   // Command palette (Ctrl/Cmd+K): the registry's commands, one "Solve Table"
   // per parametric table, the canvas commands, the guides and the functions.
   const paletteGroups = commandPaletteGroups(commands, ribbonOn)
+  // Phase R: bring a command's ribbon tab forward and mark its control. It never runs it.
+  const locateCommand = (id: CommandId) => {
+    const home = commandHome(id, ribbonOn)
+    setShowWhereIs(false)
+    if (!home.tab) return
+    if (ribbonDensity === 'collapsed') changeRibbonDensity(ribbonLastOpenRef.current)
+    setRibbonTab(home.tab)
+    setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-testid="ribbon"] [data-command="${id}"]`)
+      if (!el) return
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      el.focus()
+      el.setAttribute('data-located', '')
+      setTimeout(() => el.removeAttribute('data-located'), 3000)
+    }, 60)
+  }
   paletteGroups.find((g) => g.group === 'Run')?.actions.push(
     ...tables.filter((t) => t.kind === 'parametric').map((t) => ({
       id: `solve-table:${t.id}`,
@@ -3491,6 +3605,157 @@ export default function App() {
     </Suspense>
   ) : null
 
+  // Phase R: the analysis tools, each shown as a dialog or as a dock window (`ToolFrame`).
+  const toolShown: Record<ToolId, boolean> = {
+    minMax: showMinMax, curveFit: showCurveFit, parameterFit: showParameterFit,
+    monteCarlo: showMonteCarlo, sensitivity: showSensitivity, pidTuner: pidTuner !== null,
+  }
+  const toolBody = (id: ToolId): ReactNode => {
+    switch (id) {
+      case 'pidTuner': {
+        const pt = pidTuner ?? {}
+        return (
+          <PidTunerModal
+            opened
+            onClose={() => closeTool('pidTuner')}
+            initial={pt.initial}
+            subject={pt.subject}
+            plant={pt.plant}
+            plantLoading={pt.plantLoading}
+            plantError={pt.plantError}
+            dark={computedScheme === 'dark'}
+            onApply={(g) => {
+              if (pt.instanceName) {
+                // Rewrite the SigPID's gains in place in the editor text.
+                applyText(rewritePidGains(textRef.current, pt.instanceName, g))
+              } else {
+                // Tools-menu path: drop a ready-to-wire SigPID snippet.
+                const parts = [`Kp=${formatValue(g.kp)}`]
+                if (g.type !== 'p') parts.push(`Ki=${formatValue(g.ki)}`)
+                if (g.type === 'pid') parts.push(`Kd=${formatValue(g.kd)}`)
+                applyText(
+                  `${textRef.current.trim()}\n\n// PID Tuner result\nSigPID PID(${parts.join(', ')})`,
+                )
+              }
+            }}
+          />
+        )
+      }
+      case 'minMax':
+        return (
+          <MinMaxModal
+            variables={checkResult?.variables ?? []}
+            text={effectiveText()}
+            stopCriteria={stopCriteria}
+            complexMode={complexMode}
+            variableInfo={buildVariableInfo()}
+            unitSystem={unitSystem}
+            getFunctionTables={functionTableDtos}
+            onClose={() => closeTool('minMax')}
+            onApply={(next) => applyText(next)}
+          />
+        )
+      case 'curveFit':
+        return (
+          <CurveFitModal
+            tables={tables}
+            defaultTableId={activeTableId}
+            onClose={() => closeTool('curveFit')}
+            onInsertEquation={(eq) => applyText(textRef.current.trim() + '\n\n' + eq)}
+          />
+        )
+      case 'parameterFit':
+        return (
+          <ParameterFitModal
+            opened
+            onClose={() => closeTool('parameterFit')}
+            text={effectiveText()}
+            stopCriteria={{ ...stopCriteria, complexMode }}
+            variableInfo={buildVariableInfo()}
+            getFunctionTables={functionTableDtos}
+            tables={tables}
+            onApply={(next) => applyText(next)}
+          />
+        )
+      case 'monteCarlo':
+        return (
+          <MonteCarloModal
+            opened
+            onClose={() => closeTool('monteCarlo')}
+            onRun={(samples, seed, design) =>
+              runMonteCarlo({
+                text: effectiveText(),
+                stopCriteria: { ...stopCriteria, complexMode },
+                variableInfo: buildVariableInfo(),
+                displayUnitSystem: unitSystem,
+                functionTables: functionTableDtos(),
+                samples,
+                seed,
+                design,
+              })
+            }
+          />
+        )
+      case 'sensitivity':
+        return (
+          <SensitivityModal
+            opened
+            onClose={() => closeTool('sensitivity')}
+            initialOutput={sensitivityOutput ?? undefined}
+            onRun={(params) =>
+              runSensitivity({
+                text: effectiveText(),
+                ...params,
+                stopCriteria: { ...stopCriteria, complexMode },
+                variableInfo: buildVariableInfo(),
+                displayUnitSystem: unitSystem,
+                functionTables: functionTableDtos(),
+              })
+            }
+          />
+        )
+    }
+  }
+  const toolEl = Object.fromEntries(TOOL_IDS.map((id) => [id, toolShown[id] ? (
+    <ToolHostContext.Provider value={dockAvailable ? { docked: dockedNow.includes(id), toggle: () => toggleToolDock(id) } : null}>
+      {/* A new project mounts fresh tools: a run still pending from the old one cannot write into it. */}
+      <Suspense key={workspaceEpoch} fallback={null}>{toolBody(id)}</Suspense>
+    </ToolHostContext.Provider>
+  ) : null])) as Record<ToolId, ReactNode>
+  // Phase R: Runs & Scenarios. Its own dock panel; on a phone, which has no dock, it stays in the Variable Explorer.
+  const runsPanel = (
+    <Suspense fallback={null}>
+      <RunsPanel
+        scenarios={scenarios}
+        onScenarios={changeScenarios}
+        canUndo={scenarioHistory.done.length > 0}
+        canRedo={scenarioHistory.undone.length > 0}
+        onUndo={() => stepScenarios('undo')}
+        onRedo={() => stepScenarios('redo')}
+        inputs={(result?.variables ?? []).filter((v) => pinnableNames.has(v.name.toLowerCase()))}
+        run={currentRun}
+        stale={scenarioStale}
+        baseline={baseline}
+        onSetBaseline={() => currentRun && setBaseline({ run: currentRun, variables: comparedVariables })}
+        onClearBaseline={() => setBaseline(null)}
+        rows={comparison}
+      />
+    </Suspense>
+  )
+  // Phase R: what the values on screen are; shown on the playback/live strip and in Runs & Scenarios.
+  const runNow = runState({ live: liveOpen, busy: runBusy, stopped, recorded: playSample, stale: scenarioStale || slidersStale || (currentRun !== null && currentRun.revision !== modelRevisionRef.current.current), run: currentRun })
+  const runStateBadge = (
+    <Badge
+      size="sm"
+      variant="light"
+      color={{ live: 'teal', running: 'blue', stopped: 'orange', recorded: 'grape', failed: 'red', stale: 'orange', current: 'teal', none: 'gray' }[runNow.kind]}
+      data-testid="run-state"
+      data-kind={runNow.kind}
+      style={{ textTransform: 'none', alignSelf: 'flex-start', maxWidth: '100%' }}
+    >
+      {runNow.label}
+    </Badge>
+  )
   const panelContent: Record<string, ReactNode> = {
     equations: (
       <div style={editorPanelPad}>
@@ -3615,15 +3880,61 @@ export default function App() {
             presentation={schematic}
             onPresentationChange={setSchematic}
             handoff={{ reason: handoffReason, run: handoff }}
+            onSelection={setSchematicSelection}
             highlightIds={[...withEnclosing(diagnosisOwners(checkResult?.diagnosis, checkResult?.instances ?? []).map((o) => o.instance)), ...(cursorInstance ? [cursorInstance] : [])]}
             live={liveControls}
           />
         </Suspense>
       </div>
     ),
+    ...Object.fromEntries(TOOL_IDS.map((id) => [toolWindowId(id), dockedNow.includes(id) ? toolEl[id] : null])),
+    runs: (
+      <Stack gap="xs" p={10} style={{ height: '100%', minHeight: 0, overflow: 'auto' }}>
+        {runStateBadge}
+        {runsPanel}
+      </Stack>
+    ),
+    problems: (
+      <ProblemsPanel
+        problems={problems}
+        target={focusedParam ? `Table ${focusedParam.name}` : 'Model'}
+        lineOf={(pr) => problemLine(pr, focusedParam ? [] : checkResult?.instances)}
+        onGoToLine={goToLine}
+      />
+    ),
     inspector: (() => {
       const fw = focusedWindow
       const bodyStyle: React.CSSProperties = { flex: 1, minHeight: 0, overflow: 'auto', padding: 10 }
+
+      // A variable chosen in the Variable Explorer, until a main window is focused again.
+      if (inspectedVariable !== null) {
+        const v = workspaceVariables.find((x) => x.name.toLowerCase() === inspectedVariable.toLowerCase())
+        return (
+          <div style={bodyStyle}>
+            <VariableInspector
+              variable={v}
+              name={inspectedVariable}
+              cmds={v ? variableRowMenu(v) : null}
+              lines={linesWriting(textRef.current ?? '', inspectedVariable)}
+              onGoToLine={goToLine}
+            />
+          </div>
+        )
+      }
+
+      if (fw?.kind === 'schematic') {
+        return (
+          <div style={bodyStyle}>
+            <SchematicInspector
+              selection={schematicSelection}
+              instances={checkResult?.instances ?? []}
+              components={result?.components}
+              problems={problems}
+              onGoToLine={goToLine}
+            />
+          </div>
+        )
+      }
 
       // Table: rename + the parametric table's quick actions. The Tables
       // workbook window inspects whichever hosted table is active in it.
@@ -3636,7 +3947,7 @@ export default function App() {
           <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ ...bodyStyle }}>
               <Stack gap="xs">
-                <Text size="sm" fw={600} c="teal.4">Table</Text>
+                <InspectorTarget kind="Table" name={t?.name} />
                 <TextInput
                   size="xs"
                   label="Table name"
@@ -3684,7 +3995,7 @@ export default function App() {
         return (
           <div style={bodyStyle}>
             <Stack gap="xs">
-              <Text size="sm" fw={600} c="teal.4">{p ? PLOT_KIND_LABEL[p.kind] : 'Plot'}</Text>
+              <InspectorTarget kind={p ? PLOT_KIND_LABEL[p.kind] : 'Plot'} name={p?.name} />
               <TextInput
                 size="xs"
                 label="Plot name"
@@ -3711,7 +4022,7 @@ export default function App() {
         return (
           <div style={bodyStyle}>
             <Stack gap="xs">
-              <Text size="sm" fw={600} c="teal.4">Equations</Text>
+              <InspectorTarget kind="Editor" name={projectName} />
               <Text size="xs" c="dimmed">Edit equations in the Editor; press Solve (F2) to compute. Results appear in the Variable Explorer on the right.</Text>
             </Stack>
           </div>
@@ -3720,7 +4031,10 @@ export default function App() {
 
       return (
         <div style={bodyStyle}>
-          <Text size="xs" c="dimmed">Focus a window (Table, Plot, Editor) to inspect it here.</Text>
+          <Stack gap="xs">
+            {fw && <InspectorTarget kind={fw.title} />}
+            <Text size="xs" c="dimmed">Focus a table, plot, the Editor or the Schematic, or choose a variable in the Variable Explorer, to inspect it here.</Text>
+          </Stack>
         </div>
       )
     })(),
@@ -3741,6 +4055,7 @@ export default function App() {
             pinnableNames={pinnableNames}
             onPin={pinSlider}
             rowMenu={variableRowMenu}
+            onInspect={(v) => setInspectedVariable(v.name)}
             solutionsCount={solutions.length}
             selectedSolutionIndex={selectedSolutionIndex}
             onSelectSolutionIndex={setSelectedSolutionIndex}
@@ -3760,6 +4075,7 @@ export default function App() {
                     />
                   </Suspense>
                 )}
+                {(timeline || liveBar) && runStateBadge}
                 {timeline && (
                   <Suspense fallback={null}>
                     <PlaybackBar
@@ -3779,23 +4095,7 @@ export default function App() {
                   </Suspense>
                 )}
                 {liveBar}
-                <Suspense fallback={null}>
-                  <RunsPanel
-                    scenarios={scenarios}
-                    onScenarios={changeScenarios}
-                    canUndo={scenarioHistory.done.length > 0}
-                    canRedo={scenarioHistory.undone.length > 0}
-                    onUndo={() => stepScenarios('undo')}
-                    onRedo={() => stepScenarios('redo')}
-                    inputs={(result?.variables ?? []).filter((v) => pinnableNames.has(v.name.toLowerCase()))}
-                    run={currentRun}
-                    stale={scenarioStale}
-                    baseline={baseline}
-                    onSetBaseline={() => currentRun && setBaseline({ run: currentRun, variables: comparedVariables })}
-                    onClearBaseline={() => setBaseline(null)}
-                    rows={comparison}
-                  />
-                </Suspense>
+                {isMobile && runsPanel}
               </>
             }
           />
@@ -3806,6 +4106,7 @@ export default function App() {
       <div style={{ height: '100%', minHeight: 0 }}>
         <Suspense fallback={lazyTabFallback}>
           <ReplTerminal
+            key={`terminal-${workspaceEpoch}`}
             sessionId={sessionId}
             variables={workspaceVariables}
             replNames={replNames}
@@ -3854,6 +4155,9 @@ export default function App() {
     ),
   }
   const panelTitles: Record<string, string> = {
+    problems: 'Problems',
+    runs: 'Runs & Scenarios',
+    ...Object.fromEntries(TOOL_IDS.map((id) => [toolWindowId(id), TOOL_TITLES[id]])),
     equations: 'Editor',
     table: 'Tables',
     plots: 'Plots',
@@ -4165,8 +4469,8 @@ export default function App() {
             <WorkspaceDock
               content={panelContent}
               titles={panelTitles}
-              defaultOpen={['equations', 'inspector', 'workspace']}
-              edgeKinds={['workspace', 'inspector']}
+              defaultOpen={['equations', 'inspector', 'runs', 'workspace']}
+              edgeKinds={['workspace', 'inspector', 'runs']}
               onActiveChange={(active) => {
                 setActiveTab(active?.kind ?? '')
                 setActiveWindowId(active?.id)
@@ -4183,8 +4487,9 @@ export default function App() {
                 }
                 // The Inspector reflects the last-focused main window; focusing
                 // the auxiliary Inspector / Variable Explorer edge panels must not change it.
-                if (active && active.kind !== 'inspector' && active.kind !== 'workspace' && active.kind !== 'terminal') {
+                if (active && active.kind !== 'inspector' && active.kind !== 'workspace' && active.kind !== 'terminal' && active.kind !== 'problems' && active.kind !== 'runs' && active.kind !== 'tool') {
                   setFocusedWindow(active)
+                  setInspectedVariable(null)
                 }
               }}
               onOpenChange={setOpenWindows}
@@ -4200,14 +4505,8 @@ export default function App() {
             solve={statusSolveText}
             units={UNIT_SYSTEM_OPTIONS.find((o) => o.value === unitSystem)?.label ?? unitSystem}
             onUnits={() => setShowPreferences(true)}
-            warnings={(focusedParam ? tableCheckResult : (result ?? checkResult))?.unitWarnings.length ?? 0}
-            onWarnings={() => {
-              // The warnings carry no position of their own: show the Editor at
-              // the reported line, and the list in the status pill's details.
-              dockRef.current?.open('equations')
-              if (errorLine !== null) editorRef.current?.goToLine(errorLine)
-              document.querySelector<HTMLElement>('[aria-label="Status details"]')?.click()
-            }}
+            problems={problemSummary(problems)}
+            onProblems={() => dockRef.current?.open('problems')}
             layout={layoutName}
             engine={`Engine: ${runBusy ? 'busy' : 'idle'} · ${getWorkerPoolConcurrency()} workers`}
           />
@@ -4265,6 +4564,15 @@ export default function App() {
           onClose={() => setShowManageLayouts(false)}
         />
       )}
+      {showWhereIs && (
+        <WhereIsModal
+          commands={commands}
+          ribbon={ribbonOn}
+          onShow={locateCommand}
+          onClose={() => setShowWhereIs(false)}
+        />
+      )}
+
       {showWindowList && (
         <WindowListModal
           windows={openWindows}
@@ -4275,117 +4583,7 @@ export default function App() {
         />
       )}
 
-      {pidTuner !== null && (
-        <Suspense fallback={null}>
-          <PidTunerModal
-            opened
-            onClose={() => setPidTuner(null)}
-            initial={pidTuner.initial}
-            subject={pidTuner.subject}
-            plant={pidTuner.plant}
-            plantLoading={pidTuner.plantLoading}
-            plantError={pidTuner.plantError}
-            dark={computedScheme === 'dark'}
-            onApply={(g) => {
-              if (pidTuner.instanceName) {
-                // Rewrite the SigPID's gains in place in the editor text.
-                applyText(rewritePidGains(textRef.current, pidTuner.instanceName, g))
-              } else {
-                // Tools-menu path: drop a ready-to-wire SigPID snippet.
-                const parts = [`Kp=${formatValue(g.kp)}`]
-                if (g.type !== 'p') parts.push(`Ki=${formatValue(g.ki)}`)
-                if (g.type === 'pid') parts.push(`Kd=${formatValue(g.kd)}`)
-                applyText(
-                  `${textRef.current.trim()}\n\n// PID Tuner result\nSigPID PID(${parts.join(', ')})`,
-                )
-              }
-            }}
-          />
-        </Suspense>
-      )}
-
-      {showMinMax && (
-        <Suspense fallback={null}>
-          <MinMaxModal
-            variables={checkResult?.variables ?? []}
-            text={effectiveText()}
-            stopCriteria={stopCriteria}
-            complexMode={complexMode}
-            variableInfo={buildVariableInfo()}
-            unitSystem={unitSystem}
-            getFunctionTables={functionTableDtos}
-            onClose={() => setShowMinMax(false)}
-            onApply={(next) => applyText(next)}
-          />
-        </Suspense>
-      )}
-
-      {showCurveFit && (
-        <Suspense fallback={null}>
-          <CurveFitModal
-            tables={tables}
-            defaultTableId={activeTableId}
-            onClose={() => setShowCurveFit(false)}
-            onInsertEquation={(eq) => applyText(textRef.current.trim() + '\n\n' + eq)}
-          />
-        </Suspense>
-      )}
-
-      {showParameterFit && (
-        <Suspense fallback={null}>
-          <ParameterFitModal
-            opened
-            onClose={() => setShowParameterFit(false)}
-            text={effectiveText()}
-            stopCriteria={{ ...stopCriteria, complexMode }}
-            variableInfo={buildVariableInfo()}
-            getFunctionTables={functionTableDtos}
-            tables={tables}
-            onApply={(next) => applyText(next)}
-          />
-        </Suspense>
-      )}
-
-      {showMonteCarlo && (
-        <Suspense fallback={null}>
-          <MonteCarloModal
-            opened
-            onClose={() => setShowMonteCarlo(false)}
-            onRun={(samples, seed, design) =>
-              runMonteCarlo({
-                text: effectiveText(),
-                stopCriteria: { ...stopCriteria, complexMode },
-                variableInfo: buildVariableInfo(),
-                displayUnitSystem: unitSystem,
-                functionTables: functionTableDtos(),
-                samples,
-                seed,
-                design,
-              })
-            }
-          />
-        </Suspense>
-      )}
-
-      {showSensitivity && (
-        <Suspense fallback={null}>
-          <SensitivityModal
-            opened
-            onClose={() => { setShowSensitivity(false); setSensitivityOutput(null) }}
-            initialOutput={sensitivityOutput ?? undefined}
-            onRun={(params) =>
-              runSensitivity({
-                text: effectiveText(),
-                ...params,
-                stopCriteria: { ...stopCriteria, complexMode },
-                variableInfo: buildVariableInfo(),
-                displayUnitSystem: unitSystem,
-                functionTables: functionTableDtos(),
-              })
-            }
-          />
-        </Suspense>
-      )}
+      {TOOL_IDS.map((id) => !dockedNow.includes(id) && <Fragment key={id}>{toolEl[id]}</Fragment>)}
 
       {lesson && (
         <Suspense fallback={null}>

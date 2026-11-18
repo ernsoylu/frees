@@ -5,6 +5,7 @@
 // Run:  npm run build && npx playwright test e2e/commands.spec.ts --project=chromium
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
+import { runCommand } from './journey'
 
 test.use({ serviceWorkers: 'block', viewport: { width: 1440, height: 960 } })
 test.skip(({ browserName }) => browserName !== 'chromium', 'One engine is enough for this journey.')
@@ -105,6 +106,8 @@ test('N4: Ctrl+S from inside a scenario value saves the value being typed', asyn
   await expect(page.locator('.cm-content')).toContainText('A = L*W', { timeout: 60_000 })
   await page.getByRole('button', { name: 'Solve', exact: true }).click()
   await expect(page.getByText(/^Solved/i).first()).toBeVisible({ timeout: 60_000 })
+  // Phase R: Runs & Scenarios is its own panel, beside the Variable Explorer.
+  await runCommand(page, 'Runs & Scenarios')
   const panel = page.getByTestId('runs-panel')
   await panel.getByRole('button', { name: 'New', exact: true }).click()
   await panel.getByLabel('Scenario name').fill('Wide room')

@@ -1,5 +1,5 @@
 import { helpUrl } from './helpUrl'
-import { Button, Group, Kbd, Modal, Paper, SimpleGrid, Stack, Text, ThemeIcon } from '@mantine/core'
+import { Button, Group, Kbd, List, Modal, Paper, SimpleGrid, Stack, Text, ThemeIcon } from '@mantine/core'
 import { IconBook2, IconLayoutGrid, IconPlayerPlayFilled, IconShieldCheck } from '@tabler/icons-react'
 
 interface Props {
@@ -108,6 +108,17 @@ export default function GettingStartedModal({ opened, onClose, onSolveExample, o
             </Paper>
           ))}
         </SimpleGrid>
+        {/* Phase R: the first run, in the order the work goes. */}
+        <Stack gap={4} component="section" aria-label="Your first run">
+          <Text size="sm" fw={600}>Your first run</Text>
+          <List type="ordered" size="xs" spacing={2}>
+            <List.Item><Kbd>F4</Kbd> Check, then <Kbd>F2</Kbd> Solve: the status names the run.</List.Item>
+            <List.Item>Read the values in the <b>Variable Explorer</b>; click one to see it in the <b>Inspector</b>.</List.Item>
+            <List.Item>If something is wrong, <b>Problems</b> lists it with the line to go to.</List.Item>
+            <List.Item>Add a parametric table and a plot from <b>Insert</b>, or run a tool from <b>Analysis</b>.</List.Item>
+            <List.Item>Lost a command? <b>Where Is a Command?</b> in Help shows where it lives.</List.Item>
+          </List>
+        </Stack>
         <Group justify="space-between" wrap="wrap" gap="xs">
           <Text size="xs" c="dimmed">
             <Kbd>F4</Kbd> Check · <Kbd>F2</Kbd> Solve · <Kbd>Ctrl</Kbd>+<Kbd>K</Kbd> commands ·{' '}

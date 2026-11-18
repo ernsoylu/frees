@@ -3,6 +3,7 @@
 // a key, and the `?` sheet lists exactly the registry's bindings.
 import { describe, expect, it, vi } from 'vitest'
 import {
+  commandHome,
   COMMAND_SPECS,
   CONTEXT_TABS,
   FILE_MENU,
@@ -187,5 +188,14 @@ describe('list context menus (Phase Q)', () => {
   it('keeps a row-only command out of the palette', () => {
     const palette = commandPaletteGroups(resolveCommands(handlers())).flatMap((g) => g.actions.map((a) => a.id))
     for (const id of ['variable.pin', 'variable.copyValue', 'variable.copyName']) expect(palette).not.toContain(id)
+  })
+
+  it('says where a command lives: a permanent ribbon tab with the ribbon on, its menu without it', () => {
+    expect(commandHome('tool.minMax', true)).toEqual({ tab: 'analysis', path: 'Ribbon ▸ Analysis ▸ Optimize & Fit' })
+    expect(commandHome('tool.minMax', false)).toEqual({ tab: null, path: 'Tools ▸ Analysis' })
+    expect(commandHome('help.shortcuts', false).path).toBe('Help · ?')
+    // A contextual tab is named, but not offered: it shows only with its window.
+    const ctx = (Object.keys(COMMAND_SPECS) as CommandId[]).find((id) => !RIBBON_TABS.some((t) => t.groups.some((g) => g.items.includes(id))) && ribbonLocation(id))
+    if (ctx) expect(commandHome(ctx, true)).toMatchObject({ tab: null, path: expect.stringContaining('with its window focused') })
   })
 })

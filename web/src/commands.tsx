@@ -16,6 +16,9 @@
 import type { SpotlightActionData, SpotlightActionGroupData } from '@mantine/spotlight'
 import { Kbd } from '@mantine/core'
 import {
+  IconMapPin,
+  IconGitCompare,
+  IconAlertTriangle,
   IconAdjustments,
   IconAdjustmentsHorizontal,
   IconClipboardText,
@@ -122,6 +125,8 @@ export const COMMAND_SPECS = {
   'view.variables': { label: 'Variable Explorer', location: 'Tools', group: 'Views', icon: IconVariable },
   'view.terminal': { label: 'Terminal', location: 'Tools', group: 'Views', icon: IconTerminal2, aliases: ['repl'] },
   'view.inspector': { label: 'Inspector', location: 'Tools', group: 'Views', icon: IconAdjustments },
+  'view.runs': { label: 'Runs & Scenarios', location: 'Tools', group: 'Views', icon: IconGitCompare, aliases: ['scenario', 'baseline', 'compare runs'], description: 'The run on screen, named scenarios and a comparison with a baseline' },
+  'view.problems': { label: 'Problems', location: 'Tools', group: 'Views', icon: IconAlertTriangle, aliases: ['errors', 'warnings', 'issues', 'diagnostics'], description: 'What the last Check and Solve reported, each with its source line' },
 
   'layout.default': { label: 'Reset Workspace Layout', location: 'Rail ▸ Layout', group: 'Views', icon: IconLayoutGrid, aliases: ['default view', 'reset layout'], description: 'Rebuild the default windows; the drawing\'s own Reset layout is on the schematic' },
   'layout.results': { label: 'Results Focused', location: 'Rail ▸ Layout', group: 'Views', icon: IconChartLine },
@@ -161,6 +166,7 @@ export const COMMAND_SPECS = {
 
   'help.gettingStarted': { label: 'Getting Started…', location: 'Help', group: 'Help', icon: IconHelp, description: 'What frees is, and four one-click ways in' },
   'help.shortcuts': { label: 'Keyboard Shortcuts', location: 'Help', group: 'Help', icon: IconKeyboard, shortcut: ['?'], description: 'Show the hotkey reference' },
+  'help.whereIs': { label: 'Where Is a Command?…', location: 'Help', group: 'Help', icon: IconMapPin, aliases: ['find command', 'locate', 'which tab', 'where is'], description: 'Shows where a command lives, and highlights it on the ribbon without running it' },
   'help.docs': { label: 'Documentation', location: 'Rail', group: 'Help', icon: IconBook, aliases: ['help', 'manual'] },
 
   // Phase O: the ribbon's own commands.
@@ -264,7 +270,7 @@ export const TOOLS_MENU: readonly MenuEntry[] = [
   { label: 'Modeling' }, 'tool.componentWizard', '-',
   { label: 'Equation tools' }, 'tool.variableInfo', '-',
   { label: 'Analysis' }, 'tool.minMax', 'tool.curveFit', 'tool.monteCarlo', 'tool.sensitivity', 'tool.pidTuner', 'tool.parameterFit', '-',
-  { label: 'Auxiliary panels' }, 'view.variables', 'view.terminal', 'view.inspector',
+  { label: 'Auxiliary panels' }, 'view.variables', 'view.terminal', 'view.inspector', 'view.problems', 'view.runs',
 ]
 export const RAIL_TABLES_NEW: readonly CommandId[] = ['table.newParametric', 'table.newFunction1', 'table.newFunction2', 'view.states']
 export const RAIL_PLOTS_NEW: readonly CommandId[] = ['plot.newXY', 'plot.newProperty', 'plot.newPsychro']
@@ -287,7 +293,7 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
     { label: 'Project', items: ['file.new', 'file.open', 'file.save', 'file.saveAs', 'file.library', 'file.share', 'file.print'] },
     { label: 'Run', items: ['model.check', 'model.solve', 'run.stop'] },
     { label: 'Solve Setup', items: ['run.findAll', 'run.complex', 'app.stopCriteria'] },
-    { label: 'Panels', items: ['view.editor', 'view.variables', 'view.inspector', 'view.terminal'] },
+    { label: 'Panels', items: ['view.editor', 'view.variables', 'view.inspector', 'view.problems', 'view.runs', 'view.terminal'] },
     { label: 'Layout', items: ['layout.default', 'layout.results', 'layout.split'] },
   ] },
   { id: 'insert', label: 'Insert', groups: [
@@ -308,7 +314,7 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
   ] },
   { id: 'view', label: 'View', groups: [
     { label: 'Documents', items: ['view.editor', 'view.tables', 'view.plots', 'view.states', 'view.schematic', 'view.digitizer'] },
-    { label: 'Panels', items: ['view.variables', 'view.inspector', 'view.terminal'] },
+    { label: 'Panels', items: ['view.variables', 'view.inspector', 'view.problems', 'view.runs', 'view.terminal'] },
     { label: 'Windows', items: ['window.list', 'window.float', 'window.maximize', 'window.close', 'window.closeOthers', 'window.closeGroup'] },
     { label: 'Move', items: ['window.moveEdge', 'window.moveCentre', 'window.moveLeft', 'window.moveRight', 'window.moveBelow'] },
     { label: 'Layouts', items: ['layout.default', 'layout.results', 'layout.split', 'layout.saveAs', 'layout.manage', 'layout.undo'] },
@@ -316,7 +322,7 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
   ], slot: 'view-schematic' },
   { id: 'help', label: 'Help', groups: [
     { label: 'Learn', items: ['help.gettingStarted', 'file.example', 'help.docs'] },
-    { label: 'Reference', items: ['help.shortcuts', 'app.palette', 'app.about'] },
+    { label: 'Reference', items: ['help.whereIs', 'help.shortcuts', 'app.palette', 'app.about'] },
   ] },
 ]
 
@@ -370,6 +376,21 @@ export function ribbonLocation(id: CommandId): string | null {
     for (const g of tab.groups) if (g.items.includes(id)) return `${tab.label} ▸ ${g.label}`
   }
   return null
+}
+
+/**
+ * Phase R: where a command lives. `tab` is the permanent ribbon tab that holds
+ * it (a contextual tab appears only with its window, so it is not offered);
+ * `path` names the place in words, ribbon first when the ribbon is on.
+ */
+export function commandHome(id: CommandId, ribbon: boolean): { tab: string | null; path: string } {
+  const spec = COMMAND_SPECS[id] as CommandSpec
+  const tab = ribbon ? RIBBON_TABS.find((t) => t.groups.some((g) => g.items.includes(id))) : undefined
+  const group = tab?.groups.find((g) => g.items.includes(id))
+  const context = ribbon && !tab ? Object.values(CONTEXT_TABS).find((t) => t.groups.some((g) => g.items.includes(id))) : undefined
+  const where = tab && group ? `Ribbon ▸ ${tab.label} ▸ ${group.label}` : context ? `${context.label} tab (with its window focused) ▸ ${ribbonLocation(id)?.split(' ▸ ')[1] ?? ''}` : spec.location
+  const keys = spec.shortcut ? ` · ${spec.shortcut.map(keyLabel).join('+')}` : ''
+  return { tab: tab?.id ?? null, path: `${where}${keys}` }
 }
 
 /** Every id a menu surface shows, for the parity test. */
