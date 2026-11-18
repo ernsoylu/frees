@@ -32,6 +32,7 @@ import {
 import { useComputedColorScheme } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import {
+  IconTool,
   IconGitCompare,
   IconAlertTriangle,
   IconChartGridDots,
@@ -88,6 +89,7 @@ const KIND_ICONS: Record<string, FC<IconProps>> = {
   inspector: IconSettings,
   problems: IconAlertTriangle,
   runs: IconGitCompare,
+  tool: IconTool,
 }
 
 /** Tab renderer: a per-kind icon, the live title, and a close button.

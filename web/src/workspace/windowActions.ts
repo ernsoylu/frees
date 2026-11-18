@@ -48,7 +48,7 @@ export function windowActionReason(windows: readonly DockWindow[], id: string | 
 const KIND_GROUPS: Record<string, string> = {
   equations: 'Editor', table: 'Tables', plot: 'Plots', plots: 'Plots', states: 'Fluid States',
   schematic: 'Schematic', digitizer: 'Digitizer', spreadsheet: 'Tables',
-  workspace: 'Panels', inspector: 'Panels', terminal: 'Panels', solution: 'Panels', problems: 'Panels', runs: 'Panels',
+  workspace: 'Panels', inspector: 'Panels', terminal: 'Panels', solution: 'Panels', problems: 'Panels', runs: 'Panels', tool: 'Tools',
 }
 
 /** The Window List's rows: windows matching `query`, grouped by kind in the dock's order. */

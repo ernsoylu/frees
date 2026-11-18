@@ -1,3 +1,4 @@
+import { ToolFrame, ToolSection } from './ToolFrame'
 import { useKeptState } from './keptState'
 import { useMemo, useState } from 'react'
 import {
@@ -6,7 +7,6 @@ import {
   Button,
   Card,
   Group,
-  Modal,
   NumberInput,
   ScrollArea,
   Select,
@@ -76,9 +76,10 @@ export default function SensitivityModal({
   const [levels, setLevels] = useKeptState<number>('sensitivity.levels', 4)
   const [seed, setSeed] = useKeptState<number>('sensitivity.seed', 42)
 
-  const [running, setRunning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<SensitivityResult | null>(null)
+  // Kept with the draft: a run that lands after the view closed still leaves its result.
+  const [running, setRunning] = useKeptState('sensitivity.running', false)
+  const [error, setError] = useKeptState<string | null>('sensitivity.error', null)
+  const [result, setResult] = useKeptState<SensitivityResult | null>('sensitivity.result', null)
   const [selectedOutput, setSelectedOutput] = useState<string | null>(initialOutput ?? null)
 
   const run = async () => {
@@ -220,20 +221,17 @@ export default function SensitivityModal({
   }, [result])
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title="Global Sensitivity Analysis"
-      size="xl"
-      centered
-    >
+    <ToolFrame opened={opened} onClose={onClose} title="Global Sensitivity Analysis" size="xl">
       <Stack gap="sm">
+        <ToolSection step="Target">
         <Text size="sm" c="dimmed">
           Computes global sensitivity indices across the declared parameter ranges.
           Sobol decomposes variance into first-order (direct) and total-order (including interactions)
           contributions. Morris provides efficient screening of primary and interaction effects.
         </Text>
+        </ToolSection>
 
+        <ToolSection step="Method">
         <Group align="end" gap="sm">
           <Select
             label="Method"
@@ -310,6 +308,11 @@ export default function SensitivityModal({
             w={100}
           />
 
+        </Group>
+        </ToolSection>
+
+        <ToolSection step="Run">
+        <Group>
           <Button onClick={run} loading={running}>
             Analyze
           </Button>
@@ -320,8 +323,10 @@ export default function SensitivityModal({
             {error}
           </Alert>
         )}
+        </ToolSection>
 
         {result && (
+          <ToolSection step="Results">
           <Stack gap="xs">
             <Card withBorder p="xs" radius="sm">
               <Group justify="space-between" align="center">
@@ -456,8 +461,9 @@ export default function SensitivityModal({
               </Tabs>
             )}
           </Stack>
+          </ToolSection>
         )}
       </Stack>
-    </Modal>
+    </ToolFrame>
   )
 }

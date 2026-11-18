@@ -30,6 +30,7 @@ export function RibbonButton({ cmd, density, onRan }: Readonly<{ cmd: Command; d
   }
   const common = {
     'data-ribbon-item': true,
+    'data-command': cmd.id,
     'data-disabled': unavailable ? true : undefined,
     'aria-disabled': unavailable ? true : undefined,
     'aria-describedby': descId,

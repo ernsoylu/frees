@@ -8,6 +8,7 @@
 // entry points — the Tools-menu tuner (manual plant) and the Inspector "Tune…"
 // button on a selected SigPID (plant supplied by the caller).
 
+import { ToolFrame, ToolSection } from './ToolFrame'
 import { useKeptState } from './keptState'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -16,7 +17,6 @@ import {
   Button,
   Group,
   Loader,
-  Modal,
   SegmentedControl,
   Slider,
   Stack,
@@ -213,16 +213,11 @@ export default function PidTunerModal({
   const title = subject ? `PID Tuner — ${subject}` : 'PID Tuner'
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title={title}
-      size="xl"
-      centered
-    >
+    <ToolFrame opened={opened} onClose={onClose} title={title} size="xl">
       <Group align="stretch" gap="md" wrap="nowrap">
         {/* Controls */}
         <Stack gap="sm" w={300} style={{ flexShrink: 0 }}>
+          <ToolSection step="Target">
           <SegmentedControl
             size="xs"
             value={type}
@@ -234,7 +229,9 @@ export default function PidTunerModal({
             ]}
             fullWidth
           />
+          </ToolSection>
 
+          <ToolSection step="Inputs">
           {plantLoading && (
             <Group gap="xs" wrap="nowrap">
               <Loader size="xs" />
@@ -273,7 +270,9 @@ export default function PidTunerModal({
               />
             </>
           )}
+          </ToolSection>
 
+          <ToolSection step="Method">
           <Box>
             <Group justify="space-between" gap={4}>
               <Text size="xs" fw={600}>
@@ -325,18 +324,19 @@ export default function PidTunerModal({
               />
             </Tooltip>
           </Box>
+          </ToolSection>
+        </Stack>
 
-          <Table withRowBorders={false} verticalSpacing={2} mt="xs">
+        {/* Gains, preview and metrics */}
+        <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
+          <ToolSection step="Results">
+          <Table withRowBorders={false} verticalSpacing={2} w={220}>
             <Table.Tbody>
               {metric('Kp', result ? formatValue(result.kp) : '—')}
               {type !== 'p' && metric('Ki', result ? formatValue(result.ki) : '—')}
               {type === 'pid' && metric('Kd', result ? formatValue(result.kd) : '—')}
             </Table.Tbody>
           </Table>
-        </Stack>
-
-        {/* Preview + metrics */}
-        <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
           {error !== null && (
             <Alert color="red" p="xs" icon={<IconAlertTriangle size={14} />}>
               <Text size="xs">{error}</Text>
@@ -375,6 +375,7 @@ export default function PidTunerModal({
               </Text>
             </Group>
           )}
+          </ToolSection>
         </Stack>
       </Group>
 
@@ -388,6 +389,6 @@ export default function PidTunerModal({
           </Button>
         )}
       </Group>
-    </Modal>
+    </ToolFrame>
   )
 }

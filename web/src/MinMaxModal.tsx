@@ -1,3 +1,4 @@
+import { ToolFrame, ToolSection } from './ToolFrame'
 import { useKeptState } from './keptState'
 import { useState } from 'react'
 import {
@@ -5,7 +6,6 @@ import {
   Badge,
   Button,
   Group,
-  Modal,
   MultiSelect,
   NumberInput,
   Paper,
@@ -418,10 +418,11 @@ export default function MinMaxModal({
   const [bounds, setBounds] = useKeptState<Record<string, Bounds>>('minmax.bounds', {})
   const [method, setMethod] = useKeptState<OptimizeMethod>('minmax.method', 'brent')
   const [constraints, setConstraints] = useKeptState('minmax.constraints', '')
-  const [running, setRunning] = useState(false)
-  const [validation, setValidation] = useState<string | null>(null)
-  const [result, setResult] = useState<OptimizeResponse | null>(null)
-  const [pareto, setPareto] = useState<ParetoResponse | null>(null)
+  // Kept with the draft: a run that lands after the view closed still leaves its result.
+  const [running, setRunning] = useKeptState('minmax.running', false)
+  const [validation, setValidation] = useKeptState<string | null>('minmax.validation', null)
+  const [result, setResult] = useKeptState<OptimizeResponse | null>('minmax.result', null)
+  const [pareto, setPareto] = useKeptState<ParetoResponse | null>('minmax.pareto', null)
 
   function onDecisionsChange(selected: string[]) {
     setDecisions(selected)
@@ -593,8 +594,9 @@ export default function MinMaxModal({
   )
 
   return (
-    <Modal opened onClose={onClose} title="Min/Max — Optimization" centered size="xl">
+    <ToolFrame onClose={onClose} title="Min/Max — Optimization" size="xl">
       <Stack gap="sm">
+        <ToolSection step="Target">
         <SegmentedControl
           value={mode}
           onChange={(value) => setMode(value as Mode)}
@@ -650,7 +652,9 @@ export default function MinMaxModal({
             ))}
           </>
         )}
+        </ToolSection>
 
+        <ToolSection step="Inputs">
         <MultiSelect
           label="Independent (varied) variables"
           data={variables.filter((v) => (mode === 'single' ? v !== objective : !objectives.includes(v)))}
@@ -662,78 +666,67 @@ export default function MinMaxModal({
         />
 
         {decisionTable}
+        </ToolSection>
 
+        <ToolSection step="Method">
         {mode === 'single' ? (
-          <>
-            <Select
-              label="Method"
-              description={decisions.length > 1 ? "Brent's method only works with a single independent variable." : undefined}
-              data={METHOD_OPTIONS.map((option) => ({
-                ...option,
-                disabled: option.value === 'brent' && decisions.length > 1,
-              }))}
-              value={method}
-              onChange={(value) => setMethod((value as OptimizeMethod) ?? 'brent')}
-              allowDeselect={false}
-            />
-            <Textarea
-              label="Constraints (optional)"
-              description="One per line: expr <= value, expr >= value, or expr = value."
-              placeholder={'r + h <= 20'}
-              value={constraints}
-              onChange={(e) => setConstraints(e.currentTarget.value)}
-              autosize
-              minRows={2}
-              maxRows={6}
-              spellCheck={false}
-              styles={MONO_INPUT}
-            />
-          </>
+          <Select
+            label="Method"
+            description={decisions.length > 1 ? "Brent's method only works with a single independent variable." : undefined}
+            data={METHOD_OPTIONS.map((option) => ({
+              ...option,
+              disabled: option.value === 'brent' && decisions.length > 1,
+            }))}
+            value={method}
+            onChange={(value) => setMethod((value as OptimizeMethod) ?? 'brent')}
+            allowDeselect={false}
+          />
         ) : (
-          <>
-            <Group grow>
-              <NumberInput
-                label="Population size"
-                value={population}
-                onChange={(v) => setPopulation(typeof v === 'number' ? v : 40)}
-                min={8}
-                max={200}
-                step={8}
-              />
-              <NumberInput
-                label="Generations"
-                value={generations}
-                onChange={(v) => setGenerations(typeof v === 'number' ? v : 40)}
-                min={1}
-                max={200}
-                step={10}
-              />
-            </Group>
-            <Textarea
-              label="Constraints (optional)"
-              description="One per line: expr <= value, expr >= value, or expr = value. Infeasible points are dominated by feasible ones."
-              placeholder={'mass <= 50'}
-              value={constraints}
-              onChange={(e) => setConstraints(e.currentTarget.value)}
-              autosize
-              minRows={2}
-              maxRows={6}
-              spellCheck={false}
-              styles={MONO_INPUT}
+          <Group grow>
+            <NumberInput
+              label="Population size"
+              value={population}
+              onChange={(v) => setPopulation(typeof v === 'number' ? v : 40)}
+              min={8}
+              max={200}
+              step={8}
             />
-          </>
+            <NumberInput
+              label="Generations"
+              value={generations}
+              onChange={(v) => setGenerations(typeof v === 'number' ? v : 40)}
+              min={1}
+              max={200}
+              step={10}
+            />
+          </Group>
         )}
+        </ToolSection>
 
+        <ToolSection step="Advanced">
+        <Textarea
+          label="Constraints (optional)"
+          description={mode === 'single'
+            ? 'One per line: expr <= value, expr >= value, or expr = value.'
+            : 'One per line: expr <= value, expr >= value, or expr = value. Infeasible points are dominated by feasible ones.'}
+          placeholder={mode === 'single' ? 'r + h <= 20' : 'mass <= 50'}
+          value={constraints}
+          onChange={(e) => setConstraints(e.currentTarget.value)}
+          autosize
+          minRows={2}
+          maxRows={6}
+          spellCheck={false}
+          styles={MONO_INPUT}
+        />
+        </ToolSection>
+
+        <ToolSection step="Run">
         {validation && (
           <Text c="red" size="sm">
             {validation}
           </Text>
         )}
-
-        {mode === 'single' && result && <ResultView result={result} text={text} onApply={onApply} />}
-        {mode === 'multi' && pareto && <ParetoView result={pareto} text={text} onApply={onApply} />}
-
-        <Group justify="flex-end" mt="xs">
+        <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
             Close
           </Button>
@@ -741,7 +734,15 @@ export default function MinMaxModal({
             {mode === 'multi' ? 'Find Pareto front' : goal === 'maximize' ? 'Maximize' : 'Minimize'}
           </Button>
         </Group>
+        </ToolSection>
+
+        {((mode === 'single' && result) || (mode === 'multi' && pareto)) && (
+          <ToolSection step="Results">
+            {mode === 'single' && result && <ResultView result={result} text={text} onApply={onApply} />}
+            {mode === 'multi' && pareto && <ParetoView result={pareto} text={text} onApply={onApply} />}
+          </ToolSection>
+        )}
       </Stack>
-    </Modal>
+    </ToolFrame>
   )
 }

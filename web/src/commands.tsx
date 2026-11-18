@@ -16,6 +16,7 @@
 import type { SpotlightActionData, SpotlightActionGroupData } from '@mantine/spotlight'
 import { Kbd } from '@mantine/core'
 import {
+  IconMapPin,
   IconGitCompare,
   IconAlertTriangle,
   IconAdjustments,
@@ -165,6 +166,7 @@ export const COMMAND_SPECS = {
 
   'help.gettingStarted': { label: 'Getting Started…', location: 'Help', group: 'Help', icon: IconHelp, description: 'What frees is, and four one-click ways in' },
   'help.shortcuts': { label: 'Keyboard Shortcuts', location: 'Help', group: 'Help', icon: IconKeyboard, shortcut: ['?'], description: 'Show the hotkey reference' },
+  'help.whereIs': { label: 'Where Is a Command?…', location: 'Help', group: 'Help', icon: IconMapPin, aliases: ['find command', 'locate', 'which tab', 'where is'], description: 'Shows where a command lives, and highlights it on the ribbon without running it' },
   'help.docs': { label: 'Documentation', location: 'Rail', group: 'Help', icon: IconBook, aliases: ['help', 'manual'] },
 
   // Phase O: the ribbon's own commands.
@@ -320,7 +322,7 @@ export const RIBBON_TABS: readonly RibbonTab[] = [
   ], slot: 'view-schematic' },
   { id: 'help', label: 'Help', groups: [
     { label: 'Learn', items: ['help.gettingStarted', 'file.example', 'help.docs'] },
-    { label: 'Reference', items: ['help.shortcuts', 'app.palette', 'app.about'] },
+    { label: 'Reference', items: ['help.whereIs', 'help.shortcuts', 'app.palette', 'app.about'] },
   ] },
 ]
 
@@ -374,6 +376,21 @@ export function ribbonLocation(id: CommandId): string | null {
     for (const g of tab.groups) if (g.items.includes(id)) return `${tab.label} ▸ ${g.label}`
   }
   return null
+}
+
+/**
+ * Phase R: where a command lives. `tab` is the permanent ribbon tab that holds
+ * it (a contextual tab appears only with its window, so it is not offered);
+ * `path` names the place in words, ribbon first when the ribbon is on.
+ */
+export function commandHome(id: CommandId, ribbon: boolean): { tab: string | null; path: string } {
+  const spec = COMMAND_SPECS[id] as CommandSpec
+  const tab = ribbon ? RIBBON_TABS.find((t) => t.groups.some((g) => g.items.includes(id))) : undefined
+  const group = tab?.groups.find((g) => g.items.includes(id))
+  const context = ribbon && !tab ? Object.values(CONTEXT_TABS).find((t) => t.groups.some((g) => g.items.includes(id))) : undefined
+  const where = tab && group ? `Ribbon ▸ ${tab.label} ▸ ${group.label}` : context ? `${context.label} tab (with its window focused) ▸ ${ribbonLocation(id)?.split(' ▸ ')[1] ?? ''}` : spec.location
+  const keys = spec.shortcut ? ` · ${spec.shortcut.map(keyLabel).join('+')}` : ''
+  return { tab: tab?.id ?? null, path: `${where}${keys}` }
 }
 
 /** Every id a menu surface shows, for the parity test. */
