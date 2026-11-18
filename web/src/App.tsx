@@ -819,6 +819,9 @@ export default function App() {
   // between a tool being open and its dock window existing.
   const [dockedTools, setDockedTools] = useState<ToolId[]>(readDockedTools)
   const dockedToolsRef = useRef(dockedTools)
+  // The phone and embed layouts have no dock: there every tool is a dialog, and offers no docking.
+  const dockAvailable = isMobile === false && !EMBED.embed
+  const dockedNow = dockAvailable ? dockedTools : []
   const setToolShown = (id: ToolId, on: boolean) => {
     switch (id) {
       case 'minMax': return setShowMinMax(on)
@@ -844,7 +847,7 @@ export default function App() {
   const openTool = (id: ToolId) => {
     setToolShown(id, true)
     // Already open in the dock: bring it forward.
-    if (dockedToolsRef.current.includes(id)) dockRef.current?.openInstance(toolWindowId(id), 'tool', TOOL_TITLES[id])
+    if (dockAvailable && dockedToolsRef.current.includes(id)) dockRef.current?.openInstance(toolWindowId(id), 'tool', TOOL_TITLES[id])
   }
   const closeTool = (id: ToolId) => {
     setToolShown(id, false)
@@ -961,7 +964,7 @@ export default function App() {
     toolWindowsRef.current = now
   }, [openWindows])
   // A docked tool that is open has its window, however it was opened.
-  const shownDockedTools = TOOL_IDS.filter((id) => dockedTools.includes(id) && { minMax: showMinMax, curveFit: showCurveFit, parameterFit: showParameterFit, monteCarlo: showMonteCarlo, sensitivity: showSensitivity, pidTuner: pidTuner !== null }[id]).join(',')
+  const shownDockedTools = TOOL_IDS.filter((id) => dockedNow.includes(id) && { minMax: showMinMax, curveFit: showCurveFit, parameterFit: showParameterFit, monteCarlo: showMonteCarlo, sensitivity: showSensitivity, pidTuner: pidTuner !== null }[id]).join(',')
   useEffect(() => {
     for (const id of shownDockedTools.split(',').filter(Boolean) as ToolId[]) dockRef.current?.openInstance(toolWindowId(id), 'tool', TOOL_TITLES[id])
   }, [shownDockedTools])
@@ -3714,12 +3717,33 @@ export default function App() {
     }
   }
   const toolEl = Object.fromEntries(TOOL_IDS.map((id) => [id, toolShown[id] ? (
-    <ToolHostContext.Provider value={{ docked: dockedTools.includes(id), toggle: () => toggleToolDock(id) }}>
-      <Suspense fallback={null}>{toolBody(id)}</Suspense>
+    <ToolHostContext.Provider value={dockAvailable ? { docked: dockedNow.includes(id), toggle: () => toggleToolDock(id) } : null}>
+      {/* A new project mounts fresh tools: a run still pending from the old one cannot write into it. */}
+      <Suspense key={workspaceEpoch} fallback={null}>{toolBody(id)}</Suspense>
     </ToolHostContext.Provider>
   ) : null])) as Record<ToolId, ReactNode>
+  // Phase R: Runs & Scenarios. Its own dock panel; on a phone, which has no dock, it stays in the Variable Explorer.
+  const runsPanel = (
+    <Suspense fallback={null}>
+      <RunsPanel
+        scenarios={scenarios}
+        onScenarios={changeScenarios}
+        canUndo={scenarioHistory.done.length > 0}
+        canRedo={scenarioHistory.undone.length > 0}
+        onUndo={() => stepScenarios('undo')}
+        onRedo={() => stepScenarios('redo')}
+        inputs={(result?.variables ?? []).filter((v) => pinnableNames.has(v.name.toLowerCase()))}
+        run={currentRun}
+        stale={scenarioStale}
+        baseline={baseline}
+        onSetBaseline={() => currentRun && setBaseline({ run: currentRun, variables: comparedVariables })}
+        onClearBaseline={() => setBaseline(null)}
+        rows={comparison}
+      />
+    </Suspense>
+  )
   // Phase R: what the values on screen are; shown on the playback/live strip and in Runs & Scenarios.
-  const runNow = runState({ live: liveOpen, busy: runBusy, stopped, recorded: playSample, stale: scenarioStale || slidersStale, run: currentRun })
+  const runNow = runState({ live: liveOpen, busy: runBusy, stopped, recorded: playSample, stale: scenarioStale || slidersStale || (currentRun !== null && currentRun.revision !== modelRevisionRef.current.current), run: currentRun })
   const runStateBadge = (
     <Badge
       size="sm"
@@ -3863,27 +3887,11 @@ export default function App() {
         </Suspense>
       </div>
     ),
-    ...Object.fromEntries(TOOL_IDS.map((id) => [toolWindowId(id), dockedTools.includes(id) ? toolEl[id] : null])),
+    ...Object.fromEntries(TOOL_IDS.map((id) => [toolWindowId(id), dockedNow.includes(id) ? toolEl[id] : null])),
     runs: (
       <Stack gap="xs" p={10} style={{ height: '100%', minHeight: 0, overflow: 'auto' }}>
         {runStateBadge}
-        <Suspense fallback={null}>
-          <RunsPanel
-            scenarios={scenarios}
-            onScenarios={changeScenarios}
-            canUndo={scenarioHistory.done.length > 0}
-            canRedo={scenarioHistory.undone.length > 0}
-            onUndo={() => stepScenarios('undo')}
-            onRedo={() => stepScenarios('redo')}
-            inputs={(result?.variables ?? []).filter((v) => pinnableNames.has(v.name.toLowerCase()))}
-            run={currentRun}
-            stale={scenarioStale}
-            baseline={baseline}
-            onSetBaseline={() => currentRun && setBaseline({ run: currentRun, variables: comparedVariables })}
-            onClearBaseline={() => setBaseline(null)}
-            rows={comparison}
-          />
-        </Suspense>
+        {runsPanel}
       </Stack>
     ),
     problems: (
@@ -4087,6 +4095,7 @@ export default function App() {
                   </Suspense>
                 )}
                 {liveBar}
+                {isMobile && runsPanel}
               </>
             }
           />
@@ -4097,6 +4106,7 @@ export default function App() {
       <div style={{ height: '100%', minHeight: 0 }}>
         <Suspense fallback={lazyTabFallback}>
           <ReplTerminal
+            key={`terminal-${workspaceEpoch}`}
             sessionId={sessionId}
             variables={workspaceVariables}
             replNames={replNames}
@@ -4573,7 +4583,7 @@ export default function App() {
         />
       )}
 
-      {TOOL_IDS.map((id) => !dockedTools.includes(id) && <Fragment key={id}>{toolEl[id]}</Fragment>)}
+      {TOOL_IDS.map((id) => !dockedNow.includes(id) && <Fragment key={id}>{toolEl[id]}</Fragment>)}
 
       {lesson && (
         <Suspense fallback={null}>

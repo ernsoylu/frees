@@ -1370,6 +1370,13 @@ Neither document is in Git; like the CircuitJS studies, they are research input.
   - **First run.** Getting Started gained "Your first run": Check and Solve, read the values and the Inspector, Problems, Insert and Analysis, Where Is a Command?.
   - **Evidence.** `commands.test.ts` +1 (ribbon path, menu path, key, contextual tab). `e2e/where-is.spec.ts` (2, Chromium): with the ribbon on, Show selects Analysis, focuses and marks Optimization, and no Optimization dialog opens; with it off, the row says Tools ▸ Analysis and has no Show.
   - **Ceiling.** The palette lists Where Is a Command? as an entry; a palette row has no second action of its own to locate itself.
+- **Review follow-up (PR #125, 2026-11-18).**
+  - **No cross-project writes.** The guard in `useKeptState` no longer moves forward for views mounted across a switch. Instead every user remounts on a project switch: the tools are keyed by `workspaceEpoch`, and so is the Terminal, like the Schematic and Digitizer. A run still pending from the old project holds a setter that writes nothing.
+  - **Phones and embeds have no dock.** There every tool is a dialog whatever was remembered, and offers no Dock as Window. Runs & Scenarios stays in the Variable Explorer on a phone, where it was before R3, shown once a solve has landed.
+  - **The PID Tuner survives a move.** Its controller type is kept per tuned subject, and it re-seeds the response-time slider only for a plant it has not seeded from, so docking or undocking keeps both.
+  - **A restored Sensitivity result shows its first output** when no output was chosen.
+  - **Stale includes model edits.** The run-state label compares the run's revision with the model's. Any edit since the run, including a tool's Apply to the editor, reads "Stale: the model or its inputs changed since run N".
+  - **Evidence.** `keptState.test.tsx` (a pre-switch write is dropped; a view mounted after it works), `runs.test.ts`, and `e2e/tool-windows.spec.ts` +1 (at 390 × 844 a remembered docked Optimization opens as a dialog with no docking, and the Runs panel is in Variables after a solve).
 
 **Validation (after O, and again after R).** Task sessions with five engineers of mixed experience:
 - open an example and solve;

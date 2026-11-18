@@ -37,10 +37,14 @@ describe('useKeptState', () => {
     expect(renderHook(() => useKeptState<string | null>('t.result', null)).result.current[0]).toBeNull()
   })
 
-  it('leaves a view that stays mounted across a switch working', () => {
-    const h = renderHook(() => useKeptState('t.mounted', 1))
+  it('drops a write from a view mounted before a switch, and a view mounted after it works', () => {
+    const before = renderHook(() => useKeptState('t.mounted', 1))
     clearKeptState()
-    act(() => h.result.current[1]((v) => v + 1))
-    expect(h.result.current[0]).toBe(2)
+    act(() => before.result.current[1](5))
+    before.unmount()
+    const after = renderHook(() => useKeptState('t.mounted', 1))
+    expect(after.result.current[0]).toBe(1)
+    act(() => after.result.current[1]((v) => v + 1))
+    expect(after.result.current[0]).toBe(2)
   })
 })

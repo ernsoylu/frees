@@ -67,3 +67,24 @@ test('R: Optimization docks, runs, keeps its result across a close, and returns 
   await runCommand(page, 'Optimization…')
   await expect(dialog).toBeVisible()
 })
+
+test('R: on a phone a docked tool is a dialog with no docking, and scenarios stay in Variables', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript((doc) => {
+    if (sessionStorage.getItem('seeded')) return
+    localStorage.setItem('frees.project', JSON.stringify({ text: doc, tables: [] }))
+    localStorage.setItem('frees-tools-docked-v1', JSON.stringify(['minMax']))
+    sessionStorage.setItem('seeded', '1')
+  }, DOC)
+  await page.goto('/')
+  await expect(page.locator('.cm-content')).toContainText('L = 4', { timeout: 60_000 })
+  await runCommand(page, 'Optimization…')
+  const dialog = page.getByRole('dialog', { name: /Optimization/ })
+  await expect(dialog.locator('[data-tool-step="Target"]')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Dock as Window' })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  // As before Phase R, scenarios sit with the solved values.
+  await page.getByRole('button', { name: 'Solve', exact: true }).first().click()
+  await page.getByRole('button', { name: 'Variables', exact: true }).click()
+  await expect(page.getByTestId('runs-panel')).toBeVisible({ timeout: 120_000 })
+})

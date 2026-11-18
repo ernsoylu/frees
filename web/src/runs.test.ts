@@ -55,7 +55,7 @@ it('labels live, running, stopped, recorded, failed, stale and current in that o
   expect(runState({ ...base, stopped: true, run: null }).label).toBe('Stopped: no result')
   expect(runState({ ...base, recorded: 't = 1.5 s', stale: true }).label).toBe('Recorded time: t = 1.5 s, run 4 (stale)')
   expect(runState({ ...base, stale: true, run: run({ revision: 4, status: 'did not converge' }) }).label).toBe('Failed: run 4 did not converge')
-  expect(runState({ ...base, stale: true }).label).toBe('Stale: the inputs changed since run 4')
+  expect(runState({ ...base, stale: true }).label).toBe('Stale: the model or its inputs changed since run 4')
   expect(runState(base).label).toBe('Current: run 4')
   expect(runState({ ...base, run: null }).label).toBe('Not solved yet')
 })

@@ -83,7 +83,8 @@ export default function PidTunerModal({
   plantError,
   dark = true,
 }: Readonly<Props>) {
-  const [type, setType] = useState<PidType>(initial?.type ?? 'pi')
+  // Kept per tuned subject, so docking or undocking (a remount) keeps the controller.
+  const [type, setType] = useKeptState<PidType>(`pid.type:${subject ?? ''}`, initial?.type ?? 'pi')
   // Manual plant entry (Tools-menu path) — ignored when `plant` is supplied.
   const [numText, setNumText] = useKeptState('pid.numText', '1')
   const [denText, setDenText] = useKeptState('pid.denText', '5, 1')
@@ -93,7 +94,8 @@ export default function PidTunerModal({
   const [result, setResult] = useState<PidTuneResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const seededWc = useRef(false)
+  // The plant the slider was last seeded from: the same plant again (a remount) keeps the slider.
+  const [seededFor, setSeededFor] = useKeptState<string | null>('pid.seededFor', null)
 
   const effectivePlant = useMemo<PidPlant | null>(() => {
     if (plant && isPlant(plant)) return plant
@@ -128,11 +130,11 @@ export default function PidTunerModal({
   // Seed the response-time slider from the plant the first time it appears.
   useEffect(() => {
     if (!opened) {
-      seededWc.current = false
+      setSeededFor(null)
       return
     }
-    if (seededWc.current || !effectivePlant) return
-    seededWc.current = true
+    if (!effectivePlant || seededFor === JSON.stringify(effectivePlant)) return
+    setSeededFor(JSON.stringify(effectivePlant))
     // One tune with wc omitted lets the backend suggest a crossover; adopt it.
     setLoading(true)
     pidTune({ num: effectivePlant.num, den: effectivePlant.den, type, pm })
@@ -148,10 +150,10 @@ export default function PidTunerModal({
 
   // Re-tune on control changes once seeded (debounced for slider drags).
   useEffect(() => {
-    if (!opened || !seededWc.current || !effectivePlant) return
+    if (!opened || seededFor === null || !effectivePlant) return
     const h = setTimeout(() => doTune(effectivePlant, type, 10 ** logWc, pm), 120)
     return () => clearTimeout(h)
-  }, [opened, effectivePlant, type, logWc, pm, doTune])
+  }, [opened, effectivePlant, seededFor, type, logWc, pm, doTune])
 
   const figure = useMemo(() => {
     if (!result) return null

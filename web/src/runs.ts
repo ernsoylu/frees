@@ -65,7 +65,7 @@ export function runState(s: { live: boolean; busy: boolean; stopped: boolean; re
   if (!s.run) return { kind: 'none', label: 'Not solved yet' }
   if (s.recorded) return { kind: 'recorded', label: `Recorded time: ${s.recorded}, ${of}${s.stale ? ' (stale)' : ''}` }
   if (s.run.status === 'did not converge' || s.run.status === 'engine failed') return { kind: 'failed', label: `Failed: ${of} ${s.run.status}` }
-  if (s.stale) return { kind: 'stale', label: `Stale: the inputs changed since ${of}` }
+  if (s.stale) return { kind: 'stale', label: `Stale: the model or its inputs changed since ${of}` }
   return { kind: 'current', label: `Current: ${of}` }
 }
 

@@ -110,8 +110,9 @@ export default function SensitivityModal({
   }
 
   const currentOutput = useMemo(() => {
-    if (!result || !selectedOutput) return null
-    return result.outputs.find((o) => o.variable === selectedOutput) ?? null
+    if (!result) return null
+    // A result kept from an earlier view comes back with no choice made: show its first output.
+    return result.outputs.find((o) => o.variable === selectedOutput) ?? result.outputs[0] ?? null
   }, [result, selectedOutput])
 
   // Sorted Sobol indices (descending total effect)
@@ -362,7 +363,7 @@ export default function SensitivityModal({
                 </Text>
                 <Select
                   data={outputOptions}
-                  value={selectedOutput}
+                  value={currentOutput?.variable ?? null}
                   onChange={setSelectedOutput}
                   w={220}
                 />

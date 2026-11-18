@@ -7,14 +7,14 @@
 // Phase R: every mounted user of a key reads the one value here, so a run that
 // finishes after its view closed still leaves its result, and the view that
 // opens next shows it. A value set by a view from before a project switch is
-// dropped, not carried into the next project; a view still on screen across
-// the switch keeps working.
+// dropped, not carried into the next project. Every user remounts on a switch
+// (App keys them by the project), so a run still pending from the old project
+// holds a setter that no longer writes.
 import { useCallback, useEffect, useRef, useSyncExternalStore, type Dispatch, type SetStateAction } from 'react'
 
 const kept = new Map<string, unknown>()
 const listeners = new Map<string, Set<() => void>>()
 let epoch = 0
-const mounted = new Set<{ current: number }>()
 
 export function useKeptState<T>(key: string, initial: T | (() => T)): [T, Dispatch<SetStateAction<T>>] {
   // The first reader of a key seeds it; later readers find it.
@@ -30,10 +30,6 @@ export function useKeptState<T>(key: string, initial: T | (() => T)): [T, Dispat
     latest.current = value
   })
   const born = useRef(epoch)
-  useEffect(() => {
-    mounted.add(born)
-    return () => void mounted.delete(born)
-  }, [])
   const set = useCallback<Dispatch<SetStateAction<T>>>((action) => {
     if (born.current !== epoch) return
     const next = action instanceof Function ? action(kept.has(key) ? (kept.get(key) as T) : latest.current) : action
@@ -47,5 +43,4 @@ export function useKeptState<T>(key: string, initial: T | (() => T)): [T, Dispat
 export function clearKeptState() {
   kept.clear()
   epoch++
-  for (const m of mounted) m.current = epoch
 }
