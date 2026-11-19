@@ -150,6 +150,9 @@ async function main() {
   // Java goldens that record a failure frees now solves: graded against the
   // hand-checked values in `rescued` (tests/parity.rs `declared_rescues`).
   const rescues = new Map(Object.entries(tolDoc.rescued || {}).map(([k, v]) => [k, v.values]))
+  // Goldens whose source a library fix made over-specified: they must fail
+  // with the stated error (tests/parity.rs `declared_superseded`).
+  const superseded = new Map(Object.entries(tolDoc.superseded || {}).map(([k, v]) => [k, v.error]))
 
   let browserDivergencesDoc = { fixtures: {} }
   try {
@@ -192,6 +195,14 @@ async function main() {
       out = JSON.parse(solve_legacy(fixture.source, JSON.stringify(req)))
     } catch (e) {
       failures.push({ fixture: stem, detail: `WASM trap/panic: ${e.message}` })
+      continue
+    }
+
+    if (superseded.has(stem)) {
+      const msg = typeof out.error === 'string' ? out.error : out.error?.message || ''
+      if (out.success) failures.push({ fixture: stem, detail: 'declared superseded but WASM solved' })
+      else if (!msg.includes(superseded.get(stem))) failures.push({ fixture: stem, detail: `declared superseded, but failed differently: ${msg}` })
+      else passed++
       continue
     }
 

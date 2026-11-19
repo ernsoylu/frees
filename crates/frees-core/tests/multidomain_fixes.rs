@@ -212,3 +212,22 @@ fn an_optimizer_decision_read_only_by_a_dynamic_block_drives_it() {
         r.decision_values[0]
     );
 }
+
+// 2026-11-19: LiquidVolume left its outlet pressure without an equation, so a
+// DYNAMIC run of it was underspecified. A dead-ended volume fed a constant
+// flow must rise linearly, P = P0 + mdot t / C.
+#[test]
+fn a_liquid_volume_carries_its_pressure_to_the_outlet_in_a_dynamic_run() {
+    let v = values(
+        "function [port] = Feed(domain$ = liquid)\nport(port)\n  port.mdot = 0.02\n  port.h = 63000\nend\n\
+         function [port] = Cap(domain$ = liquid)\nport(port)\n  port.mdot = 0\nend\n\
+         Feed F()\nLiquidVolume V(C=4e-6, P0=100000)\nCap K()\n\
+         connect(F.port, V.in)\nconnect(V.out, K.port)\n\
+         DYNAMIC fill(method=ode45, time=0..100, points=11)\nEND\n\
+         p_end = FinalValue('v.out.p')\n",
+    );
+    assert!(
+        close(v["p_end"], 100000.0 + 0.02 * 100.0 / 4e-6, 1e-9),
+        "{v:?}"
+    );
+}
