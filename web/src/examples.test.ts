@@ -111,7 +111,7 @@ it.each<[string, Record<string, string>]>([
   ['oil-separator-floating-head', { P_c: 'Pa', T_c: 'K', Q: 'W', h_main: 'J/kg', x_exit: '-' }],
   ['receiver-liquid-level', { P_c: 'Pa', Q: 'W' }],
   ['charge-sets-head-pressure', { P_c: 'Pa', SC: 'K', Q: 'W', m_cond: 'kg', m_line: 'kg' }],
-  ['moving-boundary-coils', { L_boil: 'm', SH: 'K', Q_evap: 'W', L_cond: 'm', SC: 'K', Q_cond: 'W' }],
+  ['moving-boundary-coils', { L_boil: 'm', SH: 'K', Q_evap: 'W', L_cond: 'm', SC: 'K', Q_cond: 'W', T_margin_E: 'K', T_margin_C: 'K' }],
   ['reversing-valve-heating', { P_indoor: 'Pa', P_suction: 'Pa', h_suction: 'J/kg', Q_heat: 'W' }],
 ])('%s solves with physical units and preserves its checked results', (id, units) => {
   const example = EXAMPLES.find(example => example.id === id)!

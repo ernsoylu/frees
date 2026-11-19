@@ -4686,7 +4686,7 @@ m_line = line.m
     title: 'Moving-boundary evaporator and condenser',
     description: 'Solve. Moving-boundary coils solve where the refrigerant finishes boiling and condensing, then superheat and subcool the rest of the tube.',
     category: 'Heat Transfer',
-    text: `{ Where the refrigerant finishes boiling and condensing. A 12 m, 10 mm
+    text: `{ Where the refrigerant finishes boiling and condensing. A 4 m, 10 mm
   evaporator tube takes 20 g/s of R-134a at 300 kPa and quality 0.25
   against a 15 C wall (U = 2500 W/m^2-K boiling, 200 superheating); an
   8 m condenser tube takes 20 g/s of saturated vapor at 1 MPa against a
@@ -4695,11 +4695,15 @@ m_line = line.m
   superheats or subcools. Cross-check in closed form: the boiling zone
   needs 0.02 (399.00 - 250.43) kJ/kg / (2500 pi 0.01 x 14.33 K) = 2.640 m;
   the condensing zone 0.02 (419.16 - 255.50) kJ/kg
-  / (2000 pi 0.01 x 9.39 K) = 5.549 m. In the 9.36 m superheat zone,
-  200 pi 0.01 x 9.36 x (15 C - mean 9.59 C) = 318.2 W = 0.02 x
-  (414.91 - 399.00) kJ/kg. }
+  / (2000 pi 0.01 x 9.39 K) = 5.549 m. The single-phase zones drive on the
+  mean of their end temperatures, which is close while a zone's NTU stays
+  well below 2 (past 2 it would push the outlet beyond the wall). Here the
+  1.36 m superheat zone has NTU = 200 pi 0.01 x 1.36/(0.02 x 895.8) = 0.48,
+  and e-NTU gives 14.33 (1 - e^-0.48) = 5.43 K of superheat against 5.51 K;
+  the 2.45 m subcool zone has NTU = 0.78, and 9.39 (1 - e^-0.78) = 5.09 K
+  against 5.27 K. Both outlets stay on their own side of the wall. }
 TwoPhaseSource feedE(fluid$=R134a, mdot=0.02 [kg/s], P=300 [kPa], x=0.25)
-MovingBoundaryEvaporator evap(fluid$=R134a, U_tp=2500 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=12 [m], eps_zone=0.01 [m])
+MovingBoundaryEvaporator evap(fluid$=R134a, U_tp=2500 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=4 [m], eps_zone=0.01 [m])
 TwoPhaseSink suction()
 connect(feedE.out, evap.in)
 connect(evap.out, suction.in)
@@ -4716,12 +4720,16 @@ Q_evap = evap.Q
 L_cond = cond.L_cond
 SC = cond.SC
 Q_cond = cond.Q
-{ CHECK L_boil 2.6404836489704806 2.6e-06 }
-{ CHECK SH 17.833719632889768 1.8e-05 }
-{ CHECK Q_evap 3289.58413793141 0.0033 }
+T_margin_E = evap.wall.T - evap.T_out
+T_margin_C = cond.T_out - cond.wall.T
+{ CHECK L_boil 2.6404679313687884 2.6e-06 }
+{ CHECK SH 5.514360366238634 5.5e-06 }
+{ CHECK Q_evap 3070.1937825049176 0.0031 }
 { CHECK L_cond 5.549471538082024 5.5e-06 }
 { CHECK SC 5.271326197063445 5.3e-06 }
-{ CHECK Q_cond 3429.254249326288 0.0034 }`,
+{ CHECK Q_cond 3429.254249326288 0.0034 }
+{ CHECK T_margin_E 8.813575895958536 8.8e-06 }
+{ CHECK T_margin_C 4.116305143972056 4.1e-06 }`,
   },
   {
     id: 'reversing-valve-heating',
@@ -4735,8 +4743,9 @@ Q_cond = cond.Q
   subcooling, and the outdoor return to suction s. Cross-check: the
   routing is exact, so the indoor coil sees 1.6 MPa and 440 kJ/kg
   (T_sat = 57.9 C) and suction sees 350 kPa and 400 kJ/kg; the heating
-  duty is 0.03 (440.00 - 276.07) kJ/kg = 4918 W. Setting mode = 0
-  swaps the coils. }
+  duty is 0.03 (440.00 - 276.07) kJ/kg = 4918 W. In cooling (mode = 0)
+  the valve ties d to the outdoor coil and the indoor coil to suction,
+  so the second source would move from port o to port i. }
 TwoPhaseSourcePH discharge(mdot=0.03 [kg/s], P=1.6 [MPa], h=440 [kJ/kg])
 TwoPhaseSourcePH outdoor(mdot=0.03 [kg/s], P=350 [kPa], h=400 [kJ/kg])
 ReversingValve rv(mode=1)
