@@ -3,7 +3,7 @@ name: Turbocharger
 category: Component (fluid)
 summary: A turbine-driven compressor pair coupled on a common shaft.
 related: []
-examples: []
+examples: [turbocharger-boost]
 tags: [turbocharger, component, fluid, acausal]
 ---
 

@@ -3,7 +3,7 @@ name: ExpansionValve
 category: Component (fluid)
 summary: Throttles a fluid to a lower pressure isenthalpically (Joule–Thomson).
 related: []
-examples: []
+examples: [pressure-reducing-valve-sizing]
 tags: [expansionvalve, component, fluid, acausal]
 ---
 

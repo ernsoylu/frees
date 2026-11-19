@@ -3,7 +3,7 @@ name: FanCurve
 category: Component (fluid)
 summary: A fan whose pressure rise follows a tabulated pressure–flow performance curve.
 related: [Fan, FanMap]
-examples: []
+examples: [fans-in-series-duct]
 tags: [fan, fan-family, fancurve, curve, data:rho-dP0-Q0, ports:in-out, flow-closed, energy-pressure, steady, component, fluid, acausal]
 ---
 

@@ -3,7 +3,7 @@ name: CompressorMap
 category: Component (fluid)
 summary: A compressor whose isentropic efficiency comes from a tabulated map (eta vs pressure ratio).
 related: [Compressor, TwoPhaseCompressor]
-examples: []
+examples: [compressor-map-discharge]
 tags: [compressor, compressor-family, compressormap, map, data:map-eta, ports:in-out, flow-closed, energy-work, steady, map-driven, component, fluid, acausal]
 ---
 

@@ -3,7 +3,7 @@ name: FanMap
 category: Component (fluid)
 summary: A fan whose pressure rise comes from a tabulated performance map (ΔP vs volumetric flow).
 related: [Fan, FanCurve]
-examples: []
+examples: [fans-in-series-duct]
 tags: [fan, fan-family, fanmap, map, data:rho-map, ports:in-out, flow-closed, energy-pressure, steady, map-driven, component, fluid, acausal]
 ---
 

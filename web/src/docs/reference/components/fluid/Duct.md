@@ -3,7 +3,7 @@ name: Duct
 category: Component (fluid)
 summary: A flow passage that imposes a pressure drop on the stream.
 related: []
-examples: [square-duct-friction-loss, draining-tank-time-constant]
+examples: [square-duct-friction-loss, draining-tank-time-constant, fans-in-series-duct]
 tags: [duct, component, fluid, acausal]
 ---
 
