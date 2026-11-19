@@ -1428,6 +1428,23 @@ with CHECKs: fluid 20/31, liquid 12/21, two-phase 10/47.
   - **Units.** A capacitance in kg/Pa reads `m s^2`, and the turbine torque reads `J`; both are the right dimension, so the units table grades them as printed.
   - **Gates (2026-11-19).** Workspace 3,473 tests, parity 1,308/1,308 native and in WASM, vitest 1,232/1,232 in 109 files, `check-docs` 771/771, `check-examples` 826/826 (2,955 assertions), lint 0 errors. Every new example solves with no unit warnings. Rebuilt module 4,015.3 KiB raw / 1,606.7 KiB gzipped.
 
+- **2. Fluid — 31/31 (`d2-coverage-fluid`).** Nine examples cover the eleven uncovered components.
+
+  | Gallery id | Components | Cross-check | Model |
+  | --- | --- | --- | --- |
+  | `fans-in-series-duct` | FanCurve, FanMap | Colebrook iterated by hand against both curves: 1.3992 m³/s, 306.34 + 344.11 Pa | exact |
+  | `fan-ventilation-duct` | Fan | Colebrook by hand at the duct's air state: 0.89455 m³/s, 355.43 Pa; ΔT = ΔP/(ρ cp η) = 0.489 K | exact |
+  | `compressor-map-discharge` | CompressorMap | cold-air standard: 547.6 K, 497.7 kW | 544.2 K, 497.2 kW (air's cp rises with temperature) |
+  | `pressure-reducing-valve-sizing` | ExpansionValve | CdA = ṁ/√(2ρΔP) = 1.632e-4 m² | exact |
+  | `heated-duct-outlet` | HeatedDuct | single-stream ε-NTU: 17.934 kW, 50.65 °C at constant cp | 17.934 kW, 50.63 °C from real enthalpy |
+  | `gas-turbine-core-altitude` | AtmosphereSource, Combustor | ISA table at 3000 m geopotential: 268.65 K, 70.109 kPa; cold-air compressor exit 595.4 K | ISA exact; 590.1 K |
+  | `methane-combustor-products` | CombustorSpecies | CH₄ + 2 O₂ → CO₂ + 2 H₂O by hand: y_CO₂ 0.13095, y_O₂ 0.03048, 16 % excess air | exact |
+  | `propeller-thrust` | Propeller | Ct and Cp read from the maps by hand: 1361.9 N, 85.50 kW, η 0.796 | exact |
+  | `turbocharger-boost` | Turbocharger | air-standard closed form: 14.112 kW, PR_c 2.884 | exact |
+
+  - **No engine or library finding.** `FanCurve`, `FanMap` and `Duct` still carry no enthalpy (documented in programme B), so `fans-in-series-duct` passes it through them in the model. `Turbocharger`'s single cp and k, the reason D.2 could not convert Borel 4.D, is stated in its example as an air-standard assumption.
+  - **Gates (2026-11-19).** vitest 1,249/1,249 in 109 files, `check-docs` 771/771, `check-examples` 826/826 (2,955 assertions), lint 0 errors. Every new example solves with no unit warnings. No Rust source changed, so the workspace tests, parity and the module size are those of the liquid item.
+
 ### R15 usability pilot (Phase 4.4)
 
 Cards, answer key, thresholds and the pinned build are in [`R15_PILOT.md`](R15_PILOT.md) (signed 2026-09-12). Still to do: run five engineering participants through scalar solve (≤ 5 min), component chain (≤ 10 min) and missing-boundary recovery (≤ 3 min); record times, assistance and feedback. Never fabricate participant outcomes.

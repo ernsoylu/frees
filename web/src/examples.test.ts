@@ -95,6 +95,15 @@ it.each<[string, Record<string, string>]>([
   ['cooling-tower-range-approach', { Q: 'W', T_cold: 'K', range: 'K', approach: 'K' }],
   ['stratified-tank-charging', { T_1_1200: 'K', T_3_1200: 'K', T_3_closed: 'K' }],
   ['ice-bank-discharge', { NTU: '-', Q_plateau: 'W', t_half_closed: 's', t_half: 's' }],
+  ['fans-in-series-duct', { Q: 'm^3/s', dP_A: 'Pa', dP_B: 'Pa', f: '-' }],
+  ['fan-ventilation-duct', { Q: 'm^3/s', dP: 'Pa', dT: 'K' }],
+  ['compressor-map-discharge', { eta: '-', T_2: 'K', W: 'W' }],
+  ['pressure-reducing-valve-sizing', { CdA: 'm^2', d_eq: 'm' }],
+  ['heated-duct-outlet', { Q: 'W', T_out: 'K', T_out_closed: 'K' }],
+  ['gas-turbine-core-altitude', { P_amb: 'Pa', T_amb: 'K', T_2: 'K', T_3: 'K', W_c: 'W' }],
+  ['methane-combustor-products', { y_CO2: '-', y_H2O: '-', y_O2: '-', y_N2: '-', excess_air: '-' }],
+  ['propeller-thrust', { J: '-', thrust: 'N', P_shaft: 'W', eta_p: '-' }],
+  ['turbocharger-boost', { PR_c: '-', T_boost: 'K', W: 'W' }],
 ])('%s solves with physical units and preserves its checked results', (id, units) => {
   const example = EXAMPLES.find(example => example.id === id)!
   const result = JSON.parse(solve(example.text, '{}'))

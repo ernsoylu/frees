@@ -3,7 +3,7 @@ name: Propeller
 category: Component (fluid)
 summary: "Propeller (actuator-line map form): thrust Ct(J)·ρn²D⁴ and shaft power Cp(J)·ρn³D⁵ from advance-ratio maps J = v/(nD) — bridges the shaft to the vehicle's translational port."
 related: []
-examples: []
+examples: [propeller-thrust]
 tags: [propeller, component, fluid, acausal]
 references: []
 ---

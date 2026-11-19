@@ -4116,6 +4116,334 @@ t_half = TimeAt('bank.ice.port.t', T_m / 1 [K]) * 1 [s]
 { CHECK t_half 17253.637008918224 0.017 }`,
   },
   {
+    id: 'fans-in-series-duct',
+    title: 'Two fans in series on a duct',
+    description: 'Solve. A FanCurve and a catalogue FanMap add their rises against the Colebrook drop of a 200 m exhaust duct.',
+    category: 'Fluids',
+    text: `{ Two fans in series on a long exhaust duct. Fan A is a FanCurve with a
+  quadratic characteristic (600 Pa shut-off, 2.0 m^3/s free delivery); fan B
+  is a FanMap read linearly from six catalogue points. Together they push air
+  (rho 1.2 kg/m^3) through 200 m of 0.4 m galvanised duct to atmosphere, so
+  the flow settles where the two rises add up to the Colebrook drop of the
+  duct. FanCurve, FanMap and Duct carry no enthalpy, so the model passes it
+  through each of them itself. Cross-check (Colebrook iterated by hand
+  against the same two curves): Q = 1.3992 m^3/s, dP_A = 306.34 Pa,
+  dP_B = 344.11 Pa. }
+function [out] = Intake(P [Pa], T [K])
+port(out)
+  out.P = P
+  out.h = Enthalpy(Air, P=P, T=T)
+end
+function [in] = Outlet(P [Pa])
+port(in)
+  in.P = P
+end
+P_atm = 101325 [Pa]
+rho = 1.2 [kg/m^3]
+mu = 1.81e-5 [Pa-s]
+TABLE curveB(Q [m^3/s]) [Pa]
+  0     450
+  0.5   440
+  1.0   400
+  1.5   330
+  2.0   230
+  2.5   100
+END
+Intake inlet(P=P_atm, T=293.15 [K])
+FanCurve fanA(rho=rho, dP0=600 [Pa], Q0=2.0 [m^3/s])
+FanMap fanB(rho=rho, map$=curveB)
+Duct duct(rho=rho, mu=mu, L=200 [m], D=0.4 [m], rough=1.5e-4 [m])
+Outlet exhaust(P=P_atm)
+connect(inlet.out, fanA.in)
+connect(fanA.out, fanB.in)
+connect(fanB.out, duct.in)
+connect(duct.out, exhaust.in)
+fanA.out.h = fanA.in.h
+fanB.out.h = fanB.in.h
+duct.out.h = duct.in.h
+Q = fanA.in.mdot / rho
+dP_A = fanA.dP
+dP_B = fanB.dP
+f = duct.f
+{ CHECK Q 1.3991930072929215 1.4e-06 }
+{ CHECK dP_A 306.33883925138855 0.00031 }
+{ CHECK dP_B 344.11297897899095 0.00034 }
+{ CHECK f 0.017488733236735065 1.7e-08 }`,
+  },
+  {
+    id: 'fan-ventilation-duct',
+    title: 'Ventilation fan on a roof duct',
+    description: 'Solve. A Fan with a quadratic curve meets a 60 m duct; its losses warm the air by dP/(rho cp eta).',
+    category: 'HVAC',
+    text: `{ Ventilation fan on a roof duct. A fan with a quadratic curve (800 Pa
+  shut-off, 1.2 m^3/s free delivery, 60 % efficient) draws 20 C room air and
+  discharges it through 60 m of 0.3 m galvanised duct to atmosphere. The Fan
+  evaluates air density at its inlet and heats the air by its losses,
+  dT = dP / (rho cp eta). Cross-check (Colebrook iterated by hand at the
+  duct's air properties): Q = 0.89455 m^3/s and dP = 355.43 Pa, so
+  dT = 355.43 / (1.2046 * 1006 * 0.6) = 0.489 K. }
+function [out] = Room(fluid$, P [Pa], T [K])
+port(out)
+  out.P = P
+  out.h = Enthalpy(fluid$, P=P, T=T)
+end
+P_atm = 1 [atm]
+T_room = 20 [C]
+Room room(fluid$=Air, P=P_atm, T=T_room)
+Fan fan(fluid$=Air, dP0=800 [Pa], Q0=1.2 [m^3/s], eta=0.6)
+Pipe duct(fluid$=Air, L=60 [m], D=0.3 [m], rough=1.5e-4 [m])
+Sink roof()
+connect(room.out, fan.in)
+connect(fan.out, duct.in)
+connect(duct.out, roof.in)
+duct.out.P = P_atm
+Q = fan.Q
+dP = fan.dP
+T_out = Temperature(Air, P=fan.out.P, h=fan.out.h)
+dT = T_out - T_room
+{ CHECK Q 0.8945518805485461 8.9e-07 }
+{ CHECK dP 355.4316294483665 0.00036 }
+{ CHECK dT 0.48960989424011814 4.9e-07 }`,
+  },
+  {
+    id: 'compressor-map-discharge',
+    title: 'Air compressor on an efficiency map',
+    description: 'Solve. A CompressorMap reads its isentropic efficiency from a map against pressure ratio; compared with the cold-air standard.',
+    category: 'Thermodynamics',
+    text: `{ Air compressor on an efficiency map. 2 kg/s of air at 100 kPa and 300 K is
+  compressed to a pressure ratio of 6 by a CompressorMap, whose isentropic
+  efficiency is read linearly from a four-point map against pressure ratio
+  (0.81 at PR 6). It compresses along the real air entropy line. Cross-check
+  with the cold-air standard (cp 1.005 kJ/kg-K, k = 1.4):
+  T_2s = 300 * 6^(0.4/1.4) = 500.55 K, so T_2 = 547.6 K and W = 497.7 kW.
+  The model gives 544.2 K and 497.2 kW: real air's cp rises with
+  temperature, so the same work raises it 3.4 K less. }
+P_1 = 100 [kPa]
+T_1 = 300 [K]
+mdot = 2 [kg/s]
+PR = 6
+TABLE etamap(PR [-]) [-]
+  2   0.86
+  4   0.84
+  6   0.81
+  8   0.77
+END
+Source inlet(fluid$=Air, mdot=mdot, P=P_1, T=T_1)
+CompressorMap comp(fluid$=Air, map_eta$=etamap)
+Sink outlet()
+connect(inlet.out, comp.in)
+connect(comp.out, outlet.in)
+comp.out.P = PR * P_1
+eta = comp.eta
+T_2 = Temperature(Air, P=comp.out.P, h=comp.out.h)
+W = comp.W
+{ CHECK eta 0.81 8.1e-07 }
+{ CHECK T_2 544.1687956189999 0.00054 }
+{ CHECK W 497233.3105829011 0.5 }`,
+  },
+  {
+    id: 'pressure-reducing-valve-sizing',
+    title: 'Sizing a pressure-reducing valve',
+    description: 'Solve. An ExpansionValve with the downstream pressure pinned returns the flow area a 6-to-3 bar reduction needs.',
+    category: 'Fluids',
+    text: `{ Sizing a pressure-reducing valve. A building takes 4 L/s of 15 C water
+  from a 6 bar main and needs 3 bar. The ExpansionValve is a square-law
+  orifice, mdot |mdot| = CdA^2 2 rho dP; with the downstream pressure
+  pinned, the solve returns the flow area it needs. Cross-check:
+  CdA = mdot / sqrt(2 rho dP) = 3.9973 / sqrt(2 * 999.34 * 3e5)
+  = 1.632e-4 m^2, an equivalent round port of 14.4 mm. }
+P_main = 6 [bar]
+P_set = 3 [bar]
+Vdot = 4 [L/s]
+T = 15 [C]
+rho = Density(Water, T=T, P=P_main)
+Source main(fluid$=Water, mdot=rho * Vdot, P=P_main, T=T)
+ExpansionValve prv(CdA=CdA, rho_in=rho)
+Sink building()
+connect(main.out, prv.in)
+connect(prv.out, building.in)
+prv.out.P = P_set
+d_eq = sqrt(4 * CdA / pi#)
+{ CHECK CdA 0.00016324503735589907 1.6e-10 }
+{ CHECK d_eq 0.014417005134330068 1.4e-08 }`,
+  },
+  {
+    id: 'heated-duct-outlet',
+    title: 'Air heated in a duct',
+    description: 'Solve. A HeatedDuct picks up heat from an 80 C wall by the single-stream epsilon-NTU law.',
+    category: 'Heat Transfer',
+    text: `{ Air heated in a duct. 0.5 kg/s of air at 15 C passes a heating coil whose
+  wall stays at 80 C, with UA = 400 W/K. The HeatedDuct is the
+  single-stream epsilon-NTU limit, Q = (1 - e^(-UA/(mdot cp))) mdot cp
+  (T_wall - T_in), with cp at the inlet. Cross-check: with cp = 1006 J/kg-K,
+  NTU = 0.7952 and Q = 17.934 kW, which the model reproduces; the closed form
+  T_out = T_wall - (T_wall - T_in) e^(-NTU) gives 50.65 C at constant cp,
+  and the model's outlet, from air's real enthalpy, is 50.63 C. }
+mdot = 0.5 [kg/s]
+T_in = 15 [C]
+T_wall = 80 [C]
+UA = 400 [W/K]
+Source supply(fluid$=Air, mdot=mdot, P=1 [atm], T=T_in)
+HeatedDuct heater(fluid$=Air, UA=UA)
+ThermalSource coil(T=T_wall)
+Sink diffuser()
+connect(supply.out, heater.in)
+connect(heater.out, diffuser.in)
+connect(heater.wall, coil.port)
+Q = heater.Q
+T_out = Temperature(Air, P=1 [atm], h=heater.out.h)
+cp = Cp(Air, T=T_in, P=1 [atm])
+T_out_closed = T_wall - (T_wall - T_in) * exp(-UA / (mdot * cp))
+{ CHECK Q 17933.92496487991 0.018 }
+{ CHECK T_out 323.7809999054555 0.00032 }
+{ CHECK T_out_closed 323.8039364033945 0.00032 }`,
+  },
+  {
+    id: 'gas-turbine-core-altitude',
+    title: 'Gas-turbine core at 3000 m',
+    description: 'Solve. An AtmosphereSource at ISA 3000 m feeds a compressor and a Combustor; turbine inlet temperature follows.',
+    category: 'Aerospace',
+    text: `{ Gas-turbine core at 3000 m. An engine flying at 3000 m (ISA) swallows
+  20 kg/s of air, compresses it to a pressure ratio of 12 at 85 %
+  isentropic efficiency, and burns 0.36 kg/s of kerosene (LHV 43 MJ/kg,
+  99 % combustion efficiency) with a 4 % pressure loss. The
+  AtmosphereSource gives the ISA 1976 state; the Combustor adds the fuel's
+  mass and its heat release eta_b mdot_f LHV. The products are treated as
+  air. Cross-checks: the ISA table at 3000 m (geopotential) lists 268.65 K
+  and 70.109 kPa. The cold-air standard puts the compressor exit at
+  595.4 K; the model gives 590.1 K because air's cp rises with
+  temperature. }
+alt = 3000 [m]
+mdot = 20 [kg/s]
+PR = 12
+LHV = 43 [MJ/kg]
+mdot_f = 0.36 [kg/s]
+AtmosphereSource ambient(alt=alt, mdot=mdot)
+Compressor compressor(eta=0.85, fluid$=Air)
+Combustor burner(mdot_f=mdot_f, LHV=LHV, eta_b=0.99, dP=0.04 * PR * P_amb)
+Sink turbine_inlet()
+connect(ambient.out, compressor.in)
+connect(compressor.out, burner.in)
+connect(burner.out, turbine_inlet.in)
+compressor.out.P = PR * compressor.in.P
+P_amb = compressor.in.P
+T_amb = Temperature(Air, P=P_amb, h=compressor.in.h)
+T_2 = Temperature(Air, P=compressor.out.P, h=compressor.out.h)
+T_3 = Temperature(Air, P=burner.out.P, h=burner.out.h)
+W_c = mdot * (compressor.out.h - compressor.in.h)
+FAR = mdot_f / mdot
+{ CHECK P_amb 70108.98792883137 0.07 }
+{ CHECK T_amb 268.6499999999936 0.00027 }
+{ CHECK T_2 590.1219939953658 0.00059 }
+{ CHECK T_3 1249.3377370725748 0.0012 }
+{ CHECK W_c 6561599.264757517 6.6 }`,
+  },
+  {
+    id: 'methane-combustor-products',
+    title: 'Products of a methane combustor',
+    description: 'Solve. CombustorSpecies burns methane in 16 % excess air and carries the product mass fractions.',
+    category: 'Thermodynamics',
+    text: `{ Products of a methane combustor. 0.1 kg/s of methane burns completely in
+  2.0 kg/s of air (23.2 % O2, 76.8 % N2 by mass). CombustorSpecies applies
+  the stoichiometry CH4 + 2 O2 -> CO2 + 2 H2O per kilogram of fuel and
+  carries the products' mass fractions on the gas ports. Cross-check by
+  hand: 0.1 kg/s of CH4 makes 0.275 kg/s of CO2 and 0.225 kg/s of H2O and
+  uses 0.4 kg/s of O2, leaving 0.064 kg/s; over 2.1 kg/s of products that is
+  y_CO2 = 0.13095, y_H2O = 0.10714, y_O2 = 0.03048, y_N2 = 0.73143. The
+  stoichiometric air-fuel ratio is 17.24, so the air is 16 % in excess. }
+mdot_air = 2.0 [kg/s]
+mdot_f = 0.1 [kg/s]
+CombustorSpecies burner(a1, a2, mdot_f=mdot_f, LHV=50 [MJ/kg], eta_b=0.99, dP=5 [kPa], xC=1, yH=4)
+a1.P = 1000 [kPa]
+a1.h = 650 [kJ/kg]
+a1.mdot = mdot_air
+a1.yo2 = 0.232
+a1.yco2 = 0
+a1.yh2o = 0
+a1.yn2 = 0.768
+y_CO2 = a2.yco2
+y_H2O = a2.yh2o
+y_O2 = a2.yo2
+y_N2 = a2.yn2
+AFR_st = 0.232^(-1) * 2 * 32 / 16
+excess_air = mdot_air / (AFR_st * mdot_f) - 1
+h_out = a2.h
+{ CHECK y_CO2 0.13095238095238096 1.3e-07 }
+{ CHECK y_H2O 0.10714285714285714 1.1e-07 }
+{ CHECK y_O2 0.030476190476190473 3e-08 }
+{ CHECK y_N2 0.7314285714285714 7.3e-07 }
+{ CHECK excess_air 0.16000000000000014 1.6e-07 }`,
+  },
+  {
+    id: 'propeller-thrust',
+    title: 'Thrust of a propeller in flight',
+    description: 'Solve. A Propeller reads thrust and power coefficients from advance-ratio maps at 50 m/s and 2400 rpm.',
+    category: 'Aerospace',
+    text: `{ Thrust of a propeller in flight. A 1.8 m propeller turns at 2400 rpm on
+  an aircraft flying at 50 m/s through air at 1.112 kg/m^3 (ISA, 1000 m).
+  The Propeller reads its thrust and power coefficients from maps against
+  the advance ratio J = v/(nD), linear between points:
+  T = Ct rho n^2 D^4 and P = Cp rho n^3 D^5. Cross-check by hand:
+  J = 50 / (40 * 1.8) = 0.6944, Ct = 0.07292, Cp = 0.06358, so
+  T = 1361.9 N, P = 85.50 kW and the propulsive efficiency
+  J Ct / Cp = 0.796. }
+D = 1.8 [m]
+N = 2400 [rpm]
+v = 50 [m/s]
+rho = 1.112 [kg/m^3]
+TABLE ctmap(J [-]) [-]
+  0.0   0.110
+  0.4   0.095
+  0.8   0.065
+  1.0   0.045
+END
+TABLE cpmap(J [-]) [-]
+  0.0   0.065
+  0.4   0.068
+  0.8   0.062
+  1.0   0.052
+END
+Propeller prop(Dp=D, rhoA=rho, ct$=ctmap, cpw$=cpmap, epsn=1e-9 [m/s])
+prop.shaft.w = N
+prop.veh.vel = v
+J = prop.J
+thrust = -prop.veh.f
+P_shaft = prop.shaft.tau * prop.shaft.w
+eta_p = thrust * v / P_shaft
+{ CHECK J 0.6944444444347994 6.9e-07 }
+{ CHECK thrust 1361.8886400135111 0.0014 }
+{ CHECK P_shaft 85504.81637395457 0.086 }
+{ CHECK eta_p 0.7963812436350387 8e-07 }`,
+  },
+  {
+    id: 'turbocharger-boost',
+    title: 'Boost from a turbocharger',
+    description: 'Solve. A Turbocharger balances turbine and compressor work; the boost pressure ratio follows in closed form.',
+    category: 'Powertrain',
+    text: `{ Boost from a turbocharger. Exhaust at 900 K and 220 kPa (0.105 kg/s)
+  expands to 105 kPa through the turbine (78 %), which drives the compressor
+  (75 %) on 0.1 kg/s of 298 K air at 100 kPa. The Turbocharger takes one cp
+  (1005 J/kg-K) and k (1.4) for both wheels, so this is an air-standard
+  estimate, and the shaft balances turbine and compressor work. Cross-check
+  in closed form: the turbine exit is 766.27 K, so W = 14.112 kW; the
+  compressor air rises 140.41 K to 438.41 K, which at 75 % needs a pressure
+  ratio of (1 + 0.75 * 140.41 / 298)^3.5 = 2.884. }
+Turbocharger tc(t1, t2, c1, c2, cp=1005 [J/kg-K], eta_t=0.78, eta_c=0.75, gam=1.4)
+t1.T = 900 [K]
+t1.P = 220 [kPa]
+t1.mdot = 0.105 [kg/s]
+t2.P = 105 [kPa]
+c1.T = 298 [K]
+c1.P = 100 [kPa]
+c1.mdot = 0.1 [kg/s]
+PR_c = c2.P / c1.P
+T_boost = c2.T
+W = tc.Wc
+{ CHECK PR_c 2.8839185616530476 2.9e-06 }
+{ CHECK T_boost 438.41455390827355 0.00044 }
+{ CHECK W 14111.662667781491 0.014 }`,
+  },
+  {
     id: 'lesson-rc-charging',
     title: 'Lesson — RC charging',
     description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson. Solve (F2).',

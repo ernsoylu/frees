@@ -3,7 +3,7 @@ name: Combustor
 category: Component (fluid)
 summary: "Combustor: fuel mass addition with combustion efficiency on the lower heating value and a rated pressure loss."
 related: []
-examples: []
+examples: [gas-turbine-core-altitude]
 tags: [combustor, component, fluid, acausal]
 references: []
 ---

@@ -3,7 +3,7 @@ name: Pipe
 category: Component (fluid)
 summary: A flow passage that imposes a frictional pressure drop.
 related: []
-examples: [gravity-pipe-flow, parallel-pipe-branches, pipeline-pump-head]
+examples: [gravity-pipe-flow, parallel-pipe-branches, pipeline-pump-head, fan-ventilation-duct]
 tags: [pipe, component, fluid, acausal]
 ---
 

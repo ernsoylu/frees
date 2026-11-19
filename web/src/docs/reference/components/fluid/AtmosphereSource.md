@@ -3,7 +3,7 @@ name: AtmosphereSource
 category: Component (fluid)
 summary: "ISA atmosphere boundary: the 1976 standard atmosphere state at altitude, as a flow source (use with ram/propulsion models)."
 related: []
-examples: []
+examples: [gas-turbine-core-altitude]
 tags: [atmospheresource, component, fluid, acausal]
 references: []
 ---

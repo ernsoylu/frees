@@ -3,7 +3,7 @@ name: HeatedDuct
 category: Component (fluid)
 summary: "Heated duct: single-stream ε-NTU heat pickup from a wall node (ε = 1 − e^(−UA/ṁcp)), the exact single-stream limit."
 related: []
-examples: []
+examples: [heated-duct-outlet]
 tags: [heatedduct, component, fluid, acausal]
 references: []
 ---

@@ -3,7 +3,7 @@ name: CombustorSpecies
 category: Component (fluid)
 summary: "Combustor emitting product composition: complete combustion of a CxHy fuel stream into the E3 species riders — CO2/H2O produced and O2 consumed by stoichiometry per kg of fuel; N2 passes as the balance."
 related: []
-examples: []
+examples: [methane-combustor-products]
 tags: [combustorspecies, component, fluid, acausal]
 references: []
 ---
