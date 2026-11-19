@@ -3,27 +3,29 @@
   "source": "MovingBoundaryEvaporator EV(fluid$=R134a, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.01)\nTwoPhaseSource SRC(fluid$=R134a, mdot=0.02, P=350000, x=0.25)\nTwoPhaseSink SNK()\nThermalSource WALL(T=283)\nconnect(SRC.out, EV.in)\nconnect(EV.out, SNK.in)\nconnect(EV.wall, WALL.port)\n",
   "expect": {
     "variables": {
+      "ev.cp_sh": 920.7298373980747,
       "ev.hg": 401508.3387584498,
       "ev.in.h": 255469.77413388688,
       "ev.in.mdot": 0.02,
       "ev.in.p": 350000.0,
       "ev.l_need": 9.640442582508978,
-      "ev.l_sh": 5.387410904944545E-6,
+      "ev.l_sh": 5.387410904944545e-6,
       "ev.l_tp": 4.999994612589095,
-      "ev.out.h": 331212.35857915506,
+      "ev.ntu_sh": 9.903251661613484e-10,
+      "ev.out.h": 331212.35857913224,
       "ev.out.mdot": 0.02,
       "ev.out.p": 350000.0,
-      "ev.q": 1514.8516889053637,
-      "ev.q_sh": 8.79347791057853E-8,
+      "ev.q": 1514.8516889049076,
+      "ev.q_sh": 8.747871748819259e-8,
       "ev.q_tp": 1514.851688817429,
-      "ev.r_sh": 5.387410383727034E-4,
-      "ev.sh": 1.3788992987429083E-6,
-      "ev.t_out": 278.17807349682994,
+      "ev.r_sh": 0.0005387410383727035,
+      "ev.sh": 0.0,
+      "ev.t_out": 278.17807211793064,
       "ev.tsat": 278.17807211793064,
-      "ev.wall.qdot": 1514.8516889053637,
+      "ev.wall.qdot": 1514.8516889049076,
       "ev.wall.t": 283.0,
-      "snk.h": 331212.35857915506,
-      "snk.in.h": 331212.35857915506,
+      "snk.h": 331212.35857913224,
+      "snk.in.h": 331212.35857913224,
       "snk.in.mdot": 0.02,
       "snk.in.p": 350000.0,
       "snk.mdot": 0.02,
@@ -31,10 +33,11 @@
       "src.out.h": 255469.77413388688,
       "src.out.mdot": 0.02,
       "src.out.p": 350000.0,
-      "wall.port.qdot": -1514.8516889053637,
+      "wall.port.qdot": -1514.8516889049076,
       "wall.port.t": 283.0
     },
     "display_names": {
+      "ev$cp_sh": "ev.cp_sh",
       "ev$hg": "ev.hg",
       "ev$in$h": "ev.in.h",
       "ev$in$mdot": "ev.in.mdot",
@@ -42,6 +45,7 @@
       "ev$l_need": "ev.l_need",
       "ev$l_sh": "ev.l_sh",
       "ev$l_tp": "ev.l_tp",
+      "ev$ntu_sh": "ev.ntu_sh",
       "ev$out$h": "ev.out.h",
       "ev$out$mdot": "ev.out.mdot",
       "ev$out$p": "ev.out.p",
@@ -67,13 +71,13 @@
       "wall$port$qdot": "wall.port.qdot",
       "wall$port$t": "wall.port.t"
     },
-    "block_count": 28,
+    "block_count": 32,
     "ode_tables": [
     ],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Rust engine 2026-11-19. MovingBoundaryEvaporator and MovingBoundaryCondenser now run their single-phase (superheat / subcool) zone on the epsilon-NTU law Q = (1 - exp(-U*pi*D*L*r/(mdot*cp_sat)))*mdot*(h(P, T_wall) - h_sat) instead of U*pi*D*L*(T_wall - (T_sat + T_out)/2), the mean-temperature driving force. Past a zone NTU of 2 the Java oracle's mean-temperature law drives the outlet beyond the wall temperature (a second-law violation; review of #128: a 12 m evaporator left at 18.5 C against a 15 C wall), the same class of defect the 2026-10-21 LiquidWallHX regeneration removed. Owner decision 2026-11-19: fix the moving-boundary law with epsilon-NTU. The two-phase zone lengths and duties are unchanged."
   }
 }

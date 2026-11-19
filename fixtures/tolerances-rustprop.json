@@ -413,7 +413,20 @@
     "read from the other end. It is worth stating plainly what that implies: the",
     "goldens were produced by an engine WITH this cache, so repeating a property",
     "call and getting the same double back is oracle behaviour, not an",
-    "optimisation this port bolted on."
+    "optimisation this port bolted on.",
+    "",
+    "ELEVEN ENTRIES DIED ON 2026-11-19, with the law they graded. The",
+    "moving-boundary evaporator and condenser now run their superheat and subcool",
+    "zones on epsilon-NTU instead of the mean of the zone's end temperatures,",
+    "which pushed the outlet past the wall above a zone NTU of 2 (owner decision",
+    "2026-11-19). The thirteen goldens that use either component were regenerated",
+    "by this engine, with that provenance in oracle.generated_by, exactly as the",
+    "2026-10-21 LiquidWallHX goldens were. A native golden carries no oracle",
+    "(P,Hmass) table error, so the seven relative and four absolute entries those",
+    "fixtures held matched to 0..4.8e-12 and were deleted. The 'two moving-boundary",
+    "HX fixtures are the loosest entries' paragraph above, and the accomp air coil",
+    "and the three collapsed-superheat fixtures among the absolute channel's eight,",
+    "describe the Java goldens they replaced."
   ],
   "mechanisms": {
     "oracle-ph-table": [
@@ -760,12 +773,6 @@
       "mechanism": "oracle-ph-table",
       "reason": "SEN reads Temperature(R134a, P = 900 kPa, h = 450 kJ/kg): the wheel and rustprop both give 339.69624956356972 EXACTLY, the golden gives 339.69574815743835, off by 1.48e-6. sen.tsat at the same pressure is a (P,Q) call, bit-exact on both sides, so sen.sh = T - Tsat subtracts a tabulated temperature from an exact one and the Java's 0.0005 K error lands undiluted on a 31.02 K superheat -- 1.62e-5, which is 10.9x the leaf."
     },
-    "components_g4_aircoil": {
-      "relative": 8e-06,
-      "measured": 5.357429e-06,
-      "mechanism": "oracle-ph-table",
-      "reason": "Wave G4 harvest (2026-08-23). The coil's moving-boundary evaporator reads Temperature(R134a, P, h) along the superheated tail \u2014 the (P,Hmass)->T shape PhTableRegistry intercepts. Worst is coil.ev.q_sh = U_sh*A*(dT with a tabulated T inside): ours 173.22931540022424, golden 173.23024346891418. The document was re-tuned during promotion (mdot 0.02 -> 0.012) so ev.sh sits at 15.85 K instead of ~0, where the same table error read as rel 1.0 by denominator collapse."
-    },
     "components_g4_ejectormomentum": {
       "relative": 4.6e-06,
       "measured": 3.0636e-06,
@@ -868,24 +875,6 @@
       "mechanism": "oracle-ph-table",
       "reason": "Three lines, one property call, and therefore the cleanest instance of this mechanism in the corpus: T1 = Temperature(Steam, P = 500 kPa, h = 2890000) IS the intercepted (P,Hmass)->T shape, with nothing above or below it. The wheel answers 489.2130217524353, rustprop 489.2130217524351 -- the last bit, 3.5e-16 -- and the golden 489.2124541612719. The whole 1.1602e-6 is the Java's own 96 x 48 (P, dh) interpolation error at one superheated-steam state, undiluted by any algebra, and it is the number to carry as the size of that error for Water in the superheat region."
     },
-    "moving-boundary-hx-condenser-resolves-condensing-and-subcool-zones": {
-      "relative": 7.1e-05,
-      "measured": 4.711599e-05,
-      "mechanism": "oracle-ph-table",
-      "reason": "The loosest entry in this file, and a denominator rather than a defect. T_out = Temperature(R134a, P = 900 kPa, h = out.h) is the intercepted (P,Hmass)->T leaf: at the golden's own out.h = 242985.91123283812 the wheel says 304.02600026879315, rustprop 304.0260002687932 (1.9e-16), the golden 304.0257002726275 -- 3.0e-4 K, 9.8675e-7 relative. Tsat = T_sat(R134a, 900 kPa) = 308.6761100994469 and hf = Enthalpy(R134a, 900 kPa, x=0) = 249779.7946448451 are (P,Q) calls the Java does not intercept and are bit-identical between golden and wheel. SC = Tsat - T_out then spreads that error (2.19e-4 K once the solved outlet enthalpy is folded in) over a 4.65 K subcooling: the measured 4.7116e-5, a 48x amplification set entirely by how deeply this geometry subcools. cd.Q_sc, whose driving difference 0.5*(Tsat + T_out) - T_wall is 6.35 K, inherits half of it at 1.7250e-5, and the total duty cd.Q sits at 5.8017e-7. The R134a 900 kPa / hf state is the one accomp-exv-opening-sets-flow already grades on."
-    },
-    "moving-boundary-hx-evaporator-resolves-two-phase-and-superheat-zones": {
-      "relative": 3e-05,
-      "measured": 1.980007e-05,
-      "mechanism": "oracle-ph-table",
-      "reason": "The condenser fixture's mirror image: the same mechanism with the sign reversed. T_out = Temperature(R134a, P = 350 kPa, h = out.h) is the intercepted leaf -- at the golden's own out.h = 407056.365351175 the wheel says 284.24148586983836, rustprop 284.2414858697902 (1.7e-13), the golden 284.2413319151933, i.e. 1.54e-4 K and 5.4163e-7 relative. Tsat = T_sat(R134a, 350 kPa) = 278.17807211793064 and hg = Enthalpy(R134a, 350 kPa, x=1) = 401508.3387584498 are (P,Q) calls and are bit-identical between golden and wheel. SH = T_out - Tsat spreads the tabulated-T error over a 6.06 K superheat for the measured 1.9800e-5, a 37x amplification, and ev.Q_sh, driven by T_wall - 0.5*(Tsat + T_out) = 10.8 K, reads 5.5631e-6. The zone lengths and the two-phase duty stay at 2e-7 or better, so the divergence is confined to the superheat zone the fixture exists to resolve."
-    },
-    "moving-boundary-hx-transient-warmup-births-superheat-zone-on-ida": {
-      "relative": 2.4e-05,
-      "measured": 1.620292e-05,
-      "mechanism": "ida-adaptive-path",
-      "reason": "method = ida over 60 s at rtol = 1e-5 / atol = 1e-6, and this is the one fixture in the corpus where the two transient causes are separated by measurement instead of by argument. The binding cell is ev$sh at row 11 (t = 16.923 s): 9.933516038591693 against 9.933309573108273, a 2.064655e-4 K gap, 1.620292e-5 of that column's own 12.742489171631936 K range. It was decomposed at all 40 rows by asking the CoolProp 8.0.0 wheel for Temperature(R134a, 350 kPa, h) at BOTH sides' own recorded ev$out$h -- the property library held fixed, only the state moving -- which splits the gap into a TABLE term (wheel minus the golden's own tabulated ev$t_out, at the golden's own h) and a STATE term (wheel at our h minus wheel at the golden's h). The table term is systematic and one-signed, +1.3410e-4 .. +1.5755e-4 K on every superheated row -- the same (P,Hmass)->T error at the same 350 kPa that the algebraic sibling moving-boundary-hx-evaporator-resolves-two-phase-and-superheat-zones grades at 1.54e-4 K. The state term ALTERNATES SIGN row to row and reaches 2.4494e-4 K (row 20), larger than the table term at its own worst, while over the settled tail (rows 30-39) it holds a steady -4.9e-5 K, which is the table error fed back through Q_sh = U_sh*pi*D*L_sh*(T_wall - 0.5*(Tsat + T_out))*r_sh at -7.5 W/K. A one-signed RHS bias cannot make an INTEGRATED state swing sign row to row; two accepted-step meshes can, and wall$port$t -- the document's only differential state -- does exactly that, 2.3883e-7 relative at row 10 with alternating sign. At the binding row the split is 1.386477e-4 K table (67.2 %) and 6.869976e-5 K state (33.3 %). This engine's own ev$t_out sits within 2.916e-6 K of the wheel at its own h at every row, so no property call on this side is in question. ida-adaptive-path is named because the state term is what makes this document need more than its algebraic sibling -- correcting Wave P1's read that the 1.62e-5 was 'two decades over the 1.38e-6 K table error its algebraic siblings show': 1.3789e-6 K is the table error at the SATURATED-VAPOUR boundary (the collapsed-superheat siblings, and rows 0-2 here), while the superheated table error at this pressure is 1.5e-4 K and always was."
-    },
     "pressure-cooker": {
       "relative": 1.1e-06,
       "measured": 7.443478e-07,
@@ -952,12 +941,6 @@
       "mechanism": "oracle-ph-table",
       "reason": "The same cycle with evaporator/condenser dP of 15 kPa / 20 kPa, so the compressor suction sits at 335 kPa and the intercepted Entropy(R134a, P = 335 kPa, h = 408054.78756430943) lands on a coarser part of the Java's 96 x 48 (P, dh) grid: wheel 1750.9417276420077, rustprop 1750.9417276406750 (7.6e-13), golden 1750.9411004966178 (3.58e-7) -- 3.6x the isobaric sibling's leaf, at a state 15 kPa away. h_s again falls through and is bit-identical to the wheel (429474.8874681546) at the golden's own s_in; the isentropic rise (30.60 kJ/kg out of 438.65) amplifies 14x more, giving cmp.W at the measured 9.36e-6."
     },
-    "accomp-air-coil-cools-and-dehumidifies": {
-      "relative": 2e-07,
-      "measured": 1.309431e-07,
-      "mechanism": "oracle-ph-table",
-      "reason": "Promoted 2026-08-24 (Wave P1) with the absolute entry on coil.ev.sh below; this entry grades everything else. The document has exactly ONE intercepted leaf: coil.ev.t_out = Temperature(R134a, P = 300 kPa, h = 386172.3385232193), where the wheel and rustprop both give 273.822063737802807 -- bit-identical -- and the golden gives 273.8220625221176, 1.2157e-6 K low (4.4397e-9 relative). Every other property call in it falls through and matches: coil.ev.tsat and coil.ev.hg are bit-identical between golden, wheel and rustprop, and the moist-air-side coil.ac.w_sat sits at 1.65e-13. The worst variable is coil.ev.q_sh at 1.3094e-7, and it is a subtraction: q_sh = q - q_tp holds to the last digit on both sides (1456.5051436209... - 1456.4957272803... = 0.0094163...), so two ~1456.5 W duties agreeing to 1.96e-13 and 6.51e-13 leave a 0.0094 W difference that reads 1.5e5x their own error -- the same tabulated-T origin, amplified by the zone split. Nothing else in the fixture exceeds 8e-12."
-    },
     "chgclosed-charge-chain-is-well-posed": {
       "relative": 5.7e-06,
       "measured": 3.767336e-06,
@@ -969,18 +952,6 @@
       "measured": 9.618416e-07,
       "mechanism": "oracle-ph-table",
       "reason": "Promoted 2026-08-24 (Wave P1) with the absolute entry on cnd.sc below; this entry grades everything else. The same TwoPhaseCondenserUA charge chain as the -2 sibling, at T_amb = 305 K instead of 320 K, so it condenses at 1034565.09227085 Pa. Worst is again the intercepted density leaf cnd.rho_in = Density(R134a, P, h = 435000): wheel 46.60425716155743, rustprop 46.60425716155743 at the Java's own inputs (bit-identical), golden 46.60430150908086 -- 9.5158e-7 away. The outlet density carries its own 8.52e-7 of table error at the Java's h_out; our solve lands on a slightly different (P, h_out) pair and cnd.rho_out reads 4.70e-8, with cnd.q, cnd.out.h and the pressure at or under 3.9e-8."
-    },
-    "moving-boundary-hx-evaporator-superheat-zone-collapses-smoothly": {
-      "relative": 7.4e-09,
-      "measured": 4.956894e-09,
-      "mechanism": "oracle-ph-table",
-      "reason": "Promoted 2026-08-24 (Wave P1) with the absolute entry on ev.sh below; this entry grades the ONE other variable that moves. The fixture is unusually clean: of its 40 variables, 38 agree with the oracle to within the harness's own 1e-12 absolute floor -- ev.hg, ev.l_sh, ev.l_need and every connector state are bit-identical -- and the two that do not are ev.t_out and the ev.sh taken off it. ev.t_out = Temperature(R134a, P = 350 kPa, h_out = 331212.35857915506) is the intercepted (P,Hmass)->T shape: the CoolProp 8.0.0 wheel answers 278.17807211793064, this engine answers the identical f64, and the golden answers 278.17807349682994 -- 1.3789e-6 K high, 4.9569e-9 relative. Tsat(350 kPa) is the same 278.17807211793064 on all three sides, which is where the exact zero comes from."
-    },
-    "moving-boundary-hx-undersized-evaporator-leaves-refrigerant-two-phase": {
-      "relative": 7.4e-09,
-      "measured": 4.956894e-09,
-      "mechanism": "oracle-ph-table",
-      "reason": "The same evaporator at L = 2 m instead of 5 m, which leaves the outlet at quality 0.4701 instead of 0.6390 -- and, because the Java's table error at (350 kPa, superheat = 0) does not depend on where inside the dome the outlet sits, the identical numbers: ev.t_out is the wheel's 278.17807211793064 here too (bit-identical on this side), the golden's 278.17807349682994, 4.9569e-9. The pair exists to show the zone collapse is smooth in L, and the tolerance pair shows the table error is not a function of L."
     },
     "tpcharge-charge-sets-condensing-pressure-and-subcooling": {
       "relative": 1.7e-06,
@@ -1008,17 +979,6 @@
     }
   },
   "absolute": {
-    "accomp-air-coil-cools-and-dehumidifies": {
-      "unit": "K",
-      "mechanism": "oracle-ph-table",
-      "reason": "coil.ev.SH = Temperature(R134a, P, h_out) - Tsat(P) is identically zero here: the coil's refrigerant outlet is still inside the dome, at quality 0.9353 against hg = 398995.14983938617 (bit-identical between golden, wheel and rustprop), so T(P,h_out) IS Tsat(P). Asked at the JAVA's own state (P = 300 kPa, h_out = 386172.3385232193 J/kg) the CoolProp 8.0.0 wheel answers T = 273.822063737802807 K and Tsat = 273.822063737802807 K -- the same f64, difference exactly 0.0 -- and the golden's own coil.ev.tsat is that bit pattern too. rustprop returns the identical bit pattern for BOTH calls, so this engine's coil.ev.sh is exactly 0.0 and its coil.ev.t_out equals the golden's own tsat to the last bit. The golden's -1.2156851880718023e-6 K is therefore precisely the Java (P,Hmass)->T table's error at this state, read undiluted in kelvin -- the same 1.2157e-6 K that shows on coil.ev.t_out at 4.4397e-9 relative, which the fixture's `relative` entry grades. Against an exact zero there is no denominator for it.",
-      "variables": {
-        "coil.ev.sh": {
-          "absolute": 1.8e-06,
-          "measured": 1.215685e-06
-        }
-      }
-    },
     "chgclosed-charge-chain-is-well-posed": {
       "unit": "K",
       "mechanism": "oracle-ph-table",
@@ -1038,39 +998,6 @@
         "cnd.sc": {
           "absolute": 1.8e-06,
           "measured": 1.183385e-06
-        }
-      }
-    },
-    "moving-boundary-hx-evaporator-superheat-zone-collapses-smoothly": {
-      "unit": "K",
-      "mechanism": "oracle-ph-table",
-      "reason": "ev.SH = Temperature(R134a, P, h_out) - Tsat(P) is identically zero: the evaporator outlet is still inside the dome at quality 0.6390 (hg = 401508.3387584498, bit-identical between golden, wheel and this engine), so T(P,h_out) IS Tsat(P). At the JAVA's own state (P = 350 kPa, h_out = 331212.35857915506 J/kg) the CoolProp 8.0.0 wheel returns 278.17807211793064 for BOTH calls -- difference exactly 0.0 -- and the golden's own ev.tsat is that bit pattern. This engine returns the same f64 for both, so its ev.sh is exactly 0.0, and the golden's 1.3788992987429083e-6 K is the Java (P,Hmass)->T table's error at this state, undiluted, in kelvin. The document exists to assert that the superheat zone collapses SMOOTHLY to zero, so re-tuning it off the plateau would destroy the assertion it was harvested to make.",
-      "variables": {
-        "ev.sh": {
-          "absolute": 2.1e-06,
-          "measured": 1.378899e-06
-        }
-      }
-    },
-    "moving-boundary-hx-transient-warmup-births-superheat-zone-on-ida": {
-      "unit": "K",
-      "mechanism": "oracle-ph-table",
-      "reason": "SH_start = MinValue('ev.sh') is taken at rows 0-2, before the wall has warmed enough to open a superheat zone: the evaporator outlet is still inside the dome at h_out = 315466.8165816667 J/kg against hg = 401508.3387584498 (bit-identical between golden, wheel and this engine), so ev.SH = Temperature(R134a, 350 kPa, h_out) - Tsat(350 kPa) is identically 0. The CoolProp 8.0.0 wheel returns 278.17807211793064 for BOTH calls -- difference exactly 0.0 -- and the golden's own ev$tsat is that bit pattern; this engine returns the same f64 for both, so its ev$sh is exactly 0.0 at all three rows and its sh_start is exactly 0. The golden's 1.3788992987429083e-6 K is the Java (P,Hmass)->T table's error at the saturated-vapour boundary at this pressure -- the SAME f64 the two algebraic siblings' ev.sh entries carry, which is why this entry declares the same 2.1e-6 K they do. It is also the one place in this transient where the two engines are on the SAME state: the trajectory term measured for the relative entry above is exactly 0.000e+00 at rows 0, 1 and 2, so the table error is read here undiluted, in kelvin, against an exact zero that has no denominator.",
-      "variables": {
-        "sh_start": {
-          "absolute": 2.1e-06,
-          "measured": 1.378899e-06
-        }
-      }
-    },
-    "moving-boundary-hx-undersized-evaporator-leaves-refrigerant-two-phase": {
-      "unit": "K",
-      "mechanism": "oracle-ph-table",
-      "reason": "The same exact zero from the other direction: an evaporator too short (L = 2 m) to finish boiling, so the outlet is at quality 0.4701 and ev.SH is identically 0 by construction -- which is the whole assertion of the document. At the JAVA's own state (P = 350 kPa, h_out = 298333.0998791892 J/kg) the wheel returns 278.17807211793064 for Temperature(P,h_out) and for Tsat(P) alike, difference exactly 0.0, matching the golden's ev.tsat bit for bit; this engine returns the same f64 for both and its ev.sh is exactly 0.0. The golden's 1.3788992987429083e-6 K is the same tabulated-T error as the -smoothly sibling's, to the last digit, because the Java's table error at (350 kPa, saturated vapour boundary) is a property of the grid, not of the outlet quality.",
-      "variables": {
-        "ev.sh": {
-          "absolute": 2.1e-06,
-          "measured": 1.378899e-06
         }
       }
     },
