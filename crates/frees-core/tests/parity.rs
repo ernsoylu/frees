@@ -774,6 +774,45 @@ fn declared_rescues() -> BTreeMap<String, BTreeMap<String, f64>> {
         .collect()
 }
 
+/// Fixtures whose **source** a later library fix made over-specified, from the
+/// same file's optional `superseded` object: fixture stem → the text the
+/// engine's error must contain.
+///
+/// The golden stays untouched. Its document pinned a quantity by hand that a
+/// component failed to define, and once the component defines it the pin is a
+/// redundant relation. The entry states that in `reason`, and the replay
+/// requires exactly that failure: a fixture that solves again, or fails some
+/// other way, is a dead or wrong entry.
+fn declared_superseded() -> BTreeMap<String, String> {
+    let path = tolerance_path();
+    let Ok(raw) = fs::read_to_string(&path) else {
+        return BTreeMap::new();
+    };
+    let doc: serde_json::Value = serde_json::from_str(&raw)
+        .unwrap_or_else(|e| panic!("{} is not valid JSON: {e}", path.display()));
+    let Some(entries) = doc["superseded"].as_object() else {
+        return BTreeMap::new();
+    };
+    entries
+        .iter()
+        .map(|(name, entry)| {
+            assert!(
+                entry["reason"].as_str().is_some_and(|r| r.len() > 40),
+                "{}: superseded `{name}` needs a `reason` naming the library fix and the \
+                 pin it made redundant, not a placeholder",
+                path.display()
+            );
+            let error = entry["error"].as_str().unwrap_or_default();
+            assert!(
+                !error.is_empty(),
+                "{}: superseded `{name}` needs the `error` text the replay must see",
+                path.display()
+            );
+            (name.clone(), error.to_string())
+        })
+        .collect()
+}
+
 /// Declared **absolute** tolerances, from the same file's optional `absolute`
 /// object: fixture stem → variable key (the golden's key, lowercased) → the
 /// tolerance in that variable's own SI unit.
@@ -1343,6 +1382,7 @@ fn replay(
     floors: &BTreeMap<String, f64>,
     absolutes: &BTreeMap<String, BTreeMap<String, f64>>,
     rescues: &BTreeMap<String, BTreeMap<String, f64>>,
+    superseded: &BTreeMap<String, String>,
     used: &mut BTreeSet<String>,
     used_floors: &mut BTreeSet<String>,
     used_absolutes: &mut BTreeSet<(String, String)>,
@@ -1416,6 +1456,21 @@ fn replay(
             detail,
         });
     };
+
+    if let Some(want) = superseded.get(&name) {
+        match run(&settings) {
+            Ok(_) => fail(format!(
+                "is declared superseded in fixtures/{TOLERANCE_FILE}, but it solves. Delete \
+                 the entry."
+            )),
+            Err(err) if err.to_string().contains(want.as_str()) => {}
+            Err(err) => fail(format!(
+                "is declared superseded in fixtures/{TOLERANCE_FILE} with `{want}`, but failed \
+                 differently: {err}"
+            )),
+        }
+        return;
+    }
 
     match run(&settings) {
         Ok(solution) => {
@@ -1692,6 +1747,7 @@ fn golden_corpus_parity() {
     let floors = declared_solver_floors();
     let absolutes = declared_absolutes();
     let rescues = declared_rescues();
+    let superseded = declared_superseded();
     let mut used = BTreeSet::new();
     let mut used_floors = BTreeSet::new();
     let mut used_absolutes = BTreeSet::new();
@@ -1704,6 +1760,7 @@ fn golden_corpus_parity() {
             &floors,
             &absolutes,
             &rescues,
+            &superseded,
             &mut used,
             &mut used_floors,
             &mut used_absolutes,
@@ -1763,6 +1820,7 @@ fn golden_corpus_parity() {
         .chain(floors.keys().map(|n| ("solver_floor", n)))
         .chain(absolutes.keys().map(|n| ("absolute", n)))
         .chain(rescues.keys().map(|n| ("rescued", n)))
+        .chain(superseded.keys().map(|n| ("superseded", n)))
     {
         if !paths
             .iter()

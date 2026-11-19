@@ -3,7 +3,7 @@ name: LiquidThermostat
 category: Component (liquid)
 summary: "Wax thermostat: the element opens smoothly over a temperature band (Topen ± Tband) sensed on the inlet coolant — the engine warm-up bypass switch, no discrete event."
 related: []
-examples: []
+examples: [thermostat-opening-flow]
 tags: [liquidthermostat, component, liquid, acausal]
 references: []
 ---

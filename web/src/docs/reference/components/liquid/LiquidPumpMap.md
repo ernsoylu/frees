@@ -3,7 +3,7 @@ name: LiquidPumpMap
 category: Component (liquid)
 summary: "Head-curve pump: rise from a tabulated head map [m] vs volumetric flow, with the hydraulic inefficiency heating the coolant (out.h mirrors LiquidPump)."
 related: [LiquidPump, PumpMap]
-examples: []
+examples: [closed-loop-pump-operating-point]
 tags: [pump, liquid-pump-family, liquidpumpmap, map, data:rho-map, ports:in-out, flow-closed, energy-work, steady, map-driven, liquid, component, acausal]
 references: []
 ---

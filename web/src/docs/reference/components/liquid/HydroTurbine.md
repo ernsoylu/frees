@@ -3,7 +3,7 @@ name: HydroTurbine
 category: Component (liquid)
 summary: "Hydro turbine: shaft power eta·(V̇·ΔP) from the head across it, efficiency from a flow map; the extracted work leaves the stream enthalpy."
 related: []
-examples: []
+examples: [small-hydro-turbine-power]
 tags: [hydroturbine, component, liquid, acausal]
 references: []
 ---

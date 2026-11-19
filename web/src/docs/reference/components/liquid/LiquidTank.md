@@ -3,7 +3,7 @@ name: LiquidTank
 category: Component (liquid)
 summary: "Thermal-mass tank (m kg of coolant, perfectly mixed): the outlet leaves at the tank temperature state Tt; a wall heat port exchanges UA·(T_wall − Tt)."
 related: []
-examples: []
+examples: [tank-warm-up-time-constant]
 tags: [liquidtank, component, liquid, acausal]
 references: []
 ---

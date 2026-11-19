@@ -3,7 +3,7 @@ name: CoolingTower
 category: Component (liquid)
 summary: "Cooling tower (Merkel-lite): heat rejection on the enthalpy potential between saturated air at the water inlet temperature and ambient air at its wet-bulb (signal port), with a tower effectiveness and design air flow."
 related: []
-examples: []
+examples: [cooling-tower-range-approach]
 tags: [coolingtower, component, liquid, acausal]
 references: []
 ---
