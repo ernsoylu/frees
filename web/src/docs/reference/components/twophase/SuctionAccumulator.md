@@ -3,7 +3,7 @@ name: SuctionAccumulator
 category: Component (twophase)
 summary: "Suction accumulator: traps liquid carryover and delivers SATURATED VAPOR to the compressor."
 related: []
-examples: []
+examples: [suction-accumulator-carryover]
 tags: [suctionaccumulator, component, twophase, acausal]
 references: []
 ---

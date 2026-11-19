@@ -4944,6 +4944,193 @@ eff = (T_cold_out - 450 [K]) / (900 [K] - 450 [K])
 { CHECK eff 0.8055486215202985 8.1e-07 }`,
   },
   {
+    id: 'pressure-cooker-relief',
+    title: 'Pressure cooker: time to pressure',
+    description: 'Solve (DYNAMIC). A BoilingVessel heats 1 kg of water at fixed volume until a ProportionalReliefValve lifts; checked against the steam tables.',
+    category: 'Thermodynamics',
+    text: `{ A pressure cooker comes up to pressure. A rigid 6 L pot holds 1 kg of
+  water at 20 C (and its own vapor, no air) on a 1500 W burner. Its relief
+  weight lifts at 200 kPa and passes 2e-7 kg/s per pascal of overpressure.
+  The BoilingVessel integrates mass and internal energy at fixed volume
+  and flashes (rho, u) to the pressure, from heating through boiling with
+  no switch. Cross-check from the steam tables (Cengel, Table A-5): at
+  v = 0.006 m^3/kg and 200 kPa, x = (0.006 - 0.001061)/(0.88578 - 0.001061)
+  = 0.00558 and u = 504.50 + 0.00558 x 2024.6 = 515.80 kJ/kg; from
+  u_f(20 C) = 83.91 kJ/kg the pot needs 431.89 kJ, or 287.9 s at 1500 W.
+  Once venting, the steady flow is Q/h_fg = 1500/2200.1 kJ/kg = 0.682 g/s,
+  which holds the pressure 3.3 kPa above the crack. }
+BoilingVessel pot(fluid$=Water, V=6 [L], m0=1 [kg], T0=20 [C])
+ProportionalReliefValve valve(fluid$=Water, Pcrack=200 [kPa], grad=2e-7 [kg/s-Pa], eps=1 [kPa])
+TwoPhasePressureSink room(P=101.3 [kPa])
+connect(pot.vent, valve.in)
+connect(valve.out, room.in)
+pot.wall.Qdot = 1500 [W]
+DYNAMIC cook(method=radau5, time=0..900, points=451)
+END
+t_crack = TimeAt('pot.vent.p', 200000) * 1 [s]
+P_end = FinalValue('pot.vent.p') * 1 [Pa]
+m_end = FinalValue('pot.mass') * 1 [kg]
+vent_end = FinalValue('pot.vent.mdot') * 1 [kg/s]
+{ CHECK t_crack 288.35507018703265 0.00029 }
+{ CHECK P_end 203331.42232889484 0.2 }
+{ CHECK m_end 0.5842735696163454 5.8e-07 }
+{ CHECK vent_end 0.0006809694131595016 1e-09 }`,
+  },
+  {
+    id: 'steam-relief-valve-capacity',
+    title: 'Steam relief valve capacity',
+    description: 'Solve. A SteamReliefValve vents saturated steam at choked flow; checked in closed form and against the Napier rule.',
+    category: 'Thermodynamics',
+    text: `{ Capacity of a steam relief valve. Saturated steam at 1 MPa lifts a valve
+  set at 0.8 MPa (effective area 1 cm^2, Cd = 0.9) venting to atmosphere.
+  The pressure ratio is far below critical, so the flow chokes and
+  depends only on the upstream state, with k = 1.135 and
+  R = 461.5 J/kg-K for steam. Cross-check in closed form:
+  0.9 x 1e-4 x 1e6 x sqrt(1.135/(461.5 x 453.03)) x
+  (2/2.135)^(2.135/0.27) = 0.12511 kg/s. Napier's empirical rule for
+  saturated steam, m [lb/s] = P [psia] A [in^2]/70, gives
+  0.9 x 145.04 x 0.155/70 = 0.289 lb/s = 0.131 kg/s, 4.8 % more. }
+TwoPhasePressureSource boiler(fluid$=Water, P=1 [MPa], x=1)
+SteamReliefValve rv(fluid$=Water, A=1e-4 [m^2], Pset=0.8 [MPa], Cd=0.9, kgas=1.135, Rgas=461.5 [J/kg-K], eps=10 [kPa])
+TwoPhasePressureSink atm(P=101.3 [kPa])
+connect(boiler.out, rv.in)
+connect(rv.out, atm.in)
+mdot = rv.in.mdot
+opening = rv.opening
+{ CHECK mdot 0.1251052823992152 1.3e-07 }
+{ CHECK opening 1.0 1e-06 }`,
+  },
+  {
+    id: 'suction-accumulator-carryover',
+    title: 'Suction accumulator traps carry-over',
+    description: 'Solve (DYNAMIC). A SuctionAccumulator stores the liquid in a wet inlet and passes saturated vapor; the liquid grows linearly.',
+    category: 'HVAC',
+    text: `{ A suction accumulator traps liquid carry-over. Wet R-134a at 250 kPa
+  and quality 0.9 arrives at 20 g/s; the accumulator already holds
+  0.1 kg of liquid and sends saturated vapor on to the compressor. Its
+  energy balance with the liquid stored at h_f makes the vapor flow
+  x_in times the inlet flow. Cross-check in closed form: 0.9 x 20 =
+  18 g/s leaves, so the liquid grows at 2 g/s to 0.1 + 0.002 x 300 =
+  0.7 kg after five minutes. }
+TwoPhaseSource wet(fluid$=R134a, mdot=0.02 [kg/s], P=250 [kPa], x=0.9)
+SuctionAccumulator acc(fluid$=R134a, m0=0.1 [kg])
+TwoPhaseSink comp()
+connect(wet.out, acc.in)
+connect(acc.out, comp.in)
+DYNAMIC fill(method=radau5, time=0..300, points=31)
+END
+m_end = FinalValue('acc.m') * 1 [kg]
+mdot_out = FinalValue('acc.out.mdot') * 1 [kg/s]
+{ CHECK m_end 0.7000000000000005 7e-07 }
+{ CHECK mdot_out 0.018000000000000002 1.8e-08 }`,
+  },
+  {
+    id: 'two-phase-volume-charging',
+    title: 'Charging a closed two-phase volume',
+    description: 'Solve (DYNAMIC). A TwoPhaseVolume behind a TwoPhaseCap charges at a constant rate; its pressure rises as the closed form says.',
+    category: 'Fluids',
+    text: `{ Charging a closed two-phase volume. A 2 L vessel of R-134a with its
+  outlet capped (TwoPhaseCap) starts at 300 kPa; 5 g/s of two-phase
+  refrigerant flows in at a fixed enthalpy, and the vessel's compliance
+  C = dm/dP is 2e-7 kg/Pa. Cross-check in closed form: P rises at
+  0.005/2e-7 = 25 kPa/s, to 300 + 250 = 550 kPa after 10 s. The vessel
+  also reports the charge it holds, V times the Zivi void-weighted
+  density. }
+h_f = Enthalpy(R134a, P=300 [kPa], x=0.2)
+TwoPhaseEnthalpySource feed(mdot=0.005 [kg/s], h=h_f)
+TwoPhaseVolume tank(fluid$=R134a, V=2 [L], C=2e-7 [kg/Pa], P0=300 [kPa])
+TwoPhaseCap valve()
+connect(feed.out, tank.in)
+connect(tank.out, valve.in)
+DYNAMIC charge(method=radau5, time=0..10, points=11)
+END
+P_end = FinalValue('tank.in.p') * 1 [Pa]
+m_end = FinalValue('tank.m') * 1 [kg]
+{ CHECK P_end 550000.0000000005 0.55 }
+{ CHECK m_end 1.1844123349689726 1.2e-06 }`,
+  },
+  {
+    id: 'two-phase-chamber-warm-up',
+    title: 'Two-phase chamber warms toward its wall',
+    description: 'Solve (DYNAMIC). A TwoPhaseChamber with pressure and enthalpy states settles against a wall and an outlet valve.',
+    category: 'Heat Transfer',
+    text: `{ A two-phase chamber warms toward its wall. 10 g/s of R-134a at quality
+  0.3 enters a 1 L chamber (UA = 60 W/K to a 10 C wall) and leaves through
+  a valve (Cv = 4e-6 m^2) to 300 kPa. Pressure and enthalpy are both
+  states, so the heat the wall adds and the flow the valve passes settle
+  together. Cross-check at the final state, two minutes in: the heat in,
+  60 (283.15 - 279.95) = 191.78 W, equals
+  0.01 (288.77 - 269.59) kJ/kg, and the valve passes
+  4e-6 sqrt(2 x 43.33 x 72.12 kPa) = 10.00 g/s. }
+h_in = Enthalpy(R134a, P=400 [kPa], x=0.3)
+TwoPhaseEnthalpySource feed(mdot=0.01 [kg/s], h=h_in)
+TwoPhaseChamber coil(fluid$=R134a, V=1 [L], C=1e-7 [kg/Pa], UA=60 [W/K], P0=400 [kPa], h0=h_in)
+TwoPhaseExpansionValve exitv(fluid$=R134a, Cv=4e-6 [m^2])
+TwoPhasePressureSink suc(P=300 [kPa])
+connect(feed.out, coil.in)
+connect(coil.out, exitv.in)
+connect(exitv.out, suc.in)
+coil.wall.T = 10 [C]
+DYNAMIC warm(method=radau5, time=0..120, points=25)
+END
+P_end = FinalValue('coil.in.p') * 1 [Pa]
+h_end = FinalValue('coil.hcv') * 1 [J/kg]
+T_end = FinalValue('coil.tcv') * 1 [K]
+Q_end = FinalValue('coil.q') * 1 [W]
+{ CHECK P_end 372117.6159676672 0.37 }
+{ CHECK h_end 288771.451811941 0.29 }
+{ CHECK T_end 279.953691321692 0.00028 }
+{ CHECK Q_end 191.77852069847745 0.00019 }`,
+  },
+  {
+    id: 'few-cell-coils',
+    title: 'Three-cell evaporator and condenser',
+    description: 'Solve (DYNAMIC). FewCellEvaporator and FewCellCondenser run to steady state; four equal conductances give the flow in closed form.',
+    category: 'Heat Transfer',
+    text: `{ Three-cell evaporator and condenser coils. Each coil is three well-mixed
+  cells with their own pressure and enthalpy states, joined by linear
+  conductances Kv = 1e-6 kg/s-Pa, with a 40 W/K wall on every cell. The
+  evaporator runs from 320 to 300 kPa against 15 C walls; the condenser
+  from 1.02 to 1 MPa against 30 C walls. Cross-check in closed form at
+  steady state: four equal conductances in series pass
+  1e-6 x 20,000/4 = 5 g/s, with the cells 5 kPa apart; the wall heat
+  equals the enthalpy change, 0.005 (411.10 - 252.51) kJ/kg = 792.9 W into
+  the evaporator and 0.005 (419.48 - 244.81) kJ/kg = 873.4 W out of the
+  condenser. }
+h_0 = Enthalpy(R134a, P=300 [kPa], x=0.25)
+TwoPhasePressureSource feedE(fluid$=R134a, P=320 [kPa], x=0.25)
+FewCellEvaporator evap(fluid$=R134a, V=0.2 [L], Cc=1e-8 [kg/Pa], UA=40 [W/K], Kv=1e-6 [kg/s-Pa], P0=310 [kPa], h0=h_0)
+TwoPhasePressureSink suc(P=300 [kPa])
+connect(feedE.out, evap.in)
+connect(evap.out, suc.in)
+evap.w1.T = 15 [C]
+evap.w2.T = 15 [C]
+evap.w3.T = 15 [C]
+h_sat = Enthalpy(R134a, P=1 [MPa], x=1)
+TwoPhasePressureSource feedC(fluid$=R134a, P=1.02 [MPa], x=1)
+FewCellCondenser cond(fluid$=R134a, V=0.2 [L], Cc=1e-8 [kg/Pa], UA=40 [W/K], Kv=1e-6 [kg/s-Pa], P0=1.01 [MPa], h0=h_sat)
+TwoPhasePressureSink liq(P=1 [MPa])
+connect(feedC.out, cond.in)
+connect(cond.out, liq.in)
+cond.w1.T = 30 [C]
+cond.w2.T = 30 [C]
+cond.w3.T = 30 [C]
+DYNAMIC run(method=radau5, time=0..600, points=31)
+END
+mdot_E = FinalValue('evap.in.mdot') * 1 [kg/s]
+mdot_C = FinalValue('cond.in.mdot') * 1 [kg/s]
+h_E = FinalValue('evap.out.h') * 1 [J/kg]
+h_C = FinalValue('cond.out.h') * 1 [J/kg]
+Q_E = (FinalValue('evap.q1') + FinalValue('evap.q2') + FinalValue('evap.q3')) * 1 [W]
+Q_C = (FinalValue('cond.q1') + FinalValue('cond.q2') + FinalValue('cond.q3')) * 1 [W]
+{ CHECK mdot_E 0.005 5e-09 }
+{ CHECK mdot_C 0.005 5e-09 }
+{ CHECK h_E 411100.5762699324 0.41 }
+{ CHECK h_C 244808.43030763575 0.24 }
+{ CHECK Q_E 792.9407836922951 0.00079 }
+{ CHECK Q_C -873.3709061010791 0.00087 }`,
+  },
+  {
     id: 'lesson-rc-charging',
     title: 'Lesson — RC charging',
     description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson. Solve (F2).',

@@ -3,7 +3,7 @@ name: SteamReliefValve
 category: Component (twophase)
 summary: A steam relief valve venting above the set pressure.
 related: []
-examples: []
+examples: [steam-relief-valve-capacity]
 tags: [steamreliefvalve, component, twophase, acausal]
 ---
 

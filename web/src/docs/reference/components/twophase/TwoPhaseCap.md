@@ -3,7 +3,7 @@ name: TwoPhaseCap
 category: Component (twophase)
 summary: A two-phase capacitive volume (a pressure-compliance node).
 related: []
-examples: []
+examples: [two-phase-volume-charging]
 tags: [twophasecap, component, twophase, acausal]
 ---
 

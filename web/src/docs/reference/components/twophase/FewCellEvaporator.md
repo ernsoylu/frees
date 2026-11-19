@@ -3,7 +3,7 @@ name: FewCellEvaporator
 category: Component (twophase)
 summary: "Packaged 3-cell evaporator: three well-mixed cells with their own pressure and enthalpy states, inter-cell conductances and a wall port per cell."
 related: []
-examples: []
+examples: [few-cell-coils]
 tags: [fewcellevaporator, component, twophase, acausal]
 references: []
 ---
