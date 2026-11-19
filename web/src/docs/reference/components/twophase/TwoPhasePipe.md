@@ -22,7 +22,7 @@ A reusable **acausal twophase-domain** component — its two-phase refrigerant p
 ## Usage
 
 ```
-TwoPhasePipe inst(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g)
+TwoPhasePipe inst(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g, domain$)
 ```
 
 ## Parameters
@@ -38,6 +38,7 @@ TwoPhasePipe inst(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g)
 | `rho_g` | Number | Vapor density [kg/m³]. |
 | `mu_l` | Number | Liquid viscosity [Pa·s]. |
 | `mu_g` | Number | Vapor viscosity [Pa·s]. |
+| `domain$` | String | Connector fluid family — one of `fluid`, `gas`, `oil`, `moistair`, `liquid`, `twophase`. |
 
 ## Constitutive Equations
 
@@ -68,19 +69,9 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 
 ```frees
 // frees-language: 2
-function [out] = RSrc(P, h0, mdot)
-port(out)
-  out.P = P
-  out.h = h0
-  out.mdot = mdot
-end
-function [in] = PSink(P)
-port(in)
-  in.P = P
-end
-RSrc        SRC(P=500000, h0=250000, mdot=0.05)
-TwoPhasePipe TP(fluid$=R134a, L=2 [m], D=0.01 [m], rough=1e-5 [m], x=0.3, rho_l=1200 [kg/m^3], rho_g=20 [kg/m^3], mu_l=2e-4 [Pa-s], mu_g=1e-5 [Pa-s])
-Sink        SNK()
+TwoPhaseSourcePH SRC(mdot=0.05 [kg/s], P=500000 [Pa], h=250000 [J/kg])
+TwoPhasePipe     TP(fluid$=R134a, L=2 [m], D=0.01 [m], rough=1e-5 [m], x=0.3, rho_l=1200 [kg/m^3], rho_g=20 [kg/m^3], mu_l=2e-4 [Pa-s], mu_g=1e-5 [Pa-s])
+TwoPhaseSink     SNK()
 connect(SRC.out, TP.in)
 connect(TP.out, SNK.in)
 

@@ -4392,7 +4392,8 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       { name: `rho_l`, isString: false, isSelector: false, isMap: false, unit: `kg/m^3`, description: `Liquid density [kg/m³].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `rho_g`, isString: false, isSelector: false, isMap: false, unit: `kg/m^3`, description: `Vapor density [kg/m³].`, required: true, values: [], variants: [], defaultValue: `` },
       { name: `mu_l`, isString: false, isSelector: false, isMap: false, unit: `Pa-s`, description: `Liquid viscosity [Pa·s].`, required: true, values: [], variants: [], defaultValue: `` },
-      { name: `mu_g`, isString: false, isSelector: false, isMap: false, unit: `Pa-s`, description: `Vapor viscosity [Pa·s].`, required: true, values: [], variants: [], defaultValue: `` }
+      { name: `mu_g`, isString: false, isSelector: false, isMap: false, unit: `Pa-s`, description: `Vapor viscosity [Pa·s].`, required: true, values: [], variants: [], defaultValue: `` },
+      { name: `domain$`, isString: true, isSelector: false, isMap: false, unit: ``, description: `Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`.`, required: false, values: [], variants: [], defaultValue: `twophase` }
     ],
     variants: [],
   },

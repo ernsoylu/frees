@@ -231,3 +231,15 @@ fn a_liquid_volume_carries_its_pressure_to_the_outlet_in_a_dynamic_run() {
         "{v:?}"
     );
 }
+
+#[test]
+fn a_two_phase_pipe_connects_to_two_phase_boundaries() {
+    let v = values(
+        "TwoPhaseSourcePH S(mdot=0.05, P=500000, h=250000)\n\
+         TwoPhasePipe T(fluid$=R134a, L=2, D=0.01, rough=1e-5, x=0.3, rho_l=1200, rho_g=20, mu_l=2e-4, mu_g=1e-5)\n\
+         TwoPhaseSink K()\n\
+         connect(S.out, T.in)\nconnect(T.out, K.in)\n\
+         dp = 500000 - K.P\nphi2 = T.phi2\ndp_l = T.dp_l\n",
+    );
+    assert!(close(v["dp"], v["phi2"] * v["dp_l"], 1e-12), "{v:?}");
+}
