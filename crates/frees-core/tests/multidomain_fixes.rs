@@ -233,6 +233,32 @@ fn a_liquid_volume_carries_its_pressure_to_the_outlet_in_a_dynamic_run() {
 }
 
 #[test]
+fn a_moving_boundary_superheat_zone_never_passes_its_wall() {
+    // A mean-temperature driving force left this 12 m tube at 18.5 C against
+    // a 15 C wall (review of #128); epsilon-NTU approaches the wall from below.
+    // At 100 m (NTU 34) the residual gap is the smooth zone-length cap, which
+    // leaves the boiling zone 1e-7 short of the full latent duty: 1.6e-5 K.
+    for (l, gap) in [(12.0, 1.0), (100.0, 1e-4)] {
+        let v = values(&format!(
+            "TwoPhaseSource F(fluid$=R134a, mdot=0.02, P=300000, x=0.25)\n\
+             MovingBoundaryEvaporator E(fluid$=R134a, U_tp=2500, U_sh=200, D=0.01, L={l}, eps_zone=0.01)\n\
+             TwoPhaseSink K()\n\
+             connect(F.out, E.in)\nconnect(E.out, K.in)\n\
+             E.wall.T = 288.15\n\
+             h_w = Enthalpy(R134a, P=300000, T=288.15)\n\
+             q_sh = (1 - exp(-E.NTU_sh)) * 0.02 * (h_w - E.hg)\n\
+             ntu = 200 * pi# * 0.01 * E.L_sh * E.r_sh / (0.02 * Cp(R134a, P=300000, x=1))\n"
+        ));
+        assert!(
+            v["e$t_out"] < 288.15 && v["e$t_out"] > 288.15 - gap,
+            "{l} m: {v:?}"
+        );
+        assert!(close(v["e$q_sh"], v["q_sh"], 1e-12), "{v:?}");
+        assert!(close(v["e$ntu_sh"], v["ntu"], 1e-12), "{v:?}");
+    }
+}
+
+#[test]
 fn a_two_phase_pipe_connects_to_two_phase_boundaries() {
     let v = values(
         "TwoPhaseSourcePH S(mdot=0.05, P=500000, h=250000)\n\
