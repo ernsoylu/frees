@@ -4444,6 +4444,320 @@ W = tc.Wc
 { CHECK W 14111.662667781491 0.014 }`,
   },
   {
+    id: 'two-phase-line-friedel',
+    title: 'Two-phase line: Friedel pressure drop',
+    description: 'Solve. A TwoPhaseFlowRes sets the flow of a quality-0.3 R-134a line from its 20 kPa drop; the saturation temperature glides with the pressure.',
+    category: 'Fluids',
+    text: `{ Pressure drop in a two-phase refrigerant line. R-134a at 400 kPa and
+  quality 0.3 flows from a reservoir through 5 m of 10 mm smooth tube to a
+  380 kPa suction header. The TwoPhaseFlowRes applies the Friedel
+  multiplier to the liquid-only friction drop, so the 20 kPa drop sets the
+  flow. Inside the dome the temperature follows the pressure: the line
+  glides 1.5 K colder and flashes to a higher quality. Cross-check: at the
+  solved flow, an independent evaluation of the Friedel groups from the
+  phase properties the line reports gives G = 447.9 kg/m^2-s,
+  Re_lo = 18,817, f_lo = 0.02627 (Colebrook), dP_lo = 1042.0 Pa and
+  phi_lo^2 = 19.193, whose product is 20,000 Pa. }
+P_1 = 400 [kPa]
+P_2 = 380 [kPa]
+TwoPhasePressureSource feed(fluid$=R134a, P=P_1, x=0.3)
+TwoPhaseFlowRes line(fluid$=R134a, L=5 [m], D=0.01 [m])
+TwoPhaseSensor exit(fluid$=R134a)
+TwoPhasePressureSink suction(P=P_2)
+connect(feed.out, line.in)
+connect(line.out, exit.in)
+connect(exit.out, suction.in)
+mdot = line.in.mdot
+GUESS mdot = 0.02
+phi2 = line.phi2
+x_2 = exit.x
+dT_glide = T_sat(R134a, P=P_1) - exit.T
+{ CHECK mdot 0.03517898088125955 3.5e-08 }
+{ CHECK phi2 19.19306149328873 1.9e-05 }
+{ CHECK x_2 0.3088383008336481 3.1e-07 }
+{ CHECK dT_glide 1.5136195813150266 1.5e-06 }`,
+  },
+  {
+    id: 'boiler-riser-lockhart-martinelli',
+    title: 'Boiler riser: Lockhart-Martinelli friction',
+    description: 'Solve. A TwoPhasePipe multiplies the liquid-alone drop of a steam-water riser by the Chisholm factor; checked by hand.',
+    category: 'Fluids',
+    text: `{ Friction in a boiler riser. A steam-water mixture of quality 0.2 rises at
+  0.5 kg/s through 12 m of 50 mm commercial-steel tube (roughness 0.045 mm)
+  from a 1 MPa header. The TwoPhasePipe takes the phase properties as
+  inputs (saturated water at 1 MPa: rho_l = 887.1, rho_g = 5.145 kg/m^3;
+  mu_l = 1.5e-4, mu_g = 1.5e-5 Pa-s) and multiplies the liquid-alone drop
+  by the Lockhart-Martinelli-Chisholm factor 1 + 20/X + 1/X^2. Cross-check
+  by hand: V_l = 0.2296 m/s, Re_l = 67,906, f = 0.02280 (Colebrook),
+  dP_l = 127.98 Pa; X_tt = 4^0.9 (5.145/887.1)^0.5 10^0.1 = 0.33386, so
+  phi_l^2 = 69.878 and dP = 8943.1 Pa. }
+h_1 = Enthalpy(Water, P=1 [MPa], x=0.2)
+TwoPhaseSourcePH header(mdot=0.5 [kg/s], P=1 [MPa], h=h_1)
+TwoPhasePipe riser(fluid$=Water, L=12 [m], D=0.05 [m], rough=4.5e-5 [m], x=0.2, rho_l=887.1 [kg/m^3], rho_g=5.145 [kg/m^3], mu_l=1.5e-4 [Pa-s], mu_g=1.5e-5 [Pa-s])
+TwoPhaseSink drum()
+connect(header.out, riser.in)
+connect(riser.out, drum.in)
+dP = header.out.P - drum.P
+X_tt = riser.X_tt
+phi2 = riser.phi2
+{ CHECK dP 8943.112052054843 0.0089 }
+{ CHECK X_tt 0.33385692741440204 3.3e-07 }
+{ CHECK phi2 69.87769327364919 7e-05 }`,
+  },
+  {
+    id: 'short-tube-capillary-choke',
+    title: 'Short tube and capillary choke on flashing',
+    description: 'Solve. Two short tubes pass the same flow to different evaporator pressures; a capillary tube rides on the same flashing limit.',
+    category: 'HVAC',
+    text: `{ Fixed expansion devices choke on flashing. Liquid R-134a at 1.4 MPa and
+  45 C (subcooled 7.4 K) feeds three devices: two identical short tubes
+  (CdA = 1.5e-6 m^2) discharging to 300 and 400 kPa, and a capillary rated
+  m = C dP^0.5 (C = 2e-5 kg/s) discharging to 300 kPa. Once the outlet is
+  below the liquid's saturation pressure P_sat(45 C) = 1.160 MPa, the
+  throat flashes and the flow depends on P_1 - P_sat alone, so both short
+  tubes pass the same flow. Cross-check in closed form: with
+  rho = 1127.3 kg/m^3 and P_1 - P_sat = 240.08 kPa, the short tube passes
+  1.5e-6 sqrt(2 rho dP) = 34.90 g/s and the capillary
+  2e-5 sqrt(240076) = 9.80 g/s. }
+P_1 = 1.4 [MPa]
+h_1 = Enthalpy(R134a, P=P_1, T=45 [C])
+TwoPhaseSourcePH lineA(mdot=m_A, P=P_1, h=h_1)
+TwoPhaseShortTube tubeA(fluid$=R134a, CdA=1.5e-6 [m^2])
+TwoPhasePressureSink evapA(P=300 [kPa])
+connect(lineA.out, tubeA.in)
+connect(tubeA.out, evapA.in)
+TwoPhaseSourcePH lineB(mdot=m_B, P=P_1, h=h_1)
+TwoPhaseShortTube tubeB(fluid$=R134a, CdA=1.5e-6 [m^2])
+TwoPhasePressureSink evapB(P=400 [kPa])
+connect(lineB.out, tubeB.in)
+connect(tubeB.out, evapB.in)
+TwoPhaseSourcePH lineC(mdot=m_C, P=P_1, h=h_1)
+CapillaryTube cap(fluid$=R134a, C=2e-5 [kg/s], n=0.5)
+TwoPhasePressureSink evapC(P=300 [kPa])
+connect(lineC.out, cap.in)
+connect(cap.out, evapC.in)
+P_f = tubeA.Pf
+rho_1 = tubeA.rho_in
+{ CHECK m_A 0.03489826779412465 3.5e-08 }
+{ CHECK m_B 0.03489826779412465 3.5e-08 }
+{ CHECK m_C 0.009799505327467423 9.8e-09 }
+{ CHECK P_f 1159924.238342344 1.2 }`,
+  },
+  {
+    id: 'txv-evaporator-balance',
+    title: 'TXV and evaporator balance point',
+    description: 'Solve. A TXV with its bulb on the coil outlet and a UA evaporator settle on one flow and one evaporating pressure.',
+    category: 'HVAC',
+    text: `{ A thermostatic expansion valve and its evaporator find their balance
+  point. Saturated R-134a liquid at 1 MPa feeds a TXV (gain 4 g/s per
+  kelvin above its 4 K static superheat) whose bulb sits on the evaporator
+  outlet. The coil (UA = 250 W/K, no pressure drop) cools a 12 C load and
+  leaves at 6 K superheat. The evaporating pressure floats until the flow
+  the valve passes equals the flow the coil can boil. Cross-check in
+  closed form: with no coil pressure drop the bulb reads the coil's 6 K,
+  so the valve passes 0.004 (6 - 4) = 8 g/s; the duty is
+  8 g/s x (408.24 - 255.50) kJ/kg = 1222.0 W, and the evaporating
+  temperature is 12 C - 1222.0/250 = 7.11 C. }
+P_c = 1.0 [MPa]
+h_3 = Enthalpy(R134a, P=P_c, x=0)
+TwoPhaseSourcePH liquid(mdot=mdot, P=P_c, h=h_3)
+TXVSuperheat txv(fluid$=R134a, Kv=0.004 [kg/s-K], SH_set=4 [K])
+TwoPhaseEvaporatorUA coil(fluid$=R134a, UA=250 [W/K], dP=0 [Pa], SH=6 [K])
+TwoPhaseSink suction()
+connect(liquid.out, txv.in)
+connect(txv.out, coil.in)
+connect(coil.out, suction.in)
+coil.frac = 1
+coil.wall.T = 12 [C]
+txv.bulb.T = Temperature(R134a, P=coil.out.P, h=coil.out.h)
+P_e = coil.in.P
+GUESS P_e = 250000
+T_e = coil.Tevap
+Q = coil.Q
+{ CHECK mdot 0.007999999999998484 8e-09 }
+{ CHECK P_e 376065.9854158051 0.38 }
+{ CHECK T_e 280.26212449164376 0.00028 }
+{ CHECK Q 1221.9688770890543 0.0012 }`,
+  },
+  {
+    id: 'oil-separator-floating-head',
+    title: 'Oil separator and floating-head condenser',
+    description: 'Solve. An OilSeparator bleeds 1 % of the discharge; the floating-head condenser finds its own pressure from UA and ambient.',
+    category: 'HVAC',
+    text: `{ Oil separator ahead of an air-cooled condenser. Compressor discharge
+  (R-134a, 50 g/s, 430 kJ/kg) passes an OilSeparator that bleeds 1 % of
+  the flow back to the sump as saturated liquid, then a condenser with
+  UA = 600 W/K to 30 C air. The floating-head condenser has no pressure
+  set: its pressure rises until UA (T_c - T_amb) equals the heat the
+  stream must give up to leave as saturated liquid. Cross-check by energy
+  balance: the bleed carries h_f, so the main stream leaves at
+  (0.05 x 430,000 - 0.0005 h_f)/0.0495 = 431.69 kJ/kg; then
+  0.0495 (431.69 - 262.38) kJ/kg = 8381 W = 600 (43.97 - 30) W. }
+TwoPhaseEnthalpySource discharge(mdot=0.05 [kg/s], h=430 [kJ/kg])
+OilSeparator sep(fluid$=R134a, f=0.01)
+TwoPhaseCondenserFloat cond(fluid$=R134a, UA=600 [W/K], T_amb=30 [C])
+TwoPhaseSensor exit(fluid$=R134a)
+TwoPhaseSink liquid()
+TwoPhaseSink sump()
+connect(discharge.out, sep.in)
+connect(sep.out, cond.in)
+connect(cond.out, exit.in)
+connect(exit.out, liquid.in)
+connect(sep.bleed, sump.in)
+P_c = cond.in.P
+GUESS P_c = 1.0e6
+T_c = cond.Tcond
+Q = cond.Q
+h_main = sep.out.h
+x_exit = exit.x
+{ CHECK P_c 1129188.4412380902 1.1 }
+{ CHECK T_c 317.118552879384 0.00032 }
+{ CHECK Q 8381.13172763043 0.0084 }
+{ CHECK h_main 431693.1579247738 0.43 }
+{ CHECK x_exit 0.0 1e-09 }`,
+  },
+  {
+    id: 'receiver-liquid-level',
+    title: 'Receiver liquid level',
+    description: 'Solve. A TwoPhaseReceiver after a floating-head condenser holds 3.2 kg of R-134a; its liquid level follows from the charge balance.',
+    category: 'HVAC',
+    text: `{ How full is the receiver? A floating-head condenser (UA = 500 W/K to
+  32 C air) condenses 40 g/s of R-134a discharge at 425 kJ/kg to
+  saturated liquid; a 4 L receiver downstream holds 3.2 kg of the charge.
+  The condenser fixes the pressure, and the receiver's charge balance
+  m = V (LL rho_l + (1 - LL) rho_g) fixes its liquid level. Cross-check in
+  closed form: at the solved 1.157 MPa, rho_l = 1125.51 and
+  rho_g = 57.49 kg/m^3, so LL = (3.2/0.004 - 57.49)/(1125.51 - 57.49)
+  = 0.6952. }
+TwoPhaseEnthalpySource discharge(mdot=0.04 [kg/s], h=425 [kJ/kg])
+TwoPhaseCondenserFloat cond(fluid$=R134a, UA=500 [W/K], T_amb=32 [C])
+TwoPhaseReceiver rec(fluid$=R134a, V=4 [L])
+TwoPhaseSink liquid()
+connect(discharge.out, cond.in)
+connect(cond.out, rec.in)
+connect(rec.out, liquid.in)
+rec.m = 3.2 [kg]
+P_c = cond.in.P
+GUESS P_c = 1.0e6
+LL = rec.LL
+Q = cond.Q
+{ CHECK P_c 1156829.6395473601 1.2 }
+{ CHECK LL 0.6952202485400915 7e-07 }
+{ CHECK Q 6448.542339036076 0.0064 }`,
+  },
+  {
+    id: 'charge-sets-head-pressure',
+    title: 'Charge sets the head pressure',
+    description: 'Solve. With no receiver, a TwoPhaseCondenserUA and a TwoPhaseInventory share 1.8 kg of charge, which fixes the condensing pressure and subcooling.',
+    category: 'HVAC',
+    text: `{ Refrigerant charge sets the head pressure. With no receiver, the 1.8 kg
+  of R-134a on the high side must fit in a 1.5 L condenser and a 0.8 L
+  liquid line. The condenser (UA = 500 W/K to 32 C air) rejects
+  UA (T_c - T_amb) from 40 g/s of 425 kJ/kg discharge, so for any
+  condensing pressure its outlet enthalpy follows; the charge balance
+  picks the pressure. More charge means more liquid backed up in the
+  condenser, a higher pressure, and more subcooling. Cross-check: the
+  condenser holds 1.5 L x (57.06 + 1144.79)/2 = 0.9014 kg and the line
+  0.8 L x 1123.27 = 0.8986 kg, which sum to 1.8 kg; and
+  0.04 (425.00 - 257.47) kJ/kg = 6701 W = 500 (45.40 - 32) W. }
+TwoPhaseEnthalpySource discharge(mdot=0.04 [kg/s], h=425 [kJ/kg])
+TwoPhaseCondenserUA cond(fluid$=R134a, UA=500 [W/K], T_amb=32 [C], V=1.5 [L])
+TwoPhaseInventory line(fluid$=R134a, V=0.8 [L])
+TwoPhaseSink liquid()
+connect(discharge.out, cond.in)
+connect(cond.out, line.in)
+connect(line.out, liquid.in)
+cond.m + line.m = 1.8 [kg]
+P_c = cond.in.P
+GUESS P_c = 1.1e6
+GUESS cond.out.h = 250000
+SC = cond.SC
+Q = cond.Q
+m_cond = cond.m
+m_line = line.m
+{ CHECK P_c 1172074.733586867 1.2 }
+{ CHECK SC 4.671770273027391 4.7e-06 }
+{ CHECK Q 6701.050686880191 0.0067 }
+{ CHECK m_cond 0.9013870877923834 9e-07 }
+{ CHECK m_line 0.8986129122075962 9e-07 }`,
+  },
+  {
+    id: 'moving-boundary-coils',
+    title: 'Moving-boundary evaporator and condenser',
+    description: 'Solve. Moving-boundary coils solve where the refrigerant finishes boiling and condensing, then superheat and subcool the rest of the tube.',
+    category: 'Heat Transfer',
+    text: `{ Where the refrigerant finishes boiling and condensing. A 12 m, 10 mm
+  evaporator tube takes 20 g/s of R-134a at 300 kPa and quality 0.25
+  against a 15 C wall (U = 2500 W/m^2-K boiling, 200 superheating); an
+  8 m condenser tube takes 20 g/s of saturated vapor at 1 MPa against a
+  30 C wall (U = 2000 condensing, 300 subcooling). Each moving-boundary
+  model solves the length of its two-phase zone, and the rest of the tube
+  superheats or subcools. Cross-check in closed form: the boiling zone
+  needs 0.02 (399.00 - 250.43) kJ/kg / (2500 pi 0.01 x 14.33 K) = 2.640 m;
+  the condensing zone 0.02 (419.16 - 255.50) kJ/kg
+  / (2000 pi 0.01 x 9.39 K) = 5.549 m. In the 9.36 m superheat zone,
+  200 pi 0.01 x 9.36 x (15 C - mean 9.59 C) = 318.2 W = 0.02 x
+  (414.91 - 399.00) kJ/kg. }
+TwoPhaseSource feedE(fluid$=R134a, mdot=0.02 [kg/s], P=300 [kPa], x=0.25)
+MovingBoundaryEvaporator evap(fluid$=R134a, U_tp=2500 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=12 [m], eps_zone=0.01 [m])
+TwoPhaseSink suction()
+connect(feedE.out, evap.in)
+connect(evap.out, suction.in)
+evap.wall.T = 15 [C]
+TwoPhaseSource feedC(fluid$=R134a, mdot=0.02 [kg/s], P=1 [MPa], x=1)
+MovingBoundaryCondenser cond(fluid$=R134a, U_cond=2000 [W/m^2-K], U_sc=300 [W/m^2-K], D=0.01 [m], L=8 [m], eps_zone=0.01 [m])
+TwoPhaseSink liquid()
+connect(feedC.out, cond.in)
+connect(cond.out, liquid.in)
+cond.wall.T = 30 [C]
+L_boil = evap.L_tp
+SH = evap.SH
+Q_evap = evap.Q
+L_cond = cond.L_cond
+SC = cond.SC
+Q_cond = cond.Q
+{ CHECK L_boil 2.6404836489704806 2.6e-06 }
+{ CHECK SH 17.833719632889768 1.8e-05 }
+{ CHECK Q_evap 3289.58413793141 0.0033 }
+{ CHECK L_cond 5.549471538082024 5.5e-06 }
+{ CHECK SC 5.271326197063445 5.3e-06 }
+{ CHECK Q_cond 3429.254249326288 0.0034 }`,
+  },
+  {
+    id: 'reversing-valve-heating',
+    title: 'Reversing valve in heating mode',
+    description: 'Solve. A ReversingValve at mode = 1 sends compressor discharge to the indoor coil and the outdoor return to suction.',
+    category: 'HVAC',
+    text: `{ A heat pump's reversing valve in heating mode. Compressor discharge
+  (R-134a, 30 g/s, 1.6 MPa, 440 kJ/kg) enters port d; the outdoor coil's
+  return (350 kPa, 400 kJ/kg) enters port o. With mode = 1 the valve sends
+  the discharge to the indoor coil i, which condenses it to 5 K
+  subcooling, and the outdoor return to suction s. Cross-check: the
+  routing is exact, so the indoor coil sees 1.6 MPa and 440 kJ/kg
+  (T_sat = 57.9 C) and suction sees 350 kPa and 400 kJ/kg; the heating
+  duty is 0.03 (440.00 - 276.07) kJ/kg = 4918 W. Setting mode = 0
+  swaps the coils. }
+TwoPhaseSourcePH discharge(mdot=0.03 [kg/s], P=1.6 [MPa], h=440 [kJ/kg])
+TwoPhaseSourcePH outdoor(mdot=0.03 [kg/s], P=350 [kPa], h=400 [kJ/kg])
+ReversingValve rv(mode=1)
+TwoPhaseCondenser indoor(fluid$=R134a, SC_set=5 [K], dP=0 [Pa])
+TwoPhaseSink coil()
+TwoPhaseSink suction()
+connect(discharge.out, rv.d)
+connect(outdoor.out, rv.o)
+connect(rv.i, indoor.in)
+connect(indoor.out, coil.in)
+connect(rv.s, suction.in)
+P_indoor = rv.i.P
+P_suction = rv.s.P
+h_suction = rv.s.h
+Q_heat = indoor.Q
+{ CHECK P_indoor 1600000.0 1.6 }
+{ CHECK P_suction 350000.0 0.35 }
+{ CHECK h_suction 400000.0 0.4 }
+{ CHECK Q_heat 4917.95336951741 0.0049 }`,
+  },
+  {
     id: 'lesson-rc-charging',
     title: 'Lesson — RC charging',
     description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson. Solve (F2).',

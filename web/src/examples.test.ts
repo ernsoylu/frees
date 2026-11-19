@@ -104,6 +104,15 @@ it.each<[string, Record<string, string>]>([
   ['methane-combustor-products', { y_CO2: '-', y_H2O: '-', y_O2: '-', y_N2: '-', excess_air: '-' }],
   ['propeller-thrust', { J: '-', thrust: 'N', P_shaft: 'W', eta_p: '-' }],
   ['turbocharger-boost', { PR_c: '-', T_boost: 'K', W: 'W' }],
+  ['two-phase-line-friedel', { mdot: 'kg/s', x_2: '-', dT_glide: 'K' }],
+  ['boiler-riser-lockhart-martinelli', { dP: 'Pa', X_tt: '-', phi2: '-' }],
+  ['short-tube-capillary-choke', { m_A: 'kg/s', m_B: 'kg/s', m_C: 'kg/s' }],
+  ['txv-evaporator-balance', { mdot: 'kg/s', P_e: 'Pa', T_e: 'K', Q: 'W' }],
+  ['oil-separator-floating-head', { P_c: 'Pa', T_c: 'K', Q: 'W', h_main: 'J/kg', x_exit: '-' }],
+  ['receiver-liquid-level', { P_c: 'Pa', Q: 'W' }],
+  ['charge-sets-head-pressure', { P_c: 'Pa', SC: 'K', Q: 'W', m_cond: 'kg', m_line: 'kg' }],
+  ['moving-boundary-coils', { L_boil: 'm', SH: 'K', Q_evap: 'W', L_cond: 'm', SC: 'K', Q_cond: 'W' }],
+  ['reversing-valve-heating', { P_indoor: 'Pa', P_suction: 'Pa', h_suction: 'J/kg', Q_heat: 'W' }],
 ])('%s solves with physical units and preserves its checked results', (id, units) => {
   const example = EXAMPLES.find(example => example.id === id)!
   const result = JSON.parse(solve(example.text, '{}'))

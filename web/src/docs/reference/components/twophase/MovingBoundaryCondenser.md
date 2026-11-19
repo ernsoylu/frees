@@ -3,7 +3,7 @@ name: MovingBoundaryCondenser
 category: Component (twophase)
 summary: A moving-boundary condenser tracking the two-phase/subcooled zone lengths.
 related: []
-examples: []
+examples: [moving-boundary-coils]
 tags: [movingboundarycondenser, component, twophase, acausal]
 ---
 

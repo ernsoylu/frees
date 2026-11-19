@@ -3,7 +3,7 @@ name: TwoPhaseSourcePH
 category: Component (twophase)
 summary: A two-phase source specified by pressure and enthalpy (P, h).
 related: []
-examples: []
+examples: [boiler-riser-lockhart-martinelli, short-tube-capillary-choke, txv-evaporator-balance, reversing-valve-heating]
 tags: [twophasesourceph, component, twophase, acausal]
 ---
 

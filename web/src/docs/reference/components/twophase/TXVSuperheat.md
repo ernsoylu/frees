@@ -3,7 +3,7 @@ name: TXVSuperheat
 category: Component (twophase)
 summary: A thermostatic expansion valve that meters flow to hold a target superheat.
 related: []
-examples: []
+examples: [txv-evaporator-balance]
 tags: [txvsuperheat, component, twophase, acausal]
 ---
 

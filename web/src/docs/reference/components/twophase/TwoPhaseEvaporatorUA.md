@@ -3,7 +3,7 @@ name: TwoPhaseEvaporatorUA
 category: Component (twophase)
 summary: A two-phase evaporator sized by an overall conductance UA.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, txv-evaporator-balance]
 tags: [twophaseevaporatorua, component, twophase, acausal]
 ---
 

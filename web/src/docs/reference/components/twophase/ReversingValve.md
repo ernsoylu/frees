@@ -3,7 +3,7 @@ name: ReversingValve
 category: Component (twophase)
 summary: Four-way reversing valve (heat pump mode switch).
 related: []
-examples: []
+examples: [reversing-valve-heating]
 tags: [reversingvalve, component, twophase, acausal]
 references: []
 ---

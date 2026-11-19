@@ -3,7 +3,7 @@ name: OilSeparator
 category: Component (twophase)
 summary: "Oil separator: bleeds a mass fraction f off the discharge line as saturated liquid (the oil-rich film) back toward the compressor sump; the main stream's enthalpy follows from the exact energy balance."
 related: []
-examples: []
+examples: [oil-separator-floating-head]
 tags: [oilseparator, component, twophase, acausal]
 references: []
 ---

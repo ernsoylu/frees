@@ -3,7 +3,7 @@ name: TwoPhaseInventory
 category: Component (twophase)
 summary: Tracks the refrigerant charge inventory across the circuit.
 related: []
-examples: []
+examples: [charge-sets-head-pressure]
 tags: [twophaseinventory, component, twophase, acausal]
 ---
 

@@ -3,7 +3,7 @@ name: TwoPhaseCondenserFloat
 category: Component (twophase)
 summary: A two-phase condenser whose pressure floats with the charge/ambient balance.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, oil-separator-floating-head, receiver-liquid-level]
 tags: [twophasecondenserfloat, component, twophase, acausal]
 ---
 

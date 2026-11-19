@@ -3,7 +3,7 @@ name: TwoPhasePipe
 category: Component (twophase)
 summary: A two-phase pipe with a Lockhart–Martinelli frictional pressure drop.
 related: []
-examples: []
+examples: [boiler-riser-lockhart-martinelli]
 tags: [twophasepipe, component, twophase, acausal]
 ---
 
