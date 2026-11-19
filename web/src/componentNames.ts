@@ -326,7 +326,7 @@ export const COMPONENT_NAMES: ComponentName[] = [
   { name: `TwoPhaseInventory`, summary: `Tracks the refrigerant charge inventory across the circuit.`, signature: `TwoPhaseInventory inst(fluid$, V, domain$)` },
   { name: `TwoPhaseMixer`, summary: `Mixes two two-phase streams with flow-weighted enthalpy.`, signature: `TwoPhaseMixer inst(domain$)` },
   { name: `TwoPhaseOilRider`, summary: `Oil-circulation-rate rider: declares the oil mass fraction on the stream (it rides every downstream pass-through node like W/z) and exposes the documented HTC degradation factor f_deg = 1 - k_deg*OCR to inject into downstream UA parameters.`, signature: `TwoPhaseOilRider inst(oc_set, k_deg, domain$)` },
-  { name: `TwoPhasePipe`, summary: `A two-phase pipe with a Lockhart–Martinelli frictional pressure drop.`, signature: `TwoPhasePipe inst(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g)` },
+  { name: `TwoPhasePipe`, summary: `A two-phase pipe with a Lockhart–Martinelli frictional pressure drop.`, signature: `TwoPhasePipe inst(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g, domain$)` },
   { name: `TwoPhasePressureSink`, summary: `A two-phase boundary fixing the pressure (sink).`, signature: `TwoPhasePressureSink inst(P, domain$)` },
   { name: `TwoPhasePressureSource`, summary: `A two-phase boundary fixing the pressure (source).`, signature: `TwoPhasePressureSource inst(fluid$, P, x, domain$)` },
   { name: `TwoPhaseReceiver`, summary: `A liquid receiver buffering refrigerant charge at saturation.`, signature: `TwoPhaseReceiver inst(fluid$, V, domain$)` },

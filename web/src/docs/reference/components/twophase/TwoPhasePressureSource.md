@@ -3,7 +3,7 @@ name: TwoPhasePressureSource
 category: Component (twophase)
 summary: A two-phase boundary fixing the pressure (source).
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, two-phase-line-friedel]
 tags: [twophasepressuresource, component, twophase, acausal]
 ---
 

@@ -3,7 +3,7 @@ name: TwoPhaseShortTube
 category: Component (twophase)
 summary: "Short-tube (fixed) orifice that chokes on flashing: below the upstream saturation pressure the flow depends on P_up − P_sat(T_up), not on the evaporator pressure."
 related: []
-examples: []
+examples: [short-tube-capillary-choke]
 tags: [twophaseshorttube, component, twophase, acausal]
 references: []
 ---

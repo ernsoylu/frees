@@ -3,7 +3,7 @@ name: CapillaryTube
 category: Component (twophase)
 summary: "Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure)."
 related: []
-examples: []
+examples: [short-tube-capillary-choke]
 tags: [capillarytube, component, twophase, acausal]
 references: []
 ---

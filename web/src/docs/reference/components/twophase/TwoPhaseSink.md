@@ -3,7 +3,7 @@ name: TwoPhaseSink
 category: Component (twophase)
 summary: A boundary absorbing a two-phase stream.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, boiler-riser-lockhart-martinelli, txv-evaporator-balance, oil-separator-floating-head]
 tags: [twophasesink, component, twophase, acausal]
 ---
 

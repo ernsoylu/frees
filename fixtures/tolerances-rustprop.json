@@ -1161,6 +1161,14 @@
     "components_g4_liquidvolume": {
       "error": "Redundant relation (no free variable left to determine): l2.P",
       "reason": "LiquidVolume did not state out.P = in.P, which Accumulator, HydraulicVolume and PneumaticVolume all state, so its outlet pressure had no equation and a DYNAMIC run of it could not be solved. This fixture made up for it by pinning l2.P = 250000 by hand. With the library line in place (2026-11-19, D.2 coverage, liquid) that pin restates what the component defines, and the engine rejects the document as overspecified. The values the golden records are unchanged by the fix: P = 250000 Pa on both ports, mdot = 0.5 kg/s, h = h(300 K)."
+    },
+    "component-two-phase-two-phase-pipe-applies-the-lockhart-martinelli-multiplier": {
+      "error": "cannot connect a 'fluid' line (src.out) to a 'twophase' line",
+      "reason": "TwoPhasePipe was filed and documented as a two-phase component but did not declare domain$ = twophase, unlike every other component in twophase.frees, so its ports sat on the fluid bond and refused every TwoPhase* source and sink. This fixture wired it to an untagged boundary and the fluid-domain Sink to get around that. With the declaration in place (2026-11-19, D.2 coverage, two-phase) the fluid boundary can no longer connect to it, and the engine rejects the document. The pressure-drop law is unchanged: crates/frees-core/tests/multidomain_fixes.rs solves the same pipe between two-phase boundaries and grades dP = phi2 * dP_l."
+    },
+    "components_g4_twophasepipe": {
+      "error": "cannot connect a 'fluid' line (src.out) to a 'twophase' line",
+      "reason": "TwoPhasePipe was filed and documented as a two-phase component but did not declare domain$ = twophase, unlike every other component in twophase.frees, so its ports sat on the fluid bond and refused every TwoPhase* source and sink. This fixture wired it to an untagged boundary and the fluid-domain Sink to get around that. With the declaration in place (2026-11-19, D.2 coverage, two-phase) the fluid boundary can no longer connect to it, and the engine rejects the document. The pressure-drop law is unchanged: crates/frees-core/tests/multidomain_fixes.rs solves the same pipe between two-phase boundaries and grades dP = phi2 * dP_l."
     }
   }
 }

@@ -3,7 +3,7 @@ name: MovingBoundaryEvaporator
 category: Component (twophase)
 summary: A moving-boundary evaporator tracking the two-phase/superheat zone lengths.
 related: []
-examples: []
+examples: [moving-boundary-coils]
 tags: [movingboundaryevaporator, component, twophase, acausal]
 ---
 

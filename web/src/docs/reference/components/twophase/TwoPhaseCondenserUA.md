@@ -3,7 +3,7 @@ name: TwoPhaseCondenserUA
 category: Component (twophase)
 summary: A two-phase condenser sized by an overall conductance UA.
 related: []
-examples: []
+examples: [charge-sets-head-pressure]
 tags: [twophasecondenserua, component, twophase, acausal]
 ---
 

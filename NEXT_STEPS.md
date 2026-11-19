@@ -1445,6 +1445,27 @@ with CHECKs: fluid 20/31, liquid 12/21, two-phase 10/47.
   - **No engine or library finding.** `FanCurve`, `FanMap` and `Duct` still carry no enthalpy (documented in programme B), so `fans-in-series-duct` passes it through them in the model. `Turbocharger`'s single cp and k, the reason D.2 could not convert Borel 4.D, is stated in its example as an air-standard assumption.
   - **Gates (2026-11-19).** vitest 1,249/1,249 in 109 files, `check-docs` 771/771, `check-examples` 826/826 (2,955 assertions), lint 0 errors. Every new example solves with no unit warnings. No Rust source changed, so the workspace tests, parity and the module size are those of the liquid item.
 
+- **3. Two-phase — 37 uncovered, in three PRs.** 3a covers the steady cycle devices, 3b the ejectors, transcritical parts, blends and oil, and 3c the dynamic volumes and vessels.
+- **3a. Steady cycle devices — 28/47 (`d2-coverage-twophase-1`).** Nine examples cover eighteen components.
+
+  | Gallery id | Components | Cross-check | Model |
+  | --- | --- | --- | --- |
+  | `two-phase-line-friedel` | TwoPhasePressureSource, TwoPhaseFlowRes | Friedel groups and Colebrook evaluated in Python from the line's phase properties at the solved 35.18 g/s: φ² 19.193 × 1042.0 Pa = 20,000 Pa | exact |
+  | `boiler-riser-lockhart-martinelli` | TwoPhaseSourcePH, TwoPhasePipe, TwoPhaseSink | X_tt, 1 + 20/X + 1/X² and Colebrook by hand: 8943.1 Pa | exact |
+  | `short-tube-capillary-choke` | TwoPhaseShortTube, CapillaryTube | CdA √(2ρ(P₁ − P_sat)) = 34.90 g/s to either evaporator pressure; C (P₁ − P_sat)^0.5 = 9.80 g/s | exact |
+  | `txv-evaporator-balance` | TXVSuperheat, TwoPhaseEvaporatorUA | Kv (SH − SH_set) = 8 g/s; T_e = T_wall − Q/UA = 7.11 °C | exact |
+  | `oil-separator-floating-head` | TwoPhaseEnthalpySource, OilSeparator, TwoPhaseCondenserFloat | energy balance across the bleed, then ṁ Δh = UA (T_c − T_amb) = 8381 W | exact |
+  | `receiver-liquid-level` | TwoPhaseReceiver | LL = (m/V − ρ_g)/(ρ_l − ρ_g) = 0.6952 | exact |
+  | `charge-sets-head-pressure` | TwoPhaseCondenserUA, TwoPhaseInventory | the two masses from the printed densities sum to 1.8 kg; ṁ Δh = UA ΔT = 6701 W | exact |
+  | `moving-boundary-coils` | MovingBoundaryEvaporator, MovingBoundaryCondenser | zone length ṁ Δh/(U π D ΔT): 2.640 m boiling, 5.549 m condensing; ε-NTU on the single-phase zones: 5.43 K superheat, 5.09 K subcooling | lengths exact; 5.51 K and 5.27 K |
+  | `reversing-valve-heating` | ReversingValve | the routing is exact; ṁ (h_d − h(P_d, T_sat − 5 K)) = 4918 W | exact |
+
+  - **Library finding, fixed — `TwoPhasePipe` had no two-phase connector.** It was the only component in `twophase.frees` without `domain$ = twophase`, so its ports sat on the fluid bond and refused every `TwoPhase*` source and sink. Its reference page now wires it between two-phase boundaries. Regression test: `a_two_phase_pipe_connects_to_two_phase_boundaries`.
+  - **Library limitation, open — moving-boundary single-phase zones.** `MovingBoundaryEvaporator` and `MovingBoundaryCondenser` drive the superheat and subcool zones on the arithmetic mean of the zone's end temperatures. Once a zone's NTU passes 2 that law puts the outlet beyond the wall (review of #128: a 12 m evaporator left at 18.5 °C against a 15 °C wall). The example keeps both zones below NTU 1 and checks the outlets against the walls. An ε-NTU law would fix it but moves the oracle-graded goldens of both components, so it needs the owner's decision.
+  - **The goldens it superseded.** `component-two-phase-two-phase-pipe-applies-the-lockhart-martinelli-multiplier` and `components_g4_twophasepipe` wired the pipe to an untagged boundary and the fluid `Sink`. That connection is now refused, so both fixtures are in the `superseded` section, each required to fail with the fluid-to-two-phase connection error.
+  - **Units.** A component local computed from a property call or a correlation (`phi2`, `Pf`, `LL`) prints no unit, so the units table leaves those out; their CHECKs still grade the values.
+  - **Gates (2026-11-19).** Workspace 3,474 tests, parity 1,308/1,308 native and in WASM (three fixtures graded as superseded), vitest 1,261/1,261 in 109 files, `check-docs` 771/771, `check-examples` 826/826 (2,955 assertions), lint 0 errors. Every new example solves with no unit warnings. Rebuilt module 4,015.3 KiB raw / 1,603.9 KiB gzipped.
+
 ### R15 usability pilot (Phase 4.4)
 
 Cards, answer key, thresholds and the pinned build are in [`R15_PILOT.md`](R15_PILOT.md) (signed 2026-09-12). Still to do: run five engineering participants through scalar solve (≤ 5 min), component chain (≤ 10 min) and missing-boundary recovery (≤ 3 min); record times, assistance and feedback. Never fabricate participant outcomes.

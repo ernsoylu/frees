@@ -3,7 +3,7 @@ name: TwoPhaseEnthalpySource
 category: Component (twophase)
 summary: A two-phase boundary fixing the stream enthalpy.
 related: []
-examples: []
+examples: [oil-separator-floating-head, receiver-liquid-level, charge-sets-head-pressure]
 tags: [twophaseenthalpysource, component, twophase, acausal]
 ---
 

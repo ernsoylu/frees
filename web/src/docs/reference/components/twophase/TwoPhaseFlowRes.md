@@ -3,7 +3,7 @@ name: TwoPhaseFlowRes
 category: Component (twophase)
 summary: A two-phase flow resistance relating pressure drop to mass flow.
 related: []
-examples: []
+examples: [two-phase-line-friedel]
 tags: [twophaseflowres, component, twophase, acausal]
 ---
 

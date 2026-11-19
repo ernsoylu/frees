@@ -404,7 +404,7 @@ port(out)
   in.mdot * abs(in.mdot) = Cv^2 * 2 * rho_in * (in.P - out.P)
 end
 
-function [in, out] = TwoPhasePipe(fluid$, L [m], D [m], rough [m], x, rho_l [kg/m^3], rho_g [kg/m^3], mu_l [Pa-s], mu_g [Pa-s])
+function [in, out] = TwoPhasePipe(fluid$, L [m], D [m], rough [m], x, rho_l [kg/m^3], rho_g [kg/m^3], mu_l [Pa-s], mu_g [Pa-s], domain$ = twophase)
 port(in)
 port(out)
   out.mdot = in.mdot

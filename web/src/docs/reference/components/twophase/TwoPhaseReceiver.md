@@ -3,7 +3,7 @@ name: TwoPhaseReceiver
 category: Component (twophase)
 summary: A liquid receiver buffering refrigerant charge at saturation.
 related: []
-examples: []
+examples: [receiver-liquid-level]
 tags: [twophasereceiver, component, twophase, acausal]
 ---
 

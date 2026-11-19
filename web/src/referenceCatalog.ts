@@ -7574,7 +7574,7 @@ a2.p = 300000
     category: `Component (fluid)`,
     summary: `ISA atmosphere boundary: the 1976 standard atmosphere state at altitude, as a flow source (use with ram/propulsion models).`,
     related: [],
-    examples: [],
+    examples: [`gas-turbine-core-altitude`],
     tags: [`atmospheresource`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7724,7 +7724,7 @@ b.in.p = 8000000
     category: `Component (fluid)`,
     summary: `Combustor: fuel mass addition with combustion efficiency on the lower heating value and a rated pressure loss.`,
     related: [],
-    examples: [],
+    examples: [`gas-turbine-core-altitude`],
     tags: [`combustor`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7807,7 +7807,7 @@ g2.p = 580000
     category: `Component (fluid)`,
     summary: `Combustor emitting product composition: complete combustion of a CxHy fuel stream into the E3 species riders — CO2/H2O produced and O2 consumed by stoichiometry per kg of fuel; N2 passes as the balance.`,
     related: [],
-    examples: [],
+    examples: [`methane-combustor-products`],
     tags: [`combustorspecies`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -7926,7 +7926,7 @@ a2.p = 397000
     category: `Component (fluid)`,
     summary: `Raises the pressure of a fluid stream, computing the work from an isentropic efficiency.`,
     related: [`CompressorMap`, `TwoPhaseCompressor`],
-    examples: [`ev-thermal-management`, `air-compressor-efficiency`, `regenerative-gas-turbine`, `ideal-vapor-compression-cycle`],
+    examples: [`ev-thermal-management`, `air-compressor-efficiency`, `regenerative-gas-turbine`, `ideal-vapor-compression-cycle`, `gas-turbine-core-altitude`],
     tags: [`compressor`, `compressor-family`, `data:eta`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8026,7 +8026,7 @@ Related gallery example:
     category: `Component (fluid)`,
     summary: `A compressor whose isentropic efficiency comes from a tabulated map (eta vs pressure ratio).`,
     related: [`Compressor`, `TwoPhaseCompressor`],
-    examples: [],
+    examples: [`compressor-map-discharge`],
     tags: [`compressor`, `compressor-family`, `compressormap`, `map`, `data:map-eta`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `map-driven`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8213,7 +8213,7 @@ p1.v = 0.001010271149
     category: `Component (fluid)`,
     summary: `A flow passage that imposes a pressure drop on the stream.`,
     related: [],
-    examples: [`square-duct-friction-loss`, `draining-tank-time-constant`],
+    examples: [`square-duct-friction-loss`, `draining-tank-time-constant`, `fans-in-series-duct`],
     tags: [`duct`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8300,7 +8300,7 @@ b.mdot = 0.9007597979
     category: `Component (fluid)`,
     summary: `Throttles a fluid to a lower pressure isenthalpically (Joule–Thomson).`,
     related: [],
-    examples: [],
+    examples: [`pressure-reducing-valve-sizing`],
     tags: [`expansionvalve`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8385,7 +8385,7 @@ snk.in.p = 300000
     category: `Component (fluid)`,
     summary: `Adds a pressure rise to a gas/air stream, computing the fan work.`,
     related: [`FanCurve`, `FanMap`],
-    examples: [],
+    examples: [`fan-ventilation-duct`],
     tags: [`fan`, `fan-family`, `constant-rise`, `data:dP0-Q0-eta`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [`md-dehumidifier`],
@@ -8464,7 +8464,7 @@ c.out.h = 426795.1279
     category: `Component (fluid)`,
     summary: `A fan whose pressure rise follows a tabulated pressure–flow performance curve.`,
     related: [`Fan`, `FanMap`],
-    examples: [],
+    examples: [`fans-in-series-duct`],
     tags: [`fan`, `fan-family`, `fancurve`, `curve`, `data:rho-dP0-Q0`, `ports:in-out`, `flow-closed`, `energy-pressure`, `steady`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8541,7 +8541,7 @@ dP_fan = 206.5972222
     category: `Component (fluid)`,
     summary: `A fan whose pressure rise comes from a tabulated performance map (ΔP vs volumetric flow).`,
     related: [`Fan`, `FanCurve`],
-    examples: [],
+    examples: [`fans-in-series-duct`],
     tags: [`fan`, `fan-family`, `fanmap`, `map`, `data:rho-map`, `ports:in-out`, `flow-closed`, `energy-pressure`, `steady`, `map-driven`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -8699,7 +8699,7 @@ fs.in.p = 100000
     category: `Component (fluid)`,
     summary: `Heated duct: single-stream ε-NTU heat pickup from a wall node (ε = 1 − e^(−UA/ṁcp)), the exact single-stream limit.`,
     related: [],
-    examples: [],
+    examples: [`heated-duct-outlet`],
     tags: [`heatedduct`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -9031,7 +9031,7 @@ Related gallery example:
     category: `Component (fluid)`,
     summary: `A flow passage that imposes a frictional pressure drop.`,
     related: [],
-    examples: [`gravity-pipe-flow`, `parallel-pipe-branches`, `pipeline-pump-head`],
+    examples: [`gravity-pipe-flow`, `parallel-pipe-branches`, `pipeline-pump-head`, `fan-ventilation-duct`],
     tags: [`pipe`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -9113,7 +9113,7 @@ line.mu = 0.0008930444195
     category: `Component (fluid)`,
     summary: `Propeller (actuator-line map form): thrust Ct(J)·ρn²D⁴ and shaft power Cp(J)·ρn³D⁵ from advance-ratio maps J = v/(nD) — bridges the shaft to the vehicle's translational port.`,
     related: [],
-    examples: [],
+    examples: [`propeller-thrust`],
     tags: [`propeller`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -9856,7 +9856,7 @@ p1.v = 0.001010271149
     category: `Component (fluid)`,
     summary: `A turbine-driven compressor pair coupled on a common shaft.`,
     related: [],
-    examples: [],
+    examples: [`turbocharger-boost`],
     tags: [`turbocharger`, `component`, `fluid`, `acausal`],
     references: [],
     guides: [],
@@ -14092,7 +14092,7 @@ sup.out.h = 0
     category: `Component (liquid)`,
     summary: `Cooling tower (Merkel-lite): heat rejection on the enthalpy potential between saturated air at the water inlet temperature and ambient air at its wet-bulb (signal port), with a tower effectiveness and design air flow.`,
     related: [],
-    examples: [],
+    examples: [`cooling-tower-range-approach`],
     tags: [`coolingtower`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -14263,7 +14263,7 @@ g2.mdot = 0.378531707
     category: `Component (liquid)`,
     summary: `Hydro turbine: shaft power eta·(V̇·ΔP) from the head across it, efficiency from a flow map; the extracted work leaves the stream enthalpy.`,
     related: [],
-    examples: [],
+    examples: [`small-hydro-turbine-power`],
     tags: [`hydroturbine`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -14362,7 +14362,7 @@ hg.port.w = 0
     category: `Component (liquid)`,
     summary: `Ice/PCM storage on a brine loop: the latent mass sits behind a UA wall in the brine stream — charge below the melt band, discharge above it.`,
     related: [],
-    examples: [],
+    examples: [`ice-bank-discharge`],
     tags: [`icestoragebrine`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -14589,7 +14589,7 @@ ck1.in.p = 100000
     category: `Component (liquid)`,
     summary: `A liquid cold plate cooling an electronics/heat load.`,
     related: [],
-    examples: [`chilled-water-coil-flow`, `run-around-coil-loop`],
+    examples: [`chilled-water-coil-flow`, `run-around-coil-loop`, `closed-loop-pump-operating-point`],
     tags: [`liquidcoldplate`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -14665,7 +14665,7 @@ cp.in.p = 200000
     category: `Component (liquid)`,
     summary: `Expansion tank / degas bottle: pins the loop pressure datum — the one pressure reference every CLOSED coolant loop needs.`,
     related: [],
-    examples: [],
+    examples: [`closed-loop-pump-operating-point`],
     tags: [`liquidexpansiontank`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -14954,7 +14954,7 @@ Instantiated in the verified example below:
     category: `Component (liquid)`,
     summary: `A single-phase liquid pipe with frictional pressure drop.`,
     related: [],
-    examples: [`pipe-pressure-drop-brass`, `parallel-branches-three-way-valve`],
+    examples: [`pipe-pressure-drop-brass`, `parallel-branches-three-way-valve`, `closed-loop-pump-operating-point`],
     tags: [`liquidpipe`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -15126,7 +15126,7 @@ Instantiated in the verified example below:
     category: `Component (liquid)`,
     summary: `Head-curve pump: rise from a tabulated head map [m] vs volumetric flow, with the hydraulic inefficiency heating the coolant (out.h mirrors LiquidPump).`,
     related: [`LiquidPump`, `PumpMap`],
-    examples: [],
+    examples: [`closed-loop-pump-operating-point`],
     tags: [`pump`, `liquid-pump-family`, `liquidpumpmap`, `map`, `data:rho-map`, `ports:in-out`, `flow-closed`, `energy-work`, `steady`, `map-driven`, `liquid`, `component`, `acausal`],
     references: [],
     guides: [],
@@ -15429,7 +15429,7 @@ Instantiated in the verified example below:
     category: `Component (liquid)`,
     summary: `Thermal-mass tank (m kg of coolant, perfectly mixed): the outlet leaves at the tank temperature state Tt; a wall heat port exchanges UA·(T_wall − Tt).`,
     related: [],
-    examples: [],
+    examples: [`tank-warm-up-time-constant`],
     tags: [`liquidtank`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -15520,7 +15520,7 @@ l1.mdot = 0.3
     category: `Component (liquid)`,
     summary: `Wax thermostat: the element opens smoothly over a temperature band (Topen ± Tband) sensed on the inlet coolant — the engine warm-up bypass switch, no discrete event.`,
     related: [],
-    examples: [],
+    examples: [`thermostat-opening-flow`],
     tags: [`liquidthermostat`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -15755,7 +15755,7 @@ l1.h = 154539.6834
     category: `Component (liquid)`,
     summary: `A single-phase liquid control volume.`,
     related: [],
-    examples: [],
+    examples: [`pipeline-hydrostatic-test`],
     tags: [`liquidvolume`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -15789,6 +15789,7 @@ Instantiating the component expands these acausal equations (over its port membe
 
 $$
 \\begin{aligned}
+out.p &= in.p \\\\
 out.h &= in.h \\\\
 \\text{der}\\left(in.p\\right) &= \\frac{in.mdot - out.mdot}{c} \\\\
 \\text{init}\\left(in.p\\right) &= p0
@@ -15806,18 +15807,19 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 // LiquidVolume with no DYNAMIC block: der(in.P) takes the steady branch,
-// recovering in.mdot = out.mdot through the compliance node.
+// recovering in.mdot = out.mdot through the compliance node, and the
+// volume carries the source pressure to its outlet.
 LiquidSource LS(l1, fluid$ = Water, mdot = 0.5 [kg/s], P = 250000 [Pa], T = 300 [K])
 LiquidVolume LV(l1, l2, C = 1e-8 [kg/Pa], P0 = 250000 [Pa])
 LiquidSink   SK(l2)
 
-l2.P  = 250000
 m_out = SK.mdot
 h_out = SK.h
 
 { CHECK h_out 112791.7811 0.11279178109461951 }
 { CHECK l1.h 112791.7811 0.11279178109461951 }
 { CHECK l1.mdot 0.5 5e-7 }
+{ CHECK l2.p 250000 0.25 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
@@ -15826,6 +15828,7 @@ Expected output (selected solution values; numerical rounding may vary):
 h_out = 112791.7811 [J/kg]
 l1.h = 112791.7811
 l1.mdot = 0.5
+l2.p = 250000
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -15836,7 +15839,7 @@ l1.mdot = 0.5
     category: `Component (liquid)`,
     summary: `A liquid-to-wall heat exchanger.`,
     related: [],
-    examples: [`ev-thermal-management`],
+    examples: [`ev-thermal-management`, `closed-loop-pump-operating-point`],
     tags: [`liquidwallhx`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -16019,7 +16022,7 @@ o1.p = 101325
     category: `Component (liquid)`,
     summary: `Stratified thermal-storage tank: three plug-flow nodes top→bottom with inter-node mixing conductance and shell losses; charge enters the top node, draw leaves the bottom at its temperature.`,
     related: [],
-    examples: [],
+    examples: [`stratified-tank-charging`],
     tags: [`thermalstoragetank`, `component`, `liquid`, `acausal`],
     references: [],
     guides: [],
@@ -28853,7 +28856,7 @@ Instantiated in the verified example below:
     category: `Component (twophase)`,
     summary: `Capillary tube: the empirical power-law rating m = C·ΔP_eff^n (n ≈ 0.5), with the same flashing choke as the short tube (ΔP_eff clamps at the upstream saturation pressure).`,
     related: [],
-    examples: [],
+    examples: [`short-tube-capillary-choke`],
     tags: [`capillarytube`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -29459,7 +29462,7 @@ gc.in.h = 513753.2087
     category: `Component (twophase)`,
     summary: `A moving-boundary condenser tracking the two-phase/subcooled zone lengths.`,
     related: [],
-    examples: [],
+    examples: [`moving-boundary-coils`],
     tags: [`movingboundarycondenser`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -29554,7 +29557,7 @@ cd.in.mdot = 0.02
     category: `Component (twophase)`,
     summary: `A moving-boundary evaporator tracking the two-phase/superheat zone lengths.`,
     related: [],
-    examples: [],
+    examples: [`moving-boundary-coils`],
     tags: [`movingboundaryevaporator`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -29649,7 +29652,7 @@ ev.in.mdot = 0.02
     category: `Component (twophase)`,
     summary: `Oil separator: bleeds a mass fraction f off the discharge line as saturated liquid (the oil-rich film) back toward the compressor sump; the main stream's enthalpy follows from the exact energy balance.`,
     related: [],
-    examples: [],
+    examples: [`oil-separator-floating-head`],
     tags: [`oilseparator`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -29872,7 +29875,7 @@ Instantiated in the verified example below:
     category: `Component (twophase)`,
     summary: `Four-way reversing valve (heat pump mode switch).`,
     related: [],
-    examples: [],
+    examples: [`reversing-valve-heating`],
     tags: [`reversingvalve`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -30693,7 +30696,7 @@ cnd.in.p = 1210000
     category: `Component (twophase)`,
     summary: `A two-phase condenser whose pressure floats with the charge/ambient balance.`,
     related: [],
-    examples: [`ev-thermal-management`],
+    examples: [`ev-thermal-management`, `oil-separator-floating-head`, `receiver-liquid-level`],
     tags: [`twophasecondenserfloat`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -30817,7 +30820,7 @@ Instantiated in the verified example below:
     category: `Component (twophase)`,
     summary: `A two-phase condenser sized by an overall conductance UA.`,
     related: [],
-    examples: [],
+    examples: [`charge-sets-head-pressure`],
     tags: [`twophasecondenserua`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -30999,7 +31002,7 @@ dis.out.mdot = 0.1
     category: `Component (twophase)`,
     summary: `A two-phase boundary fixing the stream enthalpy.`,
     related: [],
-    examples: [],
+    examples: [`oil-separator-floating-head`, `receiver-liquid-level`, `charge-sets-head-pressure`],
     tags: [`twophaseenthalpysource`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -31160,7 +31163,7 @@ ev.in.p = 360000
     category: `Component (twophase)`,
     summary: `A two-phase evaporator sized by an overall conductance UA.`,
     related: [],
-    examples: [`ev-thermal-management`],
+    examples: [`ev-thermal-management`, `txv-evaporator-balance`],
     tags: [`twophaseevaporatorua`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -31371,7 +31374,7 @@ cmp.in.mdot = 0.025
     category: `Component (twophase)`,
     summary: `A two-phase flow resistance relating pressure drop to mass flow.`,
     related: [],
-    examples: [],
+    examples: [`two-phase-line-friedel`],
     tags: [`twophaseflowres`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -31561,7 +31564,7 @@ ihx.cp_v = 913.4598895
     category: `Component (twophase)`,
     summary: `Tracks the refrigerant charge inventory across the circuit.`,
     related: [],
-    examples: [],
+    examples: [`charge-sets-head-pressure`],
     tags: [`twophaseinventory`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -31841,7 +31844,7 @@ c.out.mdot = 0.1
     category: `Component (twophase)`,
     summary: `A two-phase pipe with a Lockhart–Martinelli frictional pressure drop.`,
     related: [],
-    examples: [],
+    examples: [`boiler-riser-lockhart-martinelli`],
     tags: [`twophasepipe`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -31858,7 +31861,7 @@ A reusable **acausal twophase-domain** component — its two-phase refrigerant p
 ## Usage
 
 \`\`\`
-TwoPhasePipe inst(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g)
+TwoPhasePipe inst(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g, domain$)
 \`\`\`
 
 ## Parameters
@@ -31874,6 +31877,7 @@ TwoPhasePipe inst(fluid$, L, D, rough, x, rho_l, rho_g, mu_l, mu_g)
 | \`rho_g\` | Number | Vapor density [kg/m³]. |
 | \`mu_l\` | Number | Liquid viscosity [Pa·s]. |
 | \`mu_g\` | Number | Vapor viscosity [Pa·s]. |
+| \`domain$\` | String | Connector fluid family — one of \`fluid\`, \`gas\`, \`oil\`, \`moistair\`, \`liquid\`, \`twophase\`. |
 
 ## Constitutive Equations
 
@@ -31904,19 +31908,9 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 
 \`\`\`frees
 // frees-language: 2
-function [out] = RSrc(P, h0, mdot)
-port(out)
-  out.P = P
-  out.h = h0
-  out.mdot = mdot
-end
-function [in] = PSink(P)
-port(in)
-  in.P = P
-end
-RSrc        SRC(P=500000, h0=250000, mdot=0.05)
-TwoPhasePipe TP(fluid$=R134a, L=2 [m], D=0.01 [m], rough=1e-5 [m], x=0.3, rho_l=1200 [kg/m^3], rho_g=20 [kg/m^3], mu_l=2e-4 [Pa-s], mu_g=1e-5 [Pa-s])
-Sink        SNK()
+TwoPhaseSourcePH SRC(mdot=0.05 [kg/s], P=500000 [Pa], h=250000 [J/kg])
+TwoPhasePipe     TP(fluid$=R134a, L=2 [m], D=0.01 [m], rough=1e-5 [m], x=0.3, rho_l=1200 [kg/m^3], rho_g=20 [kg/m^3], mu_l=2e-4 [Pa-s], mu_g=1e-5 [Pa-s])
+TwoPhaseSink     SNK()
 connect(SRC.out, TP.in)
 connect(TP.out, SNK.in)
 
@@ -32019,7 +32013,7 @@ Instantiated in the verified example below:
     category: `Component (twophase)`,
     summary: `A two-phase boundary fixing the pressure (source).`,
     related: [],
-    examples: [`ev-thermal-management`],
+    examples: [`ev-thermal-management`, `two-phase-line-friedel`],
     tags: [`twophasepressuresource`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -32100,7 +32094,7 @@ Instantiated in the verified example below:
     category: `Component (twophase)`,
     summary: `A liquid receiver buffering refrigerant charge at saturation.`,
     related: [],
-    examples: [],
+    examples: [`receiver-liquid-level`],
     tags: [`twophasereceiver`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -32268,7 +32262,7 @@ line.f_lo = 0.02801750717
     category: `Component (twophase)`,
     summary: `Short-tube (fixed) orifice that chokes on flashing: below the upstream saturation pressure the flow depends on P_up − P_sat(T_up), not on the evaporator pressure.`,
     related: [],
-    examples: [],
+    examples: [`short-tube-capillary-choke`],
     tags: [`twophaseshorttube`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -32374,7 +32368,7 @@ ka.in.h = 255495.8561
     category: `Component (twophase)`,
     summary: `A boundary absorbing a two-phase stream.`,
     related: [],
-    examples: [`ev-thermal-management`],
+    examples: [`ev-thermal-management`, `boiler-riser-lockhart-martinelli`, `txv-evaporator-balance`, `oil-separator-floating-head`],
     tags: [`twophasesink`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -32532,7 +32526,7 @@ inv.hg = 407471.3462
     category: `Component (twophase)`,
     summary: `A two-phase source specified by pressure and enthalpy (P, h).`,
     related: [],
-    examples: [],
+    examples: [`boiler-riser-lockhart-martinelli`, `short-tube-capillary-choke`, `txv-evaporator-balance`, `reversing-valve-heating`],
     tags: [`twophasesourceph`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
@@ -32705,7 +32699,7 @@ snk.h = 307915.2602
     category: `Component (twophase)`,
     summary: `A thermostatic expansion valve that meters flow to hold a target superheat.`,
     related: [],
-    examples: [],
+    examples: [`txv-evaporator-balance`],
     tags: [`txvsuperheat`, `component`, `twophase`, `acausal`],
     references: [],
     guides: [],
