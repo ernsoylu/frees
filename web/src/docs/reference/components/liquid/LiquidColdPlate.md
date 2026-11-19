@@ -3,7 +3,7 @@ name: LiquidColdPlate
 category: Component (liquid)
 summary: A liquid cold plate cooling an electronics/heat load.
 related: []
-examples: [chilled-water-coil-flow, run-around-coil-loop]
+examples: [chilled-water-coil-flow, run-around-coil-loop, closed-loop-pump-operating-point]
 tags: [liquidcoldplate, component, liquid, acausal]
 ---
 

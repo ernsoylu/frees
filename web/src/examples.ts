@@ -3759,6 +3759,363 @@ H_velocity = U^2 / (2 * g#)
 { CHECK H_exit 1.52607193543248 2e-06 }`,
   },
   {
+    id: 'closed-loop-pump-operating-point',
+    title: 'Closed-loop pump operating point',
+    description: 'Solve. A LiquidPumpMap head curve meets the Colebrook drop of a closed chilled-water loop; a LiquidExpansionTank is its one pressure reference.',
+    category: 'HVAC',
+    text: `{ Operating point of a closed chilled-water loop. A centrifugal pump with a
+  catalogue head curve (eight points, read linearly between them) circulates
+  water through a 40 kW load coil, 150 m of DN65 commercial steel piping
+  (equivalent length, fittings included) and a chiller evaporator held at 5 C
+  with UA = 12 kW/K. An expansion tank at the pump suction holds 1.5 bar: in a
+  closed loop it is the one pressure reference, since every other element only
+  sets a difference. The pump runs where its head equals the Colebrook drop of
+  the piping, and the chiller removes the load plus the pump's own heat.
+  Cross-check (Colebrook iterated by hand at the pipe's water properties,
+  intersected with the same table): Q = 5.0317 L/s, H = 5.9162 m,
+  W = rho g Q H / eta = 449.0 W, chiller duty 40,449 W. }
+P_tank = 1.5 [bar]
+T_evap = 5 [C]
+Q_load = 40 [kW]
+rho = 999.7 [kg/m^3]
+TABLE curve(Q [m^3/s]) [m]
+  0       12
+  0.001   11.76
+  0.002   11.04
+  0.003   9.84
+  0.004   8.16
+  0.005   6.00
+  0.006   3.36
+  0.007   0.24
+END
+LiquidExpansionTank tank(P=P_tank)
+LiquidPumpMap pump(rho=rho, eta=0.65, map$=curve)
+LiquidColdPlate load(Q=Q_load)
+LiquidPipe piping(fluid$=Water, L=150 [m], D=0.065 [m], rough=4.5e-5 [m])
+LiquidWallHX chiller(fluid$=Water, UA=12 [kW/K])
+ThermalSource evaporator(T=T_evap)
+connect(pump.out, load.in)
+connect(load.out, piping.in)
+connect(piping.out, chiller.in)
+connect(chiller.out, pump.in)
+connect(tank.port, pump.in)
+connect(chiller.wall, evaporator.port)
+Q = pump.in.mdot / rho
+H = (pump.out.P - pump.in.P) / (rho * g#)
+W_pump = pump.W
+Q_chiller = chiller.Q
+T_supply = Temperature(Water, P=pump.in.P, h=pump.in.h)
+T_return = Temperature(Water, P=piping.out.P, h=piping.out.h)
+{ CHECK Q 0.005031743438680591 5e-09 }
+{ CHECK H 5.916197321883239 5.9e-06 }
+{ CHECK W_pump 448.9915322511392 0.00045 }
+{ CHECK Q_chiller 40448.99153225115 0.04 }
+{ CHECK T_supply 280.65362883560783 0.00028 }
+{ CHECK T_return 282.56927151043067 0.00028 }`,
+  },
+  {
+    id: 'pipeline-hydrostatic-test',
+    title: 'Pipeline hydrostatic test',
+    description: 'Solve (DYNAMIC). A test pump pressurises a blind-flanged pipeline; the LiquidVolume reaches test pressure at the closed-form time C dP / mdot.',
+    category: 'Fluids',
+    text: `{ Time to pressurise a pipeline for a hydrostatic test. 500 m of DN150 steel
+  line pipe (D = 0.15 m, wall 7.1 mm), filled with 15 C water and vented at
+  1 bar, is closed with a blind flange and fed by a 2 L/min test pump until it
+  reaches the 16 bar test pressure. The LiquidVolume stores C = rho V / beta_eff
+  per pascal, where the effective bulk modulus adds the pipe wall's
+  elasticity to the water's: 1/beta_eff = 1/beta + D/(E t). With no outflow
+  the pressure rises linearly, so the closed form is t = C (P_test - P_0) / mdot.
+  Cross-check: that formula gives 222.73 s; the simulated pressure crosses
+  16 bar at the same time. }
+function [port] = TestPump(mdot [kg/s], h [J/kg], domain$ = liquid)
+port(port)
+  port.mdot = mdot
+  port.h    = h
+end
+function [port] = BlindFlange(domain$ = liquid)
+port(port)
+  port.mdot = 0
+end
+T = 15 [C]
+P_0 = 1 [bar]
+P_test = 16 [bar]
+L = 500 [m]
+D = 0.15 [m]
+t_w = 7.1 [mm]
+E = 200 [GPa]
+beta = 2.2 [GPa]
+Vdot = 2 [L/min]
+rho = Density(Water, T=T, P=P_0)
+V = pi# / 4 * D^2 * L
+beta_eff = 1 / (1 / beta + D / (E * t_w))
+C = rho * V / beta_eff
+TestPump pump(mdot=rho * Vdot, h=Enthalpy(Water, T=T, P=P_0))
+LiquidVolume line(C=C, P0=P_0)
+BlindFlange flange()
+connect(pump.port, line.in)
+connect(line.out, flange.port)
+DYNAMIC fill(method=ode45, time=0..300, points=31, rtol=1e-9)
+END
+t_closed = C * (P_test - P_0) / (rho * Vdot)
+t_test = TimeAt('line.in.p', P_test / 1 [Pa]) * 1 [s]
+P_end = FinalValue('line.in.p') * 1 [Pa]
+{ CHECK C 4.945147578971818e-06 4.9e-12 }
+{ CHECK t_closed 222.7316534522813 0.00022 }
+{ CHECK t_test 222.73165345228006 0.00022 }
+{ CHECK P_end 2120368.4255251717 2.1 }`,
+  },
+  {
+    id: 'tank-warm-up-time-constant',
+    title: 'Warm-up of a mixed water tank',
+    description: 'Solve (DYNAMIC). A LiquidTank fed with hot water and losing heat to the room follows the first-order closed form.',
+    category: 'Heat Transfer',
+    text: `{ Warm-up of a mixed water tank. A 40 kg tank of water at 15 C is fed
+  0.05 kg/s of 60 C water and loses heat through UA = 15 W/K to a 20 C room;
+  the outflow leaves at the tank temperature. With constant cp the tank is a
+  first-order system: T_inf = (mdot cp T_feed + UA T_room)/(mdot cp + UA) and
+  tau = m cp / (mdot cp + UA). The LiquidTank integrates the energy balance in
+  enthalpy, so it carries water's real cp. Cross-check: the closed form at
+  cp = 4179 J/kg-K (the 37.5 C mean) gives T_inf = 57.32 C, tau = 746.4 s and
+  T(600 s) = 38.378 C; the simulation reads 38.377 C at 600 s. }
+T_feed = 60 [C]
+T_0 = 15 [C]
+T_room = 20 [C]
+mdot = 0.05 [kg/s]
+m = 40 [kg]
+UA = 15 [W/K]
+P = 2 [bar]
+LiquidSource feed(fluid$=Water, mdot=mdot, P=P, T=T_feed)
+LiquidTank tank(fluid$=Water, m=m, UA=UA, T0=T_0)
+ThermalSource room(T=T_room)
+LiquidSink drain()
+connect(feed.out, tank.in)
+connect(tank.out, drain.in)
+connect(tank.wall, room.port)
+DYNAMIC warm(method=ode45, time=0..1800, points=181, rtol=1e-9)
+END
+cp = Cp(Water, T=(T_feed + T_0) / 2, P=P)
+T_inf = (mdot * cp * T_feed + UA * T_room) / (mdot * cp + UA)
+tau = m * cp / (mdot * cp + UA)
+T_600_closed = T_inf + (T_0 - T_inf) * exp(-600 [s] / tau)
+T_600 = ODEValue('tank.tt', 600) * 1 [K]
+T_end = FinalValue('tank.tt') * 1 [K]
+{ CHECK T_inf 330.4708359141258 0.00033 }
+{ CHECK tau 746.4167182825173 0.00075 }
+{ CHECK T_600_closed 311.5277496588768 0.00031 }
+{ CHECK T_600 311.52747582745906 0.00031 }
+{ CHECK T_end 326.6795732461245 0.00033 }`,
+  },
+  {
+    id: 'thermostat-opening-flow',
+    title: 'Engine thermostat opening flow',
+    description: 'Solve. A LiquidThermostat passes coolant at 80, 85 and 92 C; the flows follow its tanh opening and the orifice law.',
+    category: 'Fluids',
+    text: `{ Flow through an engine thermostat as it opens. A wax thermostat with a
+  full-open flow area CdA = 3 cm^2 sits between the engine block (1.8 bar) and
+  the radiator (1.5 bar). It opens smoothly about T_open = 85 C over a 3 K
+  band: u = (1 + tanh((T - T_open)/T_band))/2, and the flow obeys the
+  orifice law mdot = u CdA sqrt(2 rho dP). Three copies see coolant at 80, 85
+  and 92 C. Cross-check: u = 0.0344, 0.5000 and 0.9907 from the formula, and
+  the full-open flow is 3e-4 * sqrt(2 * 968.65 * 30000) = 2.287 kg/s. }
+function [out] = EngineBlock(fluid$, P [Pa], T [K], domain$ = liquid)
+port(out)
+  out.P = P
+  out.h = Enthalpy(fluid$, P=P, T=T)
+end
+function [in] = RadiatorInlet(P [Pa], domain$ = liquid)
+port(in)
+  in.P = P
+end
+P_up = 1.8 [bar]
+dP = 0.3 [bar]
+T_open = 85 [C]
+T_band = 3 [K]
+CdA = 3 [cm^2]
+rho = Density(Water, T=T_open, P=P_up)
+EngineBlock e80(fluid$=Water, P=P_up, T=80 [C])
+LiquidThermostat s80(fluid$=Water, CdA=CdA, rho=rho, Topen=T_open, Tband=T_band)
+RadiatorInlet r80(P=P_up - dP)
+connect(e80.out, s80.in)
+connect(s80.out, r80.in)
+EngineBlock e85(fluid$=Water, P=P_up, T=85 [C])
+LiquidThermostat s85(fluid$=Water, CdA=CdA, rho=rho, Topen=T_open, Tband=T_band)
+RadiatorInlet r85(P=P_up - dP)
+connect(e85.out, s85.in)
+connect(s85.out, r85.in)
+EngineBlock e92(fluid$=Water, P=P_up, T=92 [C])
+LiquidThermostat s92(fluid$=Water, CdA=CdA, rho=rho, Topen=T_open, Tband=T_band)
+RadiatorInlet r92(P=P_up - dP)
+connect(e92.out, s92.in)
+connect(s92.out, r92.in)
+m_full = CdA * sqrt(2 * rho * dP)
+m_80 = s80.in.mdot
+m_85 = s85.in.mdot
+m_92 = s92.in.mdot
+u_80 = m_80 / m_full
+u_85 = m_85 / m_full
+u_92 = m_92 / m_full
+{ CHECK m_full 2.287071087145202 2.3e-06 }
+{ CHECK m_80 0.07877861109902025 7.9e-08 }
+{ CHECK m_85 1.1435355435662307 1.1e-06 }
+{ CHECK m_92 2.265764825878045 2.3e-06 }
+{ CHECK u_80 0.03444519566611037 3.4e-08 }
+{ CHECK u_92 0.9906840406549181 9.9e-07 }`,
+  },
+  {
+    id: 'small-hydro-turbine-power',
+    title: 'Small hydro turbine power',
+    description: 'Solve. A HydroTurbine with an efficiency map turns 0.6 m3/s through 28 m of head into shaft power and generator torque.',
+    category: 'Fluids',
+    text: `{ Shaft power of a small hydro turbine. 0.6 m^3/s of 12 C water falls through
+  a 28 m net head to a Francis runner that turns a generator at 750 rpm. The
+  runner's efficiency comes from a four-point map against mass flow, read
+  linearly between points; the shaft delivers P = eta rho g Q H and the
+  torque is P / omega. Cross-check: at mdot = 599.70 kg/s the map gives
+  eta = 0.86 + 0.04 (599.70 - 400)/200 = 0.89994, so
+  P = 0.89994 * 999.50 * 9.80665 * 0.6 * 28 = 148.19 kW and
+  T = 148,193 / 78.540 = 1886.8 N-m. }
+H = 28 [m]
+Q = 0.6 [m^3/s]
+N = 750 [rpm]
+T_w = 12 [C]
+P_tail = 1 [atm]
+TABLE etamap(mdot [kg/s]) [-]
+  200   0.78
+  400   0.86
+  600   0.90
+  800   0.88
+END
+rho = Density(Water, T=T_w, P=P_tail)
+LiquidSource intake(fluid$=Water, mdot=rho * Q, P=P_tail + rho * g# * H, T=T_w)
+HydroTurbine runner(fluid$=Water, rho=rho, eta$=etamap, epsw=1e-6 [rad/s])
+LiquidSink tailrace()
+SpeedSource generator(w=N)
+MechGround frame()
+connect(intake.out, runner.in)
+connect(runner.out, tailrace.in)
+connect(runner.shaft, generator.a)
+connect(generator.b, frame.port)
+runner.out.P = P_tail
+eta = runner.eta
+P_shaft = runner.Pm
+T_shaft = -runner.shaft.tau
+{ CHECK eta 0.8999400415168007 9e-07 }
+{ CHECK P_shaft 148192.58769821076 0.15 }
+{ CHECK T_shaft 1886.8466049158783 0.0019 }`,
+  },
+  {
+    id: 'cooling-tower-range-approach',
+    title: 'Cooling tower range and approach',
+    description: 'Solve. A CoolingTower rejects condenser-water heat on the saturated-air enthalpy potential; range and approach follow.',
+    category: 'HVAC',
+    text: `{ Range and approach of a cooling tower. 10 L/s of condenser water at 35 C
+  enters a tower that moves 8 kg/s of air at a 24 C wet bulb. The
+  CoolingTower rates the heat rejected on the enthalpy potential between
+  saturated air at the water inlet temperature and saturated air at the
+  wet bulb, Q = eps_t mdot_a (h_s(T_in) - h_s(T_wb)), with eps_t = 0.55. The
+  range is the water's temperature drop; the approach is how far its outlet
+  stays above the wet bulb. Cross-check with the ideal-gas psychrometric
+  equations (ASHRAE Fundamentals ch. 1, Hyland-Wexler saturation pressure):
+  h_s = 129.07 kJ/kg at 35 C and 72.20 kJ/kg at 24 C give Q = 250.2 kW; the
+  engine's real-gas humid air gives 251.1 kW, 0.4 % higher. }
+P_atm = 1 [atm]
+T_hot = 35 [C]
+T_wb = 24 [C]
+Vdot = 10 [L/s]
+mdot_a = 8 [kg/s]
+eps_t = 0.55
+rho = Density(Water, T=T_hot, P=P_atm)
+LiquidSource hot(fluid$=Water, mdot=rho * Vdot, P=P_atm, T=T_hot)
+CoolingTower tower(fluid$=Water, eps_t=eps_t, mdot_a=mdot_a, Patm=P_atm)
+SigConstant wetbulb(k=T_wb)
+LiquidSink basin()
+connect(hot.out, tower.in)
+connect(tower.out, basin.in)
+connect(wetbulb.out, tower.wb)
+Q = tower.Q
+T_cold = Temperature(Water, P=P_atm, h=basin.in.h)
+range = T_hot - T_cold
+approach = T_cold - T_wb
+{ CHECK Q 251116.05588824747 0.25 }
+{ CHECK T_cold 302.1057283576566 0.0003 }
+{ CHECK range 6.0442716423434035 6e-06 }
+{ CHECK approach 4.9557283576565965 5e-06 }`,
+  },
+  {
+    id: 'stratified-tank-charging',
+    title: 'Charging a stratified storage tank',
+    description: 'Solve (DYNAMIC). A three-node ThermalStorageTank charged from the top matches the tanks-in-series closed form.',
+    category: 'Heat Transfer',
+    text: `{ Charging a stratified storage tank. A solar loop delivers 0.25 kg/s of 70 C
+  water to the top of a tank that starts uniformly at 20 C; the return leaves
+  from the bottom. The ThermalStorageTank models three 100 kg plug-flow nodes;
+  with no mixing between them and no shell loss it is three mixed tanks in
+  series, whose response to a step in inlet temperature is known in closed
+  form: with tau = m_node / mdot = 400 s and x = t / tau, the bottom node is
+  T_3 = T_in - (T_in - T_0) e^(-x) (1 + x + x^2/2). Cross-check: at
+  t = 1200 s (x = 3) the formula gives 48.840 C, as the simulation does. }
+mdot = 0.25 [kg/s]
+m_node = 100 [kg]
+cp = 4180 [J/kg-K]
+T_in = 70 [C]
+T_0 = 20 [C]
+LiquidSource solar(fluid$=Water, mdot=mdot, P=2 [bar], T=T_in)
+ThermalStorageTank tank(fluid$=Water, m_node=m_node, cp_f=cp, UA_loss=0 [W/K], T_amb=T_0, kmix=0 [W/K], T10=T_0, T20=T_0, T30=T_0)
+LiquidSink collector_return()
+connect(solar.out, tank.in)
+connect(tank.out, collector_return.in)
+DYNAMIC charge(method=ode45, time=0..2400, points=241, rtol=1e-10)
+END
+tau = m_node / mdot
+x = 1200 [s] / tau
+T_3_closed = T_in - (T_in - T_0) * exp(-x) * (1 + x + x^2 / 2)
+T_1_1200 = ODEValue('tank.t1', 1200) * 1 [K]
+T_3_1200 = ODEValue('tank.t3', 1200) * 1 [K]
+{ CHECK T_1_1200 340.6606465931416 0.00034 }
+{ CHECK T_3_1200 321.99049592479713 0.00032 }
+{ CHECK T_3_closed 321.9904959436578 0.00032 }`,
+  },
+  {
+    id: 'ice-bank-discharge',
+    title: 'Ice bank discharge',
+    description: 'Solve (DYNAMIC). Glycol melts an IceStorageBrine store; the time to half melted is checked against an epsilon-NTU estimate.',
+    category: 'HVAC',
+    text: `{ Discharging an ice bank. 0.5 kg/s of 50 % ethylene glycol returns at 8 C and
+  passes an 800 kg ice store (UA = 1500 W/K) that starts at -3 C. The ice
+  melts over a narrow band about 0 C (the PCMMass spreads L = 334 kJ/kg over a
+  Gaussian of width 0.3 K, so the stored energy is exact). While the ice
+  melts the brine sees a wall near 0 C, so by epsilon-NTU
+  Q = mdot cp (1 - e^(-NTU)) (T_in - 0 C). Cross-check: with cp at 8 C,
+  NTU = 0.924 and Q = 7.83 kW, so the time to warm the ice to 0 C and melt
+  half of it is m (cp_ice 3 K + L/2) / Q = 17,700 s. The simulation reaches
+  half melted (0 C) at 17,254 s, 2.5 % sooner: for most of that time the ice
+  sits below 0 C in its melt band, which raises the driving difference. }
+mdot = 0.5 [kg/s]
+T_in = 8 [C]
+UA = 1500 [W/K]
+m_ice = 800 [kg]
+cp_ice = 2100 [J/kg-K]
+L_f = 334 [kJ/kg]
+T_m = 0 [C]
+T_0 = -3 [C]
+LiquidSource brine_return(fluid$=EG50, mdot=mdot, P=2 [bar], T=T_in)
+IceStorageBrine bank(fluid$=EG50, UA=UA, m=m_ice, cp_p=cp_ice, L=L_f, Tm=T_m, dTm=0.3 [K], T0=T_0)
+LiquidSink brine_supply()
+connect(brine_return.out, bank.in)
+connect(bank.out, brine_supply.in)
+DYNAMIC melt(method=radau5, time=0..43200, points=433, rtol=1e-8)
+END
+cp_b = Cp(EG50, T=T_in, P=2 [bar])
+NTU = UA / (mdot * cp_b)
+Q_plateau = mdot * cp_b * (1 - exp(-NTU)) * (T_in - T_m)
+t_half_closed = m_ice * (cp_ice * (T_m - T_0) + L_f / 2) / Q_plateau
+t_half = TimeAt('bank.ice.port.t', T_m / 1 [K]) * 1 [s]
+{ CHECK NTU 0.923801976432673 9.2e-07 }
+{ CHECK Q_plateau 7832.759716644005 0.0078 }
+{ CHECK t_half_closed 17700.01953531152 0.018 }
+{ CHECK t_half 17253.637008918224 0.017 }`,
+  },
+  {
     id: 'lesson-rc-charging',
     title: 'Lesson — RC charging',
     description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson. Solve (F2).',

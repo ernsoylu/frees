@@ -3,7 +3,7 @@ name: ThermalStorageTank
 category: Component (liquid)
 summary: "Stratified thermal-storage tank: three plug-flow nodes top→bottom with inter-node mixing conductance and shell losses; charge enters the top node, draw leaves the bottom at its temperature."
 related: []
-examples: []
+examples: [stratified-tank-charging]
 tags: [thermalstoragetank, component, liquid, acausal]
 references: []
 ---

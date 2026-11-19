@@ -87,6 +87,14 @@ it.each<[string, Record<string, string>]>([
   ['shower-mixing-ratio', { y: '-' }],
   ['parallel-branches-three-way-valve', { u: '-', q_A: '-', q_B: '-' }],
   ['valve-loss-coefficients', { U: 'm/s', H_velocity: 'm', H_valve: 'm', dP_valve: 'Pa', H_exit: 'm' }],
+  ['closed-loop-pump-operating-point', { Q: 'm^3/s', H: 'm', W_pump: 'W', Q_chiller: 'W', T_supply: 'K', T_return: 'K' }],
+  ['pipeline-hydrostatic-test', { C: 'm s^2', t_closed: 's', t_test: 's', P_end: 'Pa' }],
+  ['tank-warm-up-time-constant', { T_inf: 'K', tau: 's', T_600_closed: 'K', T_600: 'K', T_end: 'K' }],
+  ['thermostat-opening-flow', { m_full: 'kg/s', m_80: 'kg/s', m_85: 'kg/s', m_92: 'kg/s', u_80: '-', u_92: '-' }],
+  ['small-hydro-turbine-power', { eta: '-', P_shaft: 'W', T_shaft: 'J' }],
+  ['cooling-tower-range-approach', { Q: 'W', T_cold: 'K', range: 'K', approach: 'K' }],
+  ['stratified-tank-charging', { T_1_1200: 'K', T_3_1200: 'K', T_3_closed: 'K' }],
+  ['ice-bank-discharge', { NTU: '-', Q_plateau: 'W', t_half_closed: 's', t_half: 's' }],
 ])('%s solves with physical units and preserves its checked results', (id, units) => {
   const example = EXAMPLES.find(example => example.id === id)!
   const result = JSON.parse(solve(example.text, '{}'))

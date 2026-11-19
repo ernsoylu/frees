@@ -3,7 +3,7 @@ name: LiquidWallHX
 category: Component (liquid)
 summary: A liquid-to-wall heat exchanger.
 related: []
-examples: [ev-thermal-management]
+examples: [ev-thermal-management, closed-loop-pump-operating-point]
 tags: [liquidwallhx, component, liquid, acausal]
 ---
 

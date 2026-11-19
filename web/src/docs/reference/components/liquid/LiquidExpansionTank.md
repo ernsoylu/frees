@@ -3,7 +3,7 @@ name: LiquidExpansionTank
 category: Component (liquid)
 summary: "Expansion tank / degas bottle: pins the loop pressure datum — the one pressure reference every CLOSED coolant loop needs."
 related: []
-examples: []
+examples: [closed-loop-pump-operating-point]
 tags: [liquidexpansiontank, component, liquid, acausal]
 references: []
 ---

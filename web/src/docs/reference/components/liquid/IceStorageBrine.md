@@ -3,7 +3,7 @@ name: IceStorageBrine
 category: Component (liquid)
 summary: "Ice/PCM storage on a brine loop: the latent mass sits behind a UA wall in the brine stream — charge below the melt band, discharge above it."
 related: []
-examples: []
+examples: [ice-bank-discharge]
 tags: [icestoragebrine, component, liquid, acausal]
 references: []
 ---

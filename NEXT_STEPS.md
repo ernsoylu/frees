@@ -1398,6 +1398,36 @@ Record completion, wrong-target commands, navigation errors, recovery time and h
 - **An exportable History pane** (Doc B B10): RunsPanel and playback cover runs today.
 - **The palette → shortcut-editor jump**, and remappable global keys beyond the canvas's.
 
+### Programme of 2026-11-19: D.2 coverage follow-on — approved 2026-11-19
+
+D.2 converted every bank problem it could, and left components with no
+numeric bank problem uncovered. The owner chose to cover them with problems
+that state their own inputs. Each is graded by CHECKs, and its header gives an
+independent cross-check (a closed form, a hand iteration or a published
+correlation) instead of a book answer. One PR per domain; engine and library
+fixes go in separate commits.
+
+Measured on `main` before the work, as components used in a gallery example
+with CHECKs: fluid 20/31, liquid 12/21, two-phase 10/47.
+
+- **1. Liquid — 21/21 (`d2-coverage-liquid`).** Eight examples cover the nine uncovered components.
+
+  | Gallery id | Components | Cross-check | Model |
+  | --- | --- | --- | --- |
+  | `closed-loop-pump-operating-point` | LiquidPumpMap, LiquidExpansionTank | Colebrook iterated by hand against the same head table: 5.0317 L/s, 5.9162 m, 449.0 W | equal to every printed digit |
+  | `pipeline-hydrostatic-test` | LiquidVolume | t = C ΔP / ṁ = 222.73 s | 222.73 s |
+  | `tank-warm-up-time-constant` | LiquidTank | first-order closed form at constant cp: 38.378 °C at 600 s | 38.377 °C (the model carries water's real cp) |
+  | `thermostat-opening-flow` | LiquidThermostat | u = (1 + tanh((T − T_open)/T_band))/2 and the orifice law | exact |
+  | `small-hydro-turbine-power` | HydroTurbine | P = η ρ g Q H with η read from the map by hand: 148.19 kW | exact |
+  | `cooling-tower-range-approach` | CoolingTower | ASHRAE ideal-gas psychrometrics: 250.2 kW | 251.1 kW (real-gas humid air, +0.4 %) |
+  | `stratified-tank-charging` | ThermalStorageTank | three tanks in series, step response: 48.840 °C at 1200 s | exact |
+  | `ice-bank-discharge` | IceStorageBrine | ε-NTU at a 0 °C wall: half melted at 17,700 s | 17,254 s; the ice sits below 0 °C inside its melt band for most of that time |
+
+  - **Library finding, fixed — `LiquidVolume` had no outlet pressure.** It left `out.P` without an equation, which `Accumulator`, `HydraulicVolume` and `PneumaticVolume` all state, so no DYNAMIC run of it could be solved. A steady model hid this only because the user pinned the outlet pressure too. Regression test: `a_liquid_volume_carries_its_pressure_to_the_outlet_in_a_dynamic_run`.
+  - **The golden it superseded.** `components_g4_liquidvolume` pinned `l2.P` by hand, and with the fix that pin is a redundant relation. Per the owner's choice the golden is untouched. `tolerances-rustprop.json` has a new `superseded` section that both `parity.rs` and `wasm-parity.mjs` grade: the fixture must fail with exactly that redundant relation, and an entry that solves again, or fails another way, is reported. The reference page's example drops the pin.
+  - **Units.** A capacitance in kg/Pa reads `m s^2`, and the turbine torque reads `J`; both are the right dimension, so the units table grades them as printed.
+  - **Gates (2026-11-19).** Workspace 3,473 tests, parity 1,308/1,308 native and in WASM, vitest 1,232/1,232 in 109 files, `check-docs` 771/771, `check-examples` 826/826 (2,955 assertions), lint 0 errors. Every new example solves with no unit warnings. Rebuilt module 4,015.3 KiB raw / 1,606.7 KiB gzipped.
+
 ### R15 usability pilot (Phase 4.4)
 
 Cards, answer key, thresholds and the pinned build are in [`R15_PILOT.md`](R15_PILOT.md) (signed 2026-09-12). Still to do: run five engineering participants through scalar solve (≤ 5 min), component chain (≤ 10 min) and missing-boundary recovery (≤ 3 min); record times, assistance and feedback. Never fabricate participant outcomes.
@@ -1824,8 +1854,8 @@ Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` 
     - user `function` arguments take no unit annotations;
     - `step`/`stepinfo` over a few hundred samples take seconds;
     - `PneumaticOrifice` passes forward flow only, so an overshooting volume traps pressure.
-- **D.2** Wave C large-domain examples: two-phase, fluid, liquid. Gallery use on 2026-10-30: fluid 0/31, two-phase 10/47, liquid 13/21. Its start condition, a measured Wave B conversion rate, is now met (D.1). One original motive is gone: `Pipe.md` already documents `rough` as absolute roughness [m], matching the `rough / D` in the code.
-- **D.3** The *frees Book* (mdBook) and a 30–50-model public gallery.
+- **D.2 — done 2026-11-06** as phase B of the programme of 2026-11-05 (#75–#77). 31 of 36 bank problems converted; components in a graded example rose to fluid 19/31, two-phase 12/47 and liquid 12/21. The uncovered components have no numeric bank problem; each domain's entry names them. The programme of 2026-11-19 covers them with problems that state their own inputs.
+- **D.3 — done 2026-11-06** as phase C of the same programme: a static export of the Help (D14), not an mdBook, with a 42-model gallery. Open: search inside the book.
 - **D.4 — done 2026-10-31.** Offline reference fixtures from NumPy/SciPy/statsmodels/SALib. `tools/stats-ref/gen.py` writes `fixtures/stats/reference.json` (NumPy 2.5.4, SciPy 1.18.1, statsmodels 0.15.0, SALib 1.6.0, seed 20261031; regeneration is byte-identical). `crates/frees-core/tests/reference_libraries.rs` replays it in the default `cargo test`; its header carries the measured table.
   - **Graded:** 70 scalar intrinsics through a solved document (distributions, special functions, descriptive statistics, correlation and regression, t-tests, ANOVA, χ² goodness of fit, mean CI); `poly_fit`; seven curve fits (OLS, absolute σ, a statsmodels OLS for covariance and bands, an active bound, soft-L1/Huber/Cauchy); every `signal` kernel; all 32 Sobol' dimensions bitwise; Sobol' indices and Morris effects.
   - **Same inputs:** the generator rebuilds frees' own Sobol' and Morris designs (its JavaRandom shift and trajectories), so SALib grades the estimators, not a second draw. They match to 2.5e-15 and exactly. SALib centres `Y` before Saltelli's `S1`; frees does not, and on the graded design that moves `S1` by ≤ 2.1e-4.
