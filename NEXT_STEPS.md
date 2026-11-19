@@ -1466,6 +1466,19 @@ with CHECKs: fluid 20/31, liquid 12/21, two-phase 10/47.
   - **Units.** A component local computed from a property call or a correlation (`phi2`, `Pf`, `LL`) prints no unit, so the units table leaves those out; their CHECKs still grade the values.
   - **Gates (2026-11-19).** Workspace 3,474 tests, parity 1,308/1,308 native and in WASM (three fixtures graded as superseded), vitest 1,261/1,261 in 109 files, `check-docs` 771/771, `check-examples` 826/826 (2,955 assertions), lint 0 errors. Every new example solves with no unit warnings. Rebuilt module 4,015.3 KiB raw / 1,603.9 KiB gzipped.
 
+- **3b. Ejectors, transcritical, blends and oil — 38/47 (`d2-coverage-twophase-2`).** Five examples cover ten components.
+
+  | Gallery id | Components | Cross-check | Model |
+  | --- | --- | --- | --- |
+  | `ejector-lift-two-ratings` | TwoPhaseEjector, EjectorMomentum | mixed h by hand, 416.57 kJ/kg; PLR × P_s = 375 kPa; nozzle jet √(2η_n Δh_s) = 211.55 m/s, mixed 128.44 m/s, velocity head 115.7 kPa | exact |
+  | `co2-gas-cooler-back-pressure` | GasCooler, TranscriticalBackPressureValve | u CdA √(2ρΔP) = 0.11002 kg/s; ε = 1 − exp(−UA/(ṁ cp)) = 0.9300 | exact |
+  | `blend-glide-mixing` | BlendSource, BlendMixer, BlendSensor, BlendSink | flow-weighted z = 0.226 and x = 0.58 by hand | exact |
+  | `oil-circulation-degradation` | TwoPhaseOilRider | f = 1 − k OCR = 0.9; Q = f UA ΔT = 5158 W | exact |
+  | `microturbine-recuperator` | ThreeZoneHX | counterflow ε-NTU on the total UA, iterated with Cengel's ideal-gas cp for air: 0.8049, 188.59 kW, 812.22 K | 0.8055, 188.34 kW, 812.50 K (each zone uses its local cp) |
+
+  - **No engine or library finding.** `ThreeZoneHX` is built from fluid-domain `HeatExchanger`s and declares no `domain$`; it takes any `Source`/`Sink` fluid, so that is its intended bond, not the `TwoPhasePipe` defect. Every new outlet stays on its own side of the wall it exchanges with.
+  - **Gates (2026-11-19).** vitest 1,267/1,267 in 109 files, `check-docs` 771/771, `check-examples` 826/826 (2,955 assertions), lint 0 errors. Every new example solves with no unit warnings. No Rust source changed, so the workspace tests, parity and the module size are those of 3a.
+
 ### R15 usability pilot (Phase 4.4)
 
 Cards, answer key, thresholds and the pinned build are in [`R15_PILOT.md`](R15_PILOT.md) (signed 2026-09-12). Still to do: run five engineering participants through scalar solve (≤ 5 min), component chain (≤ 10 min) and missing-boundary recovery (≤ 3 min); record times, assistance and feedback. Never fabricate participant outcomes.
