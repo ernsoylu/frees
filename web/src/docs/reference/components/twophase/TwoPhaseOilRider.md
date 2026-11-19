@@ -3,7 +3,7 @@ name: TwoPhaseOilRider
 category: Component (twophase)
 summary: "Oil-circulation-rate rider: declares the oil mass fraction on the stream (it rides every downstream pass-through node like W/z) and exposes the documented HTC degradation factor f_deg = 1 - k_deg*OCR to inject into downstream UA parameters."
 related: []
-examples: []
+examples: [oil-circulation-degradation]
 tags: [twophaseoilrider, component, twophase, acausal]
 references: []
 ---

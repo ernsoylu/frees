@@ -3,7 +3,7 @@ name: ThreeZoneHX
 category: Component (twophase)
 summary: A three-zone (subcooled / two-phase / superheat) heat exchanger.
 related: []
-examples: []
+examples: [microturbine-recuperator]
 tags: [threezonehx, component, twophase, acausal]
 ---
 

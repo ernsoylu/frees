@@ -3,7 +3,7 @@ name: BlendSink
 category: Component (twophase)
 summary: A boundary absorbing a gas-blend stream.
 related: []
-examples: []
+examples: [blend-glide-mixing]
 tags: [blendsink, component, twophase, acausal]
 ---
 

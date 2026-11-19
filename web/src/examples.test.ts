@@ -113,6 +113,11 @@ it.each<[string, Record<string, string>]>([
   ['charge-sets-head-pressure', { P_c: 'Pa', SC: 'K', Q: 'W', m_cond: 'kg', m_line: 'kg' }],
   ['moving-boundary-coils', { L_boil: 'm', SH: 'K', Q_evap: 'W', L_cond: 'm', SC: 'K', Q_cond: 'W', T_margin_E: 'K', T_margin_C: 'K' }],
   ['reversing-valve-heating', { P_indoor: 'Pa', P_suction: 'Pa', h_suction: 'J/kg', Q_heat: 'W' }],
+  ['ejector-lift-two-ratings', { P_lumped: 'Pa', h_lumped: 'J/kg', P_momentum: 'Pa', v_m: 'm/s', v_mix: 'm/s' }],
+  ['co2-gas-cooler-back-pressure', { mdot: 'kg/s', Q: 'W', T_out: 'K', eps: '-' }],
+  ['blend-glide-mixing', { z_mix: '-', x_mix: '-', glide: 'K', T_bubble: 'K', T_dew: 'K' }],
+  ['oil-circulation-degradation', { f_deg: '-', Q: 'W', mdot: 'kg/s' }],
+  ['microturbine-recuperator', { T_cold_out: 'K', T_hot_out: 'K', Q: 'W', eff: '-' }],
 ])('%s solves with physical units and preserves its checked results', (id, units) => {
   const example = EXAMPLES.find(example => example.id === id)!
   const result = JSON.parse(solve(example.text, '{}'))

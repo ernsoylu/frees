@@ -4767,6 +4767,183 @@ Q_heat = indoor.Q
 { CHECK Q_heat 4917.95336951741 0.0049 }`,
   },
   {
+    id: 'ejector-lift-two-ratings',
+    title: 'Ejector lift: rated ratio and momentum balance',
+    description: 'Solve. The same motive and suction streams through a lumped TwoPhaseEjector and an EjectorMomentum; the momentum lift is checked by hand.',
+    category: 'HVAC',
+    text: `{ Two ways to rate an ejector. Saturated R-134a vapor at 1.2 MPa
+  (30 g/s) drives 12 g/s of 5 C suction vapor at 300 kPa. The lumped
+  TwoPhaseEjector takes a rated pressure-lift ratio (1.25 here, from test
+  data); EjectorMomentum computes the lift from a nozzle efficiency of 0.8
+  and a mixing efficiency of 0.85. Both mix mass and energy exactly.
+  Cross-check by hand: the mixed enthalpy is
+  (0.03 x 422.04 + 0.012 x 402.88)/0.042 = 416.57 kJ/kg and the lumped
+  outlet 1.25 x 300 = 375 kPa. The motive jet leaves the nozzle at
+  sqrt(2 x 0.8 x (422.04 - 394.07) kJ/kg) = 211.55 m/s, the mixed stream
+  moves at 0.85 x 0.03 x 211.55/0.042 = 128.44 m/s, and its velocity head
+  at rho = 14.02 kg/m^3 recovers 14.02 x 128.44^2/2 = 115.7 kPa. }
+h_m = Enthalpy(R134a, P=1.2 [MPa], x=1)
+h_s = Enthalpy(R134a, P=300 [kPa], T=5 [C])
+TwoPhaseSourcePH motA(mdot=0.03 [kg/s], P=1.2 [MPa], h=h_m)
+TwoPhaseSourcePH sucA(mdot=0.012 [kg/s], P=300 [kPa], h=h_s)
+TwoPhaseEjector ej(PLR=1.25)
+TwoPhaseSink outA()
+connect(motA.out, ej.m)
+connect(sucA.out, ej.s)
+connect(ej.out, outA.in)
+TwoPhaseSourcePH motB(mdot=0.03 [kg/s], P=1.2 [MPa], h=h_m)
+TwoPhaseSourcePH sucB(mdot=0.012 [kg/s], P=300 [kPa], h=h_s)
+EjectorMomentum em(fluid$=R134a, eta_n=0.8, eta_m=0.85)
+TwoPhaseSink outB()
+connect(motB.out, em.mot_in)
+connect(sucB.out, em.suc_in)
+connect(em.out, outB.in)
+P_lumped = outA.P
+h_lumped = outA.h
+P_momentum = outB.P
+h_mi = em.h_mi
+v_m = em.v_m
+v_mix = em.v_mix
+rho_mix = em.rho_mix
+{ CHECK P_lumped 375000.0 0.38 }
+{ CHECK h_lumped 416565.4553205589 0.42 }
+{ CHECK P_momentum 415681.873233627 0.42 }
+{ CHECK v_m 211.5496450192795 0.00021 }
+{ CHECK v_mix 128.44085590456257 0.00013 }`,
+  },
+  {
+    id: 'co2-gas-cooler-back-pressure',
+    title: 'CO2 gas cooler and back-pressure valve',
+    description: 'Solve. A transcritical R-744 high side: a GasCooler against 35 C air and a commanded TranscriticalBackPressureValve set the flow.',
+    category: 'HVAC',
+    text: `{ The high side of a transcritical CO2 cycle. Compressor discharge at
+  10 MPa and 120 C passes a gas cooler (UA = 400 W/K, 50 kPa drop) against
+  35 C air, then a back-pressure valve (CdA_max = 2e-6 m^2) held 60 % open
+  by a constant command, to a 3.5 MPa evaporator. Above the critical point
+  nothing condenses, so the gas cooler has no saturation clamp, and the
+  valve and the high-side pressure together set the flow. Cross-check in
+  closed form: the valve passes 0.6 x 2e-6 x sqrt(2 x 651.60 x 6.45 MPa)
+  = 0.11002 kg/s; with cp = 1367.2 J/kg-K at the inlet the effectiveness
+  is 1 - exp(-400/(0.11002 x 1367.2)) = 0.9300, and the duty is that
+  fraction of the enthalpy drop to the air temperature. }
+P_hi = 10 [MPa]
+h_2 = Enthalpy(R744, P=P_hi, T=120 [C])
+TwoPhaseSourcePH discharge(mdot=mdot, P=P_hi, h=h_2)
+GasCooler gc(fluid$=R744, UA=400 [W/K], dP=50 [kPa])
+TranscriticalBackPressureValve bpv(fluid$=R744, CdA_max=2e-6 [m^2])
+SigConstant cmd(k=0.6)
+TwoPhasePressureSink evap(P=3.5 [MPa])
+connect(discharge.out, gc.in)
+connect(gc.out, bpv.in)
+connect(cmd.out, bpv.u)
+connect(bpv.out, evap.in)
+gc.wall.T = 35 [C]
+GUESS mdot = 0.05
+Q = -gc.wall.Qdot
+T_out = Temperature(R744, P=gc.out.P, h=gc.out.h)
+eps = gc.epsg
+{ CHECK mdot 0.1100190390645645 1.1e-07 }
+{ CHECK Q 24898.16697156528 0.025 }
+{ CHECK T_out 311.82437390703916 0.00031 }
+{ CHECK eps 0.9299929416547943 9.3e-07 }`,
+  },
+  {
+    id: 'blend-glide-mixing',
+    title: 'Zeotropic blend: mixing and glide',
+    description: 'Solve. Two R-407C streams meet in a BlendMixer that conserves the composition rider; a BlendSensor reads the quality and glide.',
+    category: 'HVAC',
+    text: `{ Mixing two streams of a zeotropic blend. At 400 kPa, 20 g/s of R-407C
+  at quality 0.1 and composition rider z = 0.25 meets 30 g/s at quality
+  0.9 and z = 0.21 (z is a circulating-composition marker, here the mass
+  fraction of one component after fractionation). The BlendMixer conserves
+  mass, energy and z; the BlendSensor reports the quality and the glide
+  from bubble to dew point at the charged composition. Cross-check by hand:
+  z = (0.02 x 0.25 + 0.03 x 0.21)/0.05 = 0.226, and since enthalpy is
+  linear in quality at one pressure, x = (0.02 x 0.1 + 0.03 x 0.9)/0.05
+  = 0.58. The glide is 6.36 K. }
+BlendSource liquid(fluid$=R407C, mdot=0.02 [kg/s], P=400 [kPa], x=0.1, z=0.25)
+BlendSource vapor(fluid$=R407C, mdot=0.03 [kg/s], P=400 [kPa], x=0.9, z=0.21)
+BlendMixer mix()
+BlendSensor s(fluid$=R407C)
+BlendSink header()
+connect(liquid.out, mix.in1)
+connect(vapor.out, mix.in2)
+connect(mix.out, s.in)
+connect(s.out, header.in)
+glide = s.glide
+x_mix = s.x
+z_mix = header.z
+T_bubble = s.bubble
+T_dew = s.dew
+{ CHECK z_mix 0.22599999999999998 2.3e-07 }
+{ CHECK x_mix 0.5800000000000002 5.8e-07 }
+{ CHECK glide 6.358132697866381 6.4e-06 }
+{ CHECK T_bubble 262.81974477641427 0.00026 }
+{ CHECK T_dew 269.17787747428065 0.00027 }`,
+  },
+  {
+    id: 'oil-circulation-degradation',
+    title: 'Oil circulation degrades an evaporator',
+    description: 'Solve. A TwoPhaseOilRider puts 4 % oil on the stream and scales the UA of the evaporator downstream.',
+    category: 'HVAC',
+    text: `{ Oil in circulation degrades an evaporator. R-134a at 300 kPa and
+  quality 0.25 carries 4 % oil (oil circulation ratio 0.04). The
+  TwoPhaseOilRider puts the ratio on the stream and reports the heat
+  transfer factor 1 - k_deg OCR, which scales the evaporator's 400 W/K
+  (k_deg = 2.5). The coil cools a 15 C load at 5 K superheat and sizes its
+  own flow. Cross-check in closed form: f_deg = 1 - 2.5 x 0.04 = 0.9, so
+  Q = 0.9 x 400 x (15 - 0.67) K = 5158 W, against 5731 W for oil-free
+  refrigerant, and the flow is 5158/(403.48 - 250.43) kJ/kg = 33.70 g/s. }
+TwoPhasePressureSource feedA(fluid$=R134a, P=300 [kPa], x=0.25)
+TwoPhaseOilRider oil(oc_set=0.04, k_deg=2.5)
+TwoPhaseEvaporatorUA coil(fluid$=R134a, UA=400 [W/K] * oil.f_deg, dP=0 [Pa], SH=5 [K])
+TwoPhaseSink suc()
+connect(feedA.out, oil.in)
+connect(oil.out, coil.in)
+connect(coil.out, suc.in)
+coil.frac = 1
+coil.wall.T = 15 [C]
+f_deg = oil.f_deg
+Q = coil.Q
+mdot = coil.in.mdot
+{ CHECK f_deg 0.9 9e-07 }
+{ CHECK Q 5158.057054390982 0.0052 }
+{ CHECK mdot 0.03370169350663147 3.4e-08 }`,
+  },
+  {
+    id: 'microturbine-recuperator',
+    title: 'Microturbine recuperator',
+    description: 'Solve. A ThreeZoneHX preheats compressed air with exhaust; the counterflow e-NTU formula on the total UA cross-checks it.',
+    category: 'Heat Transfer',
+    text: `{ A microturbine recuperator. 0.5 kg/s of 900 K exhaust at 105 kPa
+  preheats 0.49 kg/s of 450 K compressed air at 400 kPa through a
+  three-zone counterflow exchanger (UA = 2000 W/K, split evenly over three
+  HeatExchanger zones, each on its local cp). Cross-check: counterflow
+  units in series form one counterflow exchanger, so the e-NTU formula on
+  the total UA applies with the mean capacity rates. Iterating it by hand
+  with Cengel's ideal-gas cp polynomial for air (Table A-2c) gives
+  e = 0.8049, Q = 188.59 kW and 812.22 K to the combustor, against 0.8055,
+  188.34 kW and 812.50 K here (the zones see cp change along the
+  exchanger). }
+Source exhaust(fluid$=Air, mdot=0.5 [kg/s], P=105 [kPa], T=900 [K])
+Source charge(fluid$=Air, mdot=0.49 [kg/s], P=400 [kPa], T=450 [K])
+ThreeZoneHX rec(UA=2000 [W/K], hot$=Air, cold$=Air, arr$=counter)
+Sink stack()
+Sink combustor()
+connect(exhaust.out, rec.hot_in)
+connect(rec.hot_out, stack.in)
+connect(charge.out, rec.cold_in)
+connect(rec.cold_out, combustor.in)
+T_hot_out = Temperature(Air, P=105 [kPa], h=stack.h)
+T_cold_out = Temperature(Air, P=400 [kPa], h=combustor.h)
+Q = 0.49 [kg/s] * (combustor.h - charge.out.h)
+eff = (T_cold_out - 450 [K]) / (900 [K] - 450 [K])
+{ CHECK T_cold_out 812.4968796841343 0.00081 }
+{ CHECK T_hot_out 551.5296825648438 0.00055 }
+{ CHECK Q 188338.48993507613 0.19 }
+{ CHECK eff 0.8055486215202985 8.1e-07 }`,
+  },
+  {
     id: 'lesson-rc-charging',
     title: 'Lesson — RC charging',
     description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson. Solve (F2).',

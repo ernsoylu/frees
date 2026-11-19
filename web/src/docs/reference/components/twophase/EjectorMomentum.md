@@ -3,7 +3,7 @@ name: EjectorMomentum
 category: Component (twophase)
 summary: "Momentum-based two-phase ejector: the motive stream expands (nozzle efficiency) to the suction pressure, momentum-mixes with the entrained stream at constant area, and the mixed velocity head recovers as the diffuser lift."
 related: []
-examples: []
+examples: [ejector-lift-two-ratings]
 tags: [ejectormomentum, component, twophase, acausal]
 references: []
 ---

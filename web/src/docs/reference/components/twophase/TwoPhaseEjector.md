@@ -3,7 +3,7 @@ name: TwoPhaseEjector
 category: Component (twophase)
 summary: "Two-phase ejector, lumped: motive m entrains suction s; mass and energy mix exactly, and the diffuser recovers a pressure lift parameterized as the pressure-lift ratio PLR = P_out / P_suction (rate it from CFD/test data)."
 related: []
-examples: []
+examples: [ejector-lift-two-ratings]
 tags: [twophaseejector, component, twophase, acausal]
 references: []
 ---

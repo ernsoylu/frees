@@ -3,7 +3,7 @@ name: BlendSensor
 category: Component (twophase)
 summary: A sensor reading the state of a gas-blend stream.
 related: []
-examples: []
+examples: [blend-glide-mixing]
 tags: [blendsensor, component, twophase, acausal]
 ---
 

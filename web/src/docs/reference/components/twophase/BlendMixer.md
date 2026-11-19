@@ -3,7 +3,7 @@ name: BlendMixer
 category: Component (twophase)
 summary: A gas-blend (mixture) mixing junction carrying the species rider.
 related: []
-examples: []
+examples: [blend-glide-mixing]
 tags: [blendmixer, component, twophase, acausal]
 ---
 

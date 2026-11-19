@@ -3,7 +3,7 @@ name: TranscriticalBackPressureValve
 category: Component (twophase)
 summary: "Transcritical back-pressure valve: signal-commanded high-side pressure control (CO2 cycles) — commanded-area odd-symmetric square law."
 related: []
-examples: []
+examples: [co2-gas-cooler-back-pressure]
 tags: [transcriticalbackpressurevalve, component, twophase, acausal]
 references: []
 ---

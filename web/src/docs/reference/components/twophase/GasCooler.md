@@ -3,7 +3,7 @@ name: GasCooler
 category: Component (twophase)
 summary: "Transcritical gas cooler: supercritical single-phase cooling against a wall (no saturation clamp — the R744 high side has none); effectiveness on the local cp, LiquidWallHX sign conventions."
 related: []
-examples: []
+examples: [co2-gas-cooler-back-pressure]
 tags: [gascooler, component, twophase, acausal]
 references: []
 ---

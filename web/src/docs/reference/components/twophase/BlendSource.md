@@ -3,7 +3,7 @@ name: BlendSource
 category: Component (twophase)
 summary: A boundary supplying a gas-blend stream of set composition.
 related: []
-examples: []
+examples: [blend-glide-mixing]
 tags: [blendsource, component, twophase, acausal]
 ---
 
