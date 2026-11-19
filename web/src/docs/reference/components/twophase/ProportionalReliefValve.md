@@ -3,7 +3,7 @@ name: ProportionalReliefValve
 category: Component (twophase)
 summary: A pressure-relief valve whose opening rises proportionally above the set pressure.
 related: []
-examples: [pressure-cooker]
+examples: [pressure-cooker, pressure-cooker-relief]
 tags: [proportionalreliefvalve, component, twophase, acausal]
 ---
 

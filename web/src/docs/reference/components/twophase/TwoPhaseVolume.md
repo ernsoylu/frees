@@ -3,7 +3,7 @@ name: TwoPhaseVolume
 category: Component (twophase)
 summary: A finite-volume two-phase control volume with mass and energy states ((p, h) states).
 related: []
-examples: []
+examples: [two-phase-volume-charging]
 tags: [twophasevolume, component, twophase, acausal]
 ---
 

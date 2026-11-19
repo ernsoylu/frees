@@ -3,7 +3,7 @@ name: TwoPhaseChamber
 category: Component (twophase)
 summary: A two-phase control volume.
 related: []
-examples: []
+examples: [two-phase-chamber-warm-up]
 tags: [twophasechamber, component, twophase, acausal]
 ---
 

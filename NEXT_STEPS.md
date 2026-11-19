@@ -1479,6 +1479,21 @@ with CHECKs: fluid 20/31, liquid 12/21, two-phase 10/47.
   - **No engine or library finding.** `ThreeZoneHX` is built from fluid-domain `HeatExchanger`s and declares no `domain$`; it takes any `Source`/`Sink` fluid, so that is its intended bond, not the `TwoPhasePipe` defect. Every new outlet stays on its own side of the wall it exchanges with.
   - **Gates (2026-11-19).** vitest 1,267/1,267 in 109 files, `check-docs` 771/771, `check-examples` 826/826 (2,955 assertions), lint 0 errors. Every new example solves with no unit warnings. No Rust source changed, so the workspace tests, parity and the module size are those of 3a.
 
+- **3c. Dynamic volumes, vessels and relief — 47/47 (`d2-coverage-twophase-3`).** Six examples cover the last nine components; every library component now appears in a graded gallery example.
+
+  | Gallery id | Components | Cross-check | Model |
+  | --- | --- | --- | --- |
+  | `pressure-cooker-relief` | BoilingVessel, ProportionalReliefValve | steam tables at v = 0.006 m³/kg (Cengel A-5): 431.89 kJ to 200 kPa, 287.9 s at 1500 W; venting Q/h_fg = 0.682 g/s | 288.4 s, 0.681 g/s |
+  | `steam-relief-valve-capacity` | SteamReliefValve | choked ideal-gas flow at k = 1.135: 0.12511 kg/s; Napier's rule 0.131 kg/s | exact; Napier 4.8 % high |
+  | `suction-accumulator-carryover` | SuctionAccumulator | vapor out x ṁ = 18 g/s, liquid 0.1 + 0.002 t = 0.7 kg at 300 s | exact |
+  | `two-phase-volume-charging` | TwoPhaseVolume, TwoPhaseCap | P₀ + ṁ t/C = 550 kPa | exact |
+  | `two-phase-chamber-warm-up` | TwoPhaseChamber | at the final state UA ΔT = ṁ Δh = 191.78 W and the valve's Cv √(2ρΔP) = 10.00 g/s | exact |
+  | `few-cell-coils` | FewCellEvaporator, FewCellCondenser | four equal conductances: Kv ΔP/4 = 5 g/s, cells 5 kPa apart; wall heat = ṁ Δh, 792.9 W and 873.4 W | exact |
+
+  - **No engine or library finding.** Each dynamic example reads its results through `FinalValue`/`TimeAt`, and its outlets stay on their own side of the walls (few-cell evaporator 14.4 °C against 15 °C, condenser 32.1 °C against 30 °C, chamber 6.8 °C against 10 °C).
+  - **Gates (2026-11-19).** vitest 1,273/1,273 in 109 files, `check-docs` 771/771, `check-examples` 826/826 (2,955 assertions), lint 0 errors. Every new example solves with no unit warnings. No Rust source changed, so the workspace tests, parity and the module size are those of 3a.
+- **Programme complete.** Fluid 31/31, liquid 21/21, two-phase 47/47. One open item came out of it: the moving-boundary single-phase-zone law (3a), which waits on the owner.
+
 ### R15 usability pilot (Phase 4.4)
 
 Cards, answer key, thresholds and the pinned build are in [`R15_PILOT.md`](R15_PILOT.md) (signed 2026-09-12). Still to do: run five engineering participants through scalar solve (≤ 5 min), component chain (≤ 10 min) and missing-boundary recovery (≤ 3 min); record times, assistance and feedback. Never fabricate participant outcomes.

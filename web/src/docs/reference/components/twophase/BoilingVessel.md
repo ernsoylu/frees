@@ -3,7 +3,7 @@ name: BoilingVessel
 category: Component (twophase)
 summary: A rigid vessel boiling a two-phase fluid (rigid two-phase boil-off).
 related: []
-examples: [pressure-cooker]
+examples: [pressure-cooker, pressure-cooker-relief]
 tags: [boilingvessel, component, twophase, acausal]
 ---
 

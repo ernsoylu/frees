@@ -118,6 +118,12 @@ it.each<[string, Record<string, string>]>([
   ['blend-glide-mixing', { z_mix: '-', x_mix: '-', glide: 'K', T_bubble: 'K', T_dew: 'K' }],
   ['oil-circulation-degradation', { f_deg: '-', Q: 'W', mdot: 'kg/s' }],
   ['microturbine-recuperator', { T_cold_out: 'K', T_hot_out: 'K', Q: 'W', eff: '-' }],
+  ['pressure-cooker-relief', { t_crack: 's', P_end: 'Pa', m_end: 'kg', vent_end: 'kg/s' }],
+  ['steam-relief-valve-capacity', { mdot: 'kg/s', opening: '-' }],
+  ['suction-accumulator-carryover', { m_end: 'kg', mdot_out: 'kg/s' }],
+  ['two-phase-volume-charging', { P_end: 'Pa', m_end: 'kg' }],
+  ['two-phase-chamber-warm-up', { P_end: 'Pa', h_end: 'J/kg', T_end: 'K', Q_end: 'W' }],
+  ['few-cell-coils', { mdot_E: 'kg/s', mdot_C: 'kg/s', h_E: 'J/kg', h_C: 'J/kg', Q_E: 'W', Q_C: 'W' }],
 ])('%s solves with physical units and preserves its checked results', (id, units) => {
   const example = EXAMPLES.find(example => example.id === id)!
   const result = JSON.parse(solve(example.text, '{}'))

@@ -3,7 +3,7 @@ name: FewCellCondenser
 category: Component (twophase)
 summary: "Packaged 3-cell condenser: the same private-state C-R chain (heat leaves through the walls when they run colder than the refrigerant)."
 related: []
-examples: []
+examples: [few-cell-coils]
 tags: [fewcellcondenser, component, twophase, acausal]
 references: []
 ---
