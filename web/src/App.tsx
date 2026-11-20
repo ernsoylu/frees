@@ -2731,12 +2731,12 @@ export default function App() {
       if (ok) return 'workspace'
     } else if (res.parametricTables && res.parametricTables.length > 0) {
       // Auto-fallback: if the main block is not fully determined but there is a parametric
-      // sweep defined, the user likely intended to just "Solve Table".
-      const dto = res.parametricTables[0]
-      const overrideTbl = paramTableFromDto(dto)
-      const tableId = overrideTbl.id
-      dockRef.current?.openInstance(`table:${tableId}`, 'table', overrideTbl.name)
-      const ok = await checkThenSolveTable(tableId, overrideTbl)
+      // sweep defined, the user likely intended to just "Solve Table". The check
+      // already merged the block into the workbook; run that table, whose row
+      // ids the staleness guard compares, not a fresh copy of it.
+      const { id: tableId, name } = paramTableFromDto(res.parametricTables[0])
+      dockRef.current?.openInstance(`table:${tableId}`, 'table', name)
+      const ok = await checkThenSolveTable(tableId)
       if (ok) return 'table'
     }
   }
@@ -2747,11 +2747,9 @@ export default function App() {
     if (checking || solving) return
     const res = await onCheck()
     if (res && !res.solvable && res.parametricTables && res.parametricTables.length > 0) {
-      const dto = res.parametricTables[0]
-      const overrideTbl = paramTableFromDto(dto)
-      const tableId = overrideTbl.id
-      dockRef.current?.openInstance(`table:${tableId}`, 'table', overrideTbl.name)
-      void onCheckTable(tableId, overrideTbl)
+      const { id: tableId, name } = paramTableFromDto(res.parametricTables[0])
+      dockRef.current?.openInstance(`table:${tableId}`, 'table', name)
+      void onCheckTable(tableId)
     }
   }
 

@@ -509,7 +509,8 @@ function odeTableFromDto(dto: OdeTableDto): ParamTableSpec {
 }
 
 /** Replaces the code-sourced tables in the list with the freshly parsed set
- * from the latest solve/check, leaving GUI tables untouched. */
+ * from the latest solve/check, leaving GUI tables untouched. An unchanged
+ * PARAMETRIC block keeps its existing table, results included. */
 export function mergeCodeTables(
   existing: TableSpec[],
   functionDtos: FunctionTableDto[] | undefined,
@@ -518,7 +519,16 @@ export function mergeCodeTables(
 ): TableSpec[] {
   const guiTables = existing.filter((t) => t.source !== 'code')
   const codeFunctionTables = (functionDtos ?? []).map(functionTableFromDto)
-  const codeParamTables = (parametricDtos ?? []).map(paramTableFromDto)
+  // A block whose definition did not change keeps its table, so a table run's
+  // results survive the next Check or model Solve (each re-sends every block).
+  const codeParamTables = (parametricDtos ?? []).map((dto) => {
+    const fresh = paramTableFromDto(dto)
+    const kept = existing.find((t) => t.id === fresh.id && t.kind === 'parametric')
+    const same = kept?.kind === 'parametric'
+      && JSON.stringify(kept.vars) === JSON.stringify(fresh.vars)
+      && JSON.stringify(kept.rows.map((r) => r.values)) === JSON.stringify(fresh.rows.map((r) => r.values))
+    return same ? kept : fresh
+  })
   const codeOdeTables = odeDtos !== undefined
     ? odeDtos.map(odeTableFromDto)
     : existing.filter((t) => t.source === 'code' && t.kind === 'parametric' && t.origin === 'ode')

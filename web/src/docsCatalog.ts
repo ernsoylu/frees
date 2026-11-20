@@ -86,7 +86,7 @@ final_displacement = FinalValue('x')   { read back into the analytic solve }
   "optimization": `# Optimization & Parametric Sweeps
 
 ## Parametric sweeps
-A \`PARAMETRIC\` block drives one or more variables across a range. Variables listed in the header with a range are **driven** (overridden each run); the rest are **computed** outputs. Open the **Tables** tab and click **Solve Table** (not the main Solve) to fill it in.
+A \`PARAMETRIC\` block drives one or more variables across a range. Variables listed in the header with a range are **driven** (overridden each run); the rest are **computed** outputs. Open the **Tables** tab and click **Solve Table** to fill it in. When the model leaves a driven variable free, which is the usual case, **Solve** does the same: it opens the document's first \`PARAMETRIC\` table and runs it.
 
 \`\`\`
 PARAMETRIC sweep_name(var1, var2, ...)
