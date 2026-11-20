@@ -259,6 +259,25 @@ fn a_moving_boundary_superheat_zone_never_passes_its_wall() {
 }
 
 #[test]
+fn a_reversed_wall_adds_no_single_phase_duty() {
+    // An evaporator wall below Tsat, and a condenser wall above it, would make
+    // Enthalpy(T=wall.T) the other phase and the zone duty a latent heat that
+    // drives the outlet past the wall (review of #131). The zones carry none.
+    let v = values(
+        "TwoPhaseSource F(fluid$=R134a, mdot=0.02, P=300000, x=0.25)\n\
+         MovingBoundaryEvaporator E(fluid$=R134a, U_tp=2500, U_sh=200, D=0.01, L=12, eps_zone=0.01)\n\
+         TwoPhaseSink K()\nconnect(F.out, E.in)\nconnect(E.out, K.in)\nE.wall.T = 270\n\
+         TwoPhaseSourcePH G(mdot=0.02, P=900000, h=445000)\n\
+         MovingBoundaryCondenser C(fluid$=R134a, U_cond=2500, U_sc=300, D=0.01, L=8, eps_zone=0.01)\n\
+         TwoPhaseSink J()\nconnect(G.out, C.in)\nconnect(C.out, J.in)\nC.wall.T = 320\n",
+    );
+    assert_eq!(v["e$q_sh"], 0.0, "{v:?}");
+    assert_eq!(v["c$q_sc"], 0.0, "{v:?}");
+    // What remains is the smooth zone-length cap's milliwatts, not a latent heat.
+    assert!(v["e$q"].abs() < 0.01 && v["c$q"].abs() < 0.01, "{v:?}");
+}
+
+#[test]
 fn a_two_phase_pipe_connects_to_two_phase_boundaries() {
     let v = values(
         "TwoPhaseSourcePH S(mdot=0.05, P=500000, h=250000)\n\

@@ -115,7 +115,10 @@ port(wall)
   // once the zone's NTU exceeds 2). cp at saturated vapor sets the NTU.
   cp_sh     = Cp(fluid$, P=in.P, x=1)
   NTU_sh    = U_sh * pi# * D * L_sh * r_sh / (in.mdot * cp_sh)
-  Q_sh      = (1 - exp(-NTU_sh)) * in.mdot * (Enthalpy(fluid$, P=in.P, T=wall.T) - hg)
+  // A wall below Tsat cannot cool the vapor without condensing it, which this
+  // zone does not model: Enthalpy(T=wall.T) is then liquid, and the clamp keeps
+  // that latent jump out of the duty (continuous through wall.T = Tsat).
+  Q_sh      = (1 - exp(-NTU_sh)) * in.mdot * max(Enthalpy(fluid$, P=in.P, T=wall.T) - hg, 0)
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
   out.h     = in.h + (Q_tp + Q_sh) / in.mdot
   Q         = Q_tp + Q_sh
@@ -145,7 +148,8 @@ port(wall)
   // approaches the wall, never past it. cp at saturated liquid sets the NTU.
   cp_sc     = Cp(fluid$, P=in.P, x=0)
   NTU_sc    = U_sc * pi# * D * L_sc * r_sc / (in.mdot * cp_sc)
-  Q_sc      = (1 - exp(-NTU_sc)) * in.mdot * (hf - Enthalpy(fluid$, P=in.P, T=wall.T))
+  // A wall above Tsat would boil the liquid; clamped as in the evaporator.
+  Q_sc      = (1 - exp(-NTU_sc)) * in.mdot * max(hf - Enthalpy(fluid$, P=in.P, T=wall.T), 0)
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
   out.h     = in.h - (Q_cond + Q_sc) / in.mdot
   Q         = Q_cond + Q_sc
