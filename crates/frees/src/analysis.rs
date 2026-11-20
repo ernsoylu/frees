@@ -341,9 +341,19 @@ fn solve_table_inner(
                     }
                 }
                 let (rows, uncertainties) = variable_rows(&solution, system, &explicit_units);
+                // Lookup is case-insensitive but the grid reads cells by the
+                // header's spelling, so a table column is keyed as declared
+                // (`H`), not as the equations spell it (`h`).
                 let values: BTreeMap<String, f64> = rows
                     .iter()
-                    .map(|row| (row.name.clone(), row.value))
+                    .map(|row| {
+                        let name = table
+                            .vars
+                            .iter()
+                            .find(|v| v.eq_ignore_ascii_case(&row.name))
+                            .unwrap_or(&row.name);
+                        (name.clone(), row.value)
+                    })
                     .collect();
                 *slot = Some(RowSide {
                     success: true,
@@ -2156,5 +2166,15 @@ mod typed_boundary_tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn a_column_is_keyed_by_its_header_spelling() {
+        let request = r#"{"table":{"variables":["t","H"],"rows":[{"t":1},{"t":2}]}}"#;
+        let (legacy, _) = solve_table_inner("h = 2*t", request, false).unwrap();
+        assert_eq!(legacy["results"][1]["values"]["H"], 4.0);
+        let (typed, matrix) = solve_table_inner("h = 2*t", request, true).unwrap();
+        assert_eq!(typed["varNames"], json!(["t", "H"]));
+        assert_eq!(matrix.unwrap(), vec![1.0, 2.0, 2.0, 4.0]);
     }
 }

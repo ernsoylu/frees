@@ -244,7 +244,7 @@ pub struct Solution {
     pub plots: Vec<crate::parser::blocks::PlotDef>,
     /// The `PARAMETRIC … END` run-tables, in declaration order, carried off the
     /// same parse as `plots` so the frontend can list and run them.
-    pub parametric_tables: Vec<crate::parser::blocks::ParametricTable>,
+    pub parametric_tables: std::sync::Arc<Vec<crate::parser::blocks::ParametricTable>>,
 }
 
 /// Diagnostics captured at the point a block solve gave up — the Java
@@ -395,7 +395,7 @@ pub struct CheckReport {
     pub plots: Vec<crate::parser::blocks::PlotDef>,
     /// The `PARAMETRIC … END` run-tables, in declaration order, carried off the
     /// same parse as `plots` so the frontend can list and run them.
-    pub parametric_tables: Vec<crate::parser::blocks::ParametricTable>,
+    pub parametric_tables: std::sync::Arc<Vec<crate::parser::blocks::ParametricTable>>,
     /// Connection topology for the schematic — the same payload Solve reports,
     /// so Check can draw and validate wiring without a solve.
     pub connections: Vec<crate::components::expander::Connection>,
@@ -3055,7 +3055,7 @@ fn syntax_failure_report(source: &str, err: &FreesError) -> CheckReport {
         diagnostics: vec![diagnostic],
         // A document that did not parse declares nothing.
         plots: Vec::new(),
-        parametric_tables: Vec::new(),
+        parametric_tables: Default::default(),
         ports: Vec::new(),
         connections: Vec::new(),
         instances: Vec::new(),

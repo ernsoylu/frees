@@ -329,7 +329,7 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Parametric => {
                 let table = self.parametric_def()?;
-                doc.blocks.parametric_tables.push(table);
+                std::sync::Arc::make_mut(&mut doc.blocks.parametric_tables).push(table);
             }
             TokenKind::Plot => {
                 let plot = self.plot_def()?;
