@@ -1143,22 +1143,22 @@ P_cond   = CMP.out.P
 T_cond   = COND.Tsat
 P_evap   = CMP.in.P
 
-{ CHECK P_cond 1274424.8019865463 12.7 }
-{ CHECK P_evap 275282.55639227864 2.75 }
-{ CHECK Q_heat 2529.830577083907 0.0253 }
-{ CHECK T_hot 312.3526362946179 0.00312 }
-{ CHECK COP_h 3.8747809709646104 3.87e-05 }
+{ CHECK P_cond 1282785.417673716 12.8 }
+{ CHECK P_evap 275533.51843606815 2.76 }
+{ CHECK Q_heat 2529.3627993590853 0.0253 }
+{ CHECK T_hot 312.34815872801204 0.00312 }
+{ CHECK COP_h 3.8564543475330524 3.86e-05 }
 ```
 
 ### Key results
 
 | Quantity | Variable | Value |
 | --- | --- | --- |
-| Condensing pressure | `P_cond` | 1.274e+06 Pa |
-| Evaporating pressure | `P_evap` | 2.753e+05 Pa |
-| Heating duty | `Q_heat` | 2,529.8 W |
+| Condensing pressure | `P_cond` | 1.283e+06 Pa |
+| Evaporating pressure | `P_evap` | 2.755e+05 Pa |
+| Heating duty | `Q_heat` | 2,529.4 W |
 | Delivered water | `T_hot` | 312.4 K |
-| Heating COP | `COP_h` | 3.875  |
+| Heating COP | `COP_h` | 3.856  |
 
 ## Optimization
 
@@ -1169,7 +1169,7 @@ Maximise heating COP while delivering water at 45 °C or hotter.
 | Maximize | `COP_h` |
 | Independent variable | `mdot_w` in [0.017, 0.024] |
 | Constraints | `T_hot >= 318.15` |
-| **Optimum** | `mdot_w` = **0.0201**, `COP_h` = **3.575** |
+| **Optimum** | `mdot_w` = **0.0201**, `COP_h` = **3.558** |
 
 In the app: delete (or comment out) the `mdot_w = …` line so `mdot_w` is free, then use **Tools → Optimization…** with the settings above. The request below is the same run, executed and asserted by the documentation gate:
 
@@ -1196,12 +1196,12 @@ In the app: delete (or comment out) the `mdot_w = …` line so `mdot_w` is free,
   "checks": [
     {
       "path": "decisions.0.value",
-      "value": 0.02009531850507483,
+      "value": 0.020090207750319777,
       "tolerance": 4.02e-05
     },
     {
       "path": "objective.value",
-      "value": 3.5747259416647834,
+      "value": 3.5583438329610884,
       "tolerance": 0.00715
     }
   ]

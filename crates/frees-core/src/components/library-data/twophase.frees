@@ -82,7 +82,8 @@ end
 // floored at 0 (the C¹ max `½(x+√(x²+ε²))`) and its heat transfer is gated by
 // `zone_ramp(L,ε)=tanh(L/ε)`, so a collapsing zone fades to an inert passthrough
 // (out.h → the saturation enthalpy) instead of producing a singular UA — no NaN,
-// the integrator steps straight through. The wall port couples to a fixed
+// the integrator steps straight through. The single-phase zone runs on ε-NTU
+// from saturation toward the wall. The wall port couples to a fixed
 // `ThermalSource` (steady) or a `ThermalMass` (transient warm-up on method=ida).
 // HTCs are effective per-zone U-values (PARAM); compute them from the shipped
 // chen_*/nu_* correlations for a regime-resolved design.
@@ -108,8 +109,17 @@ port(wall)
   Q_tp      = U_tp * pi# * D * L_tp * (wall.T - Tsat)
   L_sh      = L - L_tp
   r_sh      = zone_ramp(L_sh, eps_zone)
+  // superheat zone by ε-NTU: the vapor enters at Tsat and approaches the wall,
+  // so Q_sh is that fraction of the enthalpy rise to the wall temperature and
+  // the outlet can never pass the wall (a mean-temperature driving force does
+  // once the zone's NTU exceeds 2). cp at saturated vapor sets the NTU.
+  cp_sh     = Cp(fluid$, P=in.P, x=1)
+  NTU_sh    = U_sh * pi# * D * L_sh * r_sh / (in.mdot * cp_sh)
+  // A wall below Tsat cannot cool the vapor without condensing it, which this
+  // zone does not model: Enthalpy(T=wall.T) is then liquid, and the clamp keeps
+  // that latent jump out of the duty (continuous through wall.T = Tsat).
+  Q_sh      = (1 - exp(-NTU_sh)) * in.mdot * max(Enthalpy(fluid$, P=in.P, T=wall.T) - hg, 0)
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
-  Q_sh      = U_sh * pi# * D * L_sh * (wall.T - 0.5 * (Tsat + T_out)) * r_sh
   out.h     = in.h + (Q_tp + Q_sh) / in.mdot
   Q         = Q_tp + Q_sh
   wall.Qdot = Q
@@ -134,8 +144,13 @@ port(wall)
   Q_cond    = U_cond * pi# * D * L_cond * (Tsat - wall.T)
   L_sc      = L - L_cond
   r_sc      = zone_ramp(L_sc, eps_zone)
+  // subcool zone by ε-NTU (see the evaporator): the liquid enters at Tsat and
+  // approaches the wall, never past it. cp at saturated liquid sets the NTU.
+  cp_sc     = Cp(fluid$, P=in.P, x=0)
+  NTU_sc    = U_sc * pi# * D * L_sc * r_sc / (in.mdot * cp_sc)
+  // A wall above Tsat would boil the liquid; clamped as in the evaporator.
+  Q_sc      = (1 - exp(-NTU_sc)) * in.mdot * max(hf - Enthalpy(fluid$, P=in.P, T=wall.T), 0)
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
-  Q_sc      = U_sc * pi# * D * L_sc * (0.5 * (Tsat + T_out) - wall.T) * r_sc
   out.h     = in.h - (Q_cond + Q_sc) / in.mdot
   Q         = Q_cond + Q_sc
   wall.Qdot = -Q

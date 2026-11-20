@@ -12,6 +12,12 @@
       "measured": 4.43e-6,
       "mechanism": "rustprop-transcendentals-glibc-vs-wasm32-libm",
       "reason": "ode23s transient (4000 s, 400 rows) of a five-domain closed loop: BatteryPack -> LiquidWallHX cold plate -> Chiller (MovingBoundaryEvaporator, R134a) -> EXVCmd under a clamped PID. Its golden was regenerated natively on 2026-10-21 (LiquidWallHX exact isothermal-wall law), so native replay is exact; wasm32 resolves rustprop's exp/ln/powf through compiler-rt/libm instead of glibc, and the 1-ulp property differences integrate through the PID loop. The worst cell is ch.ev$l_tp at row 45 (diff 4.20e-6 m on a column scale of 0.948, 4.43e-6), where the evaporator's smooth-min zone-length corner amplifies them; the solved scalars agree to 1.8e-11. Before the regeneration this fixture carried a 3.6e-6 rustprop-vs-Java relaxation that absorbed the same effect."
+    },
+    "moving-boundary-hx-transient-warmup-births-superheat-zone-on-ida": {
+      "relative": 4e-5,
+      "measured": 2.96e-5,
+      "mechanism": "rustprop-transcendentals-glibc-vs-wasm32-libm",
+      "reason": "IDA transient (60 s, 40 rows): a ThermalMass wall warms a MovingBoundaryEvaporator until its superheat zone is born through zone_ramp. Its golden was regenerated natively on 2026-11-19 (epsilon-NTU single-phase zone law), so native replay is exact; wasm32 resolves rustprop's exp/ln/powf through compiler-rt/libm instead of glibc, the ulp differences move IDA's adaptive steps near the zone birth, and the interpolated ev$sh rows differ by up to 3.5e-4 K (2.96e-5 of the 11.85 K column scale) with alternating sign, while the final values agree to 3.1e-6. Before the regeneration this fixture's 2.4e-5 Java tolerance covered the same spread."
     }
   }
 }
