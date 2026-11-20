@@ -29511,7 +29511,7 @@ l_{sc} &= l - l_{cond} \\\\
 r_{sc} &= \\text{zone\\_ramp}\\left(l_{sc}, eps_{zone}\\right) \\\\
 cp_{sc} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
 ntu_{sc} &= \\frac{u_{sc}\\cdot 3.141592653589793\\cdot d\\cdot l_{sc}\\cdot r_{sc}}{in.mdot\\cdot cp_{sc}} \\\\
-q_{sc} &= \\left(1 - \\text{exp}\\left(-ntu_{sc}\\right)\\right)\\cdot in.mdot\\cdot \\left(hf - \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=wall.t\\right)\\right) \\\\
+q_{sc} &= \\left(1 - \\text{exp}\\left(-ntu_{sc}\\right)\\right)\\cdot in.mdot\\cdot \\text{max}\\left(hf - \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=wall.t\\right), 0\\right) \\\\
 t_{out} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right) \\\\
 out.h &= in.h - \\frac{q_{cond} + q_{sc}}{in.mdot} \\\\
 q &= q_{cond} + q_{sc} \\\\
@@ -29608,7 +29608,7 @@ l_{sh} &= l - l_{tp} \\\\
 r_{sh} &= \\text{zone\\_ramp}\\left(l_{sh}, eps_{zone}\\right) \\\\
 cp_{sh} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 ntu_{sh} &= \\frac{u_{sh}\\cdot 3.141592653589793\\cdot d\\cdot l_{sh}\\cdot r_{sh}}{in.mdot\\cdot cp_{sh}} \\\\
-q_{sh} &= \\left(1 - \\text{exp}\\left(-ntu_{sh}\\right)\\right)\\cdot in.mdot\\cdot \\left(\\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=wall.t\\right) - hg\\right) \\\\
+q_{sh} &= \\left(1 - \\text{exp}\\left(-ntu_{sh}\\right)\\right)\\cdot in.mdot\\cdot \\text{max}\\left(\\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=wall.t\\right) - hg, 0\\right) \\\\
 t_{out} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right) \\\\
 out.h &= in.h + \\frac{q_{tp} + q_{sh}}{in.mdot} \\\\
 q &= q_{tp} + q_{sh} \\\\
