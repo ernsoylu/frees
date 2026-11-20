@@ -379,13 +379,13 @@ export async function check(
       errorLine: data.errorLine ?? null,
       errors: data.errors ?? [],
       diagnosis: data.diagnosis ?? null,
-      // PLOT blocks reach the boundary (Phase 9), so the Plots tab populates
-      // from a Check as well as from a Solve. The rest are not produced by the
-      // wasm boundary yet; the App.tsx call sites treat empty collections as
-      // "the document declares none".
+      // PLOT and PARAMETRIC blocks reach the boundary, so the Plots and Tables
+      // windows populate from a Check as well as from a Solve. Code TABLE and
+      // STATE TABLE blocks are not produced by the wasm boundary yet; the
+      // App.tsx call sites treat empty collections as "the document declares none".
       definedPlots: data.definedPlots ?? [],
       codeTables: [],
-      parametricTables: [],
+      parametricTables: data.parametricTables ?? [],
       stateTableDefs: [],
       connections: data.connections ?? [],
       ports: data.ports ?? [],

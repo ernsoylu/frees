@@ -46,3 +46,14 @@ it('rejects invalid log domains atomically and records valid interpolation witho
   expect(() => fillMissingCells({ ...table, rows: [{ x: '1', ys: ['-1'] }, ...rows.slice(1)] })).toThrow('row 1, curve 1')
   expect(rows[1].ys[0]).toBe('')
 })
+
+it('keeps an unchanged PARAMETRIC block, results included, and refreshes a changed one', () => {
+  const dto = { name: 'Traj', vars: ['t', 'h'], rows: [[0, null], [0.5, null]] }
+  const [first] = mergeCodeTables([], [], [dto])
+  const solved = { ...first, results: [{ marker: 1 }] } as unknown as typeof first
+  const [again] = mergeCodeTables([solved], [], [dto])
+  expect(again).toBe(solved)
+  const [edited] = mergeCodeTables([solved], [], [{ ...dto, rows: [[0, null], [1, null]] }])
+  expect(edited).not.toBe(solved)
+  expect(edited.kind === 'parametric' && edited.results).toEqual([])
+})

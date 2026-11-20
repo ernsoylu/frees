@@ -1241,6 +1241,9 @@ fn solve_success(
             // through `plotDefToSpec`, so this is what makes a declared plot
             // render.
             "definedPlots": plot_defs(&solution.plots),
+            // One entry per `PARAMETRIC … END` block, shaped as
+            // `ParametricTableDto`; the Tables window lists and runs it.
+            "parametricTables": parametric_defs(&solution.parametric_tables),
             "registeredCalls": solution
                 .registered_calls
                 .iter()
@@ -1315,6 +1318,15 @@ fn plot_defs(plots: &[frees_core::parser::blocks::PlotDef]) -> Vec<Value> {
                 .collect();
             json!({ "name": plot.name, "attributes": attributes })
         })
+        .collect()
+}
+
+/// `parametricTables[]`: `{name, vars, rows}`, a `null` cell where a declared
+/// variable has no column (an output the row's solve fills in).
+fn parametric_defs(tables: &[frees_core::parser::blocks::ParametricTable]) -> Vec<Value> {
+    tables
+        .iter()
+        .map(|t| json!({ "name": t.name, "vars": t.vars, "rows": t.rows }))
         .collect()
 }
 
@@ -1663,6 +1675,9 @@ fn check_response(report: &CheckReport, source: Option<&str>) -> String {
         // what lets the Plots tab populate before the first solve —
         // `App.tsx`'s `result?.definedPlots ?? checkResult?.definedPlots`.
         "definedPlots": plot_defs(&report.plots),
+        // Check reports them too: an underspecified model falls back to its
+        // first code-defined table (`checkWithFallback` in App.tsx).
+        "parametricTables": parametric_defs(&report.parametric_tables),
         "registeredCalls": report
             .registered_calls
             .iter()
@@ -1746,6 +1761,7 @@ fn check_failure(message: String) -> String {
         "errorLine": null,
         "errors": [],
         "definedPlots": [],
+        "parametricTables": [],
         "connections": [],
         "ports": [],
         "instances": [],
@@ -2238,6 +2254,27 @@ mod tests {
             assert_eq!(attributes["xlabel"], serde_json::json!(["Speed"]), "{v}");
             assert_eq!(attributes["logx"], serde_json::json!(["true"]), "{v}");
         }
+    }
+
+    /// `PARAMETRIC … END` reaches the frontend as `ParametricTableDto`, from a
+    /// Check of the underspecified model (its fallback) and from a Solve.
+    #[test]
+    fn a_declared_parametric_table_reaches_the_frontend() {
+        let table = serde_json::json!([{
+            "name": "Traj",
+            "vars": ["t", "h"],
+            "rows": [[0.0, null], [0.5, null], [1.0, null]],
+        }]);
+        let open = "h = 10 * t - 4.905 * t^2\nPARAMETRIC Traj (t, h)\n  t = 0:0.5:1\nEND\n";
+        let v = parsed(&check(open, "{}"));
+        assert_eq!(v["solvable"], false, "{v}");
+        assert_eq!(v["parametricTables"], table, "{v}");
+        let v = parsed(&solve(&format!("t = 1\n{open}"), "{}"));
+        assert_eq!(v["parametricTables"], table, "{v}");
+        assert_eq!(
+            parsed(&check("x = 1\n", "{}"))["parametricTables"],
+            serde_json::json!([])
+        );
     }
 
     #[test]

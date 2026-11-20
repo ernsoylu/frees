@@ -235,7 +235,8 @@ pub struct LinearizeSystem {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct DeclarativeBlocks {
     /// `PARAMETRIC … END` run-tables, in declaration order.
-    pub parametric_tables: Vec<ParametricTable>,
+    /// Shared, so a sweep's per-row `Solution` clones a pointer, not the grid.
+    pub parametric_tables: std::sync::Arc<Vec<ParametricTable>>,
     /// `PLOT '…' … END` graphs, in declaration order.
     pub plots: Vec<PlotDef>,
     /// `STATE TABLE … END` circuits, in declaration order.
@@ -327,7 +328,7 @@ mod tests {
     #[test]
     fn state_tables_answer_which_fluid_owns_a_state_point() {
         let blocks = DeclarativeBlocks {
-            parametric_tables: vec![table()],
+            parametric_tables: vec![table()].into(),
             plots: Vec::new(),
             state_tables: vec![
                 StateTableDef {

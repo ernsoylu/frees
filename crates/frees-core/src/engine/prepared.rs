@@ -589,6 +589,7 @@ impl PreparedDocument {
                 uncertainty_distributions: BTreeMap::new(),
                 uncertainty_correlations: Default::default(),
                 plots: self.doc.blocks.plots.clone(),
+                parametric_tables: self.doc.blocks.parametric_tables.clone(),
             });
         }
 
@@ -867,6 +868,7 @@ impl PreparedDocument {
             uncertainty_correlations: propagation.correlations,
             uncertainty_contributions: propagation.contributions,
             plots: doc.blocks.plots.clone(),
+            parametric_tables: doc.blocks.parametric_tables.clone(),
         })
     }
 

@@ -332,9 +332,9 @@ T = T0 - drop            { temperature after 30 s }`,
     featured: true,
     text: `// Projectile Trajectory (parametric time sweep)
 { The whole flight path, sampled in time. This uses a PARAMETRIC
-  table, so do NOT use the main Solve — open the Tables tab and
-  click "Solve Table". The base system is underspecified by one on
-  purpose: t is the swept column the table fills in.
+  table: the base system is underspecified by one on purpose, t
+  being the swept column the table fills in, so Solve opens the
+  table and runs it (Solve Table in the Tables tab does the same).
 
   Variables listed in the header with no range (time, x, y, vx, vy,
   v) become solved OUTPUT columns. Afterward, chart y vs x (the arc)
@@ -364,8 +364,8 @@ END`,
     category: 'Mechanics',
     text: `// Damped Harmonic Oscillator (parametric time sweep)
 { Free vibration of a mass-spring-damper, released from x0 at rest,
-  sampled in time. PARAMETRIC table: open the Tables tab and click
-  "Solve Table" (not the main Solve). Then chart x vs time, adding
+  sampled in time. PARAMETRIC table: Solve opens the table and runs
+  it, as Solve Table does. Then chart x vs time, adding
   env and -env to see the decay envelope. }
 m = 2 [kg]               { mass }
 k = 50 [N/m]             { stiffness }
@@ -1126,8 +1126,8 @@ delta = F * L^3 / (3 * E * I)        { objective 2: tip deflection, minimize }`,
     category: 'Powertrain',
     text: `// Driving-Cycle Energy
 { Tractive power over a speed profile, integrated to total energy.
-  This uses a PARAMETRIC table, so do NOT use the main Solve — open
-  the Tables tab and click "Solve Table". E_total and P_avg are
+  This uses a PARAMETRIC table: the base system leaves the speed
+  free, so Solve opens the table and runs it. E_total and P_avg are
   whole-table aggregates (the same in every row), computed by the
   parametric accessor pass. }
 m = 1500 [kg]

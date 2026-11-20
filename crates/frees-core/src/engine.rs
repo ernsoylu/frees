@@ -242,6 +242,9 @@ pub struct Solution {
     /// only so the frontend can render it. Carried forward off the one parse
     /// rather than re-parsed at the boundary (the Java re-parses `cleanText`).
     pub plots: Vec<crate::parser::blocks::PlotDef>,
+    /// The `PARAMETRIC … END` run-tables, in declaration order, carried off the
+    /// same parse as `plots` so the frontend can list and run them.
+    pub parametric_tables: std::sync::Arc<Vec<crate::parser::blocks::ParametricTable>>,
 }
 
 /// Diagnostics captured at the point a block solve gave up — the Java
@@ -390,6 +393,9 @@ pub struct CheckReport {
     /// frontend's `result?.definedPlots ?? checkResult?.definedPlots` fallback
     /// is for.
     pub plots: Vec<crate::parser::blocks::PlotDef>,
+    /// The `PARAMETRIC … END` run-tables, in declaration order, carried off the
+    /// same parse as `plots` so the frontend can list and run them.
+    pub parametric_tables: std::sync::Arc<Vec<crate::parser::blocks::ParametricTable>>,
     /// Connection topology for the schematic — the same payload Solve reports,
     /// so Check can draw and validate wiring without a solve.
     pub connections: Vec<crate::components::expander::Connection>,
@@ -2081,6 +2087,7 @@ pub fn check_with_tables_complex(
                 unit_warnings: Vec::new(),
                 diagnostics: check_diagnostics,
                 plots: doc.blocks.plots.clone(),
+                parametric_tables: doc.blocks.parametric_tables.clone(),
                 connections: layer_connections,
                 ports: layer_ports,
                 instances: identities.0.clone(),
@@ -2118,6 +2125,7 @@ pub fn check_with_tables_complex(
             unit_warnings: merge_advisory_warnings(unit_report.warnings, &check_diagnostics),
             diagnostics: check_diagnostics,
             plots: doc.blocks.plots.clone(),
+            parametric_tables: doc.blocks.parametric_tables.clone(),
             connections: layer_connections.clone(),
             ports: layer_ports.clone(),
             instances: identities.0.clone(),
@@ -2173,6 +2181,7 @@ pub fn check_with_tables_complex(
         unit_warnings: merge_advisory_warnings(unit_report.warnings, &diagnostics),
         diagnostics,
         plots: doc.blocks.plots.clone(),
+        parametric_tables: doc.blocks.parametric_tables.clone(),
         connections: layer_connections,
         ports: layer_ports,
         instances: identities.0,
@@ -3046,6 +3055,7 @@ fn syntax_failure_report(source: &str, err: &FreesError) -> CheckReport {
         diagnostics: vec![diagnostic],
         // A document that did not parse declares nothing.
         plots: Vec::new(),
+        parametric_tables: Default::default(),
         ports: Vec::new(),
         connections: Vec::new(),
         instances: Vec::new(),
