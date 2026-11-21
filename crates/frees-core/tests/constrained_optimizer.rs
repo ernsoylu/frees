@@ -125,3 +125,55 @@ fn solve_count_reduction_benchmark() {
     );
     assert!(evals > 50, "evals = {}", evals);
 }
+
+#[test]
+fn one_decision_refines_with_brent_after_the_first_pass() {
+    // The default method on one decision: the simplex opens the barrier loop,
+    // Brent refines every later pass from the last point. In engineering
+    // units (a range of 0.005 kg/s, or 5e6 Pa) the simplex's fixed unit start
+    // step is far off scale and spends over twice the solves.
+    for scale in [1e-3, 1e6] {
+        let text = format!("f = ((x - {}) / {scale})^2\n", 3.0 * scale);
+        let constraint = format!("x <= {}", 2.0 * scale);
+        let brent = Problem {
+            method: None,
+            ..make_problem(&text, "f", &["x"], &[0.0], &[5.0 * scale], &[&constraint])
+        };
+        let simplex = Problem {
+            method: Some("nelder-mead".to_string()),
+            ..brent.clone()
+        };
+        let fast = optimize(&brent).unwrap();
+        let slow = optimize(&simplex).unwrap();
+        assert!(fast.warning.is_none(), "{:?}", fast.warning);
+        let x = fast.decision_values[0] / scale;
+        assert!((x - 2.0).abs() < 1e-4, "scale {scale}: x = {x}");
+        assert!(
+            fast.evaluations * 2 < slow.evaluations,
+            "scale {scale}: {} vs {}",
+            fast.evaluations,
+            slow.evaluations
+        );
+    }
+}
+
+#[test]
+fn one_decision_far_from_zero_still_meets_its_equality() {
+    // Brent's tolerance must follow the box, not |x|: at x ~ 1e12 a relative
+    // tolerance spans the whole range and every later pass stops at once.
+    let p = Problem {
+        method: None,
+        ..make_problem(
+            "f = (x - 1000000000003)^2\n",
+            "f",
+            &["x"],
+            &[1_000_000_000_000.0],
+            &[1_000_000_000_005.0],
+            &["x - 1000000000000 = 2"],
+        )
+    };
+    let result = optimize(&p).unwrap();
+    assert!(result.warning.is_none(), "{:?}", result.warning);
+    let offset = result.decision_values[0] - 1_000_000_000_000.0;
+    assert!((offset - 2.0).abs() < 1e-3, "offset = {offset}");
+}
