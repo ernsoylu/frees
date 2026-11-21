@@ -25,6 +25,15 @@
 //! | anything else (`"simplex"`, `"nelder-mead"`, …) | `SimplexOptimizer(1e-10, 1e-12)` + `NelderMeadSimplex(n)` | [`nelder_mead`] — a full port |
 //! | `"bobyqa"`, two or more decisions | `BOBYQAOptimizer(2n+1)` | [`super::bobyqa`] — a full port |
 //!
+//! ## One constrained decision (departs from the Java)
+//!
+//! The Java runs the simplex on every barrier pass. Here, with one decision and
+//! the default method, only the first pass is the simplex; each later pass is
+//! Brent, started at and bracketed around the last pass's point. Each pass also
+//! starts with the last pass's solution as the warm fallback for a failed probe.
+//! The simplex's fixed unit start step is far off scale for decisions such as a
+//! mass flow in kg/s or a pressure in Pa, and it spent over twice the solves.
+//!
 //! ## One-variable BOBYQA
 //!
 //! Commons' BOBYQA refuses fewer than two variables. A one-decision `"bobyqa"`
@@ -448,6 +457,9 @@ fn unconstrained_optimize(problem: &Problem) -> Result<OptimizeResult> {
             &mut ctx,
             problem.lowers[0],
             problem.uppers[0],
+            problem.lowers[0] + 0.5 * (problem.uppers[0] - problem.lowers[0]),
+            0.0,
+            BRENT_ABSOLUTE_THRESHOLD,
             !problem.maximize,
         )
         // Java lets both exceptions escape the 1-D path (there is no catch
@@ -470,7 +482,20 @@ fn unconstrained_optimize(problem: &Problem) -> Result<OptimizeResult> {
             warning: None,
         });
     }
-    multivariate_optimize(&mut prep, problem, &[], "", &[], 0.0, &[], 0.0, None, None)
+    multivariate_optimize(
+        &mut prep,
+        problem,
+        &[],
+        "",
+        &[],
+        0.0,
+        &[],
+        0.0,
+        None,
+        None,
+        None,
+        None,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -519,7 +544,29 @@ fn constrained_optimize(problem: &Problem) -> Result<OptimizeResult> {
     let mut total_evaluations = 0usize;
     let mut last_inner: Option<OptimizeResult> = None;
 
-    for _outer in 0..CONSTRAINED_MAX_OUTER_ITERATIONS {
+    let mut last_step = f64::INFINITY;
+    // The last pass's solution: a probe that fails from the document's own
+    // guesses is retried from it, as within a pass. Without it each pass
+    // starts cold, and a closed loop that solves only near a converged
+    // neighbour fails at the very point the last pass returned.
+    let mut warm_values: Option<crate::eval::Scope> = None;
+    for outer in 0..CONSTRAINED_MAX_OUTER_ITERATIONS {
+        // One decision: the first pass is the simplex, which explores the whole
+        // range; each later pass is Brent from the last pass's point, which
+        // only refines it toward the constraint. That is where the simplex
+        // spent most of its solves, bouncing off the bounds. Departs from the
+        // Java, which runs the simplex on every pass.
+        //
+        // ponytail: Brent's bracket is ten times the last pass's move, so its
+        // probes stay near the branch the simplex found rather than sampling
+        // the whole range (a closed loop can converge on another root far
+        // away). Widen the factor if a pass ever ends on the bracket edge.
+        let brent_from =
+            (problem.decisions.len() == 1 && problem.is_brent() && outer > 0).then(|| {
+                let (lo, hi, x) = (problem.lowers[0], problem.uppers[0], best_point[0]);
+                let half = (10.0 * last_step).max(1e-3 * (hi - lo));
+                [jmax(lo, x - half), x, jmin(hi, x + half)]
+            });
         let inner = multivariate_optimize(
             &mut prep,
             problem,
@@ -531,6 +578,8 @@ fn constrained_optimize(problem: &Problem) -> Result<OptimizeResult> {
             rho,
             Some(&lambda),
             Some(&best_point),
+            brent_from,
+            warm_values.take(),
         )?;
 
         // How far this pass moved the decisions (relative), before overwriting.
@@ -540,6 +589,15 @@ fn constrained_optimize(problem: &Problem) -> Result<OptimizeResult> {
             .zip(&best_point)
             .map(|(new, old)| (new - old).abs() / old.abs().max(1e-12))
             .fold(0.0f64, f64::max);
+        last_step = (inner.decision_values[0] - best_point[0]).abs();
+        warm_values = Some(
+            inner
+                .solution
+                .values
+                .iter()
+                .map(|(k, v)| (k.clone(), *v))
+                .collect(),
+        );
         best_point = inner.decision_values.clone();
         total_evaluations += inner.evaluations;
 
@@ -671,9 +729,12 @@ fn multivariate_optimize(
     rho: f64,
     lambda: Option<&[f64]>,
     warm_start: Option<&[f64]>,
+    brent_from: Option<[f64; 3]>,
+    warm_values: Option<crate::eval::Scope>,
 ) -> Result<OptimizeResult> {
     let n = problem.decisions.len();
     let mut ctx = Ctx::new(problem, prep, con_var_prefix, MULTIVARIATE_MAX_EVALUATIONS);
+    ctx.warm = warm_values;
     ctx.penalty = if inequalities.is_empty() && equalities.is_empty() {
         None
     } else {
@@ -747,6 +808,23 @@ fn multivariate_optimize(
                 )))
             }
         }
+    } else if let Some([lo, start, hi]) = brent_from {
+        // Offset coordinates around the last point, with a threshold that
+        // follows the box: Brent's relative term on |x| would otherwise span
+        // the whole bracket for a decision far from zero (x ~ 1e12 on a range
+        // of 5), and every pass would stop where it started.
+        let absolute = BRENT_RELATIVE_THRESHOLD * (problem.uppers[0] - problem.lowers[0])
+            + 4.0 * f64::EPSILON * start.abs();
+        brent_optimize(
+            &mut ctx,
+            lo - start,
+            hi - start,
+            0.0,
+            start,
+            absolute,
+            !problem.maximize,
+        )
+        .map(|x| vec![x])
     } else {
         nelder_mead(&mut ctx, &guess, !problem.maximize)
     };
@@ -1160,8 +1238,20 @@ const GOLDEN_SECTION: f64 = 0.381_966_011_250_105_15;
 ///
 /// No user convergence checker is installed (`BrentOptimizer(rel, abs)` passes
 /// `null`), so the loop terminates only on Brent's own criterion.
-fn brent_optimize(ctx: &mut Ctx<'_>, lo: f64, hi: f64, minimize: bool) -> EvalResult {
-    let mid = lo + 0.5 * (hi - lo);
+///
+/// The search runs in coordinates offset by `origin` (the probe is
+/// `origin + x`) with `absolute` as Brent's absolute threshold. The Java path
+/// passes `0.0` and [`BRENT_ABSOLUTE_THRESHOLD`], which changes nothing.
+fn brent_optimize(
+    ctx: &mut Ctx<'_>,
+    lo: f64,
+    hi: f64,
+    start: f64,
+    origin: f64,
+    absolute: f64,
+    minimize: bool,
+) -> EvalResult {
+    let mid = start;
 
     let (mut a, mut b) = if lo < hi { (lo, hi) } else { (hi, lo) };
 
@@ -1170,7 +1260,7 @@ fn brent_optimize(ctx: &mut Ctx<'_>, lo: f64, hi: f64, minimize: bool) -> EvalRe
     let mut w = x;
     let mut d = 0.0f64;
     let mut e = 0.0f64;
-    let mut fx = ctx.budgeted(&[x])?;
+    let mut fx = ctx.budgeted(&[origin + x])?;
     if !minimize {
         fx = -fx;
     }
@@ -1183,13 +1273,13 @@ fn brent_optimize(ctx: &mut Ctx<'_>, lo: f64, hi: f64, minimize: bool) -> EvalRe
 
     loop {
         let m = 0.5 * (a + b);
-        let tol1 = BRENT_RELATIVE_THRESHOLD * x.abs() + BRENT_ABSOLUTE_THRESHOLD;
+        let tol1 = BRENT_RELATIVE_THRESHOLD * x.abs() + absolute;
         let tol2 = 2.0 * tol1;
 
         let stop = (x - m).abs() <= tol2 - 0.5 * (b - a);
         if stop {
             let candidate = (x, if minimize { fx } else { -fx });
-            return Ok(better_of(best, candidate, minimize).0);
+            return Ok(origin + better_of(best, candidate, minimize).0);
         }
 
         let mut u;
@@ -1235,7 +1325,7 @@ fn brent_optimize(ctx: &mut Ctx<'_>, lo: f64, hi: f64, minimize: bool) -> EvalRe
             u = x + d;
         }
 
-        let mut fu = ctx.budgeted(&[u])?;
+        let mut fu = ctx.budgeted(&[origin + u])?;
         if !minimize {
             fu = -fu;
         }
