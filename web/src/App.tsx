@@ -1719,6 +1719,30 @@ export default function App() {
     [applyProject, adoptFileHandle],
   )
 
+  // Every slice a document owns, emptied. New Project and Load Example both
+  // start here, so nothing the last document pinned (sliders, scenarios, a
+  // baseline, a lesson) survives into the next one; `applyProject` sets the
+  // same slices from the opened file.
+  function clearDocumentState() {
+    setVarDrafts({})
+    setStateUnitIds({})
+    setTables([])
+    setPlots([])
+    spreadsheetsRef.current = []
+    analyzersRef.current = []
+    setPinnedSliders([])
+    setScenarios(EMPTY_SCENARIOS)
+    setScenarioHistory({ done: [], undone: [] })
+    setScenarioStale(false)
+    setBaseline(null)
+    setSchematic(EMPTY_PRESENTATION)
+    setLoadNotice(null)
+    setResult(null)
+    setCheckResult(null)
+    setLastSolvedWithFillMissing(false)
+    setLesson(null)
+  }
+
   const performNewProject = useCallback(() => {
     projectSourceRef.current = null
     setSaveWhere(null)
@@ -1746,15 +1770,7 @@ export default function App() {
       dockLayout: null,
     })
     applyText(EXAMPLE)
-    setVarDrafts({})
-    setStateUnitIds({})
-    setTables([])
-    setPlots([])
-    spreadsheetsRef.current = []
-    analyzersRef.current = []
-    setSchematic(EMPTY_PRESENTATION)
-    setResult(null)
-    setCheckResult(null)
+    clearDocumentState()
     setProjectName('untitled')
     setWorkspaceEpoch((e) => e + 1)
     requestAnimationFrame(() => dockRef.current?.reset())
@@ -1936,16 +1952,7 @@ export default function App() {
     // I4: an embed leaves the visitor's stored workspace exactly as it was.
     if (!EMBED.embed) persistLoadedExample(example)
     applyText(example.text)
-    setVarDrafts({})
-    setStateUnitIds({})
-    setTables([])
-    setPlots([])
-    spreadsheetsRef.current = []
-    analyzersRef.current = []
-    setSchematic(EMPTY_PRESENTATION)
-    setResult(null)
-    setCheckResult(null)
-    setLastSolvedWithFillMissing(false)
+    clearDocumentState()
     setProjectName(example.title)
     setWorkspaceEpoch((e) => e + 1)
     const nextLesson = lessonFor(example.id)
