@@ -1904,6 +1904,12 @@ Fixed on 2026-10-28 in PR #61, measured by `web/e2e/schematic-baseline.spec.ts` 
 
 ## 3. Deferred Candidates
 
+**npm alerts left open (Socket scan, 2026-11-21).** `deps-security-refresh` patched vite, katex, undici, vitest, source-map-js, serialize-javascript, fast-uri, zod and probe-image-size within their ranges. These remain; revisit when the trigger lands:
+
+- `glob` 11.1.0 (workbox-build `^11`) and `minimatch` 9/10 (linaria behind glide-data-grid; eslint): the fixes are in glob 14 and minimatch 11, outside those ranges. They are denial-of-service bugs in build tools that read only this repository's files. Trigger: a workbox-build or linaria release that takes the fixed major.
+- `maplibre-gl` 4.7.1 (CVSS 10), `@plotly/mapbox-gl` (deprecated) and `es5-ext` (protest postinstall, runs on `npm ci`): plotly.js depends on them, but `src/plots/plotlyBundle.ts` (core + bar, pie, histogram, mesh3d, sankey) never bundles them; the built `dist/assets` carries none of their code. Trigger: adding a map or WebGL trace type to the bundle, or plotly.js 4.
+- `babel-merge` and `@babel/plugin-proposal-export-namespace-from` (deprecated, no CVE): glide-data-grid's build-time dependencies.
+
 **Documentation programmes.**
 
 - **D.1** Wave B examples: **done 2026-10-31.** The 30-problem table is in Git at `ba2add6` (Phase 4.7b-4). Electrical B16–B18 and B30 landed in #28, and B22 was already the `uncertain-tank-inventory` gallery entry. The other 25 are now gallery entries in `examples.ts`, with CHECKs graded by `examples.test.ts` (units and values) and bound to 84 reference pages. The bank's answer was a cross-check, not the golden value.
