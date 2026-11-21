@@ -156,3 +156,24 @@ fn one_decision_refines_with_brent_after_the_first_pass() {
         );
     }
 }
+
+#[test]
+fn one_decision_far_from_zero_still_meets_its_equality() {
+    // Brent's tolerance must follow the box, not |x|: at x ~ 1e12 a relative
+    // tolerance spans the whole range and every later pass stops at once.
+    let p = Problem {
+        method: None,
+        ..make_problem(
+            "f = (x - 1000000000003)^2\n",
+            "f",
+            &["x"],
+            &[1_000_000_000_000.0],
+            &[1_000_000_000_005.0],
+            &["x - 1000000000000 = 2"],
+        )
+    };
+    let result = optimize(&p).unwrap();
+    assert!(result.warning.is_none(), "{:?}", result.warning);
+    let offset = result.decision_values[0] - 1_000_000_000_000.0;
+    assert!((offset - 2.0).abs() < 1e-3, "offset = {offset}");
+}
