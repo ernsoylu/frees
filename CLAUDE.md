@@ -29,7 +29,7 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Test Suite Health**:
   - `cargo test --workspace -- --skip golden_corpus_parity`: 3,422 tests pass across all workspace crates (2026-11-22, after the table decoders and their tests were removed).
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 109 test files, 1,274 tests passing (needs the built `web/src/wasm/pkg`).
+  - `vitest run` (Node 22): 109 test files, 1,339 tests passing (2026-11-22, after EC1; needs the built `web/src/wasm/pkg`).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
   - `npm run check-examples`: 826/826 documentation blocks (2,955 assertions), including the 20 multi-domain examples and their 19 optimization requests. Every graded block must also check with zero unit warnings.
