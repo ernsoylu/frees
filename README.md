@@ -29,8 +29,9 @@ If both are supplied, an existing `#share=` document takes precedence over `?url
   - Explicit & Stiff ODE Solvers: Adaptive Dormand-Prince Runge-Kutta (`ode45`) and 5th-order Radau IIA (`radau5` / `radauiia`).
   - Stiff Differential-Algebraic Equations (DAE): Variable-coefficient Backward Differentiation Formulas (BDF / IDA) with adaptive order (1–5) and step-size control.
   - State Event Handling: Root-finding zero crossings (`EVENT condition -> action`), discrete mode switching, and trajectory stop events.
-- **Thermodynamic Property Engine (`rustprop`)**: Pure-Rust CoolProp 8.0.0 implementation supporting high-accuracy Helmholtz equations of state. 26 pure fluids are linked and served on the diagram picker — every one the property alias table names — spanning Water/Steam, Air, CO2, the R-series refrigerants, Ammonia, the light hydrocarbons, and the permanent and noble gases (Nitrogen, Oxygen, Argon, Helium, Hydrogen). Cubic EoS, incompressibles (`INCOMP::MEG`, `MPG`) and humid air psychrometrics (`HAPropsSI`) sit alongside them.
-- **Standard Acausal Component Library**: 295+ built-in acausal components across 13 physical domains: fluid networks, heat transfer, moist air HVAC, electrical systems, mechanics, and control blocks.
+- **Live Simulation**: A dynamic block runs live in chunks that reproduce the batch rows bit for bit. Sliders and on-canvas controls (switches, valve openings, setpoints) change inputs while it runs, rolling scopes and block mini-scopes plot it with a Welch spectrum, pause conditions stop it at a root-found instant, and a recorder exports the run with its inputs, solver settings and provenance.
+- **Thermodynamic Property Engine (`rustprop`)**: Pure-Rust CoolProp 8.0.0 implementation supporting high-accuracy Helmholtz equations of state. 28 real fluids are served, 26 of them on the diagram picker — every pure fluid the property alias table names — spanning Water/Steam, Air, CO2, the R-series refrigerants, Ammonia, the light hydrocarbons, and the permanent and noble gases (Nitrogen, Oxygen, Argon, Helium, Hydrogen). The ten low-GWP refrigerant blends (R448A–R455A, R513A, R515B) match CoolProp 8.0.0 to the last digit. Cubic EoS, incompressibles (`INCOMP::MEG`, `MPG`) and humid air psychrometrics (`HAPropsSI`) sit alongside them. The browser module links Water, R134a, R1234yf and Air, and its worker installs the other fluids from packed files the first time a model names them; native builds link everything.
+- **Standard Acausal Component Library**: 329 built-in acausal components across 13 physical domains: fluid networks, two-phase and liquid systems, heat transfer, moist air HVAC, hydraulics, pneumatics, electrical and AC circuits, mechanics, powertrain, signal and control blocks.
 - **Computer Algebra (CAS) & Control Systems**:
   - CAS: Exact rational arithmetic over $\mathbb{Q}$, polynomial operations, Zassenhaus factorization, partial fractions, and symbolic Laplace transforms.
   - Control Systems: Transfer functions, state-space models ($A, B, C, D$), pole placement, LQR/LQE, frequency response (Bode, Nyquist), and automated PID tuning.
@@ -85,8 +86,9 @@ If both are supplied, an existing `#share=` document takes precedence over `?url
 | [`crates/frees-core`](crates/frees-core) | Core numerical engine. Target-agnostic, zero browser dependencies. |
 | [`crates/frees`](crates/frees) | WebAssembly boundary crate (`wasm-bindgen`). Serializes and deserializes typed JSON payloads. |
 | [`crates/frees-cli`](crates/frees-cli) | Native command-line binary for headless solving, verification, and automated batch processing. |
+| [`crates/frees-fluid-pack`](crates/frees-fluid-pack) | Writes the packed rustprop fluid files the browser worker installs on demand (`web/src/wasm/fluids/`). |
 | [`web`](web) | Modern React 19 web application, Web Worker client, and PWA packaging. |
-| [`fixtures`](fixtures) | Frozen regression corpus of 1,308+ test models, reference solutions, and tolerance definitions. |
+| [`fixtures`](fixtures) | Frozen regression corpus of 1,308 test models and reference solutions, the per-fixture tolerances, and the NumPy/SciPy, psychrometric and DAE reference data. |
 
 ---
 
@@ -121,8 +123,9 @@ Exit codes: `0` on success, `1` when the engine rejects a model or analysis requ
 Building the web application requires Node 22 (pinned in `web/.nvmrc`) and `wasm-pack`.
 
 ```bash
-# 1. Compile the Rust engine to WebAssembly
+# 1. Compile the Rust engine to WebAssembly, then write the packed fluid files
 wasm-pack build crates/frees --release --target web --out-dir ../../web/src/wasm/pkg
+cargo run -p frees-fluid-pack -- web/src/wasm/fluids
 
 # 2. Install web dependencies and compile reference documentation
 cd web
@@ -153,14 +156,15 @@ cargo test --workspace -- --skip golden_corpus_parity
 # 3. Full golden regression corpus replay (1,308 fixtures)
 cargo test --release --test parity
 
-# 4. Frontend unit tests (Vitest under Node 22)
+# 4. Frontend unit tests (Vitest under Node 22; needs the built web/src/wasm/pkg)
 cd web && npm test
 
 # 5. Production frontend bundle build & PWA validation
 cd web && npm run build
 
-# 6. Reference-documentation coverage and cross-link invariants
+# 6. Reference-documentation coverage, and every documentation example run and checked
 cd web && npm run check-docs
+cd web && npm run check-examples
 
 # 7. Golden corpus replayed through the COMPILED WASM module under Node,
 #    so the browser engine is graded, not just the native build
@@ -169,7 +173,7 @@ cd web && node scripts/wasm-parity.mjs --shard 0/4
 
 ### Bundle Budget Gate
 
-The WebAssembly engine binary is strictly gated in CI against a ceiling of **5,120 KiB** raw to maintain fast download and startup performance on web and mobile devices (current build: ~3,888 KiB raw / ~1,753 KiB gzipped). The ceiling was raised from 4,096 KiB on 2026-09-10 to link every pure fluid the property alias table names; `.github/workflows/ci.yml` carries the full ledger of why each raise happened.
+The WebAssembly engine binary is strictly gated in CI against a ceiling of **5,120 KiB** raw to maintain fast download and startup performance on web and mobile devices (measured 2026-11-06: 3,900.8 KiB raw / 1,556.5 KiB gzipped, after 24 fluids and the mixture tables moved out of the module into on-demand packed files). The ceiling was raised from 4,096 KiB on 2026-09-10, owner-authorized; `.github/workflows/ci.yml` carries the full ledger of why each raise happened.
 
 ---
 

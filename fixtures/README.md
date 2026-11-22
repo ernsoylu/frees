@@ -4,9 +4,8 @@ This directory contains the frozen regression test corpus, reference golden solu
 
 ## Provenance: where these numbers came from
 
-Every golden in `corpus/`/`golden/`, the property grids in `proptables/` and
-`auxtables/`, and the 912 psychrometric points in `humidair/reference.json`
-were produced by an **external oracle** — the Java `frees` engine linked
+Every golden in `corpus/`/`golden/` and the 912 psychrometric points in
+`humidair/reference.json` were produced by an **external oracle** — the Java `frees` engine linked
 against CoolProp 8.0.0 — and frozen here. They are not `rustprop` output, which
 is exactly why they can grade it.
 
@@ -42,8 +41,11 @@ fixtures/
 │   └── *.request.json            # Solver configuration sidecars (stop criteria, variable specs, initial guesses)
 ├── golden/                       # 1,308 reference golden solutions
 │   └── *.json                    # Frozen output solutions (variables, blocks, trajectories, status)
-├── proptables/                   # Precomputed thermodynamic property tables
-├── auxtables/                    # Auxiliary property grids (FRAUX1 format for incompressibles and transport)
+├── corpus-pending/               # Models not yet promoted; replayed by dynamics_robustness.rs
+├── humidair/reference.json       # CoolProp psychrometric points (tools/humidair-ref/gen.py)
+├── stats/reference.json          # NumPy/SciPy/statsmodels/SALib reference values (tools/stats-ref/gen.py)
+├── dae-oracle.json               # DAE reference trajectories
+├── browser-divergences.json      # Recorded native-vs-WASM differences for the WASM parity gate
 ├── tolerances-rustprop.json      # Declared numerical tolerances and variance mechanisms
 └── README.md                     # This specification
 ```

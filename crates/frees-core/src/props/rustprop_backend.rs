@@ -176,8 +176,7 @@ impl RealFluid for RustpropBackend {
     /// states** for, spelled as [`crate::props::propfun::resolve_fluid`]
     /// produces them. The glycols are listed by family: `resolve_fluid`
     /// appends the mass fraction (`INCOMP::MEG[0.50]`), so the family is the
-    /// serveable identity — the same spelling [`super::propfun::TableBackend`]
-    /// keys its incompressible aux grids by.
+    /// serveable identity.
     ///
     /// `Air` is on this list, and since **Wave-3 D6** it is served by rustprop
     /// alone. Its history is worth one paragraph, because the entry outlived

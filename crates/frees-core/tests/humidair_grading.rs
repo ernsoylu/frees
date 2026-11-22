@@ -36,7 +36,7 @@
 //! excluding the whole nested-solve group it is **1.989e-15**.
 //!
 //! That retires the reason D8 existed. No humid-air entry in
-//! `fixtures/tolerances.json` is needed, because there is no humid-air error
+//! `fixtures/tolerances-rustprop.json` is needed, because there is no humid-air error
 //! to tolerate: the ideal-gas model D8 rejected was 2.4e-04 on `(T,W)` and
 //! 2.7e-03 on `(T,R)`; this path is at 1.6e-16 and 5.7e-16 on the same points,
 //! twelve to thirteen orders better, and the 7.1e-5 ancillary-saturation floor

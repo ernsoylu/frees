@@ -12,11 +12,10 @@
 //! * **Real-fluid properties** — everything the Java reaches through CoolProp's
 //!   four-function façade (`PropsSI`, `Props1SI`, `HAPropsSI`,
 //!   `get_global_param_string`). The default on native and WASM is **rustprop**,
-//!   the pure-Rust CoolProp implementation. Runtime tables are optional overlays,
-//!   not linked data; see ARCHITECTURE_AND_REQUIREMENTS.md, retained decisions.
+//!   the pure-Rust CoolProp implementation, and the only real-fluid backend
+//!   (decision D12 in ARCHITECTURE_AND_REQUIREMENTS.md).
 
 pub mod atmosphere;
-pub mod auxtable;
 pub mod combustion;
 pub mod compressible;
 pub mod convective;
@@ -29,10 +28,8 @@ pub mod heisler;
 pub mod hx;
 pub mod hxcorr;
 pub mod idealgas;
-pub mod leread;
 pub mod nasa;
 pub mod periodic;
-pub mod phtable;
 pub mod pneumatics;
 pub mod propfun;
 pub mod psychro;
@@ -41,7 +38,6 @@ pub mod psychrochart;
 pub mod rustprop_backend;
 #[cfg(feature = "rustprop-backend")]
 pub mod rustprop_warm;
-pub mod satsplit;
 pub mod solids;
 pub mod tables;
 pub mod thermochem;

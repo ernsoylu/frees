@@ -12,11 +12,6 @@ frees = { workspace = true }
 serde_json = { workspace = true }
 
 [features]
-# The switch D9 flips for the browser, reachable natively: with this on the CLI
-# answers property calls through rustprop instead of the linked (P,h) tables,
-# which is how the accuracy path gets exercised outside wasm
-# (`frees-cli --features rustprop-backend solve doc.frees`). Off by default so
-# the CLI's default configuration stays byte-identical to the pre-D9 table
-# backend (the old reason — a checkout without the sibling rustprop tree —
-# vanished when rustprop became a git-tag dependency).
+# Kept for the old `frees-cli --features rustprop-backend` spelling. Since D12
+# rustprop is frees-core's default backend, so the CLI has it either way.
 rustprop-backend = ["frees-core/rustprop-backend"]
