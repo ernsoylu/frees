@@ -206,4 +206,9 @@ Q_cond    = COND.Q                { condenser heat rejection, W }
     DYNAMIC ev (method = ida, time = 0 .. 600, points = 1201)
       CHLR.frac = 0.05 + 0.95 * min(time/5, 1)
       CABE.frac = 0.05 + 0.95 * min(time/5, 1)
-    END }`
+    END }
+
+{ CHECK Q_evap 8206.23392668932 8.3e-6 }
+{ CHECK W_comp 2161.009848695795 2.2e-6 }
+{ CHECK COP_cool 3.797407000084667 3.8e-9 }
+{ CHECK Q_cond 8455.381340978016 8.5e-6 }`

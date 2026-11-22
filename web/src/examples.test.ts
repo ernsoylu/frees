@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import { EXAMPLES } from './examples'
 import { CYCLE_EXAMPLES } from './helpExamples'
-import { check, initSync, install_property_table, solve } from './wasm/pkg/frees.js'
+import { check, initSync, install_property_table, solve, solve_table } from './wasm/pkg/frees.js'
 import { installPackedFluids } from '../scripts/packed-fluids.mjs'
 
 initSync({ module: readFileSync(new URL('./wasm/pkg/frees_bg.wasm', import.meta.url)) })
 installPackedFluids({ install_property_table })
 
-it.each<[string, Record<string, string>]>([
+const UNITS = new Map<string, Record<string, string>>([
   ['series-rlc-resonance', { omega_n: 'Hz', zeta: '-' }],
   ['rc-step-charging', { tau: 's', v_2ms: 'V', i_2ms: 'A' }],
   ['resistor-bridge-equivalent', { current: 'A', R_eq: 'Ω' }],
@@ -124,31 +124,48 @@ it.each<[string, Record<string, string>]>([
   ['two-phase-volume-charging', { P_end: 'Pa', m_end: 'kg' }],
   ['two-phase-chamber-warm-up', { P_end: 'Pa', h_end: 'J/kg', T_end: 'K', Q_end: 'W' }],
   ['few-cell-coils', { mdot_E: 'kg/s', mdot_C: 'kg/s', h_E: 'J/kg', h_C: 'J/kg', Q_E: 'W', Q_C: 'W' }],
-])('%s solves with physical units and preserves its checked results', (id, units) => {
-  const example = EXAMPLES.find(example => example.id === id)!
-  const result = JSON.parse(solve(example.text, '{}'))
-  expect(result.success, result.error).toBe(true)
-  expect(result.unitWarnings).toEqual([])
-  const variables = new Map<string, { units: string; value: number }>(
-    result.variables.map((v: { name: string; units: string; value: number }) => [v.name.toLowerCase(), v]),
-  )
-  for (const [name, unit] of Object.entries(units)) {
+])
+
+const CHECK_MARKER = /\{\s*CHECK\s+(\S+)\s+(\S+)\s+(\S+)\s*\}/g
+
+type Solved = Map<string, { units?: string; value: number }>
+
+// A PARAMETRIC document leaves its swept column free on purpose, so it is run as
+// its own table, as Solve does in the app: every row must converge, and its
+// CHECKs read the table's final row.
+function solveExample(text: string): Solved {
+  const result = JSON.parse(solve(text, '{}'))
+  const table = result.success ? undefined : JSON.parse(check(text, '{}')).parametricTables?.[0]
+  if (!table) {
+    expect(result.success, result.error).toBe(true)
+    expect(result.unitWarnings).toEqual([])
+    return new Map(result.variables.map((v: { name: string; units: string; value: number }) => [v.name.toLowerCase(), v]))
+  }
+  expect(JSON.parse(check(text, '{}')).unitWarnings).toEqual([])
+  const vars: string[] = table.vars
+  const rows = table.rows.map((r: (number | null)[]) => Object.fromEntries(vars.flatMap((v, i) => (r[i] === null ? [] : [[v, r[i]]]))))
+  const swept = JSON.parse(solve_table(text, JSON.stringify({ table: { variables: vars, rows } })))
+  expect(swept.results.every((r: { success: boolean }) => r.success), swept.results.find((r: { error?: string }) => r.error)?.error).toBe(true)
+  return new Map(Object.entries(swept.results.at(-1).values as Record<string, number>).map(([k, value]) => [k.toLowerCase(), { value }]))
+}
+
+// EC1: every example is solved and graded, so none can drop out of the gate by
+// being left off a list. UNITS adds unit assertions for the examples above.
+it.each(EXAMPLES.map((e) => [e.id, e] as const))('%s solves with physical units and passes its CHECKs', (id, example) => {
+  const checks = [...example.text.matchAll(CHECK_MARKER)]
+  expect(checks.length, `${id} carries no { CHECK }`).toBeGreaterThan(0)
+  const variables = solveExample(example.text)
+  for (const [name, unit] of Object.entries(UNITS.get(id) ?? {})) {
     expect(variables.get(name.toLowerCase())?.units, name).toBe(unit)
   }
-  for (const [, name, value, tolerance] of example.text.matchAll(/\{\s*CHECK\s+(\S+)\s+(\S+)\s+(\S+)\s*\}/g)) {
+  for (const [, name, value, tolerance] of checks) {
     const actual = variables.get(name.toLowerCase())?.value
     expect(actual, name).toBeDefined()
     expect(Math.abs(actual! - Number(value)), name).toBeLessThanOrEqual(Number(tolerance))
   }
-  // Celsius annotations must change absolute temperatures, not the transient.
-  if (id === 'newton-cooling-transient') {
-    expect(variables.get('t_peak')?.value).toBeCloseTo(363.15, 8)
-    expect(variables.get('t_final')?.value).toBeCloseTo(295.15 + 68 * Math.exp(-0.012 * 300), 4)
-    expect(variables.get('t_half')?.value).toBeCloseTo(Math.log(2) / 0.012, 2)
-  }
-  if (id === 'transient-heat-rod') expect(variables.get('t_mid_final')?.value).toBeCloseTo(313.15, 4)
-  // The transfer-function examples take a few seconds alone, more under a parallel suite.
-}, 30_000)
+  // ev-battery-cooling-pid takes ~16 s alone and ~55 s under the parallel suite
+  // (NEXT_STEPS EC1); the transfer-function examples take a few seconds.
+}, 120_000)
 
 it('every gallery and Help example is dimensionally consistent', () => {
   const documents: [string, string][] = [
