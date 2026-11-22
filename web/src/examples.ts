@@ -1499,7 +1499,7 @@ q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))`,
    "title": "Remove drift and smooth a sampled sensor trace",
     "description": "Solve (F2). Remove drift and smooth a sampled sensor trace",
     "category": "Signal Processing",
-    "text": "trace = [1, 3, 2, 6, 4, 9, 5, 12]\ndetrended = Detrend(trace)\ncentered = Detrend(trace, 'constant')\nsmoothed = Smooth(trace, 3)\ntapered = Window(detrended[1:8], 'hann')\ncentered_mean = sum(centered[1:8])/8\nresidual_mean = sum(detrended[1:8])/8\nleft_edge = smoothed[1]\n{ CHECK centered_mean 0 1e-9 }\n{ CHECK residual_mean 0 1e-9 }\n{ CHECK left_edge 2 1e-9 }\n{ CHECK tapered[1] 0 1e-9 }\n{ CHECK tapered[8] 0 1e-9 }"
+    "text": "trace = [1, 3, 2, 6, 4, 9, 5, 12]\n[detrended] = Detrend(trace)\n[centered] = Detrend(trace, 'constant')\n[smoothed] = Smooth(trace, 3)\n[tapered] = Window(detrended[1:8], 'hann')\ncentered_mean = sum(centered[1:8])/8\nresidual_mean = sum(detrended[1:8])/8\nleft_edge = smoothed[1]\n{ CHECK centered_mean 0 1e-9 }\n{ CHECK residual_mean 0 1e-9 }\n{ CHECK left_edge 2 1e-9 }\n{ CHECK tapered[1] 0 1e-9 }\n{ CHECK tapered[8] 0 1e-9 }"
   },
 {
    id: 'vibration-tone-spectrum',
@@ -1513,7 +1513,7 @@ q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))`,
    "title": "Causal filtering, zero-phase filtering and convolution",
     "description": "Solve (F2). Causal filtering, zero-phase filtering and convolution",
     "category": "Signal Processing",
-    "text": "samples = [0, 0, 0, 1, 0, 0, 0]\nb = [0.5, 0.5]\na = [1]\ncausal = Filter(b, a, samples)\nzero_phase = FiltFilt(b, a, samples)\nfull_response = Convolve(samples, b)\nsymmetry_error = zero_phase[3]-zero_phase[5]\n{ CHECK causal[4] 0.5 1e-9 }\n{ CHECK causal[5] 0.5 1e-9 }\n{ CHECK full_response[8] 0 1e-9 }\n{ CHECK symmetry_error 0 1e-9 }"
+    "text": "samples = [0, 0, 0, 1, 0, 0, 0]\nb = [0.5, 0.5]\na = [1]\n[causal] = Filter(b, a, samples)\n[zero_phase] = FiltFilt(b, a, samples)\n[full_response] = Convolve(samples, b)\nsymmetry_error = zero_phase[3]-zero_phase[5]\n{ CHECK causal[4] 0.5 1e-9 }\n{ CHECK causal[5] 0.5 1e-9 }\n{ CHECK full_response[8] 0 1e-9 }\n{ CHECK symmetry_error 0 1e-9 }"
   },
 {
    id: 'transport-delay-peak-detection',
