@@ -27,8 +27,6 @@
 //! * **the phase envelope** — exactly on the critical point, above it, below the
 //!   triple point, and inside the dome where the `(P,h)` inverse is genuinely
 //!   non-unique;
-//! * **table edges** — the generated `(P,h)` tables have a served box with hard
-//!   edges, probed exactly on and a hair outside;
 //! * **the formula parser** — `""`, `"3"`, `"H2O2X"`, unbalanced brackets, and
 //!   a formula long enough to matter;
 //! * **the bracketed root-finds** — area ratios below one, Prandtl–Meyer angles
@@ -42,7 +40,6 @@
 use std::time::{Duration, Instant};
 
 use frees_core::props::propfun;
-use frees_core::props::satsplit::SaturationSplitTable;
 use frees_core::{check, parse_document, solve, SolverSettings};
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -775,166 +772,6 @@ fn material_lookups_outside_their_table_are_refused_by_name() {
         .unwrap_err()
         .to_string_message();
     assert!(err.to_lowercase().contains("vibranium"), "{err}");
-}
-
-/// The generated `FRPHTAB1` artifacts, read from `fixtures/`.
-///
-/// D12 stopped linking these into the binary; they remain the only real bytes
-/// the decoder can be tested against, so the byte-level tests read them from
-/// the fixture tree instead of from `props::tables`.
-fn fixture(rel: &str) -> Vec<u8> {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../fixtures")
-        .join(rel);
-    std::fs::read(&path).unwrap_or_else(|e| panic!("fixture {}: {e}", path.display()))
-}
-
-// ── the generated tables, at the byte level ─────────────────────────────────
-
-/// The `FRPHTAB1` reader against corrupted artifacts.
-///
-/// This is the one place in the property surface where *bytes* rather than
-/// numbers are the untrusted input, and it is reachable at runtime through
-/// `props::tables::install_from_bytes`. Every corruption must be a `Result`.
-#[test]
-fn a_corrupted_property_table_is_refused_at_every_byte_position() {
-    let good = &fixture("proptables/water.phtab")[..];
-    assert!(SaturationSplitTable::decode_generated(good).is_ok());
-
-    // Every truncation length on a log scale, plus the exact header boundaries.
-    let mut lengths: Vec<usize> = vec![0, 1, 7, 8, 9, 135, 136, 137, 159, 160, 161];
-    let mut n = 256usize;
-    while n < good.len() {
-        lengths.push(n);
-        n *= 2;
-    }
-    lengths.push(good.len() - 1);
-    for len in lengths {
-        let out = std::panic::catch_unwind(|| SaturationSplitTable::decode_generated(&good[..len]));
-        match out {
-            Err(_) => panic!("decode panicked on a {len}-byte prefix"),
-            Ok(Ok(_)) if len != good.len() => {
-                panic!("a {len}-byte prefix decoded as a whole table")
-            }
-            Ok(_) => {}
-        }
-    }
-
-    // Every byte of the header flipped, one at a time: the reader must refuse or
-    // produce a table, never trap.
-    for i in 0..160usize {
-        for bit in [0x01u8, 0x80] {
-            let mut bytes = good.to_vec();
-            bytes[i] ^= bit;
-            let out =
-                std::panic::catch_unwind(|| SaturationSplitTable::decode_generated(&bytes).is_ok());
-            assert!(
-                out.is_ok(),
-                "decode panicked with header byte {i} ^ {bit:#04x}"
-            );
-        }
-    }
-
-    // Payload corruption: a NaN bit pattern written over a saturation sample.
-    let mut bytes = good.to_vec();
-    for b in bytes.iter_mut().skip(160).take(64) {
-        *b = 0xff;
-    }
-    let out = std::panic::catch_unwind(|| SaturationSplitTable::decode_generated(&bytes).is_ok());
-    assert!(
-        out.is_ok(),
-        "decode panicked on a NaN-filled saturation line"
-    );
-    assert!(
-        !SaturationSplitTable::decode_generated(&bytes).is_ok(),
-        "a table with a non-finite saturation line must be refused, not served"
-    );
-}
-
-/// Grid-edge probes on the decoded table itself, at and just outside every
-/// declared bound.
-///
-/// The bounds come from the artifact, not from a literal, so this test moves
-/// with the tables instead of going stale when they are regenerated.
-#[test]
-fn table_lookups_exactly_on_and_just_outside_every_grid_edge_are_bounded() {
-    for bytes in [
-        fixture("proptables/water.phtab"),
-        fixture("proptables/r134a.phtab"),
-    ] {
-        let t = SaturationSplitTable::decode_generated(&bytes).unwrap();
-        let mut probes: Vec<(f64, f64)> = Vec::new();
-        for p in [
-            t.p_min(),
-            t.p_min() * (1.0 - 1e-12),
-            t.p_min() * (1.0 + 1e-12),
-            t.p_serve_max(),
-            t.p_serve_max() * (1.0 - 1e-12),
-            t.p_serve_max() * (1.0 + 1e-12),
-            t.p_liquid_min(),
-            t.p_max(),
-            0.0,
-            -1.0,
-            f64::MIN_POSITIVE,
-            f64::MAX,
-            f64::INFINITY,
-            f64::NEG_INFINITY,
-            f64::NAN,
-        ] {
-            let hf = t.hf_at(p);
-            let hg = t.hg_at(p);
-            let floor = t.h_liquid_min_at(p);
-            for h in [
-                hf,
-                hg,
-                floor,
-                floor * (1.0 - 1e-12),
-                hf - (hf - floor) * 0.5,
-                hg + t.dh_vapor_max(),
-                hg + t.dh_vapor_max() * (1.0 + 1e-12),
-                0.5 * (hf + hg),
-                0.0,
-                -1e12,
-                1e12,
-                f64::INFINITY,
-                f64::NAN,
-            ] {
-                probes.push((p, h));
-            }
-        }
-        for (p, h) in probes {
-            for out in [
-                frees_core::props::satsplit::Output::Temperature,
-                frees_core::props::satsplit::Output::Density,
-                frees_core::props::satsplit::Output::Entropy,
-            ] {
-                let got = std::panic::catch_unwind(|| t.value(out, p, h));
-                let Ok(got) = got else {
-                    panic!("{}: value({out:?}, {p}, {h}) panicked", t.fluid())
-                };
-                if let Some(v) = got {
-                    assert!(
-                        v.is_finite(),
-                        "{}: value({out:?}, {p}, {h}) served a non-finite {v} instead of \
-                         declining",
-                        t.fluid()
-                    );
-                }
-                // `region` is the cheap coverage pre-check a caller uses to
-                // decide whether to evaluate at all. It may be optimistic about
-                // a cell whose interpolant then declines, but it must never be
-                // *pessimistic*: a state `value` served and `region` called
-                // uncovered would make the pre-check a liar.
-                if got.is_some() {
-                    assert!(
-                        t.region(p, h).is_some(),
-                        "{}: value() served ({p}, {h}) but region() calls it uncovered",
-                        t.fluid()
-                    );
-                }
-            }
-        }
-    }
 }
 
 // ── humid air and psychrometrics ────────────────────────────────────────────

@@ -75,7 +75,7 @@ pub fn version() -> String {
 }
 
 /// Install fetched property data: a packed rustprop fluid (`RPFLUID1`), the
-/// packed mixture tables (`RPMIXTB1`) or an `FRPHTAB1` table. This module
+/// packed mixture tables (`RPMIXTB1`). This module
 /// links four fluids; the worker installs the others on first use (phase E).
 #[wasm_bindgen]
 pub fn install_property_table(bytes: &[u8]) -> String {

@@ -91,12 +91,11 @@
 //!
 //! # Per-fixture tolerance
 //!
-//! `fixtures/tolerances.json` may relax the *numeric* tolerance for a named
-//! fixture, and nothing else. It exists because this build resolves real-fluid
-//! properties from precomputed tables whose measured error is `1e-7…1e-4`
-//! (decision D1) while the goldens hold full-accuracy CoolProp values — a gap no
-//! table-backed engine can close, and one that must not be hidden by loosening
-//! the gate for everybody. Three guards keep it honest:
+//! `fixtures/tolerances-rustprop.json` may relax the *numeric* tolerance for a
+//! named fixture, and nothing else. It exists because a few goldens carry the
+//! Java oracle's own approximations (its run-time `(P,Hmass)` table, for one)
+//! while rustprop answers bit-exact CoolProp — a gap that must not be hidden by
+//! loosening the gate for everybody. Three guards keep it honest:
 //!
 //! * a fixture named there but **absent** from `fixtures/golden/` fails;
 //! * a fixture named there that **passes at the default** fails, so a tolerance
@@ -240,9 +239,8 @@
 //!
 //! # This replay needs the `rustprop-backend` feature
 //!
-//! Since Wave-3 F6/F8 the corpus holds twelve documents the `(P,h)`
-//! `TableBackend` cannot serve **at all**, so it is replayable by exactly one
-//! backend. Rather than fail twelve times with an error that names nothing,
+//! Without it the engine has no real-fluid backend at all, and every property
+//! document would fail with an error that names nothing. Rather than that,
 //! [`golden_corpus_parity`] refuses up front and prints the command that
 //! works — see [`WRONG_BACKEND`].
 //!
@@ -418,28 +416,8 @@ fn golden_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/golden")
 }
 
-/// Which tolerance file grades this build — one per property backend.
-///
-/// Decision D9 pins the gate to **one** backend, but "one" cannot mean "one
-/// file": the entries in `fixtures/tolerances.json` exist because of the (P,h)
-/// tables' own interpolation error, and under rustprop most of them are dead
-/// (the file's own rule then makes them failures) while the survivors have a
-/// completely different cause — the *golden* side, where the Java answered
-/// `(P,Hmass) → T/Dmass/Smass` from its own run-time 256/96/48 table. So each
-/// backend is graded by the file that describes it, selected by the same `cfg`
-/// that decides which backend `install_builtin_once` installs. There is no
-/// configuration in which both files are read, and none in which neither is.
-///
-/// The table branch is **currently unreachable**, and deliberately kept. Since
-/// Wave-3 F6/F8 this corpus cannot be replayed by the table backend at all
-/// ([`WRONG_BACKEND`]), so nothing reads `tolerances.json` today. That does not
-/// make it wrong — it describes a configuration D9 still supports and that a
-/// smaller corpus would reach again — so the branch stays, next to the reason
-/// it does not fire.
-#[cfg(feature = "rustprop-backend")]
+/// The tolerance file that grades the corpus.
 const TOLERANCE_FILE: &str = "tolerances-rustprop.json";
-#[cfg(not(feature = "rustprop-backend"))]
-const TOLERANCE_FILE: &str = "tolerances.json";
 
 fn tolerance_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -467,15 +445,10 @@ const CORPUS_IS_SERVABLE: bool = cfg!(feature = "rustprop-backend");
 /// come back as `Newton iteration stalled after 0 iteration(s) … (norm NaN)`,
 /// with nothing in the text about `HAPropsSI` or a tabulated output.
 const WRONG_BACKEND: &str = "\
-the parity corpus cannot be replayed by the (P,h) TableBackend, and this build \
-has `rustprop-backend` OFF.
-
-Twelve of the corpus documents ask for HAPropsSI (the seven humid-air ones), \
-single-phase (P,T) transport (hx-correlations-fluid), CompressibilityFactor \
-(thermo-compliance) or Air Enthalpy (the three pneumatic documents). The table \
-backend serves none of those at all, so they do not miss a tolerance — they \
-come back as `Newton iteration stalled after 0 iteration(s) … (norm NaN)`, \
-which names neither the fixture's real problem nor this one.
+the parity corpus needs a real-fluid property backend, and this build has \
+`rustprop-backend` OFF, so it has none. Every property document would come \
+back as `Newton iteration stalled after 0 iteration(s) … (norm NaN)`, which \
+names neither the fixture's real problem nor this one.
 
 Run the gate with the backend the corpus was promoted against:
 
@@ -546,7 +519,7 @@ fn declared_shard() -> Shard {
     }
 }
 
-/// Declared relative tolerance per fixture stem, from `fixtures/tolerances.json`.
+/// Declared relative tolerance per fixture stem, from [`TOLERANCE_FILE`].
 ///
 /// # The mechanism catalogue
 ///
@@ -564,9 +537,7 @@ fn declared_shard() -> Shard {
 /// `fixtures` section already has ("a dead tolerance fails") applies one level
 /// up: a dead *explanation* fails too.
 ///
-/// A file with no `mechanisms` object is unaffected. That is
-/// `fixtures/tolerances.json`, whose 23 entries describe the table backend and
-/// predate the catalogue.
+/// A file with no `mechanisms` object is unaffected.
 ///
 /// The citation set spans **both** graded sections — `fixtures` and `absolute`
 /// — because a mechanism can perfectly well have all of its instances in one of

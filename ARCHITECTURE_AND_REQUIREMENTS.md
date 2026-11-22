@@ -34,10 +34,12 @@ frees-wasm/
 │   │   ├── props/                # Fluid, mixture, and moist air thermodynamic models (rustprop)
 │   │   ├── cas/                  # Rational symbolic CAS, simplification, differentiation, matrices
 │   │   ├── control/              # Transfer functions, state-space, Riccati, frequency response
-│   │   ├── optimize/             # Unconstrained and bound-constrained optimization, Nelder-Mead
-│   │   └── components/           # 295+ standard acausal components and connection expander
+│   │   ├── analysis/             # Optimization, curve fitting, uncertainty, sampling, sensitivity
+│   │   └── components/           # 329 standard acausal components and connection expander
 │   ├── frees/                    # WebAssembly interface crate (wasm-bindgen JSON RPC bridge)
-│   └── frees-cli/                # Headless command-line binary (solve, check, export)
+│   ├── frees-cli/                # Headless command-line binary (solve, check, analyze, migrate)
+│   └── frees-fluid-pack/         # Writes the packed rustprop fluids the browser installs on demand
+├── fixtures/                     # Frozen parity corpus, goldens, tolerances, reference data
 └── web/                          # Modern React 19 / TypeScript Progressive Web Application
     ├── src/
     │   ├── wasm/                 # Web Worker pool client, WASM lifecycle, request multiplexing
@@ -188,15 +190,16 @@ Thermodynamic calculations are powered by `rustprop`, a pure-Rust implementation
    - High-accuracy fundamental equations of state explicit in reduced Helmholtz energy $\alpha(\delta, \tau) = \alpha^0(\delta, \tau) + \alpha^r(\delta, \tau)$ where $\delta = \rho/\rho_c$ and $\tau = T_c/T$.
    - Evaluates all thermodynamic properties (pressure, density, enthalpy, entropy, internal energy, specific heat capacities $c_p$, $c_v$, sound speed, Joule-Thomson coefficient) via exact partial derivatives of $\alpha$.
 2. **Supported Fluid Classes**:
-   - The shipped build links 26 real fluids, including `Water`, `R134a`, `R1234yf`, `CO2`, `Ammonia`, `Air`, and `Hydrogen`. The backend's `served_fluids` list controls the diagram picker; the upstream library's larger catalogue is not a claim of shipped coverage. Ten named `.mix` refrigerant blends remain unbacked pending mixture routing.
+   - 28 real fluids are served, including `Water`, `R134a`, `R1234yf`, `CO2`, `Ammonia`, `Air`, and `Hydrogen`; 26 of them (every pure fluid the alias table names) are on the diagram picker, which the backend's `served_fluids` list controls. The upstream library's larger catalogue is not a claim of shipped coverage.
+   - The ten low-GWP refrigerant blends (R448A–R455A, R513A, R515B) are served through rustprop's `heos-mixtures` engine and match CoolProp 8.0.0 to the last digit; R515B, which CoolProp does not predefine, is spelled out as its two components. Mixtures have no property diagrams.
    - Saturated liquid and vapor states, saturation curves, and two-phase mixture properties parameterized by vapor quality $Q \in [0, 1]$.
    - Incompressible fluids and aqueous mixtures (`INCOMP::MEG[x]`, `INCOMP::MPG[x]` aqueous ethylene/propylene glycol) with exact concentration node mapping.
 3. **Psychrometrics & Moist Air (`HAPropsSI`)**:
    - Real-gas moist air calculations based on ASHRAE RP-1485 formulations.
    - Properties: dry-bulb temperature, wet-bulb temperature, dew-point temperature, relative humidity, humidity ratio, moist air enthalpy, entropy, specific volume.
-4. **Runtime Property Tables**:
-   - No property grids are linked into the engine. `rustprop-backend` is the default on native and WASM targets; `FRPHTAB1` decoding and `install_from_bytes` remain as an optional runtime overlay. `FRAUX1` artifacts remain decoder test inputs, not the shipped property backend.
-   - **Runtime fluids (Phase E, 2026-11-06).** The WASM module links Water, R134a, R1234yf and Air. The other fluids and the mixture tables are rustprop's own data in its packed format (`RPFLUID1`, `RPMIXTB1`, bit-exact), written by `frees-fluid-pack` and installed through `install_from_bytes` into rustprop's runtime registry. The worker scans each request for the fluids it names and installs missing ones, with their transport reference fluids and blend components, before running it; each worker installs for itself. Native builds link every fluid (`linked-fluids`). This is D12's backend with its data delivered later, not a table path.
+4. **Runtime Property Data**:
+   - There are no property tables. `rustprop-backend` is the default on native and WASM targets and the only real-fluid backend. The `FRPHTAB1`/`FRAUX1` table formats, their decoders, the `(P,h)` table backend and their fixtures were removed on 2026-11-22 (D12).
+   - **Runtime fluids (Phase E, 2026-11-06).** The WASM module links Water, R134a, R1234yf and Air. The other fluids and the mixture tables are rustprop's own data in its packed format (`RPFLUID1`, `RPMIXTB1`, bit-exact), written by `frees-fluid-pack` and installed through `install_from_bytes` into rustprop's runtime registry. The worker scans each request for the fluids it names and installs missing ones, with their transport reference fluids and blend components, before running it; each worker installs for itself. Native builds link every fluid (`linked-fluids`). This is D12's backend with its data delivered later, not a table path. `install_from_bytes` accepts only these two formats and refuses anything else.
 
 ---
 
@@ -268,7 +271,7 @@ To maintain an MIT-compatible license and eliminate heavy third-party CAS depend
 
 | Metric | Specification Target | Current Status |
 |---|---|---|
-| **Raw WASM Size** | $\le 5,120\text{ KiB}$ | CI is authoritative; 3,981.7 KiB raw / 1,791.0 KiB gzipped measured 12 September 2026 |
+| **Raw WASM Size** | $\le 5,120\text{ KiB}$ | CI is authoritative; 3,900.8 KiB raw / 1,556.5 KiB gzipped measured 6 November 2026 |
 | **Engine Cold Boot** | $\le 250\text{ ms}$ | $\approx 120\text{ ms}$ |
 | **Linear Memory Baseline** | $\le 64\text{ MiB}$ initial | $\approx 32\text{ MiB}$ |
 | **Peak Linear Memory** | $\le 256\text{ MiB}$ during complex sweeps | Verified within budget |
@@ -306,12 +309,11 @@ instructions to restore removed features.
 
 - **D1/D7 → D8/D9 → D12:** phase-split interpolation and auxiliary grids were replaced by pure-Rust CoolProp algorithms for accuracy and coverage. Neither a C++/Emscripten module nor a Java/Symja service is required. Do not restore `linked-tables`, the byte packer, or duplicate linked artifacts.
 - The default backend is rustprop on every target. Without its feature, the library must compile but property calls must report the missing backend honestly. Single-phase quality is $Q=-1$, not an extrapolated vapour fraction.
-- `install_from_bytes` installs packed rustprop fluids and mixture tables (`RPFLUID1`, `RPMIXTB1`) into rustprop's registry, and still decodes `FRPHTAB1` and layers it over the installed backend. It does not install `FRAUX1` transport grids. Preserve this seam and the `fixtures/proptables` / `fixtures/auxtables` decoder inputs; removing documentation is not permission to remove numerical fixtures.
+- `install_from_bytes` installs packed rustprop fluids and mixture tables (`RPFLUID1`, `RPMIXTB1`) into rustprop's registry and refuses every other byte string. The `FRPHTAB1` overlay it used to layer over rustprop, the `FRAUX1` decoder, and the `fixtures/proptables`, `fixtures/auxtables` and `fixtures/tolerances.json` inputs were removed on 2026-11-22 with owner approval: no host ever sent a table, and rustprop covers everything they served. Do not reintroduce a table format; new fluids arrive as packed rustprop data.
 - Historical table error reached approximately $2.1\times10^{-4}$; an idealized humid-air shortcut did not meet the CoolProp oracle. Preserve the real-fluid/psychrometric reference equations and grade the shipped backend rather than loosening global tolerances to accommodate a shortcut.
-- Historical liquid tables needed normalized depth $\eta=(h_f(P)-h)/(h_f(P)-h_{cold}(P))$: a single absolute-depth bound excluded high-pressure states. Both artifact coordinate modes remain in the decoder for compatibility.
 - The adapter must reject non-finite inputs and outputs and survive invalid Newton trial states. Warm-start acceleration is a performance layer, not authority to change thermodynamic results; the Air warm shortcut was retired when its benefit became negligible.
 - `served_fluids` advertises diagram support, not unconditional success at every state. Report unsupported states and mixture routes explicitly. Current investigation items belong in `NEXT_STEPS.md`.
-- Frozen Java/CoolProp outputs remain provenance. Grade current results with `fixtures/tolerances-rustprop.json`; retain the old table tolerance file as historical data, not a second production configuration. Per-fixture relaxations require a measured explanation, and unused relaxations must fail validation.
+- Frozen Java/CoolProp outputs remain provenance. Grade current results with `fixtures/tolerances-rustprop.json`; the table backend's tolerance file was removed with it (Git history keeps it). Per-fixture relaxations require a measured explanation, and unused relaxations must fail validation.
 
 ### Removed features and file compatibility
 
