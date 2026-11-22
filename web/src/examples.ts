@@ -91,7 +91,9 @@ connect(COOK.vent, PRV.in)
 connect(PRV.out, ATM.in)
 
 DYNAMIC cooker (method = ida, time = 0 .. 1200, points = 241, rtol = 1e-5, atol = 1e-4)
-END`,
+END
+
+{ CHECK I_heater 6.818174774612836 7.5e-6 }`,
   },
   {
     id: 'pump-sizing',
@@ -111,7 +113,10 @@ H = 25 [m]               { pump head }
 eta = 0.7                { pump efficiency }
 
 P_hydraulic = rho * g * Q_flow * H   { hydraulic power, in watts }
-P_shaft = P_hydraulic / eta          { required shaft power }`,
+P_shaft = P_hydraulic / eta          { required shaft power }
+
+{ CHECK P_hydraulic 4905 5e-6 }
+{ CHECK P_shaft 7007.142857142858 7.1e-6 }`,
   },
   {
     id: 'projectile-motion',
@@ -131,7 +136,11 @@ vx = v0 * cos(theta)
 vy = v0 * sin(theta)
 t_flight = 2 * vy / g    { time of flight }
 x_range = vx * t_flight  { horizontal range }
-h_max = vy^2 / (2 * g)   { peak height }`,
+h_max = vy^2 / (2 * g)   { peak height }
+
+{ CHECK t_flight 2.3387418403712377 2.4e-9 }
+{ CHECK x_range 38.31570319208596 3.9e-8 }
+{ CHECK h_max 6.707236051726107 6.8e-9 }`,
   },
   {
     id: 'heat-conduction',
@@ -146,7 +155,9 @@ A = 12 [m^2]           { wall area }
 L = 0.25 [m]           { wall thickness }
 T_in = 21 [C]
 T_out = -5 [C]
-Q = k * A * (T_in - T_out) / L   { heat loss rate, watts }`,
+Q = k * A * (T_in - T_out) / L   { heat loss rate, watts }
+
+{ CHECK Q 998.4000000000001 1e-6 }`,
   },
   {
     id: 'ideal-gas',
@@ -161,7 +172,9 @@ P = 500 [kPa]
 Vol = 0.05 [m^3]
 T = 25 [C]
 R = 0.287 [kJ/kg-K]    { gas constant for air }
-P * Vol = m * R * T    { ideal gas equation }`,
+P * Vol = m * R * T    { ideal gas equation }
+
+{ CHECK m 0.2921617103380253 3e-10 }`,
   },
   {
     id: 'dc-circuit',
@@ -173,7 +186,10 @@ P * Vol = m * R * T    { ideal gas equation }`,
 V = 12 [V]
 R = 220 [ohm]
 I = V / R       { current }
-P = V * I       { power dissipated }`,
+P = V * I       { power dissipated }
+
+{ CHECK I 0.05454545454545454 5.5e-11 }
+{ CHECK P 0.6545454545454545 6.6e-10 }`,
   },
   {
     id: 'rankine-cycle',
@@ -204,7 +220,11 @@ h4 = Enthalpy(Water, P=P_cond, s=s3)
 { Performance }
 q_in = h3 - h2
 w_turb = h3 - h4
-eta_th = (w_turb - w_pump) / q_in`,
+eta_th = (w_turb - w_pump) / q_in
+
+{ CHECK q_in 3149767.154885827 3.2e-3 }
+{ CHECK w_turb 1240252.0387124298 1.3e-3 }
+{ CHECK eta_th 0.39119716208990235 4e-10 }`,
   },
   {
     id: 'thermo-compliance',
@@ -239,7 +259,12 @@ cp_air = 1005 [J/kg-K]
 k_air = 1.4
 
 T0_air = StagnationTemp(T_air, V_air, cp_air)
-P0_air = StagnationPres(P_air, T_air, T0_air, k_air)`,
+P0_air = StagnationPres(P_air, T_air, T0_air, k_air)
+
+{ CHECK T_crit_r134a 374.2119665849513 3.8e-7 }
+{ CHECK P_crit_r134a 4059276.3737910665 4.1e-3 }
+{ CHECK T0_air 319.9004975124378 3.2e-7 }
+{ CHECK P0_air 125206.77019884119 1.3e-4 }`,
   },
   {
     id: 'state-tables-multifluid',
@@ -279,7 +304,12 @@ END
 
 STATE TABLE RefrigerantLoop(Pref_1, xref_1, href_1, Pref_2, Tref_2, href_2)
   FLUID = R134a
-END`,
+END
+
+{ CHECK hw_1 188435.13550803528 1.9e-4 }
+{ CHECK hw_2 3349645.1659218343 3.4e-3 }
+{ CHECK href_1 392618.89553575753 4e-4 }
+{ CHECK href_2 437787.9473383412 4.4e-4 }`,
   },
   {
     id: 'tank-draining',
@@ -302,7 +332,10 @@ a_orifice = 0.0015 [m^2]  { orifice area }
 h0 = 2.0 [m]              { initial water height }
 
 drop = Integral((a_orifice/A_tank)*sqrt(2*g*(h0 - drop)), tau, 0, 60)
-h = h0 - drop            { water height after 60 s }`,
+h = h0 - drop            { water height after 60 s }
+
+{ CHECK h 1.475953951579557 1.5e-9 }
+{ CHECK drop 0.5240460484204431 5.3e-10 }`,
   },
   {
     id: 'newton-cooling',
@@ -322,7 +355,10 @@ T_inf = 20 [C]           { ambient temperature }
 T0 = 90 [C]              { initial temperature }
 
 drop = Integral(k*(T0 - drop - T_inf), tau, 0, 30)
-T = T0 - drop            { temperature after 30 s }`,
+T = T0 - drop            { temperature after 30 s }
+
+{ CHECK T 308.76911265027184 3.1e-7 }
+{ CHECK drop 54.38088734972817 5.5e-8 }`,
   },
   {
     id: 'projectile-trajectory',
@@ -355,7 +391,12 @@ v  = sqrt(vx^2 + vy^2)          { speed }
 
 PARAMETRIC trajectory (t, time, x, y, vx, vy, v)
   t = 0:0.05:4
-END`,
+END
+
+{ Graded on the table's last row, t = 4 s, below the launch height. }
+{ CHECK x 65.5321635431193 1e-10 }
+{ CHECK y -32.5938850919163 1e-10 }
+{ CHECK v 32.2411542210169 1e-10 }`,
   },
   {
     id: 'damped-oscillator',
@@ -382,7 +423,11 @@ x = env * (cos(wd*time) + (zeta*wn/wd)*sin(wd*time))
 
 PARAMETRIC vibration (t, time, x, env)
   t = 0:0.05:6
-END`,
+END
+
+{ Graded on the table's last row, t = 6 s: x0 e^(-zeta wn t) (cos wd t + (zeta wn / wd) sin wd t). }
+{ CHECK env 0.000247875217666636 1e-15 }
+{ CHECK x -0.000153629414442251 1e-15 }`,
   },
   {
     id: 'karman-rocket',
@@ -452,7 +497,11 @@ h_apogee = h_target                 { <-- the equation that sizes the rocket }
 
 { Propellant split (load this much into the tanks) }
 m_fuel = f_fuel * m_prop
-m_oxidizer = OF * m_fuel`,
+m_oxidizer = OF * m_fuel
+
+{ CHECK h_coast 52147.964767274476 5.3e-5 }
+{ CHECK m_fuel 3.4216330731586844 3.5e-9 }
+{ CHECK m_oxidizer 11.633552448739527 1.2e-8 }`,
   },
   {
     id: 'newton-cooling-transient',
@@ -480,7 +529,11 @@ END
 { Read transient results back into the analytic solution }
 T_final = FinalValue('T') * 1 [K]        { temperature at the end of the run }
 T_peak  = MaxValue('T') * 1 [K]          { hottest point (here, the start) }
-t_half  = TimeAt('T', 56 [C]) * 1 [s]        { time to reach 56 degrees }`,
+t_half  = TimeAt('T', 56 [C]) * 1 [s]        { time to reach 56 degrees }
+
+{ CHECK T_peak 363.15 1e-8 }
+{ CHECK T_final 297.00801312641585 0.00005 }
+{ CHECK t_half 57.76226504666211 0.005 }`,
   },
   {
     id: 'transient-heat-rod',
@@ -515,7 +568,9 @@ DYNAMIC rod (method = ode23s, t = 0 .. 300, points = 150, rtol = 1e-6)
 END
 
 { Steady-state check: T[i] = 273.15 + 100 (N-i)/(N-1), in kelvin }
-T_mid_final = FinalValue('t[4]') * 1 [K]`,
+T_mid_final = FinalValue('t[4]') * 1 [K]
+
+{ CHECK T_mid_final 313.15 0.0001 }`,
   },
   {
     id: 'damped-oscillator-ode',
@@ -543,7 +598,10 @@ END
 
 { Transient read-backs }
 x_settled = FinalValue('x') * 1 [m]        { residual displacement at t = 20 }
-E0        = ODEValue('energy', 0) * 1 [J]  { initial energy }`,
+E0        = ODEValue('energy', 0) * 1 [J]  { initial energy }
+
+{ CHECK x_settled 0.001919825875960991 2e-12 }
+{ CHECK E0 10 1e-8 }`,
   },
   {
     id: 'sounding-rocket-trajectory',
@@ -590,7 +648,11 @@ END
 { Read the trajectory back into the analytic solution }
 apogee = MaxValue('h') * 1 [m]     { peak altitude reached }
 v_burnout = ODEValue('v', t_burn) * 1 [m/s]    { speed at burnout }
-m_final   = FinalValue('m') * 1 [kg]          { burnout / coasting mass }`,
+m_final   = FinalValue('m') * 1 [kg]          { burnout / coasting mass }
+
+{ CHECK apogee 98571.74729819218 1e-4 }
+{ CHECK v_burnout 1292.4475052767484 1.3e-6 }
+{ CHECK m_final 357.00041513103366 3.6e-7 }`,
   },
   {
     id: 'partial-fractions',
@@ -614,7 +676,11 @@ tf([1, 3], [1, 3, 2]) = A/(s+1) + B/(s+2)
 
 { A and B are ordinary variables now — use them downstream. With the
   inverse Laplace transform y(t) = A*e^(-t) + B*e^(-2t): }
-y_initial = A + B        { y(0) }`,
+y_initial = A + B        { y(0) }
+
+{ CHECK A 2 2e-9 }
+{ CHECK B -1 1e-9 }
+{ CHECK y_initial 1 1e-9 }`,
   },
   {
     id: 'cruise-control',
@@ -687,7 +753,11 @@ PLOT 'Pole-Zero Map'
   pi = cl_pi
   zr = cl_zr
   zi = cl_zi
-END`,
+END
+
+{ CHECK pm 90 9.1e-8 }
+{ CHECK w_cg 0.8000059198449195 8.1e-10 }
+{ CHECK cl_pr[1] -0.7999999999999994 8e-10 }`,
   },
   {
     id: 'multi-output-destructuring',
@@ -714,7 +784,12 @@ omega = [0.1, 1, 10]
 [mag, ~] = bode(num, den, omega)
 
 { 4. Omit trailing outputs : state & input matrices only (C, D dropped) }
-[Ar, Br] = tf2ss(num, den)`,
+[Ar, Br] = tf2ss(num, den)
+
+{ CHECK num2[3] 1 1e-9 }
+{ CHECK den2[3] 2 2e-9 }
+{ CHECK mag[1] -6.074657464028251 6.1e-9 }
+{ CHECK mag[3] -40.21354713081423 4.1e-8 }`,
   },
   {
     id: 'step-impulse-response',
@@ -770,7 +845,11 @@ PLOT 'Ramp Response (lsim)'
   xlabel = 'Time [s]'
   ylabel = 'Amplitude'
   title = 'Ramp Response via lsim'
-END`,
+END
+
+{ CHECK pr[1] -0.6 6e-10 }
+{ CHECK y_step[50] 0.9974089580786609 1e-9 }
+{ CHECK y_imp[50] 0.0011808598375713535 1.2e-12 }`,
   },
   {
     id: 'controller-design-lqr-pid',
@@ -805,7 +884,13 @@ Acl[2,2] = A[2,2] - B[2]*K[2]
 num = [1]
 den = [1, 1, 0]
 wc = 1 [rad/s]
-[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)`,
+[Kp, Ki, Kd] = pidtune(num, den, 'PID', wc)
+
+{ CHECK K[1] 1.0000000000000004 1.1e-9 }
+{ CHECK K[2] 1.732050807568877 1.8e-9 }
+{ CHECK kp 1.3660254037844386 1.4e-9 }
+{ CHECK ki 0.5240940792943284 5.3e-10 }
+{ CHECK kd 0.8901194830787665 9e-10 }`,
   },
   {
     id: 'estimator-gramian-balreal',
@@ -835,7 +920,12 @@ Rn = 0.1 [V^2]
 [Wo] = gram(A, C, 'o')
 
 { ---- Internally-balanced realization: Wc = Wo = diag(Hankel singular values) ---- }
-[Ab, Bb, Cb] = balreal(A, B, C)`,
+[Ab, Bb, Cb] = balreal(A, B, C)
+
+{ CHECK l[1,1] 2.949460316227945 3e-9 }
+{ CHECK l[2,1] -0.6503419214982696 6.6e-10 }
+{ CHECK ab[1,1] -0.40858968733650153 4.1e-10 }
+{ CHECK ab[2,2] -2.5914103126634984 2.6e-9 }`,
   },
   {
     id: 'control-analysis-report',
@@ -913,7 +1003,11 @@ PLOT 'Step Response'
   y = y
   xlabel = 'Time [s]'
   ylabel = 'Amplitude'
-END`,
+END
+
+{ CHECK pr[1] -2 2e-9 }
+{ CHECK pi[2] 4.58257569495584 4.6e-9 }
+{ CHECK y[81] 0.07994618546824751 8e-11 }`,
   },
   {
     id: 'root-locus-analysis',
@@ -940,7 +1034,10 @@ PLOT 'Root Locus'
   pi = cpi
   zr = zr
   zi = zi
-END`,
+END
+
+{ CHECK pr[1] -3.999999999999993 4e-9 }
+{ CHECK zr[1] -3 3e-9 }`,
   },
   {
     id: 'heisler-transient',
@@ -970,7 +1067,11 @@ theta_c = heisler_temp(geom$, Bi, Fo, 0)   { centre, x* = 0 }
 theta_s = heisler_temp(geom$, Bi, Fo, 1)   { surface, x* = 1 }
 T_centre = Tinf + theta_c * (Ti - Tinf)
 T_surface = Tinf + theta_s * (Ti - Tinf)
-Q_ratio = heisler_q(geom$, Bi, Fo)         { fraction of heat removed }`,
+Q_ratio = heisler_q(geom$, Bi, Fo)         { fraction of heat removed }
+
+{ CHECK T_centre 450.576089441665 4.6e-7 }
+{ CHECK T_surface 350.53744609871654 3.6e-7 }
+{ CHECK Q_ratio 0.32952524994160104 3.3e-10 }`,
   },
   {
     id: 'nichols-chart',
@@ -1000,7 +1101,10 @@ PLOT 'Nichols'
   kind = nichols
   mag = mag
   phase = phase
-END`,
+END
+
+{ CHECK mag[1] -15.5777885192688 1.6e-8 }
+{ CHECK phase[9] -252.89623602644045 2.6e-7 }`,
   },
   {
     id: 'routh-stability',
@@ -1013,7 +1117,9 @@ END`,
   the answer is 2 (unstable). }
 den = [1, 1, 2, 8]       { s^3 + s^2 + 2s + 8 }
 
-[nRHP, stable] = routh(den)`,
+[nRHP, stable] = routh(den)
+
+{ CHECK nrhp 2 2e-9 }`,
   },
   {
     id: 'inverse-laplace-residue',
@@ -1028,7 +1134,12 @@ den = [1, 1, 2, 8]       { s^3 + s^2 + 2s + 8 }
 num = [1, 3]             { s + 3 }
 den = [1, 3, 2]          { s^2 + 3s + 2 = (s+1)(s+2) }
 
-[r_r, r_i, p_r, p_i, k] = residue(num, den)`,
+[r_r, r_i, p_r, p_i, k] = residue(num, den)
+
+{ CHECK r_r[1] -1 1e-9 }
+{ CHECK r_r[2] 2 2e-9 }
+{ CHECK p_r[1] -2 2e-9 }
+{ CHECK p_r[2] -1 1e-9 }`,
   },
   {
     id: 'digital-control-c2d',
@@ -1044,7 +1155,11 @@ den = [1, 2]             { 2 / (s + 2) }
 Ts = 0.1 [s]
 
 [numz_t, denz_t] = c2d(num, den, Ts, 'tustin')
-[numz_z, denz_z] = c2d(num, den, Ts, 'zoh')`,
+[numz_z, denz_z] = c2d(num, den, Ts, 'zoh')
+
+{ CHECK numz_z[2] 0.18126924692201812 1.9e-10 }
+{ CHECK denz_z[2] -0.8187307530779818 8.2e-10 }
+{ CHECK numz_t[1] 0.09090909090909091 9.1e-11 }`,
   },
   {
     id: 'radiation-view-factors',
@@ -1058,7 +1173,11 @@ Ts = 0.1 [s]
   leaves surface 1 and reaches surface 2. }
 F_perp = viewfactor_perp(1 [m], 1 [m], 1 [m])       { perpendicular plates sharing an edge }
 F_par  = viewfactor_plates(2 [m], 2 [m], 1 [m])     { aligned parallel rectangles }
-F_disk = viewfactor_disks(0.5 [m], 1 [m], 0.4 [m])  { coaxial parallel disks }`,
+F_disk = viewfactor_disks(0.5 [m], 1 [m], 0.4 [m])  { coaxial parallel disks }
+
+{ CHECK F_perp 0.20004377607540316 2.1e-10 }
+{ CHECK F_par 0.4152532835771469 4.2e-10 }
+{ CHECK F_disk 0.8319356147247143 8.4e-10 }`,
   },
   {
     id: 'material-conduction',
@@ -1074,7 +1193,10 @@ L = 0.02 [m]             { plate thickness }
 A = 0.25 [m^2]           { area }
 k = k_(Aluminum)         { ~237 W/m-K from the material DB }
 
-q = k * A * (T_hot - T_cold) / L   { heat rate through the plate }`,
+q = k * A * (T_hot - T_cold) / L   { heat rate through the plate }
+
+{ CHECK k 237 2.4e-7 }
+{ CHECK q 296250 3e-4 }`,
   },
   {
     id: 'engine-map-2d',
@@ -1093,7 +1215,10 @@ TABLE bsfc(rpm : load = 0.25, 0.5, 1.0)
 END
 
 g_per_kWh = bsfc(2500, 0.6)                  { direct curve-family call }
-g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, classic-solver name }`,
+g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, classic-solver name }
+
+{ CHECK g_per_kWh 268 2.7e-7 }
+{ CHECK g_check 268 2.7e-7 }`,
   },
   {
     id: 'multi-objective-beam',
@@ -1117,7 +1242,10 @@ h = 0.05 [m]             { cross-section height (decision) }
 
 I = b * h^3 / 12         { second moment of area }
 mass = rho * L * b * h               { objective 1: minimize }
-delta = F * L^3 / (3 * E * I)        { objective 2: tip deflection, minimize }`,
+delta = F * L^3 / (3 * E * I)        { objective 2: tip deflection, minimize }
+
+{ CHECK mass 11.781 1.2e-8 }
+{ CHECK delta 0.0026666666666666657 2.7e-12 }`,
   },
   {
     id: 'driving-cycle-energy',
@@ -1147,7 +1275,11 @@ P_avg = TableAvg('P')                 { mean power across the runs }
 
 PARAMETRIC drive (t, v, P)
   t = 0:2:30
-END`,
+END
+
+{ Trapezoid over t = 0:2:30 and the mean of the 16 rows. }
+{ CHECK E_total 160007.4 1e-6 }
+{ CHECK P_avg 5499.9 1e-8 }`,
   },
   {
     // Distinct from 'rankine-cycle' above, which is the IDEAL cycle. This one
@@ -1184,7 +1316,12 @@ h4 = h3 - w_t
 
 q_in = h3 - h2
 w_net = w_t - w_p
-eta_th = w_net / q_in`,
+eta_th = w_net / q_in
+
+{ CHECK h4 2295430.93301627 0.0023 }
+{ CHECK q_in 3147749.13826655 0.0032 }
+{ CHECK w_net 1044124.14980918 0.0011 }
+{ CHECK eta_th 0.331705006957503 3.4e-10 }`,
   },
   {
     id: 'brayton-cycle',
@@ -1210,7 +1347,11 @@ w_c = cp * (T2 - T1)
 w_t = cp * (T3 - T4)
 q_in = cp * (T3 - T2)
 w_net = w_t - w_c
-eta_th = w_net / q_in`,
+eta_th = w_net / q_in
+
+{ CHECK q_in 762538.8342199575 7.7e-4 }
+{ CHECK w_net 234075.91744412924 2.4e-4 }
+{ CHECK eta_th 0.30696917578444155 3.1e-10 }`,
   },
   {
     id: 'otto-cycle',
@@ -1231,7 +1372,11 @@ T4 = T3 / r^(k - 1)      { isentropic expansion }
 q_out = cv * (T4 - T1)
 w_net = q_in - q_out
 eta_th = w_net / q_in
-eta_ideal = 1 - 1 / r^(k - 1)   { closed-form air-standard efficiency }`,
+eta_ideal = 1 - 1 / r^(k - 1)   { closed-form air-standard efficiency }
+
+{ CHECK w_net 1016504.493033488 1.1e-3 }
+{ CHECK eta_th 0.5647247183519378 5.7e-10 }
+{ CHECK eta_ideal 0.5647247183519379 5.7e-10 }`,
   },
   {
     id: 'refrigeration-vcr',
@@ -1258,7 +1403,11 @@ h4 = h3                              { throttle is isenthalpic }
 
 q_L = h1 - h4            { refrigeration effect }
 w_c = h2 - h1
-COP = q_L / w_c`,
+COP = q_L / w_c
+
+{ CHECK q_L 136255.66901049565 4.3e-4 }
+{ CHECK w_c 42268.47396280995 1.4e-4 }
+{ CHECK COP 3.223576728376346 1e-8 }`,
   },
   {
     id: 'cd-nozzle-shock',
@@ -1280,7 +1429,11 @@ P1 = P0 / P0_P(M1, k)
 
 M2 = M2_shock(M1, k)                 { Mach downstream of the shock }
 P2 = P1 * P2_P1_shock(M1, k)
-P02 = P0 * P02_P01_shock(M1, k)      { stagnation pressure after the loss }`,
+P02 = P0 * P02_P01_shock(M1, k)      { stagnation pressure after the loss }
+
+{ CHECK M2 0.5474316547926514 5.5e-10 }
+{ CHECK P2 513400.72799562756 5.2e-4 }
+{ CHECK P02 629412.8957115987 6.3e-4 }`,
   },
   {
     id: 'hx-effectiveness-ntu',
@@ -1310,7 +1463,12 @@ Q_max = C_min * (Th_in - Tc_in)
 Q = eps * Q_max
 Th_out = Th_in - Q / C_h
 Tc_out = Tc_in + Q / C_c
-dTlm = LMTD(Th_in - Tc_out, Th_out - Tc_in)`,
+dTlm = LMTD(Th_in - Tc_out, Th_out - Tc_in)
+
+{ CHECK Q 311844.933246102 0.00032 }
+{ CHECK Th_out 322.697974492093 3.3e-7 }
+{ CHECK Tc_out 339.736034010543 3.4e-7 }
+{ CHECK dTlm 25.9870777705085 2.6e-8 }`,
   },
   {
     id: 'cubic-eos-properties',
@@ -1325,7 +1483,11 @@ Z = eos_z('co2', 'PR', T, P, 'vapor')          { compressibility factor }
 rho = eos_density('co2', 'PR', T, P, 'vapor')
 v = eos_volume('co2', 'PR', T, P, 'vapor')
 h = eos_enthalpy('co2', 'PR', T, P, 'vapor')
-Psat_300 = eos_psat('co2', 'PR', 300)          { saturation pressure at 300 K }`,
+Psat_300 = eos_psat('co2', 'PR', 300)          { saturation pressure at 300 K }
+
+{ CHECK rho 142.796497070525 1.5e-7 }
+{ CHECK h -45003.83281558031 4.6e-5 }
+{ CHECK Psat_300 6726910.38265417 6.8e-3 }`,
   },
   {
     id: 'engine-cycle-wiebe',
@@ -1362,7 +1524,9 @@ DYNAMIC engine (method = ode45, t = 0 .. 360, points = 361, rtol = 1e-8)
   p(0)     = p_ivc
 END
 
-p_max = MaxValue('p') * 1 [Pa]      { peak cylinder pressure }`,
+p_max = MaxValue('p') * 1 [Pa]      { peak cylinder pressure }
+
+{ CHECK p_max 4473698.179189238 4.5e-3 }`,
   },
   {
     id: 'adiabatic-flame-temp',
@@ -1377,7 +1541,11 @@ phi     = 1.0              { equivalence ratio (1 = stoichiometric, <1 = excess 
 T_react = 298.15 [K]       { reactants enter at 25 C }
 T_flame = AdiabaticFlameTemp('CH4', phi, T_react)
 AFR_st  = StoichAFR('CH4') { stoichiometric air-fuel ratio (mass basis) }
-LHV     = HeatingValue('CH4', 'LHV')`,
+LHV     = HeatingValue('CH4', 'LHV')
+
+{ CHECK T_flame 2325.598129753964 2.4e-6 }
+{ CHECK AFR_st 17.119975067007417 1.8e-8 }
+{ CHECK LHV 50009973.19703297 5.1e-2 }`,
   },
   {
     id: 'ev-battery-cooling-pid',
@@ -1436,7 +1604,10 @@ connect(PID.out, EXV.u)
 DYNAMIC cool(method = ode23s, time = 0 .. 4000, points = 400)
 END
 t_bat      = FinalValue('bp.t') * 1 [K]
-q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))`,
+q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))
+
+{ CHECK t_bat 302.99984375521336 3.1e-7 }
+{ CHECK hliq 265947.2005481485 2.7e-4 }`,
   },
   {
    id: 'pneumatic-spring-actuator',
