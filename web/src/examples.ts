@@ -6179,7 +6179,471 @@ PLOT 'Room and mixed air'
   x = T_room, T_mix     { paired in order with y: the room and the mixed air }
   y = w_room, w_mix
 END`,
-  }
+  },
+  {
+    id: 'ideal-rankine',
+    title: 'Ideal Rankine Steam Power Cycle',
+    description: 'Analyses an ideal Rankine cycle, computing state enthalpies, work, and efficiency.',
+    category: 'Thermodynamics',
+    text: `{ Ideal Rankine Steam Power Cycle }
+{ No source is cited. Hand check from steam-table values (8 MPa, 500 C: h =
+  3399.5 kJ/kg, s = 6.7266 kJ/kg-K; 10 kPa saturated liquid: h_f = 191.81
+  kJ/kg, v_f = 0.00101 m^3/kg, s_f = 0.6492 and s_fg = 7.4996 kJ/kg-K) gives
+  h2 = 2320.8 kJ/kg, h4 = 200.78 kJ/kg, eta_th = 33.44 % and m_dot = 9.35
+  kg/s. The turbine and pump are 85 % and 90 % efficient, so despite its
+  title the cycle is not ideal. }
+P_high = 8000 [kPa]
+P_low = 10 [kPa]
+T_boiler = 500 [C]
+eta_turb = 0.85
+eta_pump = 0.90
+W_dot_net = 10000 [kW]
+
+h1 = Enthalpy(Water, P=P_high, T=T_boiler)
+s1 = Entropy(Water, P=P_high, T=T_boiler)
+s_2s = s1
+h_2s = Enthalpy(Water, P=P_low, s=s_2s)
+h2 = h1 - eta_turb * (h1 - h_2s)
+h3 = Enthalpy(Water, P=P_low, x=0)
+v3 = Volume(Water, P=P_low, x=0)
+h_4s = Enthalpy(Water, P=P_high, s=Entropy(Water, P=P_low, x=0))
+h4 = h3 + (h_4s - h3) / eta_pump
+
+w_turb = h1 - h2
+w_pump = h4 - h3
+q_boiler = h1 - h4
+w_net = w_turb - w_pump
+eta_th = w_net / q_boiler * 100
+W_dot_net = m_dot * w_net
+{ CHECK h2 2320617.6602863567 3 }
+{ CHECK h4 200759.7214069614 3e-1 }
+{ CHECK eta_th 33.448261305976395 4e-5 }
+{ CHECK m_dot 9.346491321944612 1e-5 }`,
+  },
+  {
+    id: 'reheat-rankine',
+    title: 'Reheat Rankine Cycle with Moisture Limit',
+    description: 'A reheat Rankine cycle where the condenser pressure is itself an unknown, fixed by the requirement that turbine-exit moisture not exceed 5%. frees finds it implicitly from the quality constraint.',
+    category: 'Thermodynamics',
+    text: `{ Reheat Rankine Cycle with Moisture Limit }
+{ Verified against the textbook: condenser pressure 9.73 kPa, net power 10.2
+  MW, thermal efficiency 36.9%. }
+{ Find the condenser pressure that limits turbine-exit moisture to 5%,
+  then the net power output and thermal efficiency. }
+m_dot = 7.7 [kg/s]
+P[3] = 12500 [kPa]   { HP turbine inlet }
+T[3] = 550 [C]
+P[4] = 2000 [kPa]    { Reheat pressure }
+T[5] = 450 [C]       { Reheat temperature }
+P[5] = P[4]
+eta_turb = 0.85
+eta_pump = 0.90
+x[6] = 0.95          { Max 5% moisture at LP turbine exit }
+
+{ State 3: HP turbine inlet }
+h[3] = Enthalpy(Water, P=P[3], T=T[3])
+s[3] = Entropy(Water, P=P[3], T=T[3])
+
+{ State 4: HP turbine exit }
+h_4s = Enthalpy(Water, P=P[4], s=s[3])
+h[4] = h[3] - eta_turb * (h[3] - h_4s)
+
+{ State 5: reheater exit }
+h[5] = Enthalpy(Water, P=P[5], T=T[5])
+s[5] = Entropy(Water, P=P[5], T=T[5])
+
+{ State 6: LP turbine exit; the quality constraint fixes P[6] }
+h_6s = Enthalpy(Water, P=P[6], s=s[5])
+h[6] = h[5] - eta_turb * (h[5] - h_6s)
+h[6] = Enthalpy(Water, P=P[6], x=x[6])
+
+{ State 1: condenser exit (saturated liquid) }
+P[1] = P[6]                  { condenser pressure, so state 1 plots on the diagram }
+h[1] = Enthalpy(Water, P=P[6], x=0)
+v[1] = Volume(Water, P=P[6], x=0)
+
+{ State 2: pump exit }
+P[2] = P[3]                  { pump discharges to boiler pressure }
+w_pump = v[1] * (P[3] - P[6]) / eta_pump
+h[2] = h[1] + w_pump
+
+{ Energy balances }
+q_in = (h[3] - h[2]) + (h[5] - h[4])
+w_turb = (h[3] - h[4]) + (h[5] - h[6])
+w_net = w_turb - w_pump
+W_dot_net = m_dot * w_net
+eta_th = w_net / q_in * 100
+
+{ Plot the cycle on a temperature-entropy diagram (see "Plots in Code"). }
+PLOT 'Reheat Rankine T-s'
+  kind = property
+  fluid = Water
+  diagram = 'T-s'
+  overlaystates = true
+  connectstates = true
+END
+
+{ T-s diagram of the reheat Rankine cycle appears in the Plots window }
+{ CHECK P[6] 9730.596178746808 1e-2 }
+{ CHECK W_dot_net 10242150.49138011 20 }
+{ CHECK eta_th 36.909459276375095 4e-5 }`,
+  },
+  {
+    id: 'reheat-regen-rankine',
+    title: 'Ideal Reheat-Regenerative Rankine Cycle, English Units',
+    description: 'One reheater and two open feedwater heaters with extractions at 250 and 40 psia. All inputs are in English units (psia, F, Btu/s); frees converts them to SI automatically and solves the two feedwater-heater mass balances simultaneously.',
+    category: 'Thermodynamics',
+    text: `{ Ideal Reheat-Regenerative Rankine Cycle, English Units }
+{ With 4e5 Btu/s of boiler heat input the cycle delivers about 200 MW at
+  47.4% thermal efficiency. }
+{ One reheater and two open feedwater heaters; everything isentropic.
+  English-unit inputs are converted to SI automatically. Find the boiler
+  flow rate, net power and thermal efficiency. }
+P[7] = 1500 [psia]   { HP turbine inlet }
+T[7] = 1100 [F]
+P[8] = 250 [psia]    { Extraction to FWH II }
+P[9] = 140 [psia]    { HP exit / reheater }
+T[10] = 1000 [F]     { Reheat temperature }
+P[11] = 40 [psia]    { Extraction to FWH I }
+P[12] = 1 [psia]     { Condenser }
+Q_dot_in = 400000 [Btu/s]
+
+{ HP turbine: 7 -> 8 (extraction) -> 9 (to reheater), isentropic }
+h[7] = Enthalpy(Water, P=P[7], T=T[7])
+s[7] = Entropy(Water, P=P[7], T=T[7])
+h[8] = Enthalpy(Water, P=P[8], s=s[7])
+h[9] = Enthalpy(Water, P=P[9], s=s[7])
+
+{ Reheater and LP turbine: 10 -> 11 (extraction) -> 12, isentropic }
+h[10] = Enthalpy(Water, P=P[9], T=T[10])
+s[10] = Entropy(Water, P=P[9], T=T[10])
+h[11] = Enthalpy(Water, P=P[11], s=s[10])
+h[12] = Enthalpy(Water, P=P[12], s=s[10])
+
+{ Condensate and feedwater path: saturated liquid out of each FWH }
+h[1] = Enthalpy(Water, P=P[12], x=0)
+v[1] = Volume(Water, P=P[12], x=0)
+h[2] = h[1] + v[1] * (P[11] - P[12])
+h[3] = Enthalpy(Water, P=P[11], x=0)
+v[3] = Volume(Water, P=P[11], x=0)
+h[4] = h[3] + v[3] * (P[8] - P[11])
+h[5] = Enthalpy(Water, P=P[8], x=0)
+v[5] = Volume(Water, P=P[8], x=0)
+h[6] = h[5] + v[5] * (P[7] - P[8])
+
+{ Feedwater heater balances (per kg of boiler flow):
+  y extracted at 250 psia, z at 40 psia }
+y * h[8] + (1 - y) * h[4] = h[5]
+z * h[11] + (1 - y - z) * h[2] = (1 - y) * h[3]
+
+{ Boiler heat input fixes the mass flow rate }
+q_in = (h[7] - h[6]) + (1 - y) * (h[10] - h[9])
+Q_dot_in = m_dot * q_in
+
+{ Net power and efficiency }
+w_turb = (h[7] - h[8]) + (1 - y) * (h[8] - h[9]) + (1 - y) * (h[10] - h[11]) + (1 - y - z) * (h[11] - h[12])
+w_pumps = (1 - y - z) * (h[2] - h[1]) + (1 - y) * (h[4] - h[3]) + (h[6] - h[5])
+w_net = w_turb - w_pumps
+W_dot_net = m_dot * w_net
+eta_th = w_net / q_in * 100
+{ CHECK m_dot 128.15098942601617 2e-4 }
+{ CHECK W_dot_net 200120912.86763355 300 }
+{ CHECK eta_th 47.41950683716818 5e-5 }`,
+  },
+  {
+    id: 'cogeneration-plant',
+    title: 'Cogeneration Plant with Regeneration',
+    description: '35% of the turbine flow is extracted at 1.6 MPa; one part feeds an open feedwater heater, the rest a process heater. The open-FWH energy balance determines the split.',
+    category: 'Thermodynamics',
+    text: `{ Cogeneration Plant with Regeneration }
+{ Verified against the textbook: boiler mass flow rate 29.1 kg/s for 25 MW
+  of net power. }
+{ 35% of the turbine flow is extracted at 1.6 MPa; part heats the open
+  feedwater heater, the rest serves the process heater. Isentropic
+  turbine and pumps. Find the boiler flow rate for 25 MW net power. }
+P[6] = 9000 [kPa]
+T[6] = 400 [C]
+P[7] = 1600 [kPa]    { Extraction pressure }
+P[8] = 10 [kPa]      { Condenser pressure }
+f_ext = 0.35         { Extracted fraction of the boiler flow }
+W_dot_net = 25000 [kW]
+
+{ State 6: turbine inlet }
+h[6] = Enthalpy(Water, P=P[6], T=T[6])
+s[6] = Entropy(Water, P=P[6], T=T[6])
+
+{ States 7 and 8: isentropic expansion }
+h[7] = Enthalpy(Water, P=P[7], s=s[6])
+h[8] = Enthalpy(Water, P=P[8], s=s[6])
+
+{ State 1: condenser exit; pump I to extraction pressure }
+h[1] = Enthalpy(Water, P=P[8], x=0)
+v[1] = Volume(Water, P=P[8], x=0)
+w_pI = v[1] * (P[7] - P[8])
+h[2] = h[1] + w_pI
+
+{ States 3 and 9: FWH and process heater both yield sat. liquid at 1.6 MPa }
+h[3] = Enthalpy(Water, P=P[7], x=0)
+v[3] = Volume(Water, P=P[7], x=0)
+
+{ Open FWH balance: y of the boiler flow condenses the feedwater stream }
+(1 - f_ext) * h[2] + y * h[7] = (1 - f_ext + y) * h[3]
+
+{ Mixing of FWH exit and process-heater drain is at the same state,
+  then pump II raises it to boiler pressure }
+w_pII = v[3] * (P[6] - P[7])
+h[5] = h[3] + w_pII
+
+{ Specific work per kg of boiler flow }
+w_turb = (h[6] - h[7]) + (1 - f_ext) * (h[7] - h[8])
+w_pumps = (1 - f_ext) * w_pI + w_pII
+w_net = w_turb - w_pumps
+W_dot_net = m_dot * w_net
+
+{ Process heat delivered }
+Q_dot_process = m_dot * (f_ext - y) * (h[7] - h[3])
+{ CHECK m_dot 29.068347495404108 3e-5 }
+{ CHECK Q_dot_process 6475691.737409691 7 }`,
+  },
+  {
+    id: 'binary-geothermal',
+    title: 'Binary Geothermal Plant with Isobutane',
+    description: 'A binary-cycle plant where geothermal brine at 160 C drives a Rankine cycle on isobutane. The problem supplies the isobutane properties directly, so this is a pure energy-balance system.',
+    category: 'Thermodynamics',
+    text: `{ Binary Geothermal Power Plant with Isobutane }
+{ Results: turbine isentropic efficiency 78.8%, net power 22.6 MW, thermal
+  efficiency 13.7%. }
+{ Property values are given in the problem statement. Find the turbine
+  isentropic efficiency, net power and thermal efficiency. }
+m_dot_geo = 555.9 [kg/s]
+T_geo_in = 160 [C]
+T_geo_out = 90 [C]
+cp_geo = 4.258 [kJ/kg-K]
+P[2] = 3250 [kPa]    { Turbine inlet pressure (pump exit) }
+P[1] = 410 [kPa]     { Condenser pressure }
+eta_pump = 0.90
+
+{ Given isobutane properties }
+h[1] = 273.01 [kJ/kg]    { Condenser exit, saturated liquid }
+v[1] = 0.001842 [m^3/kg]
+h[3] = 761.54 [kJ/kg]    { Turbine inlet }
+h[4] = 689.74 [kJ/kg]    { Turbine exit, actual }
+h_4s = 670.40 [kJ/kg]    { Turbine exit, isentropic }
+
+{ (a) Turbine isentropic efficiency }
+eta_turb = (h[3] - h[4]) / (h[3] - h_4s)
+
+{ Pump work and heat-exchanger inlet state }
+w_pump = v[1] * (P[2] - P[1]) / eta_pump
+h[2] = h[1] + w_pump
+
+{ Heat picked up from the geothermal brine }
+Q_dot_in = m_dot_geo * cp_geo * (T_geo_in - T_geo_out)
+Q_dot_in = m_dot_iso * (h[3] - h[2])
+
+{ (b) Net power and (c) thermal efficiency }
+W_dot_turb = m_dot_iso * (h[3] - h[4])
+W_dot_pump = m_dot_iso * w_pump
+W_dot_net = W_dot_turb - W_dot_pump
+eta_th = W_dot_net / Q_dot_in * 100
+{ CHECK eta_turb 0.7877989905639675 8e-7 }
+{ CHECK W_dot_net 22650031.64692445 30 }
+{ CHECK eta_th 13.669997715710034 2e-5 }`,
+  },
+  {
+    id: 'brayton-irreversible',
+    title: 'Simple Brayton Cycle with Irreversibilities',
+    description: 'A gas-turbine plant between 100 and 1600 kPa with compressor and turbine efficiencies of 85% and 88%. The turbine inlet temperature is unknown and recovered from the known exhaust temperature.',
+    category: 'Thermodynamics',
+    text: `{ Simple Brayton Cycle with Irreversibilities }
+{ Verified against the textbook: net power 6488 kW, back work ratio 0.511,
+  thermal efficiency 37.8%. The model gives 6484 kW; the book's 6488 kW
+  carries its rounded intermediates. }
+{ Air enters the compressor at 40 C and 850 m^3/min; the turbine exhausts
+  at 650 C. Find net power, back work ratio and thermal efficiency. }
+P[1] = 100 [kPa]
+P[2] = 1600 [kPa]
+T[1] = 40 [C]
+T[4] = 650 [C]       { Turbine exit temperature }
+V_dot = 850 [m^3/min]
+eta_C = 0.85
+eta_T = 0.88
+cp = 1.108 [kJ/kg-K]
+cv = 0.821 [kJ/kg-K]
+k = 1.35
+
+{ Mass flow rate from ideal gas at compressor inlet }
+R = cp - cv
+rho[1] = P[1] / (R * T[1])
+m_dot = rho[1] * V_dot
+
+{ Compressor }
+T_2s = T[1] * (P[2] / P[1])^((k - 1) / k)
+w_C = cp * (T_2s - T[1]) / eta_C
+T[2] = T[1] + w_C / cp
+
+{ Turbine: exit temperature known, inlet T[3] unknown }
+T_4s = T[3] * (P[1] / P[2])^((k - 1) / k)
+T[3] - T[4] = eta_T * (T[3] - T_4s)
+w_T = cp * (T[3] - T[4])
+
+{ Performance }
+w_net = w_T - w_C
+W_dot_net = m_dot * w_net
+bwr = w_C / w_T
+    q_in = cp * (T[3] - T[2])
+    eta_th = w_net / q_in * 100
+{ CHECK W_dot_net 6484035.50249186 7 }
+{ CHECK bwr 0.510751801409789 6e-7 }
+{ CHECK eta_th 37.83470895073085 4e-5 }`,
+  },
+  {
+    id: 'brayton-cold-air-standard',
+    title: 'Simple Brayton Cycle, Cold-Air-Standard',
+    description: 'An air-standard Brayton cycle with a pressure ratio of 8, compressor and turbine isentropic efficiencies of 80% and 85%, and a turbine inlet of 1300 K. The actual compressor and turbine exit temperatures (T2a, T4a) are recovered implicitly from the efficiency definitions rather than being computed by hand.',
+    category: 'Thermodynamics',
+    text: `{ Simple Brayton Cycle, Cold-Air-Standard }
+{ Verified against the textbook: T2a = 604.3 K, T4a = 805.0 K, net work
+  191.7 kJ/kg, back work ratio 0.615, thermal efficiency 27.4%, heat rate 12
+  450 Btu/kWh. }
+{ Air enters the compressor at 300 K and 100 kPa, is compressed to 8 times
+  that pressure, then heated to 1300 K before expanding back to the inlet
+  pressure. Compressor and turbine isentropic efficiencies are 80% and 85%.
+  Find the state temperatures, works, back work ratio, thermal efficiency
+  and heat rate. Cold-air-standard: constant cp and k. }
+T1 = 300 [K]
+P1 = 100 [kPa]
+rp = 8
+T3 = 1300 [K]
+etaC = 0.80
+etaT = 0.85
+k = 1.4
+cp = 1.005 [kJ/kg-K]
+
+{ Pressures through the cycle }
+P2 = rp * P1
+P3 = P2
+P4 = P1
+
+{ Isentropic compressor exit and actual exit (T2a is the unknown) }
+T2s = T1 * rp^((k - 1) / k)
+etaC = (T2s - T1) / (T2a - T1)
+
+{ Isentropic turbine exit and actual exit (T4a is the unknown) }
+T4s = T3 / rp^((k - 1) / k)
+etaT = (T3 - T4a) / (T3 - T4s)
+
+{ Work and heat transfers }
+w_comp = cp * (T2a - T1)
+w_turb = cp * (T3 - T4a)
+w_net = w_turb - w_comp
+q_in = cp * (T3 - T2a)
+
+{ Performance metrics }
+r_bw = w_comp / w_turb
+eta_th = w_net / q_in * 100
+heat_rate = 3412 / (eta_th / 100)
+{ CHECK T2a 604.2927481979299 7e-4 }
+{ CHECK T4a 805.0094563047815 9e-4 }
+{ CHECK w_net 191651.28447477508 2e-1 }
+{ CHECK r_bw 0.614744568504914 7e-7 }
+{ CHECK eta_th 27.410637880132732 3e-5 }
+{ CHECK heat_rate 12447.721993631612 2e-2 }`,
+  },
+  {
+    id: 'auto-gas-turbine',
+    title: 'Automotive Gas Turbine with Regenerator',
+    description: 'An isentropic Brayton cycle with a regenerator whose cold stream leaves 10 C cooler than the turbine exhaust entering it. Find the heat addition and rejection rates for 115 kW of net power.',
+    category: 'Thermodynamics',
+    text: `{ Automotive Gas Turbine with Regenerator }
+{ Verified against the textbook: heat addition 240 kW, heat rejection 125
+  kW. }
+{ Isentropic compressor and turbine; the cold stream leaves the
+  regenerator 10 C cooler than the turbine exhaust entering it. }
+P[1] = 100 [kPa]
+T[1] = 30 [C]
+r_p = 8
+T[4] = 800 [C]       { Maximum cycle temperature (turbine inlet) }
+W_dot_net = 115 [kW]
+cp = 1.005 [kJ/kg-K]
+k = 1.4
+
+{ Compressor (isentropic) }
+T[2] = T[1] * r_p^((k - 1) / k)
+
+{ Turbine (isentropic) }
+T[5] = T[4] * (1 / r_p)^((k - 1) / k)
+
+{ Regenerator: cold-side exit 10 C below the hot-side inlet }
+T[3] = T[5] - 10
+
+{ Work and heat rates }
+w_net = cp * (T[4] - T[5]) - cp * (T[2] - T[1])
+W_dot_net = m_dot * w_net
+Q_dot_in = m_dot * cp * (T[4] - T[3])
+Q_dot_out = Q_dot_in - W_dot_net
+{ CHECK Q_dot_in 240414.36747691248 3e-1 }
+{ CHECK Q_dot_out 125414.36747691248 2e-1 }`,
+  },
+  {
+    id: 'brayton-regen-variable-cp',
+    title: 'Brayton Cycle with Regeneration and Variable Specific Heats',
+    description: 'Instead of assuming constant specific heats, this model uses real-gas air properties (Enthalpy/Entropy of Air) for the compressor, turbine and regenerator, exactly like the air-table solution in the book.',
+    category: 'Thermodynamics',
+    text: `{ Brayton Cycle with Regeneration, Variable Specific Heats }
+{ Verified against the textbook: turbine exit temperature 783 K, net work
+  108 kJ/kg, thermal efficiency 22.5%. }
+{ Real-gas air properties replace the constant-cp assumption. Find the
+  turbine exit temperature, net work and thermal efficiency. }
+P[1] = 100 [kPa]
+T[1] = 310 [K]
+r_p = 7
+P[2] = P[1] * r_p
+T[3] = 1150 [K]
+eta_C = 0.75
+eta_T = 0.82
+epsilon = 0.65       { Regenerator effectiveness }
+
+{ Compressor }
+h[1] = Enthalpy(Air, T=T[1], P=P[1])
+s[1] = Entropy(Air, T=T[1], P=P[1])
+h_2s = Enthalpy(Air, P=P[2], s=s[1])
+w_C = (h_2s - h[1]) / eta_C
+h[2] = h[1] + w_C
+T[2] = Temperature(Air, P=P[2], h=h[2])
+
+{ Turbine }
+h[3] = Enthalpy(Air, T=T[3], P=P[2])
+s[3] = Entropy(Air, T=T[3], P=P[2])
+h_4s = Enthalpy(Air, P=P[1], s=s[3])
+w_T = eta_T * (h[3] - h_4s)
+h[4] = h[3] - w_T
+P[4] = P[1]                  { turbine exits to inlet pressure }
+T[4] = Temperature(Air, P=P[1], h=h[4])
+
+{ Regenerator }
+P[5] = P[2]                  { regenerator cold side at compressor-discharge pressure }
+h[5] = h[2] + epsilon * (h[4] - h[2])
+
+{ Performance }
+q_in = h[3] - h[5]
+w_net = w_T - w_C
+eta_th = w_net / q_in * 100
+
+{ Plot the cycle on a temperature-entropy diagram (see "Plots in Code"). }
+PLOT 'Brayton T-s'
+  kind = property
+  fluid = Air
+  diagram = 'T-s'
+  overlaystates = true
+  connectstates = true
+END
+
+{ T-s diagram of the regenerative Brayton cycle appears in the Plots window }
+{ CHECK T[4] 782.7286641026278 8e-4 }
+{ CHECK w_net 108138.54048526031 2e-1 }
+{ CHECK eta_th 22.471020244581286 3e-5 }`,
+  },
 ]
 
 /** The document new/blank workspaces start from. */

@@ -1876,6 +1876,11 @@ export default function HelpPage() {
                         </MantineAccordion.Control>
                         <MantineAccordion.Panel>
                           <Text size="sm" mb="xs">{ex.description}</Text>
+                          {ex.id === 'brayton-cold-air-standard' && (
+                            <Paper withBorder p="sm" mb="sm" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8))">
+                              <BraytonCycleDiagram />
+                            </Paper>
+                          )}
                           <RunnableCode code={ex.text} title={ex.title} />
                         </MantineAccordion.Panel>
                       </MantineAccordion.Item>
@@ -1900,11 +1905,6 @@ export default function HelpPage() {
                         <Alert color="gray" py="xs" mb="sm">
                           {ex.note}
                         </Alert>
-                      )}
-                      {ex.diagram === 'BraytonCycle' && (
-                        <Paper withBorder p="sm" mb="sm" bg="light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-8))">
-                          <BraytonCycleDiagram />
-                        </Paper>
                       )}
                       <RunnableCode code={ex.code} title={exampleShortTitle(ex.title)} />
                     </MantineAccordion.Panel>
