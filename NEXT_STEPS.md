@@ -24,8 +24,9 @@ gate over every example (#137); EC2 group 1 (#139).
 ### FX. Correctness fixes from the 2026-11-23 engine audit
 
 **Source.** About 120 probe documents were run through the WASM module, and the
-code behind each failure was read. Every item below reproduced on `main` at
-`8c9f942`. The probes were temporary evidence and are not in the repository;
+code behind each failure was read. An external review was triaged the same day;
+its rejected points are listed at the end of FX. Every item below reproduced on
+`main` at `8c9f942`. The probes were temporary evidence and are not in the repository;
 each item carries its own repro, and each fix lands with that repro as a test.
 
 **Binding rules.**
@@ -51,6 +52,10 @@ each item carries its own repro, and each fix lands with that repro as a test.
   - Keep `t` out of the variables.
   - Before changing anything, scan the goldens for a five-argument `Integral` and list them.
 
+- **FX1f. The first property solve in a process differs from every later one.** Solving the same Rankine document six times in one WASM instance gives a different `h_4s` on the first solve (199864.3437221268 against 199864.34372214382 on every later one; about 1e-13 relative). That carries through to `eta_th` and `m_dot`. Single property calls and plain algebra are bit-stable. The cause is process-global state on the (P, s) inverse path, so a sweep row's last digits depend on which worker ran it and what that worker solved before. The older finding that "a cold `PreparedDocument` is not bit-equal to a fresh one" is this, misattributed.
+  - Fix: find the cached state (a warm-start or saturation cache in rustprop's inverse flash, or frees' property cache) and make the result independent of call history. Either seed the cache deterministically, or key it so a cold and a warm call take the same path.
+  - Test: a fresh module solves a property cycle twice and gets bit-equal values; a 4-worker sweep matches a 1-worker sweep bit for bit.
+
 **FX2. Units that disappear.**
 - **FX2a. Component variables have no units after Solve.** `crates/frees/src/lib.rs:933` (`variable_rows`) looks units up by the display name (`snk.in.p`), but member units are keyed by the flat name. `check()` already reports them all, internal variables included.
   - Fix (lowest risk): the Inspector and the variable tables fill an empty unit from the latest check's `inferredUnits`. The values stay SI and the labels are SI.
@@ -68,6 +73,11 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **FX3e. Missing common units:** `psig`, `barg`, `mbar`, `ton` (refrigeration), `mph`, `knot` and `inH2O`. Gauge units need an atmosphere convention, which is an *owner decision*: a fixed 101.325 kPa, or a refusal that names `psia`.
   - Also: an unknown unit leaves the value unconverted and the solve reports OK. Make an unknown unit on a literal a preparation error.
 
+- **FX3f. `Ω` inside a unit bracket.** `R = 10 [Ω]` and `[kΩ]` fail with "unexpected character `Ω`", but the engine prints `[Ω]` in its own output, so a reported unit cannot be pasted back. Accepting `Ω` in the unit lexer is purely additive, since that text is a syntax error today. It does not need FX5's contract process.
+- **FX3g. `PneumaticOrifice` and `PneumaticServoValve` pass forward flow only.** `iso6358` (`props/pneumatics.rs:76`) returns 0 when `p_down >= p_up`, so an overshooting volume traps pressure. Its slope is also infinite as the pressure ratio approaches 1, the zero-flow point Newton and IDA must cross.
+  - Fix: return a signed flow, taken from the downstream state when the pressure ratio reverses, and regularise the last few percent before ratio 1 so the slope stays finite.
+  - Scan the pneumatic goldens and gallery examples first: a changed grade is caused by this item and is named in the PR.
+
 **FX4. Diagnostics that point the wrong way.**
 - A property call outside its range, or an overflow, reports "Newton stalled after 0 iterations… try different guess values". An explicit single-equation block that fails on its first evaluation should report the function error itself.
 - Size limits (FOR > 10⁶, `linspace`, `zeros`) are labelled "Syntax error". Label them as limits.
@@ -77,16 +87,30 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - A one-decision BOBYQA request runs Nelder-Mead. The response should carry a warning saying so.
 - User `FUNCTION` recursion stops at 64 levels, so `h(70)` with a base case fails. Raise the limit under the evaluator's work budget, or name it in the message and the reference page.
 
+**FX6. Measure, then optimise.**
+- Profile `ev-battery-cooling-pid` (16 s alone; IDA over the R134a loop) before changing anything. Split the time between residual assembly, the Jacobian, the factorisation and property calls. The engine already factors sparse Jacobians (Phase 4.1), so "no sparsity" is not the working hypothesis. Property evaluation and the number of Jacobian refreshes are.
+  - Acceptance: a recorded profile, and the gate timeout back near the suite's normal limit.
+- `step`/`stepinfo`: the 2026-10-31 finding ("seconds over a few hundred samples") did not reproduce at the default length (41–90 ms on 2026-11-23). Retest with a long explicit time vector. If it is still fast, close the finding.
+
 **FX5. Language-contract items (owner decision before any work).** Each changes how existing text parses, so each needs a migration-matrix row (§4) and a golden scan.
 - **Transpose and string literals.** `A' + A'`, and `C = A'` followed by any later `'string'`, lex the two quotes as one string (`lexer.rs`, pinned as Java behaviour). The fix: after an identifier, `)` or `]`, a quote is a transpose.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
-- **A temperature-difference unit** (FX1c), and **`Ω` inside a unit bracket** (open finding of 2026-11-11).
+- **A temperature-difference unit** (FX1c).
 
-**Order.** FX1a → FX1b → FX2a → FX1c/FX1d (checker) → FX2b → FX1e → FX3 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX1a → FX1b → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.
 - **Catalog moves (EC2):** a converter that maps fields by hand must fail loudly on a field it does not know. The first EC2 group dropped Help's `diagram` field, and only `tsc -b` caught it. Run `tsc -b` on every group, not just `vitest`.
+
+**External review, 2026-11-23: points not taken.** Re-raise one only with new evidence.
+- **"Lazy fluid loading infected the core; let the CLI bundle everything."** That is the current design. Native builds link all 28 fluids through `frees-core`'s default `linked-fluids` feature; the core keeps only the `install_from_bytes` seam (D12).
+- **"Replace the custom canvas with React Flow."** D13 spiked React Flow on three models. Drag cost matched, it lost native SVG export and keyboard connect, and it added 63 KB gzipped. The 350-line figure was the subset React Flow would have replaced, not the canvas (12.4k lines today, most of it routing and authoring that React Flow does not provide). D13's own reconsider triggers stand. The review's accessibility point is taken and belongs with the WCAG 2.1 AA item in §3.
+- **"Use mdBook instead of the custom SSR Book."** D14 measured mdBook on the 844 pages: 635 pages showed raw `$…$` math and 212 showed raw Help directives. Making it work needs a second implementation of the Help dialect.
+- **"SharedArrayBuffer avoidance is a hard ceiling."** It stays a deferred candidate (§3) with its COOP/COEP cost. There is no measured sweep that needs it.
+- **"The integrator needs an RNG seam now."** It stays deferred. No model has asked for in-time stochastic boundaries, and parameter Monte Carlo over a `DYNAMIC` document already re-solves per sample.
+- **Live-mode buffer recycling.** It stays a `ponytail:` ceiling until a profile shows GC pauses in a long run.
+- **Catalog unification and function units** are already EC2/EC4 and FX2b.
 
 ### EC. Example curriculum (approved 2026-11-22; EC1 done)
 
@@ -113,9 +137,6 @@ each item carries its own repro, and each fix lands with that repro as a test.
 
 ### Open findings (not reverified since the date given)
 
-- **2026-11-22.** `ev-battery-cooling-pid` takes about 16 s alone and 55 s under the parallel suite; the gate timeout is 120 s. It has not been profiled.
-- **2026-11-07.** A cold `PreparedDocument` solve is not bit-equal to a fresh one on property cycles; both are within tolerance.
-- **2026-10-31.** `step`/`stepinfo` over a few hundred samples take seconds. `PneumaticOrifice` passes forward flow only.
 - **2026-11-06.** The RustProp crates.io publish was blocked by the new-crate burst limit; frees pins the `v0.3.0` tag. A scenario's baseline is not saved with the project. Spokes of one net can share a lane past their junction dot.
 - **2026-11-07.** There are no switch, transformer, op-amp or lamp symbols; they need Figma masters.
 - **Live-mode ceilings:**
@@ -140,7 +161,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
   - `glob` 11 and `minimatch` 9/10: build-time denial-of-service bugs. Trigger: workbox-build or linaria taking the fixed major.
   - `maplibre-gl`, `@plotly/mapbox-gl` and `es5-ext`: not bundled. Trigger: a map or WebGL trace, or plotly.js 4.
   - `babel-merge` and `@babel/plugin-proposal-export-namespace-from`: glide-data-grid build dependencies.
-- **Research and infrastructure:** the `frees-lsp` language server; Python/C++ model export; `SharedArrayBuffer` sweeps; bounded surrogate property models; WCAG 2.1 AA and touch ergonomics.
+- **Research and infrastructure:** the `frees-lsp` language server; Python/C++ model export; `SharedArrayBuffer` sweeps; bounded surrogate property models; WCAG 2.1 AA and touch ergonomics, including schematic canvas keyboard navigation (raised by the 2026-11-23 review).
 - **Simulation:**
   - several DYNAMIC blocks; structural state migration
   - hysteresis and state machines; ADC/DAC and sampled control
