@@ -44,7 +44,7 @@ frees-wasm/
 ├── Cargo.toml                    # Root workspace configuration & compiler profiles
 ├── rust-toolchain.toml           # Pinned stable Rust toolchain & wasm32 target
 ├── ARCHITECTURE_AND_REQUIREMENTS.md # Architecture, language contract, retained decisions
-├── NEXT_STEPS.md                 # Milestones, unresolved work, acceptance gates
+├── NEXT_STEPS.md                 # Open work, findings, acceptance gates
 ├── crates/
 │   ├── frees-core/               # Pure Rust numerical engine (solvers, AST, DAE, ODE, CAS, props)
 │   ├── frees/                    # WASM boundary crate (`wasm-bindgen` JSON bridge)
@@ -157,7 +157,7 @@ by `README.md`, not in separate report/decision folders:
 
 - `ARCHITECTURE_AND_REQUIREMENTS.md`: architecture, language contract, compatibility constraints and the retained rationale of D1–D14.
 - `CLAUDE.md`: development instructions, authoritative source locations and maintenance rules.
-- `NEXT_STEPS.md`: signed milestones, unresolved findings and acceptance criteria. Label historical findings that have not been reverified; do not turn an old review into a claim that a bug remains open.
+- `NEXT_STEPS.md`: open work in priority order, unresolved findings and acceptance criteria. Closed work is one line there; its narrative lives in Git history and PRs. Label historical findings that have not been reverified; do not turn an old review into a claim that a bug remains open.
 
 User guides and per-symbol reference pages live only in `web/src/docs/`.
 Generated Help catalogs are build outputs, not independently authored sources.
