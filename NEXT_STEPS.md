@@ -20,7 +20,7 @@ project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#
 three event goldens regenerated against closed forms, owner-approved); FX1a,
 case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
 refused (#143, owner decision); FX1b, the optimizer reads a capitalised
-decision's guess (#144).
+decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145).
 
 ---
 
@@ -58,11 +58,10 @@ each item carries its own repro, and each fix lands with that repro as a test.
   - Corroborating evidence from the second review: an unsharded single-process WASM replay of the corpus twice failed `chiller-higher-refrigerant-flow-delivers-more-cooling-2` on `ch.ev.q_sh` (1.73e-9 relative against a 1e-9 tolerance), and the fixture passes alone. CI's four shards hide this. Reproduced again on the FX7 build (2026-11-24). Add acceptance: the unsharded replay passes.
 
 **FX8. Component invariants at the boundaries.** Each fix pairs the failing point with the reviewer's passing control, and scans the goldens and gallery for the component first.
-- **E04. Superheat on a gliding blend is measured from the bubble point.** `TwoPhaseSensor` computes `SH = T − T_sat(P)`, and `T_sat` is the x = 0 temperature. R407C saturated vapour at 500 kPa reads 6.21 K of superheat (dew 275.51 K, bubble 269.30 K); R134a reads 0. `TwoPhaseEvaporator` does the same and fails inside the glide.
-  - Fix: vapour-side superheat uses `Temperature(fluid$, P, x=1)`, as `TXVSuperheat` already does. Subcooling keeps the bubble point. Define what the sensor reads inside the dome.
 - **E05. `TwoPhaseEvaporatorUA` applies outlet superheat at the inlet saturation temperature.** `Tevap = T_sat(P=in.P)` sets `out.h` at `out.P`. With R134a and `SH = 5`, the delivered superheat is 5.00, 6.27 and 11.80 K at dP = 0, 20 and 100 kPa.
   - Fix: keep `Tevap` as the heat-transfer driving temperature, and set the outlet from `Temperature(P=out.P, x=1) + SH`.
   - The EV thermal model uses this component on both evaporator branches, so its goldens may move, for this cause.
+  - **Measured 2026-11-24, not yet landed.** The fix delivers exactly the set superheat, where the Java goldens deliver 6.92 K (`ev-thermal-management`) and 6.77/9.77 K (`new-library-components`) for SH = 5/8 at dP = 20 kPa; both goldens and the four reference pages sharing the `aux` example would move for this cause. But `multidomain_examples.md[md-hpwh]` (dP = 3 kPa, R134a closed loop) then stalls in **WASM only**: block 22 (53 equations) "T is not a valid number" after 5 iterations, under every guess perturbation tried, while the same `frees::solve` succeeds natively. `T_sat(out.P)` and `Temperature(out.P, x=1)` give bit-identical stalls, and the nested property call solves in isolation, so the cause is the WASM closed-loop Newton path, not the formula. Find it before landing E05.
 - **E06. `MotorMap` and `DCDCConverter` can report negative loss when regenerating.** Their `tanh` blend of `P/eta` and `P·eta` gives `Pin = 0.5·Pout·(1/η + η)` at the midpoint, larger than `|Pout|` when `Pout < 0`. The reviewer measured a bus gain of 117.5 W from 100 W of shaft power, and −0.0175 W of loss inside `epsP`.
   - Fix: build the transition from a nonnegative loss term.
   - Test: sweep through zero in both directions and assert loss ≥ 0.
