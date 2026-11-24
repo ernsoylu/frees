@@ -177,3 +177,33 @@ fn one_decision_far_from_zero_still_meets_its_equality() {
     let offset = result.decision_values[0] - 1_000_000_000_000.0;
     assert!((offset - 2.0).abs() < 1e-3, "offset = {offset}");
 }
+
+/// FX1b: the guess was looked up with the decision as spelled against
+/// lowercased keys, so `X` ignored its guess, started at the midpoint and
+/// landed in the other basin (X = 0.960, f = 0.294 against x = −1.036,
+/// f = −0.305 from the same guess).
+#[test]
+fn a_capitalised_decision_uses_its_guess() {
+    let run = |name: &str, method: &str| {
+        let mut p = make_problem(
+            &format!("f = ({name}^2 - 1)^2 + 0.3*{name}\n"),
+            "f",
+            &[name],
+            &[-2.0],
+            &[2.0],
+            &[],
+        );
+        p.method = Some(method.to_string());
+        p.overrides = vec![frees_core::VariableOverride {
+            name: name.to_string(),
+            guess: Some(-1.5),
+            ..Default::default()
+        }];
+        optimize(&p).unwrap().decision_values[0]
+    };
+    for method in ["nelder-mead", "bobyqa"] {
+        let lower = run("x", method);
+        assert!((lower + 1.036).abs() < 1e-2, "{method}: x = {lower}");
+        assert_eq!(run("X", method), lower, "{method}");
+    }
+}
