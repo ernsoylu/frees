@@ -15,8 +15,12 @@ schematic CR-SCHEMATIC-01 (01a–01e); the programmes of 2026-11-05 (A–E, lazy
 fluid chunks), 2026-11-06 (F–M, interactive simulation and teaching),
 2026-11-12 (N–R, workspace shell) and 2026-11-19 (D.2 component coverage);
 removal of the (P,h) table path (D12, #136); EC1, which runs one solve-and-CHECK
-gate over every example (#137); EC2 group 1 (#139); FX1a, case-sensitive milli/mega
-prefixes and `S`, with lowercase former-mega spellings refused (#143, owner decision).
+gate over every example (#137); EC2 group 1 (#139); FX0, the three
+project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#142;
+three event goldens regenerated against closed forms, owner-approved); FX1a,
+case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
+refused (#143, owner decision); FX1b, the optimizer reads a capitalised
+decision's guess (#144).
 
 ---
 
@@ -37,29 +41,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **A Java-parity quirk is not a reason to keep a wrong answer.** Where a fix departs from the reference engine, the code comment says so and the pinned parity test is rewritten to assert the fixed behaviour.
 - **Language changes need the owner.** FX5 changes how existing documents parse, so it waits for a decision. Items marked *owner decision* list the options.
 
-**FX0. Lost project work (do first).** These three are the reviewer's IndexedDB/React integration repros; re-run them as the first test of each fix.
-- **U01. Autosave overwrites a pending recovery.** The boot-time autosave (`App.tsx:1147`) runs after 800 ms with no edit, so a newer IndexedDB recovery copy is replaced by the older local copy while the Restore prompt is still open.
-  - Fix: suspend recovery-copy writes until the prompt is resolved.
-  - Test: reload before and after Restore.
-- **U02. A scenario-only edit is not "unsaved".** The dirty-state effect (`App.tsx:1200`) omits scenarios, so New Project or Open discards a new scenario without a prompt, though Save would have stored it.
-  - Fix: derive the dirty flag from the persisted project fields.
-  - Test: a scenario-only edit, then New, Open and Save.
-- **U04. A stale tab overwrites a different project with the same name.** The revision restarts at 1 when a row is recreated, so a compare-and-write on `revision` alone accepts the stale save (`projectStore.ts:239`).
-  - Fix: add a persistent project id or generation to the write condition.
-  - Test: the stale save after a same-name recreation opens the conflict flow.
-
-**FX7. Hybrid-event semantics (do second).** Reproduced on `8c9f942` with `ode4, step = maxstep = 1` over `0 .. 1`; IDA is correct in all three.
-- **E01. A `record` event can swallow a later `stop`.** `marker` at y = 0.25 (record), then `limit` at y = 0.5 (stop). The result is `events = [marker]`, `stopped = false`, `end = 1`. Without the marker, `limit` stops at 0.5. The integrator takes the earliest bracketed event, accepts the whole step after a record, and refreshes the guards at the step's end (`integrator.rs:428–531`). The adaptive `ode45` shows it too (marker at 5 s, stop at 5.002 s).
-- **E02. Samples show a reset before it happens.** `EVENT change: time = 0.5 -> set y = 10` on `der(y) = 0` samples `0, 1.04, 3.52, 6.48, 8.96, 10`, where the exact values are `0 … 0, 10`. Hermite output interpolates through the knot holding the post-reset state (`integrator.rs:1019`).
-- **E03. A single time trigger fires twice.** The same event logs at 0.5 s and 1.0 s, and `set y = y + 1` ends at 2. After the restart the guard sits at zero, and leaving zero passes the direction test again (`problem.rs:177`).
-- **Fix:** after a hit, integrate the rest of the step and re-evaluate the guards after any state change. Keep left and right states at a discontinuity and interpolate each segment separately. Re-arm a guard only after it has left zero.
-- **Grades:** `fixtures/golden/av_ev_two_in_one_step.json` freezes the Java engine's swallowed second record. It is regenerated only with the owner's approval and an analytic expectation stated in `oracle.generated_by`. The other event goldens must not move.
-- **Gate:** `web/scripts/wasm-parity.mjs` compares only the event count. Make it compare names, times and order. Add analytic tests: the E01 stop at 0.5 with or without the marker, E02 samples on both sides of the reset, E03 one event and a final state of 1. Run them under `ode4`, `ode45` and IDA.
-
 **FX1. Silent wrong numbers (one PR per item).**
-- **FX1b. The optimizer ignores the guess of a decision spelled with capitals.** `optimizer.rs:1201` (`initial_guess`) looks the spec up in a lowercase-keyed map without lowercasing the name, a Java quirk kept deliberately. Repro: `f = (X^2-1)^2 + 0.3*X` on [−2, 2] with guess −1.5 gives `X = 0.960, f = 0.294`, while lowercase `x` gives `x = −1.036, f = −0.305`.
-  - Fix: lowercase the lookup, and apply the same check to every other `specs().get` in `analysis/`.
-  - Test: the repro, both spellings, one result.
 - **FX1c. A temperature difference written in °C or °F is read as absolute.** `T1 = 20 [C]; dT = 10 [C]; T2 = T1 + dT` gives 576.3 K with no warning, and `2 * 20 [C]` gives 586.3 K.
   - Fix: the unit checker warns when two absolute temperatures are added, or when one is scaled, naming the °C/°F literal.
   - *Owner decision:* add a difference spelling such as `[dC]`/`[dF]`. That is a language change; see FX5.
@@ -73,7 +55,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **FX1f. The first property solve in a process differs from every later one.** Solving the same Rankine document six times in one WASM instance gives a different `h_4s` on the first solve (199864.3437221268 against 199864.34372214382 on every later one; about 1e-13 relative). That carries through to `eta_th` and `m_dot`. Single property calls and plain algebra are bit-stable. The cause is process-global state on the (P, s) inverse path, so a sweep row's last digits depend on which worker ran it and what that worker solved before. The older finding that "a cold `PreparedDocument` is not bit-equal to a fresh one" is this, misattributed.
   - Fix: find the cached state (a warm-start or saturation cache in rustprop's inverse flash, or frees' property cache) and make the result independent of call history. Either seed the cache deterministically, or key it so a cold and a warm call take the same path.
   - Test: a fresh module solves a property cycle twice and gets bit-equal values; a 4-worker sweep matches a 1-worker sweep bit for bit.
-  - Corroborating evidence from the second review: an unsharded single-process WASM replay of the corpus twice failed `chiller-higher-refrigerant-flow-delivers-more-cooling-2` on `ch.ev.q_sh` (1.73e-9 relative against a 1e-9 tolerance), and the fixture passes alone. CI's four shards hide this. Add acceptance: the unsharded replay passes.
+  - Corroborating evidence from the second review: an unsharded single-process WASM replay of the corpus twice failed `chiller-higher-refrigerant-flow-delivers-more-cooling-2` on `ch.ev.q_sh` (1.73e-9 relative against a 1e-9 tolerance), and the fixture passes alone. CI's four shards hide this. Reproduced again on the FX7 build (2026-11-24). Add acceptance: the unsharded replay passes.
 
 **FX8. Component invariants at the boundaries.** Each fix pairs the failing point with the reviewer's passing control, and scans the goldens and gallery for the component first.
 - **E04. Superheat on a gliding blend is measured from the bubble point.** `TwoPhaseSensor` computes `SH = T − T_sat(P)`, and `T_sat` is the x = 0 temperature. R407C saturated vapour at 500 kPa reads 6.21 K of superheat (dew 275.51 K, bubble 269.30 K); R134a reads 0. `TwoPhaseEvaporator` does the same and fails inside the glide.
@@ -144,7 +126,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
 - **A temperature-difference unit** (FX1c).
 
-**Order.** FX0 (lost work) → FX7 (events) → FX1b → FX8 (E04, E05, E06, then E07) → FX9 (U03 and U05 first) → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX8 (E04, E05, E06, then E07) → FX9 (U03 and U05 first) → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.
