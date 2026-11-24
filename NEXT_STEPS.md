@@ -15,7 +15,8 @@ schematic CR-SCHEMATIC-01 (01a–01e); the programmes of 2026-11-05 (A–E, lazy
 fluid chunks), 2026-11-06 (F–M, interactive simulation and teaching),
 2026-11-12 (N–R, workspace shell) and 2026-11-19 (D.2 component coverage);
 removal of the (P,h) table path (D12, #136); EC1, which runs one solve-and-CHECK
-gate over every example (#137); EC2 group 1 (#139).
+gate over every example (#137); EC2 group 1 (#139); FX1a, case-sensitive milli/mega
+prefixes and `S`, with lowercase former-mega spellings refused (#143, owner decision).
 
 ---
 
@@ -56,9 +57,6 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **Gate:** `web/scripts/wasm-parity.mjs` compares only the event count. Make it compare names, times and order. Add analytic tests: the E01 stop at 0.5 with or without the marker, E02 samples on both sides of the reset, E03 one event and a final state of 1. Run them under `ode4`, `ode45` and IDA.
 
 **FX1. Silent wrong numbers (one PR per item).**
-- **FX1a. Unit prefixes are case-folded.** `units/registry.rs:594` lowercases every name not in `CASE_SENSITIVE_UNITS` (only `h`/`H`). In `UNITS`, `mw`, `mj`, `mhz` and `mohm` mean mega, and `mg` means milligram. The result: `1 [mW]` gives 1e6 W; `mJ`, `mHz` and `mOhm` give the mega value; `1 [Mg]` gives 1e-6 kg; `1 [Mm]` gives 0.001 m; and `[S]` (siemens) reads as seconds.
-  - Fix: resolve every M/m prefix pair, and `S`/`s`, case-sensitively. *Owner decision:* a lowercase spelling that now means mega (`[mpa]`, `[mw]`) either keeps its old reading with a warning, or is refused with "did you mean MPa or mPa?". The recommendation is to refuse.
-  - Test: every prefix pair resolves to its own factor.
 - **FX1b. The optimizer ignores the guess of a decision spelled with capitals.** `optimizer.rs:1201` (`initial_guess`) looks the spec up in a lowercase-keyed map without lowercasing the name, a Java quirk kept deliberately. Repro: `f = (X^2-1)^2 + 0.3*X` on [−2, 2] with guess −1.5 gives `X = 0.960, f = 0.294`, while lowercase `x` gives `x = −1.036, f = −0.305`.
   - Fix: lowercase the lookup, and apply the same check to every other `specs().get` in `analysis/`.
   - Test: the repro, both spellings, one result.
@@ -146,7 +144,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
 - **A temperature-difference unit** (FX1c).
 
-**Order.** FX0 (lost work) → FX7 (events) → FX1a → FX1b → FX8 (E04, E05, E06, then E07) → FX9 (U03 and U05 first) → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX0 (lost work) → FX7 (events) → FX1b → FX8 (E04, E05, E06, then E07) → FX9 (U03 and U05 first) → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.
