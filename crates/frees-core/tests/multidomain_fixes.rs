@@ -288,3 +288,33 @@ fn a_two_phase_pipe_connects_to_two_phase_boundaries() {
     );
     assert!(close(v["dp"], v["phi2"] * v["dp_l"], 1e-12), "{v:?}");
 }
+
+/// FX8/E04: vapour-side superheat counts from the dew point. From `T_sat`, the
+/// bubble point, saturated R407C vapour at 500 kPa read 6.21 K of superheat and
+/// a 5 K evaporator set point landed inside the glide, where the solve failed.
+#[test]
+fn superheat_on_a_gliding_blend_counts_from_the_dew_point() {
+    for fluid in ["R407C", "R134a"] {
+        let v = values(&format!(
+            "TwoPhaseSource SRC(fluid$='{fluid}', mdot=0.05 [kg/s], P=500 [kPa], x=1)\n\
+             TwoPhaseSensor S(fluid$='{fluid}')\nTwoPhaseSink SNK()\n\
+             connect(SRC.out, S.in)\nconnect(S.out, SNK.in)\n"
+        ));
+        assert!(
+            v["s$sh"].abs() < 1e-9,
+            "{fluid}: saturated vapour reads {} K",
+            v["s$sh"]
+        );
+        let v = values(&format!(
+            "TwoPhaseSource SRC(fluid$='{fluid}', mdot=0.05 [kg/s], P=500 [kPa], x=0.3)\n\
+             TwoPhaseEvaporator EV(fluid$='{fluid}', SH_set=5 [K], dP=20 [kPa])\n\
+             TwoPhaseSensor S(fluid$='{fluid}')\nTwoPhaseSink SNK()\n\
+             connect(SRC.out, EV.in)\nconnect(EV.out, S.in)\nconnect(S.out, SNK.in)\n"
+        ));
+        assert!(
+            (v["s$sh"] - 5.0).abs() < 1e-9,
+            "{fluid}: delivered {} K",
+            v["s$sh"]
+        );
+    }
+}

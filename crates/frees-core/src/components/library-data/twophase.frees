@@ -29,8 +29,12 @@ port(out)
 end
 
 // Quality / superheat / void readout (pass-through). x and alpha are derived
-// locally; SH = T - Tsat is positive superheated, ~0 in the dome, negative
-// subcooled. Void uses Zivi (slip, no mass-flux dependence).
+// locally. SH = T - T_dew is measured from the dew point (x = 1), as a bulb on
+// the suction line reads it: positive superheated, 0 at saturated vapour,
+// negative in the dome and below it (a pure fluid reads 0 across the dome; a
+// zeotropic blend reads down to minus its glide at the bubble point). Tsat is
+// the bubble point (x = 0), which subcooling is measured from. Void uses Zivi
+// (slip, no mass-flux dependence).
 function [in, out] = TwoPhaseSensor(fluid$, domain$ = twophase)
 port(in)
 port(out)
@@ -42,7 +46,7 @@ port(out)
   x        = (in.h - hf) / (hg - hf)
   T        = Temperature(fluid$, P=in.P, h=in.h)
   Tsat     = T_sat(fluid$, P=in.P)
-  SH       = T - Tsat
+  SH       = T - Temperature(fluid$, P=in.P, x=1)
   rho_l    = Density(fluid$, P=in.P, x=0)
   rho_g    = Density(fluid$, P=in.P, x=1)
   alpha    = void_zivi(x, rho_l, rho_g)
@@ -123,7 +127,8 @@ port(wall)
   out.h     = in.h + (Q_tp + Q_sh) / in.mdot
   Q         = Q_tp + Q_sh
   wall.Qdot = Q
-  SH        = T_out - Tsat
+  // From the dew point, where the superheat zone starts (FX8/E04).
+  SH        = T_out - Temperature(fluid$, P=in.P, x=1)
 end
 
 // Vapor inlet → subcooled liquid outlet. Zones: condensing (Tsat, U_cond) +
@@ -358,8 +363,11 @@ port(in)
 port(out)
   out.mdot = in.mdot
   out.P    = in.P - dP
+  // Superheat counts from the dew point (FX8/E04): from T_sat, the bubble
+  // point, a blend's set point can land inside its glide, where (P, T) does not
+  // fix the state.
   Tsat     = T_sat(fluid$, P=out.P)
-  out.h    = if(SH_set, Enthalpy(fluid$, P=out.P, T=Tsat + SH_set), Enthalpy(fluid$, P=out.P, x=1))
+  out.h    = if(SH_set, Enthalpy(fluid$, P=out.P, T=Temperature(fluid$, P=out.P, x=1) + SH_set), Enthalpy(fluid$, P=out.P, x=1))
   Q        = in.mdot * (out.h - in.h)
 end
 
