@@ -106,11 +106,14 @@ port(wall)
   // length by a C¹ smooth-min. When the tube is long enough this equals the need
   // and Q_tp = full latent duty (complete-evaporation regime, superheat downstream);
   // when it is too short, L_tp = L, Q_tp < full duty and the outlet stays two-phase.
-  L_need    = in.mdot * (hg - in.h) / (U_tp * pi# * D * (wall.T - Tsat))
-  // max(…, 0): with the wall on the wrong side of saturation the wanted
-  // length is negative — no zone, never a negative one (a spurious root).
-  L_tp      = 0.5 * (max(L_need, 0) + L - sqrt((max(L_need, 0) - L)^2 + eps_zone^2))
-  Q_tp      = U_tp * pi# * D * L_tp * (wall.T - Tsat)
+  // A wall at or below Tsat evaporates nothing: the whole tube stays two-phase
+  // (the wall.T → Tsat⁺ limit), no heat moves, and L_need reports L. Only the
+  // wall-above-Tsat branch divides by wall.T − Tsat (FX8/E07). max(L_need, 0)
+  // covers a superheated inlet; the outer max(…, 0) the smooth-min's undershoot
+  // of ≈ eps_zone²/4L below zero, so the zones always lie in [0, L].
+  L_need    = If(wall.T, Tsat, L, L, in.mdot * (hg - in.h) / (U_tp * pi# * D * (wall.T - Tsat)))
+  L_tp      = If(wall.T, Tsat, L, L, max(0.5 * (max(L_need, 0) + L - sqrt((max(L_need, 0) - L)^2 + eps_zone^2)), 0))
+  Q_tp      = U_tp * pi# * D * L_tp * max(wall.T - Tsat, 0)
   L_sh      = L - L_tp
   r_sh      = zone_ramp(L_sh, eps_zone)
   // superheat zone by ε-NTU: the vapor enters at Tsat and approaches the wall,
@@ -121,8 +124,9 @@ port(wall)
   NTU_sh    = U_sh * pi# * D * L_sh * r_sh / (in.mdot * cp_sh)
   // A wall below Tsat cannot cool the vapor without condensing it, which this
   // zone does not model: Enthalpy(T=wall.T) is then liquid, and the clamp keeps
-  // that latent jump out of the duty (continuous through wall.T = Tsat).
-  Q_sh      = (1 - exp(-NTU_sh)) * in.mdot * max(Enthalpy(fluid$, P=in.P, T=wall.T) - hg, 0)
+  // that latent jump out of the duty (continuous through wall.T = Tsat). At
+  // wall.T = Tsat, (P, T) does not fix the state, so that side is not evaluated.
+  Q_sh      = If(wall.T, Tsat, 0, 0, (1 - exp(-NTU_sh)) * in.mdot * max(Enthalpy(fluid$, P=in.P, T=wall.T) - hg, 0))
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
   out.h     = in.h + (Q_tp + Q_sh) / in.mdot
   Q         = Q_tp + Q_sh
@@ -144,9 +148,10 @@ port(wall)
   // condensing-zone length wanted for full condensation, capped at the tube length
   // (smooth-min). Long enough ⇒ Q_cond = full latent duty and the outlet subcools;
   // too short ⇒ L_cond = L, Q_cond < full duty and the outlet stays two-phase.
-  L_need    = in.mdot * (in.h - hf) / (U_cond * pi# * D * (Tsat - wall.T))
-  L_cond    = 0.5 * (max(L_need, 0) + L - sqrt((max(L_need, 0) - L)^2 + eps_zone^2))
-  Q_cond    = U_cond * pi# * D * L_cond * (Tsat - wall.T)
+  // A wall at or above Tsat condenses nothing, as in the evaporator (FX8/E07).
+  L_need    = If(wall.T, Tsat, in.mdot * (in.h - hf) / (U_cond * pi# * D * (Tsat - wall.T)), L, L)
+  L_cond    = If(wall.T, Tsat, max(0.5 * (max(L_need, 0) + L - sqrt((max(L_need, 0) - L)^2 + eps_zone^2)), 0), L, L)
+  Q_cond    = U_cond * pi# * D * L_cond * max(Tsat - wall.T, 0)
   L_sc      = L - L_cond
   r_sc      = zone_ramp(L_sc, eps_zone)
   // subcool zone by ε-NTU (see the evaporator): the liquid enters at Tsat and
@@ -154,7 +159,7 @@ port(wall)
   cp_sc     = Cp(fluid$, P=in.P, x=0)
   NTU_sc    = U_sc * pi# * D * L_sc * r_sc / (in.mdot * cp_sc)
   // A wall above Tsat would boil the liquid; clamped as in the evaporator.
-  Q_sc      = (1 - exp(-NTU_sc)) * in.mdot * max(hf - Enthalpy(fluid$, P=in.P, T=wall.T), 0)
+  Q_sc      = If(wall.T, Tsat, (1 - exp(-NTU_sc)) * in.mdot * max(hf - Enthalpy(fluid$, P=in.P, T=wall.T), 0), 0, 0)
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
   out.h     = in.h - (Q_cond + Q_sc) / in.mdot
   Q         = Q_cond + Q_sc

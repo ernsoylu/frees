@@ -363,3 +363,43 @@ fn regeneration_through_zero_power_never_reports_negative_loss() {
         );
     }
 }
+
+/// FX8/E07: the zone lengths divided by `T_wall − T_sat`, so a wall at
+/// saturation failed the solve, and a wall on the wrong side of it gave the
+/// two-phase zone a negative length (the smooth-min's undershoot below 0).
+#[test]
+fn moving_boundary_zones_stay_in_the_tube_through_zero_wall_superheat() {
+    // (component, sat. pressure, zone, other zone, tube length, wall offsets:
+    // first on the side with no driving force, then with one)
+    let cases = [
+        ("MovingBoundaryEvaporator EV(fluid$=R134a, U_tp=2000 [W/m^2-K], U_sh=200 [W/m^2-K], D=0.01 [m], L=5 [m], eps_zone=0.01 [m])\n\
+          TwoPhaseSource SRC(fluid$=R134a, mdot=0.02 [kg/s], P=350000 [Pa], x=0.25)\nconnect(SRC.out, EV.in)\nconnect(EV.out, SNK.in)\nconnect(EV.wall, WALL.port)\n",
+         350000.0, "ev$l_tp", "ev$l_sh", "ev$q", 5.0, [0.0, -2.0, 0.5, 13.0]),
+        ("MovingBoundaryCondenser EV(fluid$=R134a, U_cond=2500 [W/m^2-K], U_sc=300 [W/m^2-K], D=0.01 [m], L=8 [m], eps_zone=0.01 [m])\n\
+          TwoPhaseSourcePH SRC(mdot=0.02 [kg/s], P=900000 [Pa], h=445000 [J/kg])\nconnect(SRC.out, EV.in)\nconnect(EV.out, SNK.in)\nconnect(EV.wall, WALL.port)\n",
+         900000.0, "ev$l_cond", "ev$l_sc", "ev$q", 8.0, [0.0, 2.0, -0.5, -8.0]),
+    ];
+    for (model, p, zone, other, duty, len, offsets) in cases {
+        for (k, dt) in offsets.into_iter().enumerate() {
+            let v = values(&format!(
+                "{model}TwoPhaseSink SNK()\nTw = T_sat(R134a, P={p}) + {dt}\nThermalSource WALL(T=Tw)\n"
+            ));
+            let (a, b, q) = (v[zone], v[other], v[duty]);
+            let at = format!("{zone} with the wall {dt} K from T_sat");
+            assert!(
+                (0.0..=len).contains(&a),
+                "{at}: zone {a} m outside [0, {len}]"
+            );
+            assert!(close(a + b, len, 1e-12), "{at}: zones sum to {}", a + b);
+            if k < 2 {
+                // No driving force: the whole tube stays two-phase, and no heat moves.
+                assert!(
+                    close(a, len, 1e-12) && q.abs() < 1e-9,
+                    "{at}: zone {a} m, duty {q} W"
+                );
+            } else {
+                assert!(q > 0.0, "{at}: duty {q} W");
+            }
+        }
+    }
+}

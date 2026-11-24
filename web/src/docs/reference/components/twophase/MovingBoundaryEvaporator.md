@@ -47,19 +47,19 @@ out.mdot &= in.mdot \\
 out.p &= in.p \\
 tsat &= \text{T\_sat}\left(\mathrm{fluid\$}, p=in.p\right) \\
 hg &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
-l_{need} &= \frac{in.mdot\cdot \left(hg - in.h\right)}{u_{tp}\cdot 3.141592653589793\cdot d\cdot \left(wall.t - tsat\right)} \\
-l_{tp} &= 0.5\,\left(\text{max}\left(l_{need}, 0\right) + l - \sqrt{\left(\text{max}\left(l_{need}, 0\right) - l\right)^{2} + eps_{zone}^{2}}\right) \\
-q_{tp} &= u_{tp}\cdot 3.141592653589793\cdot d\cdot l_{tp}\cdot \left(wall.t - tsat\right) \\
+l_{need} &= \text{if}\left(wall.t, tsat, l, l, \frac{in.mdot\cdot \left(hg - in.h\right)}{u_{tp}\cdot 3.141592653589793\cdot d\cdot \left(wall.t - tsat\right)}\right) \\
+l_{tp} &= \text{if}\left(wall.t, tsat, l, l, \text{max}\left(0.5\,\left(\text{max}\left(l_{need}, 0\right) + l - \sqrt{\left(\text{max}\left(l_{need}, 0\right) - l\right)^{2} + eps_{zone}^{2}}\right), 0\right)\right) \\
+q_{tp} &= u_{tp}\cdot 3.141592653589793\cdot d\cdot l_{tp}\cdot \text{max}\left(wall.t - tsat, 0\right) \\
 l_{sh} &= l - l_{tp} \\
 r_{sh} &= \text{zone\_ramp}\left(l_{sh}, eps_{zone}\right) \\
 cp_{sh} &= \text{Cp}\left(\mathrm{fluid\$}, p=in.p, x=1\right) \\
 ntu_{sh} &= \frac{u_{sh}\cdot 3.141592653589793\cdot d\cdot l_{sh}\cdot r_{sh}}{in.mdot\cdot cp_{sh}} \\
-q_{sh} &= \left(1 - \text{exp}\left(-ntu_{sh}\right)\right)\cdot in.mdot\cdot \text{max}\left(\text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, t=wall.t\right) - hg, 0\right) \\
+q_{sh} &= \text{if}\left(wall.t, tsat, 0, 0, \left(1 - e^{-ntu_{sh}}\right)\cdot in.mdot\cdot \text{max}\left(\text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, t=wall.t\right) - hg, 0\right)\right) \\
 t_{out} &= \text{Temperature}\left(\mathrm{fluid\$}, p=out.p, h=out.h\right) \\
 out.h &= in.h + \frac{q_{tp} + q_{sh}}{in.mdot} \\
 q &= q_{tp} + q_{sh} \\
 wall.qdot &= q \\
-sh &= t_{out} - tsat
+sh &= t_{out} - \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, x=1\right)
 \end{aligned}
 $$
 
