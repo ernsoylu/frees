@@ -20,7 +20,7 @@ project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#
 three event goldens regenerated against closed forms, owner-approved); FX1a,
 case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
 refused (#143, owner decision); FX1b, the optimizer reads a capitalised
-decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145).
+decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145); FX8/E06, nonnegative regeneration loss (#146); FX8/E07, moving-boundary zones at zero wall superheat (#147).
 
 ---
 
@@ -54,6 +54,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 
 - **FX1f. The first property solve in a process differs from every later one.** Solving the same Rankine document six times in one WASM instance gives a different `h_4s` on the first solve (199864.3437221268 against 199864.34372214382 on every later one; about 1e-13 relative). That carries through to `eta_th` and `m_dot`. Single property calls and plain algebra are bit-stable. The cause is process-global state on the (P, s) inverse path, so a sweep row's last digits depend on which worker ran it and what that worker solved before. The older finding that "a cold `PreparedDocument` is not bit-equal to a fresh one" is this, misattributed.
   - Fix: find the cached state (a warm-start or saturation cache in rustprop's inverse flash, or frees' property cache) and make the result independent of call history. Either seed the cache deterministically, or key it so a cold and a warm call take the same path.
+  - The cache is `props/rustprop_warm.rs`, which seeds each `(P,h)`/`(P,s)` flash from the previous answer. Bypassing it is not the fix: on 2026-11-24 it made the parity gate 4× slower (117 s against ~30 s) and moved `ev-battery-cooling-pid` by up to 2.4e-8 against its 1e-9 tolerance. Separately, a cold `Temperature(R134a, P=1282785, h=261234)` (compressed liquid) differs by 7.3e-10 between native and WASM even with the seed bypassed; every other call measured agrees to 4e-13.
   - Test: a fresh module solves a property cycle twice and gets bit-equal values; a 4-worker sweep matches a 1-worker sweep bit for bit.
   - Corroborating evidence from the second review: an unsharded single-process WASM replay of the corpus twice failed `chiller-higher-refrigerant-flow-delivers-more-cooling-2` on `ch.ev.q_sh` (1.73e-9 relative against a 1e-9 tolerance), and the fixture passes alone. CI's four shards hide this. Reproduced again on the FX7 build (2026-11-24). Add acceptance: the unsharded replay passes.
 
@@ -61,12 +62,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **E05. `TwoPhaseEvaporatorUA` applies outlet superheat at the inlet saturation temperature.** `Tevap = T_sat(P=in.P)` sets `out.h` at `out.P`. With R134a and `SH = 5`, the delivered superheat is 5.00, 6.27 and 11.80 K at dP = 0, 20 and 100 kPa.
   - Fix: keep `Tevap` as the heat-transfer driving temperature, and set the outlet from `Temperature(P=out.P, x=1) + SH`.
   - The EV thermal model uses this component on both evaporator branches, so its goldens may move, for this cause.
-  - **Measured 2026-11-24, not yet landed.** The fix delivers exactly the set superheat, where the Java goldens deliver 6.92 K (`ev-thermal-management`) and 6.77/9.77 K (`new-library-components`) for SH = 5/8 at dP = 20 kPa; both goldens and the four reference pages sharing the `aux` example would move for this cause. But `multidomain_examples.md[md-hpwh]` (dP = 3 kPa, R134a closed loop) then stalls in **WASM only**: block 22 (53 equations) "T is not a valid number" after 5 iterations, under every guess perturbation tried, while the same `frees::solve` succeeds natively. `T_sat(out.P)` and `Temperature(out.P, x=1)` give bit-identical stalls, and the nested property call solves in isolation, so the cause is the WASM closed-loop Newton path, not the formula. Find it before landing E05.
-- **E06. `MotorMap` and `DCDCConverter` can report negative loss when regenerating.** Their `tanh` blend of `P/eta` and `P·eta` gives `Pin = 0.5·Pout·(1/η + η)` at the midpoint, larger than `|Pout|` when `Pout < 0`. The reviewer measured a bus gain of 117.5 W from 100 W of shaft power, and −0.0175 W of loss inside `epsP`.
-  - Fix: build the transition from a nonnegative loss term.
-  - Test: sweep through zero in both directions and assert loss ≥ 0.
-- **E07. Moving-boundary heat exchangers divide by zero at zero ΔT.** The evaporator and condenser zone lengths divide by `T_wall − T_sat`. At saturation the solve fails, and 2 K colder gives a zone of −5e-6 m.
-  - Fix: write the duty from the available heat transfer before dividing, define the ΔT = 0 limit, and assert each zone lies in [0, L] and the zones sum to L.
+  - **Blocked on FX1f (measured 2026-11-24).** The fix delivers exactly the set superheat, where the Java goldens deliver 6.92 K (`ev-thermal-management`) and 6.77/9.77 K (`new-library-components`) for SH = 5/8 at dP = 20 kPa; both goldens and the four reference pages sharing the `aux` example move for this cause. But `multidomain_examples.md[md-hpwh]` then fails in WASM only. Its 53-equation block stalls cold on both targets, and the ladder's consistent-start rung starts 1.4e-12 apart on the two (the sweep's property calls), reaches 1e-7 after one step and 1 % after two, then converges natively in 28 iterations and stalls in WASM after 195. With `rustprop_warm` bypassed, WASM solves it, agreeing with native to 1.5e-13. Land E05 after FX1f, with `md-hpwh` as a second repro.
 - **Reverse and zero flow.** `TwoPhaseFlowRes` fails at zero and negative flow, because Friedel needs a positive mass flux. Treat it with FX3g's `iso6358` work under one policy: a zero-flow pressure-drop limit and an upstream state on reversal. Until then, its reference page says forward flow only.
 
 **FX9. What the display shows must match the data.**
@@ -125,7 +121,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
 - **A temperature-difference unit** (FX1c).
 
-**Order.** FX8 (E04, E05, E06, then E07) → FX9 (U03 and U05 first) → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX8's reverse-flow policy, with FX3g → FX9 (U03 and U05 first) → FX2a → FX1f → E05 → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.
