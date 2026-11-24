@@ -217,6 +217,10 @@ end
 // from a 2-D efficiency map eff$(ω, τ). Four-quadrant: motoring draws
 // P_mech/η from the DC bus, generating returns P_mech·η, blended smoothly
 // through zero mechanical power (width epsP [W]). Loss heat exits `heat`.
+// The blend is taken on the loss, not on P/η and P·η: blending those two gives
+// P·(s/η + (1−s)·η) at the midpoint, more than |P| in regen — negative loss
+// (FX8/E06). The loss coefficients (1/η − 1, 1 − η) and the smooth magnitude
+// P·tanh(P/epsP) are each nonnegative, so Q ≥ 0, and Q = 0 at P = 0.
 function [p, n, shaft, heat, u] = MotorMap(eff$, epsP [W])
 port(p)
 port(n)
@@ -228,10 +232,10 @@ port(u)
   Pm        = tau_e * shaft.w
   eff       = eff$(shaft.w, tau_e)
   s         = 0.5 * (1 + tanh(Pm / epsP))
-  Pe        = s * Pm / eff + (1 - s) * Pm * eff
+  Q         = (s * (1 / eff - 1) + (1 - s) * (1 - eff)) * Pm * tanh(Pm / epsP)
+  Pe        = Pm + Q
   (p.V - n.V) * p.I = Pe
   p.I + n.I = 0
-  Q         = Pe - Pm
   heat.Qdot = -Q
 end
 
@@ -252,7 +256,8 @@ port(heat)
 end
 
 // Ideal-transformer DC/DC converter with a fixed voltage ratio and a
-// four-quadrant efficiency (forward power / eta, reverse power · eta).
+// four-quadrant efficiency (forward power / eta, reverse power · eta), blended
+// on a nonnegative loss through zero power as in MotorMap (FX8/E06).
 function [in_p, in_n, out_p, out_n] = DCDCConverter(ratio [-], eta [-], epsP [W])
 port(in_p)
 port(in_n)
@@ -263,7 +268,7 @@ port(out_n)
   out_p.I + out_n.I = 0
   Pout = (out_p.V - out_n.V) * (0 - out_p.I)
   s    = 0.5 * (1 + tanh(Pout / epsP))
-  Pin  = s * Pout / eta + (1 - s) * Pout * eta
+  Pin  = Pout + (s * (1 / eta - 1) + (1 - s) * (1 - eta)) * Pout * tanh(Pout / epsP)
   Pin  = (in_p.V - in_n.V) * in_p.I
 end
 
