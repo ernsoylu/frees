@@ -15,7 +15,8 @@ schematic CR-SCHEMATIC-01 (01a–01e); the programmes of 2026-11-05 (A–E, lazy
 fluid chunks), 2026-11-06 (F–M, interactive simulation and teaching),
 2026-11-12 (N–R, workspace shell) and 2026-11-19 (D.2 component coverage);
 removal of the (P,h) table path (D12, #136); EC1, which runs one solve-and-CHECK
-gate over every example (#137); EC2 group 1 (#139).
+gate over every example (#137); EC2 group 1 (#139); FX0, the three
+project data-loss paths U01, U02 and U04 (#141).
 
 ---
 
@@ -36,18 +37,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **A Java-parity quirk is not a reason to keep a wrong answer.** Where a fix departs from the reference engine, the code comment says so and the pinned parity test is rewritten to assert the fixed behaviour.
 - **Language changes need the owner.** FX5 changes how existing documents parse, so it waits for a decision. Items marked *owner decision* list the options.
 
-**FX0. Lost project work (do first).** These three are the reviewer's IndexedDB/React integration repros; re-run them as the first test of each fix.
-- **U01. Autosave overwrites a pending recovery.** The boot-time autosave (`App.tsx:1147`) runs after 800 ms with no edit, so a newer IndexedDB recovery copy is replaced by the older local copy while the Restore prompt is still open.
-  - Fix: suspend recovery-copy writes until the prompt is resolved.
-  - Test: reload before and after Restore.
-- **U02. A scenario-only edit is not "unsaved".** The dirty-state effect (`App.tsx:1200`) omits scenarios, so New Project or Open discards a new scenario without a prompt, though Save would have stored it.
-  - Fix: derive the dirty flag from the persisted project fields.
-  - Test: a scenario-only edit, then New, Open and Save.
-- **U04. A stale tab overwrites a different project with the same name.** The revision restarts at 1 when a row is recreated, so a compare-and-write on `revision` alone accepts the stale save (`projectStore.ts:239`).
-  - Fix: add a persistent project id or generation to the write condition.
-  - Test: the stale save after a same-name recreation opens the conflict flow.
-
-**FX7. Hybrid-event semantics (do second).** Reproduced on `8c9f942` with `ode4, step = maxstep = 1` over `0 .. 1`; IDA is correct in all three.
+**FX7. Hybrid-event semantics (do first).** Reproduced on `8c9f942` with `ode4, step = maxstep = 1` over `0 .. 1`; IDA is correct in all three.
 - **E01. A `record` event can swallow a later `stop`.** `marker` at y = 0.25 (record), then `limit` at y = 0.5 (stop). The result is `events = [marker]`, `stopped = false`, `end = 1`. Without the marker, `limit` stops at 0.5. The integrator takes the earliest bracketed event, accepts the whole step after a record, and refreshes the guards at the step's end (`integrator.rs:428–531`). The adaptive `ode45` shows it too (marker at 5 s, stop at 5.002 s).
 - **E02. Samples show a reset before it happens.** `EVENT change: time = 0.5 -> set y = 10` on `der(y) = 0` samples `0, 1.04, 3.52, 6.48, 8.96, 10`, where the exact values are `0 … 0, 10`. Hermite output interpolates through the knot holding the post-reset state (`integrator.rs:1019`).
 - **E03. A single time trigger fires twice.** The same event logs at 0.5 s and 1.0 s, and `set y = y + 1` ends at 2. After the restart the guard sits at zero, and leaving zero passes the direction test again (`problem.rs:177`).
@@ -146,7 +136,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
 - **A temperature-difference unit** (FX1c).
 
-**Order.** FX0 (lost work) → FX7 (events) → FX1a → FX1b → FX8 (E04, E05, E06, then E07) → FX9 (U03 and U05 first) → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX7 (events) → FX1a → FX1b → FX8 (E04, E05, E06, then E07) → FX9 (U03 and U05 first) → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.
