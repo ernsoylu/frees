@@ -15,8 +15,12 @@ schematic CR-SCHEMATIC-01 (01a–01e); the programmes of 2026-11-05 (A–E, lazy
 fluid chunks), 2026-11-06 (F–M, interactive simulation and teaching),
 2026-11-12 (N–R, workspace shell) and 2026-11-19 (D.2 component coverage);
 removal of the (P,h) table path (D12, #136); EC1, which runs one solve-and-CHECK
-gate over every example (#137); EC2 group 1 (#139); FX7, hybrid events E01–E03
-(#142; three event goldens regenerated against closed forms, owner-approved).
+gate over every example (#137); EC2 group 1 (#139); FX0, the three
+project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#142;
+three event goldens regenerated against closed forms, owner-approved); FX1a,
+case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
+refused (#143, owner decision); FX1b, the optimizer reads a capitalised
+decision's guess (#144).
 
 ---
 
@@ -37,24 +41,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **A Java-parity quirk is not a reason to keep a wrong answer.** Where a fix departs from the reference engine, the code comment says so and the pinned parity test is rewritten to assert the fixed behaviour.
 - **Language changes need the owner.** FX5 changes how existing documents parse, so it waits for a decision. Items marked *owner decision* list the options.
 
-**FX0. Lost project work (do first).** These three are the reviewer's IndexedDB/React integration repros; re-run them as the first test of each fix.
-- **U01. Autosave overwrites a pending recovery.** The boot-time autosave (`App.tsx:1147`) runs after 800 ms with no edit, so a newer IndexedDB recovery copy is replaced by the older local copy while the Restore prompt is still open.
-  - Fix: suspend recovery-copy writes until the prompt is resolved.
-  - Test: reload before and after Restore.
-- **U02. A scenario-only edit is not "unsaved".** The dirty-state effect (`App.tsx:1200`) omits scenarios, so New Project or Open discards a new scenario without a prompt, though Save would have stored it.
-  - Fix: derive the dirty flag from the persisted project fields.
-  - Test: a scenario-only edit, then New, Open and Save.
-- **U04. A stale tab overwrites a different project with the same name.** The revision restarts at 1 when a row is recreated, so a compare-and-write on `revision` alone accepts the stale save (`projectStore.ts:239`).
-  - Fix: add a persistent project id or generation to the write condition.
-  - Test: the stale save after a same-name recreation opens the conflict flow.
-
 **FX1. Silent wrong numbers (one PR per item).**
-- **FX1a. Unit prefixes are case-folded.** `units/registry.rs:594` lowercases every name not in `CASE_SENSITIVE_UNITS` (only `h`/`H`). In `UNITS`, `mw`, `mj`, `mhz` and `mohm` mean mega, and `mg` means milligram. The result: `1 [mW]` gives 1e6 W; `mJ`, `mHz` and `mOhm` give the mega value; `1 [Mg]` gives 1e-6 kg; `1 [Mm]` gives 0.001 m; and `[S]` (siemens) reads as seconds.
-  - Fix: resolve every M/m prefix pair, and `S`/`s`, case-sensitively. *Owner decision:* a lowercase spelling that now means mega (`[mpa]`, `[mw]`) either keeps its old reading with a warning, or is refused with "did you mean MPa or mPa?". The recommendation is to refuse.
-  - Test: every prefix pair resolves to its own factor.
-- **FX1b. The optimizer ignores the guess of a decision spelled with capitals.** `optimizer.rs:1201` (`initial_guess`) looks the spec up in a lowercase-keyed map without lowercasing the name, a Java quirk kept deliberately. Repro: `f = (X^2-1)^2 + 0.3*X` on [−2, 2] with guess −1.5 gives `X = 0.960, f = 0.294`, while lowercase `x` gives `x = −1.036, f = −0.305`.
-  - Fix: lowercase the lookup, and apply the same check to every other `specs().get` in `analysis/`.
-  - Test: the repro, both spellings, one result.
 - **FX1c. A temperature difference written in °C or °F is read as absolute.** `T1 = 20 [C]; dT = 10 [C]; T2 = T1 + dT` gives 576.3 K with no warning, and `2 * 20 [C]` gives 586.3 K.
   - Fix: the unit checker warns when two absolute temperatures are added, or when one is scaled, naming the °C/°F literal.
   - *Owner decision:* add a difference spelling such as `[dC]`/`[dF]`. That is a language change; see FX5.
@@ -139,7 +126,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
 - **A temperature-difference unit** (FX1c).
 
-**Order.** FX0 (lost work) → FX1a → FX1b → FX8 (E04, E05, E06, then E07) → FX9 (U03 and U05 first) → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX8 (E04, E05, E06, then E07) → FX9 (U03 and U05 first) → FX2a → FX1f → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.

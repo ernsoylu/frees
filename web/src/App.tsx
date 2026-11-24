@@ -756,6 +756,10 @@ export default function App() {
   const [dirty, setDirty] = useState(false)
   const [saveWhere, setSaveWhere] = useState<SaveProvenance>(null)
   const suppressDirtyRef = useRef(false)
+  // U01: true from boot until the autosave-mirror recovery check has resolved
+  // (nothing newer, restored, or dismissed). While true the autosave leaves the
+  // mirror alone, because it may be the only copy of the newer workspace.
+  const mirrorRecoveryPendingRef = useRef(true)
   // Stores the action to run once the save-check dialog is resolved.
   const pendingActionRef = useRef<(() => void) | null>(null)
   const [dismissedWarnings, setDismissedWarnings] = useState(false)
@@ -1155,7 +1159,9 @@ export default function App() {
     const id = setTimeout(() => {
       const project = buildProject(currentSlices())
       saveProjectLocal(project)
-      void writeAutosaveMirror(project)
+      // The mirror may hold the newer copy the recovery prompt is offering;
+      // it is not overwritten until the user has answered (U01).
+      if (!mirrorRecoveryPendingRef.current) void writeAutosaveMirror(project)
     }, 800)
     return () => clearTimeout(id)
   }, [currentSlices])
@@ -1199,6 +1205,8 @@ export default function App() {
 
   // Mark the project dirty whenever content changes, unless the change came from
   // an explicit load/new/save (suppressDirtyRef lets those operations opt out).
+  // Keyed on `currentSlices`, so every slice a save persists (scenarios, stop
+  // criteria, unit system… — U02) marks the project dirty, not a hand-kept list.
   useEffect(() => {
     if (suppressDirtyRef.current) {
       suppressDirtyRef.current = false
@@ -1208,8 +1216,7 @@ export default function App() {
     }
     isDirtyRef.current = true
     setDirty(true)
-
-  }, [text, tables, plots, varDrafts, pinnedSliders, schematic])
+  }, [currentSlices])
 
   // Apply an opened/loaded project to every workspace slice. Child-owned slices
   // are written back to their caches and the relevant tabs are remounted (epoch
@@ -1270,17 +1277,33 @@ export default function App() {
   // the user may have *wanted* the state they are looking at.
   const mirrorCheckedRef = useRef(false)
   useEffect(() => {
+    if (mirrorCheckedRef.current) return
     // I4: an embed never reads the visitor's workspace, the mirror included.
-    if (mirrorCheckedRef.current || sharedBoot !== null || EMBED.embed) return
+    if (sharedBoot !== null || EMBED.embed) {
+      mirrorRecoveryPendingRef.current = false
+      return
+    }
     mirrorCheckedRef.current = true
     const booted = bootRef.current ?? null
+    const release = () => {
+      mirrorRecoveryPendingRef.current = false
+    }
     void readAutosaveMirror().then((mirror) => {
-      if (!mirrorIsNewer(mirror, booted)) return
+      if (!mirrorIsNewer(mirror, booted)) return release()
       const when = new Date(Date.parse(mirror.savedAt)).toLocaleString()
+      let restoring = false
       notifications.show({
         id: 'autosave-mirror-restore',
         color: 'yellow',
         autoClose: false,
+        // Dismissed: the user keeps what they are looking at, so the mirror
+        // takes it now rather than offering the same copy on every reload.
+        onClose: () => {
+          if (restoring) return
+          release()
+          const slices = currentSlicesRef.current?.()
+          if (slices) void writeAutosaveMirror(buildProject(slices))
+        },
         title: 'A newer autosave exists in browser storage',
         message: (
           <Stack gap="xs">
@@ -1291,6 +1314,8 @@ export default function App() {
             <Button
               size="xs"
               onClick={() => {
+                restoring = true
+                release()
                 notifications.hide('autosave-mirror-restore')
                 applyProject(mirror)
               }}
@@ -1300,7 +1325,7 @@ export default function App() {
           </Stack>
         ),
       })
-    })
+    }, release)
   }, [sharedBoot, applyProject])
 
   // Wave E (closing Phase 11's gap 2): where this project lives. Opened from
