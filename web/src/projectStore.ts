@@ -50,7 +50,26 @@ export interface StoredProjectMeta {
 const LEGACY_REV = 0
 
 interface ProjectRow extends StoredProjectMeta {
-  project: FreesProject
+  project?: FreesProject
+  /**
+   * A tombstone: the name was deleted or renamed away. It keeps the last
+   * revision so that re-creating the name continues the revision line instead of
+   * restarting at 1 — otherwise a stale tab still holding revision 1 of the old
+   * project would pass the compare and overwrite the new one (U04). Every reader
+   * treats a tombstone as absent.
+   *
+   * ponytail: tombstones are never purged; they are a few bytes per deleted
+   * name. Purge ones older than every open tab if the library ever grows large.
+   */
+  deleted?: true
+}
+
+function isLive(row: ProjectRow | undefined): row is ProjectRow & { project: FreesProject } {
+  return !!row && !row.deleted
+}
+
+function tombstone(row: ProjectRow): ProjectRow {
+  return { name: row.name, savedAt: new Date().toISOString(), size: 0, rev: row.rev ?? LEGACY_REV, deleted: true }
 }
 
 function metaOf(row: ProjectRow): StoredProjectMeta {
@@ -166,6 +185,7 @@ export async function listStoredProjects(): Promise<StoredProjectMeta[]> {
       db.transaction(PROJECTS_STORE, 'readonly').objectStore(PROJECTS_STORE).getAll() as IDBRequest<ProjectRow[]>,
     )
     return rows
+      .filter(isLive)
       .map(metaOf)
       .sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0))
   } catch {
@@ -194,7 +214,7 @@ export async function loadStoredProjectRev(name: string): Promise<LoadedProject 
         ProjectRow | undefined
       >,
     )
-    if (!row) return null
+    if (!isLive(row)) return null
     const project = normalizeStoredProject(row.project)
     return project ? { project, rev: row.rev ?? LEGACY_REV } : null
   } catch {
@@ -249,7 +269,7 @@ export async function saveStoredProject(
   try {
     const store = db.transaction(PROJECTS_STORE, 'readwrite').objectStore(PROJECTS_STORE)
     const current = await await_(store.get(key) as IDBRequest<ProjectRow | undefined>)
-    if (current && expected !== 'overwrite') {
+    if (isLive(current) && expected !== 'overwrite') {
       const currentRev = current.rev ?? LEGACY_REV
       // 'new' means "I expect nothing here", so any row at all is a conflict.
       if (expected === 'new' || expected !== currentRev) {
@@ -258,7 +278,9 @@ export async function saveStoredProject(
     }
     // An absent row is never a conflict, even for a tab that loaded a revision:
     // another tab deleting the project and this one re-creating it loses no
-    // work, where refusing the save would lose this tab's.
+    // work, where refusing the save would lose this tab's. A tombstone is
+    // absent too, but its revision carries on, so the re-created row never
+    // reuses a revision a stale tab may still hold.
     const row: ProjectRow = {
       name: key,
       savedAt: safe.savedAt,
@@ -294,7 +316,10 @@ export async function deleteStoredProject(name: string): Promise<void> {
   const db = await openDb()
   if (!db) return
   try {
-    await await_(db.transaction(PROJECTS_STORE, 'readwrite').objectStore(PROJECTS_STORE).delete(normalizeName(name)))
+    const store = db.transaction(PROJECTS_STORE, 'readwrite').objectStore(PROJECTS_STORE)
+    const row = await await_(store.get(normalizeName(name)) as IDBRequest<ProjectRow | undefined>)
+    if (!isLive(row)) return
+    await await_(store.put(tombstone(row)))
     postLibraryChange({ kind: 'deleted', name: normalizeName(name) })
   } catch {
     // Deleting an absent row is not an error worth surfacing.
@@ -316,11 +341,13 @@ export async function renameStoredProject(from: string, to: string): Promise<boo
     const tx = db.transaction(PROJECTS_STORE, 'readwrite')
     const store = tx.objectStore(PROJECTS_STORE)
     const row = await await_(store.get(source) as IDBRequest<ProjectRow | undefined>)
-    if (!row) return false
+    if (!isLive(row)) return false
     const existing = await await_(store.get(target) as IDBRequest<ProjectRow | undefined>)
-    if (existing) return false
-    await await_(store.put({ ...row, name: target }))
-    await await_(store.delete(source))
+    if (isLive(existing)) return false
+    // Over a tombstone the target name's revision line continues (see `deleted`).
+    const rev = existing ? Math.max(row.rev ?? LEGACY_REV, existing.rev ?? LEGACY_REV) + 1 : row.rev
+    await await_(store.put({ ...row, name: target, rev }))
+    await await_(store.put(tombstone(row)))
     postLibraryChange({ kind: 'renamed', name: source, to: target })
     return true
   } catch {
