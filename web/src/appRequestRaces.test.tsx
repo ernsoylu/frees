@@ -13,79 +13,31 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { DEFAULT_STOP_CRITERIA } from './api'
 import { newParamRow, newParamTable, sameParamInputs, type ParamTableSpec } from './tables'
 import { wasmCheck, wasmSolve, wasmSolveTable } from './wasm/engineClient'
+import { stubJsdomForApp } from './test/appHarness'
 
 // dockview does not lay out in jsdom, so nothing ever becomes the active
 // window. This stand-in reports `dock.active` instead; the top bar, which
 // sits outside the dock, then behaves as it does in a browser.
 const dock = vi.hoisted(() => ({ active: 'equations' }))
 vi.mock('./workspace/WorkspaceDock', async () => {
-  const { useEffect } = await import('react')
+  const { fakeWorkspaceDock } = await import('./test/appHarness')
   const { TABLES_WORKBOOK_WINDOW_ID } = await import('./tablesGrid/tablesWorkbookBridge')
   return {
-    WorkspaceDock: ({ onActiveChange, handleRef }: {
-      onActiveChange?: (w: { id: string; kind: string; title: string }) => void
-      handleRef?: { current: unknown }
-    }) => {
-      useEffect(() => {
-        if (handleRef) {
-          handleRef.current = {
-            open() {}, openInstance() {}, close() {}, setTitle() {}, isOpen: () => false,
-            reset() {}, restore() {}, applyPerspective() {},
-          }
-        }
-        const id = dock.active === 'table' ? TABLES_WORKBOOK_WINDOW_ID : dock.active
-        onActiveChange?.({ id, kind: dock.active, title: dock.active })
-        // Once, on mount, like dockview's first report: App passes a fresh
-        // callback every render.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [])
-      return null
-    },
+    WorkspaceDock: fakeWorkspaceDock(() => ({
+      id: dock.active === 'table' ? TABLES_WORKBOOK_WINDOW_ID : dock.active,
+      kind: dock.active,
+    })),
   }
 })
 
-vi.mock('./wasm/engineClient', async (orig) => {
-  const real = await orig<Record<string, unknown>>()
-  const stubbed: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(real)) stubbed[k] = typeof v === 'function' ? vi.fn(async () => ({})) : v
-  stubbed.wasmCheck = vi.fn(async () => ({
-    solvable: true, equations: 2, unknowns: 2, variables: ['x', 'y'], unitWarnings: [], inferredUnits: {}, message: 'ok',
-  }))
-  return stubbed
-})
+vi.mock('./wasm/engineClient', async (orig) =>
+  (await import('./test/appHarness')).stubbedEngine(await orig(), ['x', 'y']))
 
 beforeEach(() => {
-  // The phone layout reaches the workbook and Solve table through plain
-  // buttons; the desktop rail's menus need layout jsdom does not have.
-  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }))
-  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} })
-  HTMLElement.prototype.scrollIntoView = () => {}
-  // CodeMirror measures text ranges, which jsdom does not lay out.
-  Range.prototype.getClientRects = () => [] as unknown as DOMRectList
-  Range.prototype.getBoundingClientRect = () => new DOMRect()
-  // jsdom throws resolving some of Mantine's CSS lengths; layout is not what
-  // this test is about, so an unreadable style reads as an empty one.
-  // Both the global and the element's own window, where floating-ui reads it.
-  const view = document.defaultView!
-  const computed = view.getComputedStyle.bind(view)
-  const safe = (el: Element, pseudo?: string | null) => {
-    try {
-      return computed(el, pseudo)
-    } catch {
-      return document.createElement('div').style
-    }
-  }
-  vi.stubGlobal('getComputedStyle', safe)
-  vi.spyOn(view, 'getComputedStyle').mockImplementation(safe)
+  stubJsdomForApp({ phone: true })
   dock.active = 'equations'
-  localStorage.clear()
-  // A returning user: no first-run dialog over the workspace.
-  localStorage.setItem('frees.firstRunDismissed', 'true')
-  localStorage.setItem('frees.gettingStartedSeen', 'true')
 })
 
-// The style spy stays for the file: floating-ui can measure after a test's
-// own cleanup has run.
 afterEach(() => vi.unstubAllGlobals())
 
 /** A saved workspace holding one parametric table, restored on mount. */
