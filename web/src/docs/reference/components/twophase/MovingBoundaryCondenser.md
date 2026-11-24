@@ -47,14 +47,14 @@ out.mdot &= in.mdot \\
 out.p &= in.p \\
 tsat &= \text{T\_sat}\left(\mathrm{fluid\$}, p=in.p\right) \\
 hf &= \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
-l_{need} &= \frac{in.mdot\cdot \left(in.h - hf\right)}{u_{cond}\cdot 3.141592653589793\cdot d\cdot \left(tsat - wall.t\right)} \\
-l_{cond} &= 0.5\,\left(\text{max}\left(l_{need}, 0\right) + l - \sqrt{\left(\text{max}\left(l_{need}, 0\right) - l\right)^{2} + eps_{zone}^{2}}\right) \\
-q_{cond} &= u_{cond}\cdot 3.141592653589793\cdot d\cdot l_{cond}\cdot \left(tsat - wall.t\right) \\
+l_{need} &= \text{if}\left(wall.t, tsat, \frac{in.mdot\cdot \left(in.h - hf\right)}{u_{cond}\cdot 3.141592653589793\cdot d\cdot \left(tsat - wall.t\right)}, l, l\right) \\
+l_{cond} &= \text{if}\left(wall.t, tsat, \text{max}\left(0.5\,\left(\text{max}\left(l_{need}, 0\right) + l - \sqrt{\left(\text{max}\left(l_{need}, 0\right) - l\right)^{2} + eps_{zone}^{2}}\right), 0\right), l, l\right) \\
+q_{cond} &= u_{cond}\cdot 3.141592653589793\cdot d\cdot l_{cond}\cdot \text{max}\left(tsat - wall.t, 0\right) \\
 l_{sc} &= l - l_{cond} \\
 r_{sc} &= \text{zone\_ramp}\left(l_{sc}, eps_{zone}\right) \\
 cp_{sc} &= \text{Cp}\left(\mathrm{fluid\$}, p=in.p, x=0\right) \\
 ntu_{sc} &= \frac{u_{sc}\cdot 3.141592653589793\cdot d\cdot l_{sc}\cdot r_{sc}}{in.mdot\cdot cp_{sc}} \\
-q_{sc} &= \left(1 - \text{exp}\left(-ntu_{sc}\right)\right)\cdot in.mdot\cdot \text{max}\left(hf - \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, t=wall.t\right), 0\right) \\
+q_{sc} &= \text{if}\left(wall.t, tsat, \left(1 - e^{-ntu_{sc}}\right)\cdot in.mdot\cdot \text{max}\left(hf - \text{Enthalpy}\left(\mathrm{fluid\$}, p=in.p, t=wall.t\right), 0\right), 0, 0\right) \\
 t_{out} &= \text{Temperature}\left(\mathrm{fluid\$}, p=out.p, h=out.h\right) \\
 out.h &= in.h - \frac{q_{cond} + q_{sc}}{in.mdot} \\
 q &= q_{cond} + q_{sc} \\
