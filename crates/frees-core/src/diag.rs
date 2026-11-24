@@ -241,7 +241,11 @@ impl fmt::Display for FreesError {
             FreesError::Solver { message, .. } => write!(f, "solver error: {message}"),
             FreesError::Property { message } => write!(f, "property error: {message}"),
             FreesError::Evaluation { message } => write!(f, "evaluation error: {message}"),
-            FreesError::UnknownUnit { unit } => write!(f, "unknown unit: {unit}"),
+            FreesError::UnknownUnit { unit } => write!(
+                f,
+                "unknown unit: {unit}{}",
+                crate::units::registry::unit_hint(unit)
+            ),
         }
     }
 }
