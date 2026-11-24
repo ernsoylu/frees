@@ -20,7 +20,7 @@ project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#
 three event goldens regenerated against closed forms, owner-approved); FX1a,
 case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
 refused (#143, owner decision); FX1b, the optimizer reads a capitalised
-decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145); FX8/E06, nonnegative regeneration loss (#146).
+decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145); FX8/E06, nonnegative regeneration loss (#146); FX8/E07, moving-boundary zones at zero wall superheat (#147).
 
 ---
 
@@ -63,8 +63,6 @@ each item carries its own repro, and each fix lands with that repro as a test.
   - Fix: keep `Tevap` as the heat-transfer driving temperature, and set the outlet from `Temperature(P=out.P, x=1) + SH`.
   - The EV thermal model uses this component on both evaporator branches, so its goldens may move, for this cause.
   - **Blocked on FX1f (measured 2026-11-24).** The fix delivers exactly the set superheat, where the Java goldens deliver 6.92 K (`ev-thermal-management`) and 6.77/9.77 K (`new-library-components`) for SH = 5/8 at dP = 20 kPa; both goldens and the four reference pages sharing the `aux` example move for this cause. But `multidomain_examples.md[md-hpwh]` then fails in WASM only. Its 53-equation block stalls cold on both targets, and the ladder's consistent-start rung starts 1.4e-12 apart on the two (the sweep's property calls), reaches 1e-7 after one step and 1 % after two, then converges natively in 28 iterations and stalls in WASM after 195. With `rustprop_warm` bypassed, WASM solves it, agreeing with native to 1.5e-13. Land E05 after FX1f, with `md-hpwh` as a second repro.
-- **E07. Moving-boundary heat exchangers divide by zero at zero ΔT.** The evaporator and condenser zone lengths divide by `T_wall − T_sat`. At saturation the solve fails, and 2 K colder gives a zone of −5e-6 m.
-  - Fix: write the duty from the available heat transfer before dividing, define the ΔT = 0 limit, and assert each zone lies in [0, L] and the zones sum to L.
 - **Reverse and zero flow.** `TwoPhaseFlowRes` fails at zero and negative flow, because Friedel needs a positive mass flux. Treat it with FX3g's `iso6358` work under one policy: a zero-flow pressure-drop limit and an upstream state on reversal. Until then, its reference page says forward flow only.
 
 **FX9. What the display shows must match the data.**
@@ -123,7 +121,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
 - **A temperature-difference unit** (FX1c).
 
-**Order.** FX8/E07 → FX9 (U03 and U05 first) → FX2a → FX1f → E05 → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX8's reverse-flow policy, with FX3g → FX9 (U03 and U05 first) → FX2a → FX1f → E05 → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f and FX3g first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.
