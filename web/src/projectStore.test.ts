@@ -200,6 +200,40 @@ describe('revision-checked saves', () => {
     expect((await loadStoredProject('gone'))?.text).toBe('a = 2')
   })
 
+  // U04 (review 2026-11-23): before tombstones, re-creating a deleted name
+  // restarted its revision at 1, so a stale tab still holding revision 1 of the
+  // OLD project passed the compare and replaced the new one.
+  it('refuses a stale save after another tab deleted and re-created the same name', async () => {
+    await saveOk('Loop', project('old = 1'), 'new')
+    const stale = (await loadStoredProjectRev('Loop'))!.rev // tab A
+    await deleteStoredProject('Loop') // tab B
+    await saveOk('Loop', project('different = 1'), 'new') // tab B, a different project
+
+    const outcome = await saveStoredProject('Loop', project('old = 2'), stale)
+    expect(outcome.status).toBe('conflict')
+    expect((await loadStoredProject('Loop'))?.text).toBe('different = 1')
+  })
+
+  it('hides tombstones from every reader', async () => {
+    await saveOk('gone', project('a = 1'), 'new')
+    await deleteStoredProject('gone')
+    expect(await listStoredProjects()).toEqual([])
+    expect(await loadStoredProjectRev('gone')).toBeNull()
+    // A deleted name is free again, for 'new' and for a rename onto it.
+    await saveOk('kept', project('k = 1'), 'new')
+    expect(await renameStoredProject('kept', 'gone')).toBe(true)
+    expect((await listStoredProjects()).map((m) => m.name)).toEqual(['gone'])
+  })
+
+  it('a rename leaves a tombstone, so a stale save to the old name cannot reuse its revision', async () => {
+    await saveOk('src', project('a = 1'), 'new')
+    const stale = (await loadStoredProjectRev('src'))!.rev
+    expect(await renameStoredProject('src', 'dst')).toBe(true)
+    await saveOk('src', project('other = 1'), 'new') // someone re-creates the old name
+    expect((await saveStoredProject('src', project('a = 2'), stale)).status).toBe('conflict')
+    expect((await loadStoredProject('dst'))?.text).toBe('a = 1')
+  })
+
   it('treats a row written before revisions existed as revision 0', async () => {
     // Exactly what a Phase-11 library holds: a row with no `rev` field. A tab
     // that loads it reads 0, and saving with 0 must succeed, not conflict.
