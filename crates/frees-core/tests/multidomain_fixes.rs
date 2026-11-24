@@ -319,6 +319,51 @@ fn superheat_on_a_gliding_blend_counts_from_the_dew_point() {
     }
 }
 
+/// FX8/E06: blending `P/η` and `P·η` through zero power returned more than
+/// `|P|` in regen — negative loss (−0.0175 W inside `epsP` on the reviewer's
+/// sweep). The loss now blends two nonnegative coefficients on `P·tanh(P/ε)`.
+#[test]
+fn regeneration_through_zero_power_never_reports_negative_loss() {
+    for tau in [-50.0, -3.0, -0.01, -0.002, 0.0, 0.002, 0.01, 3.0, 50.0] {
+        let v = values(&format!(
+            "TABLE effm(w [rad/s] : tau = -100, 100) [-]\n  0 0.9 0.9\n  200 0.9 0.9\nEND\n\
+             VoltageSource BUS(E=400 [V])\nGround GB()\nSigConstant CMD(k={tau} [N-m])\n\
+             SpeedSource SPD(w=100 [rad/s])\nMechGround MG()\nThermalSource TS(T=300 [K])\n\
+             MotorMap MOT(eff$=effm, epsP=1 [W])\n\
+             connect(BUS.p, MOT.p)\nconnect(BUS.n, MOT.n, GB.port)\nconnect(CMD.out, MOT.u)\n\
+             connect(SPD.a, MOT.shaft)\nconnect(SPD.b, MG.port)\nconnect(MOT.heat, TS.port)\n"
+        ));
+        let (pm, q) = (v["mot$pm"], v["mot$q"]);
+        assert!(q >= 0.0, "MotorMap at Pm = {pm} W: loss {q} W");
+        if pm.abs() > 100.0 {
+            let ideal = if pm > 0.0 {
+                pm * (1.0 / 0.9 - 1.0)
+            } else {
+                -pm * 0.1
+            };
+            assert!(
+                close(q, ideal, 1e-12),
+                "Pm = {pm} W: loss {q}, ideal {ideal}"
+            );
+        }
+    }
+    for r in [-1.2, -1e3, -1e5, 1e5, 1e3, 1.2] {
+        // A negative load resistance feeds power back into the converter.
+        let v = values(&format!(
+            "VoltageSource SRC(E=400 [V])\nGround GI()\nGround GO()\n\
+             DCDCConverter DC(ratio=0.03, eta=0.9, epsP=1 [W])\nResistor LOAD(R={r} [ohm])\n\
+             connect(SRC.p, DC.in_p)\nconnect(SRC.n, DC.in_n, GI.port)\n\
+             connect(DC.out_p, LOAD.a)\nconnect(DC.out_n, LOAD.b, GO.port)\n"
+        ));
+        let (pout, pin) = (v["dc$pout"], v["dc$pin"]);
+        assert!(
+            pin - pout >= 0.0,
+            "DCDCConverter at Pout = {pout} W: loss {} W",
+            pin - pout
+        );
+    }
+}
+
 /// FX8/E07: the zone lengths divided by `T_wall − T_sat`, so a wall at
 /// saturation failed the solve, and a wall on the wrong side of it gave the
 /// two-phase zone a negative length (the smooth-min's undershoot below 0).
