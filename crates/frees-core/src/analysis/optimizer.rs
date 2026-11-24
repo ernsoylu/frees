@@ -1201,10 +1201,10 @@ fn read_objective(solution: &Solution, objective: &str) -> Result<f64> {
 /// The Java `initialGuess`: the decision's own spec guess when the Variable
 /// Information window supplied one, else the midpoint of the box, clamped.
 ///
-/// The Java looks the spec up with `problem.specs().get(dec)` against a map
-/// whose keys `VariableSpec`'s compact constructor lowercased, so a decision
-/// spelled with capitals silently misses and falls back to the midpoint. That
-/// quirk is reproduced here rather than "fixed".
+/// Names are case-insensitive. The Java looked the spec up with the decision
+/// as spelled against lowercased keys, so a decision written `X` silently fell
+/// back to the midpoint and could land in another basin; this port matched
+/// that until FX1b.
 fn initial_guess(problem: &Problem) -> Vec<f64> {
     let mut guess = Vec::with_capacity(problem.decisions.len());
     for (i, dec) in problem.decisions.iter().enumerate() {
@@ -1213,7 +1213,7 @@ fn initial_guess(problem: &Problem) -> Vec<f64> {
         let spec_guess = problem
             .overrides
             .iter()
-            .filter(|o| o.name.trim().to_ascii_lowercase() == *dec)
+            .filter(|o| o.name.trim().eq_ignore_ascii_case(dec))
             .find_map(|o| variable_override_spec(o).ok())
             .map(|(_, spec_guess, _, _)| spec_guess);
         let value = spec_guess.unwrap_or((lo + hi) / 2.0);
