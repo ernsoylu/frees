@@ -1143,3 +1143,101 @@ fn a_failing_monte_carlo_sample_is_counted_not_fatal() {
     );
     assert!(outcome.failed_samples < 32, "every sample failed");
 }
+
+// ── FX7: hybrid-event semantics, graded against closed forms ────────────────
+//
+// Each case runs under a one-step fixed method (every event inside a single
+// step, the worst case), the adaptive explicit path, and IDA, which was right
+// before FX7. The expectations are the analytic answers, not an oracle's.
+
+const FX7_METHODS: [&str; 3] = [
+    "method = ode4, step = 1, maxstep = 1",
+    "method = ode45",
+    "method = ida",
+];
+
+fn fx7_table(options: &str, body: &str) -> frees_core::ode::problem::OdeTableResult {
+    let src = format!("DYNAMIC r ({options}, time = 0 .. 1, points = 6)\n{body}END\n");
+    let mut solution = solve(&src, &settings()).unwrap_or_else(|e| panic!("{src}\n=> {}", e.error));
+    solution.ode_tables.remove(0)
+}
+
+#[test]
+fn fx7_e01_a_record_does_not_swallow_a_later_stop_in_the_same_step() {
+    for m in FX7_METHODS {
+        for marker in ["  EVENT marker: y = 0.25 | rising -> record\n", ""] {
+            let body = format!(
+                "  der(y) = 1\n  y(0) = 0\n{marker}  EVENT limit: y = 0.5 | rising -> stop\n"
+            );
+            let t = fx7_table(m, &body);
+            assert!(t.stopped, "{m} {marker:?}: did not stop");
+            assert!(
+                (t.end_time - 0.5).abs() < 1e-12,
+                "{m}: stopped at {}",
+                t.end_time
+            );
+            let names: Vec<&str> = t.events.iter().map(|e| e.name.as_str()).collect();
+            let want: &[&str] = if marker.is_empty() {
+                &["limit"]
+            } else {
+                &["marker", "limit"]
+            };
+            assert_eq!(names, want, "{m}");
+        }
+    }
+}
+
+#[test]
+fn fx7_e02_samples_before_a_reset_keep_the_pre_reset_state() {
+    for m in FX7_METHODS {
+        let t = fx7_table(
+            m,
+            "  der(y) = 0\n  y(0) = 0\n  EVENT change: time = 0.5 -> set y = 10\n",
+        );
+        let y: Vec<f64> = t.rows.iter().map(|r| r[1]).collect();
+        assert_eq!(y, [0.0, 0.0, 0.0, 10.0, 10.0, 10.0], "{m}");
+    }
+}
+
+#[test]
+fn fx7_e03_a_time_trigger_fires_once() {
+    for m in FX7_METHODS {
+        let t = fx7_table(
+            m,
+            "  der(y) = 0\n  y(0) = 0\n  EVENT once: time = 0.5 -> set y = y + 1\n",
+        );
+        assert_eq!(t.events.len(), 1, "{m}: {:?}", t.events);
+        assert!((t.events[0].time - 0.5).abs() < 1e-12, "{m}");
+        assert_eq!(t.rows.last().unwrap()[1], 1.0, "{m}");
+    }
+}
+
+#[test]
+fn fx7_a_bounce_hits_at_the_closed_form_times_until_zeno() {
+    // Drop from 5 m, restitution 0.7: t_n = t1 (1 + 2 Σ_{k<n} 0.7^k), t1 = √(2h/g).
+    // Before FX7 the guard re-read at each restart carried the bisection's last
+    // bit, so the run lost the bounce train after 11 hits and its rows showed
+    // each reset early.
+    let t = solve(
+        "DYNAMIC bounce (method = ode45, time = 0 .. 5.7, points = 58)\n  \
+           der(h) = v\n  der(v) = -9.80665\n  h(0) = 5\n  v(0) = 0\n  \
+           EVENT hit: h = 0 | falling -> set v = -0.7*v\n\
+         END\n",
+        &settings(),
+    )
+    .unwrap_or_else(|e| panic!("{}", e.error))
+    .ode_tables
+    .remove(0);
+    let t1 = (2.0 * 5.0 / 9.80665f64).sqrt();
+    let mut exact = vec![t1];
+    let mut gap = 2.0 * t1;
+    while exact.last().unwrap() + 0.7 * gap < 5.7 {
+        gap *= 0.7;
+        exact.push(exact.last().unwrap() + gap);
+    }
+    let got: Vec<f64> = t.events.iter().map(|e| e.time).collect();
+    assert_eq!(got.len(), exact.len(), "hits {got:?}");
+    for (n, (g, x)) in got.iter().zip(&exact).enumerate() {
+        assert!((g - x).abs() < 1e-9, "hit {n}: {g} vs {x}");
+    }
+}
