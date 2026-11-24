@@ -100,8 +100,17 @@ function compareOdeTables(expectedTables, actualTables, relTol, fail, perturbTra
 
     const wantEvents = want.events || []
     const gotEvents = got.events || []
+    // Names, times and order, not just the count (FX7): a count let a
+    // swallowed event and a duplicated one cancel out.
     if (wantEvents.length !== gotEvents.length) {
       fail(`ode_tables[${i}] events count = ${gotEvents.length} but Java recorded ${wantEvents.length}`)
+    }
+    for (let e = 0; e < Math.min(wantEvents.length, gotEvents.length); e++) {
+      const w = wantEvents[e]
+      const g = gotEvents[e]
+      if (g.name !== w.name || !close(g.time, w.time, relTol)) {
+        fail(`ode_tables[${i}] event ${e} = ${g.name} @ ${g.time} but Java recorded ${w.name} @ ${w.time}`)
+      }
     }
   }
 }

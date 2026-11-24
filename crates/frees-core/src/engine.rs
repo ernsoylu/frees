@@ -2893,10 +2893,21 @@ fn collect_unit_warnings(equations: &[Equation], diagnostics: &mut Vec<Diagnosti
     for equation in equations {
         for side in [&equation.lhs, &equation.rhs] {
             walk_units(side, &mut |unit| {
-                if UnitRegistry::parse(unit).is_err() && seen.insert(unit.to_string()) {
+                let Err(err) = UnitRegistry::parse(unit) else {
+                    return;
+                };
+                if seen.insert(unit.to_string()) {
+                    // The failing *name* inside the expression carries the hint
+                    // (`kJ/mpa` → `mpa`), so read it off the error.
+                    let hint = match &err {
+                        FreesError::UnknownUnit { unit: name } => {
+                            crate::units::registry::unit_hint(name)
+                        }
+                        _ => String::new(),
+                    };
                     diagnostics.push(
                         Diagnostic::warning(format!(
-                            "unknown unit `{unit}`: the literal was left unconverted, \
+                            "unknown unit `{unit}`{hint}: the literal was left unconverted, \
                              so this value is not in SI"
                         ))
                         .with_source_text(equation.source_text.clone()),
@@ -5911,7 +5922,10 @@ impl FreesError {
             | FreesError::Solver { message, .. }
             | FreesError::Property { message }
             | FreesError::Evaluation { message } => message.clone(),
-            FreesError::UnknownUnit { unit } => format!("unknown unit: {unit}"),
+            FreesError::UnknownUnit { unit } => format!(
+                "unknown unit: {unit}{}",
+                crate::units::registry::unit_hint(unit)
+            ),
         }
     }
 }

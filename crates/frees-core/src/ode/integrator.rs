@@ -426,7 +426,7 @@ impl ExplicitStepper {
         check_finite(&f_new, t_new, "derivative")?;
 
         let g_new = eval_events(p, t_new, &y_new)?;
-        let hit = earliest_event(
+        let hits = crossings(
             p,
             self.t,
             &self.y,
@@ -437,16 +437,26 @@ impl ExplicitStepper {
             &self.g_prev,
             &g_new,
         )?;
-        if let Some(hit) = hit.as_ref() {
-            if record_events(p, hit, &mut self.recorded, knots)? {
-                self.end_time = hit.time;
+        // Every crossing in the step, in time order (FX7/E01). A `record` does
+        // not change the trajectory, so the ones after it still count; the
+        // first `stop` or `set` ends the step there. The Java took only the
+        // earliest hit and accepted the step past it, so a record swallowed a
+        // later stop in the same step.
+        let mut hit = None;
+        for h in hits {
+            if record_events(p, &h, &mut self.recorded, knots)? {
+                self.end_time = h.time;
                 self.stopped = true;
                 return Ok(());
+            }
+            if p.events[h.event].is_set() {
+                hit = Some(h);
+                break;
             }
         }
 
         match hit {
-            Some(hit) if p.events[hit.event].is_set() => {
+            Some(hit) => {
                 // Discrete reassignment: jump to the crossing, overwrite the
                 // target state, and restart integration from the modified
                 // state. The knot at the crossing carries the POST-set state so
@@ -489,6 +499,11 @@ impl ExplicitStepper {
                 }
                 self.t = hit.time;
                 self.y = hit.y.clone();
+                // The left limit at the discontinuity (FX7/E02): without it the
+                // samples before the crossing interpolate toward the post-set
+                // state and show the reset before it happens. Two knots at one
+                // time split the dense output into the segments either side.
+                knots.push(self.t, self.y.clone(), p.rhs.eval(self.t, &self.y)?);
                 let set = &p.events[hit.event].set;
                 if let Some(reset) = set.as_ref() {
                     // `DynamicSolver.eventSetStateIndex` already rejects a
@@ -513,6 +528,22 @@ impl ExplicitStepper {
                 self.f = p.rhs.eval(self.t, &self.y)?;
                 check_finite(&self.f, self.t, "post-event derivative")?;
                 self.g_prev = eval_events(p, self.t, &self.y)?;
+                // The fired guard sits on its zero, give or take the bisection's
+                // last bit, so its sign there says nothing about which way it
+                // leaves. Read it a hundred ulps ahead along the new derivative
+                // instead, as IDA's `IDARcheck1`/`IDARcheck2` do: a time trigger
+                // then counts as past its crossing and does not fire again
+                // (FX7/E03), while a bounced ball's guard reads positive and its
+                // next fall is a crossing, even inside one step.
+                let i = hit.event;
+                let dt = (self.t.abs() + out.h_use.abs()) * f64::EPSILON * 100.0;
+                let ahead: Vec<f64> = self
+                    .y
+                    .iter()
+                    .zip(&self.f)
+                    .map(|(y, f)| y + dt * f)
+                    .collect();
+                self.g_prev[i] = p.events[i].g.eval(self.t + dt, &ahead)?;
             }
             _ => {
                 self.consecutive_sets = 0;
@@ -813,10 +844,10 @@ fn eval_events(p: &OdeProblem<'_>, t: f64, y: &[f64]) -> Result<Vec<f64>> {
     Ok(g)
 }
 
-/// Earliest matching zero crossing across all events on `(t, tNew]`, refined on
-/// the Hermite interpolant; `None` if none. Port of
-/// `OdeIntegrator.earliestEvent`.
-fn earliest_event(
+/// Every matching zero crossing on `(t, tNew]`, refined on the Hermite
+/// interpolant, earliest first (ties in declaration order). Grew out of
+/// `OdeIntegrator.earliestEvent`, which kept only the first.
+fn crossings(
     p: &OdeProblem<'_>,
     t: f64,
     y: &[f64],
@@ -826,8 +857,8 @@ fn earliest_event(
     f_new: &[f64],
     g_prev: &[f64],
     g_new: &[f64],
-) -> Result<Option<EventHit>> {
-    let mut best: Option<EventHit> = None;
+) -> Result<Vec<EventHit>> {
+    let mut hits = Vec::new();
     for i in 0..p.events.len() {
         let ev = &p.events[i];
         if !ev.triggers(g_prev[i], g_new[i]) {
@@ -835,17 +866,17 @@ fn earliest_event(
         }
         let tc = refine_crossing(ev, t, y, f, t_new, y_new, f_new, g_prev[i], g_new[i])?;
         let yc = hermite(t, y, f, t_new, y_new, f_new, tc);
-        if best.as_ref().is_none_or(|b| tc < b.time) {
-            best = Some(EventHit {
-                name: ev.name.clone(),
-                time: tc,
-                y: yc,
-                stop: ev.stop,
-                event: i,
-            });
-        }
+        hits.push(EventHit {
+            name: ev.name.clone(),
+            time: tc,
+            y: yc,
+            stop: ev.stop,
+            event: i,
+        });
     }
-    Ok(best)
+    // Stable, so simultaneous crossings keep declaration order.
+    hits.sort_by(|a, b| a.time.total_cmp(&b.time));
+    Ok(hits)
 }
 
 /// Zero crossing on the Hermite interpolant. Port of
@@ -866,12 +897,16 @@ fn refine_crossing(
     t_new: f64,
     y_new: &[f64],
     f_new: &[f64],
-    _g_prev: f64,
+    g_prev: f64,
     _g_new: f64,
 ) -> Result<f64> {
     let mut lo = t;
     let mut hi = t_new;
-    let mut g_lo = ev.g.eval(lo, y)?;
+    // `g_prev`, not `g(t, y)`: the two are the same number except right after
+    // a set, where `g_prev` is the probe that says which way the guard leaves
+    // its zero. Re-reading the guard there returns the bisection's last bit,
+    // and the search converges back onto the restart (FX7: a duplicate hit).
+    let mut g_lo = g_prev;
     for _ in 0..BISECTION_ITERS {
         let mid = 0.5 * (lo + hi);
         let ym = hermite(t, y, f, t_new, y_new, f_new, mid);
@@ -1019,7 +1054,10 @@ fn interpolate_at(
     let mut out = Vec::with_capacity(taus.len());
     let mut knot = 0usize;
     for &tau in taus {
-        while knot < knots - 2 && knot_t[knot + 1] < tau {
+        // `<=`: a sample at exactly an event time reads the post-event state
+        // (right-continuous). At an ordinary knot both neighbouring segments
+        // return the knot value bit for bit, so only a set's twin knot cares.
+        while knot < knots - 2 && knot_t[knot + 1] <= tau {
             knot += 1;
         }
         let lo = knot.min(knots - 2);
@@ -2235,9 +2273,9 @@ mod oracle {
     /// END
     /// ```
     /// A `set` event fires twice: the direction guard must re-arm against the
-    /// post-set state without retriggering at the same instant, and the knot at
-    /// the crossing must carry the POST-set velocity (row `t = 1.0` shows
-    /// `vel = +10`, not `−10`).
+    /// post-set state without retriggering at the same instant. The crossing
+    /// carries twin knots, pre- and post-set; the row at `t = 1.0` falls a hair
+    /// before the computed crossing and so shows `vel = −10`.
     #[test]
     fn a_set_event_matches_the_oracle_across_two_bounces() {
         const ROWS: [&[f64]; 13] = [
@@ -2245,7 +2283,10 @@ mod oracle {
             &[0.25, 4.687_499_999_999_998, -2.5],
             &[0.5, 3.749_999_999_999_999_6, -4.999_999_999_999_997],
             &[0.75, 2.187_500_000_000_005, -7.499_999_999_999_993],
-            &[1.0, -9.857_917_987_875_52e-15, 10.000_000_000_000_014],
+            // FX7 (owner-approved 2026-11-24): the crossing is computed at
+            // 1 + 9e-16, so this sample precedes it and reads the left limit.
+            // The Java oracle's +10 was the reset shown before it happened.
+            &[1.0, -9.857_917_987_875_52e-15, -9.999_999_999_999_996],
             &[1.25, 2.187_499_999_999_990_7, 7.500_000_000_000_011_5],
             &[1.5, 3.749_999_999_999_991_6, 5.000_000_000_000_015],
             &[1.75, 4.687_499_999_999_996_4, 2.500_000_000_000_019],

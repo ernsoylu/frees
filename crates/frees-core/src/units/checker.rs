@@ -262,7 +262,10 @@ fn unit_error_text(err: &FreesError, full: &str) -> String {
         FreesError::UnknownUnit { unit }
             if !unit.is_empty() && unit.chars().all(char::is_alphabetic) =>
         {
-            format!("Unknown unit: '{unit}' in '{full}'")
+            format!(
+                "Unknown unit: '{unit}' in '{full}'{}",
+                crate::units::registry::unit_hint(unit)
+            )
         }
         FreesError::UnknownUnit { unit } => format!("Cannot parse unit: '{unit}' in '{full}'"),
         other => other.to_string(),

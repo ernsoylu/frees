@@ -12,8 +12,9 @@
 //!   property-package units are written;
 //! * exponents may be written with or without `^` (`m^2` == `m2`), and may be
 //!   fractional (`m^1.5`);
-//! * unit names are case-insensitive, apart from the handful in
-//!   [`CASE_SENSITIVE_UNITS`] where case carries meaning (`H` henry vs `h` hour);
+//! * unit names are case-insensitive, apart from those in
+//!   [`CASE_SENSITIVE_UNITS`] where case carries meaning: `H` henry vs `h`
+//!   hour, `S` siemens vs `s` second, and the milli/mega prefix (`mW`/`MW`);
 //! * `-` on its own (and the empty string) is the explicit dimensionless marker.
 //!
 //! Everything the engine computes is in SI; a unit is therefore just a
@@ -106,7 +107,6 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     // ---- Mass -------------------------------------------------------------
     ("kg", 1.0, MASS),
     ("g", 1e-3, MASS),
-    ("mg", 1e-6, MASS),
     ("lbm", 0.45359237, MASS),
     ("lb", 0.45359237, MASS),
     ("lbs", 0.45359237, MASS),
@@ -115,7 +115,6 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     // ---- Length -----------------------------------------------------------
     ("m", 1.0, LENGTH),
     ("cm", 0.01, LENGTH),
-    ("mm", 0.001, LENGTH),
     ("km", 1000.0, LENGTH),
     ("in", 0.0254, LENGTH),
     ("inch", 0.0254, LENGTH),
@@ -123,12 +122,10 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("yd", 0.9144, LENGTH),
     ("mile", 1609.344, LENGTH),
     // ---- Time -------------------------------------------------------------
-    ("s", 1.0, TIME),
     ("sec", 1.0, TIME),
     ("secs", 1.0, TIME),
     ("second", 1.0, TIME),
     ("seconds", 1.0, TIME),
-    ("ms", 1e-3, TIME),
     ("millisecond", 1e-3, TIME),
     ("milliseconds", 1e-3, TIME),
     ("us", 1e-6, TIME),
@@ -161,18 +158,15 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("mol", 1.0, AMOUNT),
     ("kmol", 1000.0, AMOUNT),
     ("a", 1.0, CURRENT),
-    ("ma", 1e-3, CURRENT),
     ("cd", 1.0, LUMINOUS),
     // ---- Force: kg·m/s² ---------------------------------------------------
     ("n", 1.0, FORCE),
     ("kn", 1e3, FORCE),
-    ("mn", 1e6, FORCE),
     ("lbf", 4.4482216152605, FORCE),
     ("dyne", 1e-5, FORCE),
     // ---- Pressure: kg/(m·s²) ----------------------------------------------
     ("pa", 1.0, PRESSURE),
     ("kpa", 1e3, PRESSURE),
-    ("mpa", 1e6, PRESSURE),
     ("gpa", 1e9, PRESSURE),
     ("bar", 1e5, PRESSURE),
     ("atm", 101325.0, PRESSURE),
@@ -183,7 +177,6 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     // ---- Energy: kg·m²/s² -------------------------------------------------
     ("j", 1.0, ENERGY),
     ("kj", 1e3, ENERGY),
-    ("mj", 1e6, ENERGY),
     ("btu", 1055.05585262, ENERGY),
     ("cal", 4.1868, ENERGY),
     ("kcal", 4186.8, ENERGY),
@@ -191,12 +184,10 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     // ---- Power: kg·m²/s³ --------------------------------------------------
     ("w", 1.0, POWER),
     ("kw", 1e3, POWER),
-    ("mw", 1e6, POWER),
     ("hp", 745.69987158, POWER),
     // ---- Volume -----------------------------------------------------------
     ("l", 1e-3, VOLUME),
     ("liter", 1e-3, VOLUME),
-    ("ml", 1e-6, VOLUME),
     ("gal", 0.003785411784, VOLUME),
     // ---- Volume flow: US HVAC airflow and pump ratings ----------------------
     // cfm = ft^3/min = 0.3048^3 / 60; gpm = US gal/min = 0.003785411784 / 60.
@@ -206,7 +197,6 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("hz", 1.0, FREQUENCY),
     ("hertz", 1.0, FREQUENCY),
     ("khz", 1e3, FREQUENCY),
-    ("mhz", 1e6, FREQUENCY),
     ("ghz", 1e9, FREQUENCY),
     // Angular velocity: rad/s (rad is dimensionless, so this is s⁻¹).
     // rpm = revolutions per minute = 2π rad / 60 s.
@@ -215,13 +205,11 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     // Voltage: V = kg·m²·s⁻³·A⁻¹
     ("v", 1.0, VOLTAGE),
     ("kv", 1e3, VOLTAGE),
-    ("mv", 1e-3, VOLTAGE),
     // Resistance: Ω = kg·m²·s⁻³·A⁻²
     ("ω", 1.0, RESISTANCE),
     ("ohm", 1.0, RESISTANCE),
     ("ohms", 1.0, RESISTANCE),
     ("kohm", 1e3, RESISTANCE),
-    ("mohm", 1e6, RESISTANCE),
     // Capacitance: F = s⁴·A²·kg⁻¹·m⁻²
     ("farad", 1.0, CAPACITANCE),
     ("uf", 1e-6, CAPACITANCE),
@@ -229,7 +217,6 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("pf", 1e-12, CAPACITANCE),
     // Inductance: H = kg·m²·s⁻²·A⁻² (bare `H` lives in CASE_SENSITIVE_UNITS)
     ("henry", 1.0, INDUCTANCE),
-    ("mh", 1e-3, INDUCTANCE),
     ("uh", 1e-6, INDUCTANCE),
     // Charge: C = A·s
     ("coulomb", 1.0, CHARGE),
@@ -245,11 +232,9 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     // Magnetic flux: Wb = kg·m²·s⁻²·A⁻¹
     ("wb", 1.0, MAGNETIC_FLUX),
     ("weber", 1.0, MAGNETIC_FLUX),
-    ("mwb", 1e-3, MAGNETIC_FLUX),
     // Magnetic flux density: T = kg·s⁻²·A⁻¹
     ("tesla", 1.0, FLUX_DENSITY),
     ("t", 1.0, FLUX_DENSITY),
-    ("mt", 1e-3, FLUX_DENSITY),
     ("ut", 1e-6, FLUX_DENSITY),
     // ---- Viscosity (extension over the Java table; see module deviations) --
     // Dynamic: 1 P = 0.1 Pa·s, 1 cP = 1 mPa·s.
@@ -265,10 +250,77 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("cst", 1e-6, KINEMATIC_VISCOSITY),
 ];
 
-/// SI symbols whose meaning depends on letter case (`H` henry vs `h` hour).
-/// Probed before [`UNITS`], with the user's spelling untouched.
-pub static CASE_SENSITIVE_UNITS: &[(&str, f64, Dims)] =
-    &[("h", 3600.0, TIME), ("H", 1.0, INDUCTANCE)];
+/// SI symbols whose meaning depends on letter case: `h` hour and `H` henry,
+/// `s` second and `S` siemens, and every milli/mega pair (`mW`/`MW`), whose
+/// prefix letter is the whole difference (FX1a). Probed before [`UNITS`].
+/// The prefix letter must match exactly; the rest of a prefixed symbol may be
+/// in any case (`Mpa`, `MPA` and `MPa` are all megapascal) — see [`lookup`].
+pub static CASE_SENSITIVE_UNITS: &[(&str, f64, Dims)] = &[
+    ("h", 3600.0, TIME),
+    ("H", 1.0, INDUCTANCE),
+    ("s", 1.0, TIME),
+    ("S", 1.0, CONDUCTANCE),
+    ("mg", 1e-6, MASS),
+    ("Mg", 1e3, MASS),
+    ("mm", 1e-3, LENGTH),
+    ("Mm", 1e6, LENGTH),
+    ("ms", 1e-3, TIME),
+    ("Ms", 1e6, TIME),
+    ("mA", 1e-3, CURRENT),
+    ("MA", 1e6, CURRENT),
+    ("mN", 1e-3, FORCE),
+    ("MN", 1e6, FORCE),
+    ("mPa", 1e-3, PRESSURE),
+    ("MPa", 1e6, PRESSURE),
+    ("mJ", 1e-3, ENERGY),
+    ("MJ", 1e6, ENERGY),
+    ("mW", 1e-3, POWER),
+    ("MW", 1e6, POWER),
+    ("mL", 1e-6, VOLUME),
+    ("ML", 1e3, VOLUME),
+    ("mHz", 1e-3, FREQUENCY),
+    ("MHz", 1e6, FREQUENCY),
+    ("mV", 1e-3, VOLTAGE),
+    ("MV", 1e6, VOLTAGE),
+    ("mOhm", 1e-3, RESISTANCE),
+    ("MOhm", 1e6, RESISTANCE),
+    ("mH", 1e-3, INDUCTANCE),
+    ("MH", 1e6, INDUCTANCE),
+    ("mS", 1e-3, CONDUCTANCE),
+    ("MS", 1e6, CONDUCTANCE),
+    ("mWb", 1e-3, MAGNETIC_FLUX),
+    ("MWb", 1e6, MAGNETIC_FLUX),
+    ("mT", 1e-3, FLUX_DENSITY),
+    ("MT", 1e6, FLUX_DENSITY),
+];
+
+/// Lowercase spellings that meant *mega* while names were case-folded
+/// (`[mpa]` was MPa). With the prefix read case-sensitively they would quietly
+/// become milli, nine orders of magnitude off, so they are refused with a hint
+/// instead (FX1a, owner decision 2026-11-24). The exact milli spellings
+/// (`mPa`) are not in doubt and resolve normally.
+const FORMERLY_MEGA: &[&str] = &["mn", "mpa", "mj", "mw", "mhz", "mohm"];
+
+/// The extra sentence an unknown-unit message carries when `unit` is one of
+/// the [`FORMERLY_MEGA`] spellings: which two units the author may have meant.
+/// Empty for every other name.
+pub fn unit_hint(unit: &str) -> String {
+    let lower = unit.to_lowercase();
+    if !unit.starts_with('m') || !FORMERLY_MEGA.contains(&lower.as_str()) {
+        return String::new();
+    }
+    let twin = |prefix: char| {
+        CASE_SENSITIVE_UNITS
+            .iter()
+            .find(|(n, _, _)| n.starts_with(prefix) && n[1..].eq_ignore_ascii_case(&lower[1..]))
+            .map_or("", |(n, _, _)| n)
+    };
+    format!(
+        " — ambiguous: write '{}' for mega or '{}' for milli",
+        twin('M'),
+        twin('m')
+    )
+}
 
 /// Named SI units, tried in order, that [`UnitRegistry::si_name`] prefers over a
 /// composed `kg m^2/s^3` style string.
@@ -590,9 +642,27 @@ impl UnitRegistry {
 // Unit-expression parser
 // ---------------------------------------------------------------------------
 
-/// Look one unit name up: case-sensitive table first, then the lowercased one.
+/// Look one unit name up: the case-sensitive table (exactly, then by prefix
+/// letter), then the lowercased one, then currencies.
 fn lookup(name: &str) -> Result<Quantity> {
-    if let Some((_, factor, dims)) = CASE_SENSITIVE_UNITS.iter().find(|(n, _, _)| *n == name) {
+    let exact = CASE_SENSITIVE_UNITS.iter().find(|(n, _, _)| *n == name);
+    // A prefixed symbol keeps its prefix letter's case and may write the rest
+    // in any case: `Mpa` is MPa. Two-letter `ms`/`mS`/`Ms`/`MS` are all exact
+    // entries, so the second letter's case is never guessed for `s`.
+    let prefixed = || {
+        let mut chars = name.chars();
+        let prefix = chars.next().filter(|c| *c == 'm' || *c == 'M')?;
+        let rest = chars.as_str();
+        CASE_SENSITIVE_UNITS.iter().find(|(n, _, _)| {
+            n.len() > 1 && n.starts_with(prefix) && n[1..].eq_ignore_ascii_case(rest)
+        })
+    };
+    if exact.is_none() && !unit_hint(name).is_empty() {
+        return Err(FreesError::UnknownUnit {
+            unit: name.to_string(),
+        });
+    }
+    if let Some((_, factor, dims)) = exact.or_else(prefixed) {
         return Ok(Quantity::new(*factor, *dims));
     }
     let lower = name.to_lowercase();
@@ -1459,5 +1529,42 @@ mod tests {
         assert!(!UnitRegistry::is_known_unit("zorp"));
         // it is a *name* check, not an expression check
         assert!(!UnitRegistry::is_known_unit("kJ/kg-K"));
+    }
+
+    /// FX1a: names were case-folded, so `1 [mW]` was 1e6 W, `[Mg]` 1e-6 kg and
+    /// `[S]` a second. Every milli/mega pair now resolves to its own factor.
+    #[test]
+    fn every_milli_mega_pair_resolves_to_its_own_factor() {
+        for base in [
+            "g", "m", "s", "A", "N", "Pa", "J", "W", "L", "Hz", "V", "Ohm", "H", "S", "Wb", "T",
+        ] {
+            let si =
+                |name: &str| UnitRegistry::parse(name).unwrap_or_else(|e| panic!("{name}: {e}"));
+            let one = si(base).factor;
+            let milli = si(&format!("m{base}"));
+            let mega = si(&format!("M{base}"));
+            assert_close(milli.factor, one * 1e-3);
+            assert_close(mega.factor, one * 1e6);
+            assert!(milli.same_dimensions_as(&mega), "{base}");
+        }
+        assert_close(UnitRegistry::convert("S", "1/Ohm").unwrap(), 1.0);
+        assert_close(UnitRegistry::convert("s", "ms").unwrap(), 1e3);
+        // The prefix letter decides; the base may be written in any case.
+        for mega in ["MPa", "Mpa", "MPA", "Mw", "MOHM"] {
+            assert_eq!(UnitRegistry::parse(mega).unwrap().factor, 1e6, "{mega}");
+        }
+    }
+
+    #[test]
+    fn a_lowercase_spelling_that_meant_mega_is_refused_with_a_hint() {
+        for name in ["mpa", "mw", "mj", "mhz", "mohm", "mn", "mPA"] {
+            let err = UnitRegistry::parse(name).unwrap_err().to_string();
+            assert!(err.contains("ambiguous: write 'M"), "{name}: {err}");
+        }
+        // Spellings that always meant milli are not in doubt.
+        for name in ["ma", "mv", "mt", "mh", "ml", "mwb", "mm", "mg"] {
+            assert!(UnitRegistry::parse(name).unwrap().factor < 1.0, "{name}");
+        }
+        assert_eq!(unit_hint("kPa"), "");
     }
 }
