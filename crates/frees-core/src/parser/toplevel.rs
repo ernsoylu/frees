@@ -2267,9 +2267,14 @@ impl<'a> Parser<'a> {
         let start_pos = self.c.pos();
         self.c.expect(&TokenKind::Connect)?;
         self.c.expect(&TokenKind::LParen)?;
-        let mut ports = vec![self.connect_port()?];
-        while self.c.eat(&TokenKind::Comma) {
+        let (mut ports, mut port_spans) = (Vec::new(), Vec::new());
+        loop {
+            let port_pos = self.c.pos();
             ports.push(self.connect_port()?);
+            port_spans.push(self.span_since(port_pos));
+            if !self.c.eat(&TokenKind::Comma) {
+                break;
+            }
         }
         self.c.expect(&TokenKind::RParen)?;
         Ok(ConnectDecl {
@@ -2277,6 +2282,7 @@ impl<'a> Parser<'a> {
             source_text: self.text_since(start_pos),
             boundary: Vec::new(),
             span: self.span_since(start_pos),
+            port_spans,
         })
     }
 

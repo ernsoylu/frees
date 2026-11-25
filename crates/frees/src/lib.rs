@@ -1346,6 +1346,8 @@ fn connection_defs(
                 "fluid": c.fluid,
                 "streams": c.streams,
                 "range": source.zip(c.source).and_then(|(map, span)| map.range(span)),
+                // Per endpoint, its range in the statement, for an edit that takes one out.
+                "endpointRanges": source.map(|map| c.endpoint_spans.iter().map(|s| map.range(*s)).collect::<Vec<_>>()),
                 "alias": c.alias,
                 "inDefinition": c.in_definition,
                 // Phase H: per endpoint, the variable and sign of the flow
