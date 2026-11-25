@@ -20,7 +20,7 @@ project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#
 three event goldens regenerated against closed forms, owner-approved); FX1a,
 case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
 refused (#143, owner decision); FX1b, the optimizer reads a capitalised
-decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145); FX8/E06, nonnegative regeneration loss (#146); FX8/E07, moving-boundary zones at zero wall superheat (#147); FX3g with FX8's reverse-flow policy, signed ISO 6358 flow with a linear zero-flow band and a bidirectional `TwoPhaseFlowRes` (#148); FX9/U03, raw statistics and the data table from the source series (#149); FX9/U05, the box plot registered and every offered chart type validated against the bundle (#150); FX9/U06, a 3D mesh kept whatever its row order (#151); FX9/U07, playback speed on coarse trajectories (#152); FX9/U08, disconnect beside a comment, from the parser's endpoint spans (#153); FX9/E08, a live watch's unit checked against its column (#154); FX9 docs, the table accessors' syntax shown as it parses (#155).
+decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145); FX8/E06, nonnegative regeneration loss (#146); FX8/E07, moving-boundary zones at zero wall superheat (#147); FX3g with FX8's reverse-flow policy, signed ISO 6358 flow with a linear zero-flow band and a bidirectional `TwoPhaseFlowRes` (#148); FX9/U03, raw statistics and the data table from the source series (#149); FX9/U05, the box plot registered and every offered chart type validated against the bundle (#150); FX9/U06, a 3D mesh kept whatever its row order (#151); FX9/U07, playback speed on coarse trajectories (#152); FX9/U08, disconnect beside a comment, from the parser's endpoint spans (#153); FX9/E08, a live watch's unit checked against its column (#154); FX9 docs, the table accessors' syntax shown as it parses (#155); FX2a, component members' units filled from the check, values still SI (#156).
 
 ---
 
@@ -65,9 +65,6 @@ each item carries its own repro, and each fix lands with that repro as a test.
   - **Blocked on FX1f (measured 2026-11-24).** The fix delivers exactly the set superheat, where the Java goldens deliver 6.92 K (`ev-thermal-management`) and 6.77/9.77 K (`new-library-components`) for SH = 5/8 at dP = 20 kPa; both goldens and the four reference pages sharing the `aux` example move for this cause. But `multidomain_examples.md[md-hpwh]` then fails in WASM only. Its 53-equation block stalls cold on both targets, and the ladder's consistent-start rung starts 1.4e-12 apart on the two (the sweep's property calls), reaches 1e-7 after one step and 1 % after two, then converges natively in 28 iterations and stalls in WASM after 195. With `rustprop_warm` bypassed, WASM solves it, agreeing with native to 1.5e-13. Land E05 after FX1f, with `md-hpwh` as a second repro.
 
 **FX2. Units that disappear.**
-- **FX2a. Component variables have no units after Solve.** `crates/frees/src/lib.rs:933` (`variable_rows`) looks units up by the display name (`snk.in.p`), but member units are keyed by the flat name. `check()` already reports them all, internal variables included.
-  - Fix (lowest risk): the Inspector and the variable tables fill an empty unit from the latest check's `inferredUnits`. The values stay SI and the labels are SI.
-  - Candidate (owner decision): key `variable_rows` by the canonical name as well. That converts member values to display units, so every consumer that assumes SI would need an audit (schematic readouts, flow particles, operating-point cards, the power view), and the two parity tests in `lib.rs` would be rewritten.
 - **FX2b. User `FUNCTION` arguments carry no units.** `FUNCTION Sq(a [m]); y = Sq(3 [m])` warns "argument must be dimensionless" and returns `9 [-]`. The `[m]` annotation is parsed and then ignored, both on arguments and on multi-output results (`parser/toplevel.rs:771`).
   - Fix: an annotated argument checks the call against its declared unit. An unannotated argument is a wildcard, so it no longer raises the false warning. The result's unit follows the body or the declared output unit.
   - This supersedes the D.1 open finding on function arguments.
@@ -102,7 +99,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
 - **A temperature-difference unit** (FX1c).
 
-**Order.** FX2a → FX1f → E05 → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX1f → E05 → FX1c/FX1d (checker) → FX2b → FX1e → FX3 (FX3f first) → FX6 → FX4. FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.

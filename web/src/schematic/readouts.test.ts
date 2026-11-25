@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { badgeFor, formatCompact, formatReading, indexVariables, readoutFor, streamSummary } from './readouts'
+import { badgeFor, fillUnits, formatCompact, formatReading, indexVariables, readoutFor, solveWithUnits, streamSummary } from './readouts'
 import { layoutSchematic, type Connection } from './layout'
-import type { VariableResult } from '../api'
+import type { SolveResponse, VariableResult } from '../api'
 
 const NETWORK: Connection[] = [
   {
@@ -174,5 +174,35 @@ describe('stream hover summary (H4)', () => {
     ])
     expect(streamSummary('Cook.vent', values)).toBe('P = 202600 Pa\nh = 2.700e+6 J/kg\nmdot = 0.001 kg/s\nzeta = 2')
     expect(streamSummary('prv.out', values)).toBe('')
+  })
+})
+
+// FX2a: a component member's unit reaches the frontend only on the check,
+// keyed by its display name (members lower-case, scalars as written).
+describe('solve results take their missing units from the check', () => {
+  const inferred = { P: 'V', 'r1.a.i': 'A', 'r1.a.v': 'V' }
+  const solved: VariableResult[] = [
+    { name: 'r1.a.i', value: 2, units: '' },
+    { name: 'R1.a.v', value: 10, units: '' },
+    { name: 'P', value: 10, units: 'kV' },
+    { name: 'x', value: 1, units: '' },
+  ]
+
+  it('fills an empty unit, keeps the value in SI, and leaves a stated unit alone', () => {
+    expect(fillUnits(solved, inferred)).toEqual([
+      { name: 'r1.a.i', value: 2, units: 'A' },
+      { name: 'R1.a.v', value: 10, units: 'V' },
+      { name: 'P', value: 10, units: 'kV' },
+      { name: 'x', value: 1, units: '' },
+    ])
+    expect(fillUnits(solved, undefined)).toBe(solved)
+  })
+
+  it('fills every solution of a solve, so the Inspector and the tables read one result', () => {
+    const response = { variables: solved, solutions: [{ variables: solved, maxResidual: 0 }] } as unknown as SolveResponse
+    const out = solveWithUnits(response, inferred)!
+    expect(out.variables[0].units).toBe('A')
+    expect(out.solutions[0].variables[1].units).toBe('V')
+    expect(solveWithUnits(null, inferred)).toBeNull()
   })
 })
