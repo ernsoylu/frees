@@ -58,6 +58,7 @@ const LENGTH: Dims = dims_from(&[0.0, 1.0]);
 const AREA: Dims = dims_from(&[0.0, 2.0]);
 const VOLUME: Dims = dims_from(&[0.0, 3.0]);
 const VOLUME_FLOW: Dims = dims_from(&[0.0, 3.0, -1.0]);
+const SPEED: Dims = dims_from(&[0.0, 1.0, -1.0]);
 const TIME: Dims = dims_from(&[0.0, 0.0, 1.0]);
 const TEMPERATURE: Dims = dims_from(&[0.0, 0.0, 0.0, 1.0]);
 const AMOUNT: Dims = dims_from(&[0.0, 0.0, 0.0, 0.0, 1.0]);
@@ -174,6 +175,9 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("psia", 6894.757293168, PRESSURE),
     ("torr", 133.3223684, PRESSURE),
     ("mmhg", 133.3223684, PRESSURE),
+    // FX3e. inH2O is the conventional inch of water, 0.0254 m x 1000 kg/m3 x g_n.
+    ("mbar", 100.0, PRESSURE),
+    ("inh2o", 249.08891, PRESSURE),
     // ---- Energy: kg·m²/s² -------------------------------------------------
     ("j", 1.0, ENERGY),
     ("kj", 1e3, ENERGY),
@@ -185,6 +189,12 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("w", 1.0, POWER),
     ("kw", 1e3, POWER),
     ("hp", 745.69987158, POWER),
+    // FX3e: the refrigeration ton, 12,000 Btu/h.
+    ("ton", 12000.0 * 1055.05585262 / 3600.0, POWER),
+    // FX3e: speeds. `kn` is kilonewton, so the knot is spelled out.
+    ("mph", 0.44704, SPEED),
+    ("knot", 1852.0 / 3600.0, SPEED),
+    ("knots", 1852.0 / 3600.0, SPEED),
     // ---- Volume -----------------------------------------------------------
     ("l", 1e-3, VOLUME),
     ("liter", 1e-3, VOLUME),
@@ -825,6 +835,16 @@ impl UnitExprParser {
             inner
         } else if c.is_alphabetic() {
             let start = self.pos;
+            // A unit whose digit belongs to its name, not an exponent (FX3e).
+            let rest: String = self.chars[start..]
+                .iter()
+                .take(6)
+                .collect::<String>()
+                .to_lowercase();
+            if rest.starts_with("inh2o") && !rest[5..].starts_with(|ch: char| ch.is_alphanumeric())
+            {
+                self.pos += 5;
+            }
             while matches!(self.peek(), Some(ch) if ch.is_alphabetic()) {
                 self.pos += 1;
             }
