@@ -1690,7 +1690,7 @@
     },
     {
       "name": "nparametricruns",
-      "signature": "NParametricRuns()",
+      "signature": "NParametricRuns(0)",
       "description": "Total number of configured parametric runs",
       "category": "Tables",
       "aliases": [],
@@ -2387,7 +2387,7 @@
     },
     {
       "name": "tablerun#",
-      "signature": "TableRun#()",
+      "signature": "TableRun#(0)",
       "description": "Current parametric run index (1-based)",
       "category": "Tables",
       "aliases": [

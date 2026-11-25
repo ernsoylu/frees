@@ -135,8 +135,8 @@ Query cells or statistical summaries of the active **Parametric Table**. These a
 
 ## Accessor functions
 - **`TableValue(run, col)`** — a cell value in the parametric table.
-- **`TableRun#()`** — the current run index (1-based).
-- **`NParametricRuns()`** — total configured runs.
+- **`TableRun#(0)`** — the current run index (1-based). The `0` is a placeholder; a call needs an argument.
+- **`NParametricRuns(0)`** — total configured runs.
 - **`TableSum('col')` / `TableAvg('col')`** — sum / average of a column.
 - **`TableMin('col')` / `TableMax('col')`** — minimum / maximum.
 - **`TableStdDev('col')`** — standard deviation.
@@ -147,7 +147,7 @@ Query cells or statistical summaries of the active **Parametric Table**. These a
 { Whole-cycle energy from a speed-sweep table }
 E_total = IntegralValue('P', 't')      { trapezoid integral of power over time }
 P_avg   = TableAvg('P')                { mean power, same in every row }
-current_index = TableRun#()
+current_index = TableRun#(0)
 ```
 
 [Related: optimization, lookup-tables, plot-code]

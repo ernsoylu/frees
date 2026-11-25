@@ -16,12 +16,13 @@ Current parametric run index (1-based)
 ## Syntax
 
 ```
-TableRun#()
+TableRun#(0)
 ```
 
 ## Description
 
-Current parametric run index (1-based)
+Current parametric run index (1-based). The argument is a placeholder and is ignored: a call needs at least
+one argument, so `TableRun#()` is refused with "expected an expression".
 
 
 ## Mathematical Formulation
