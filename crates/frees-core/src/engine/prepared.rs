@@ -838,10 +838,10 @@ impl PreparedDocument {
 
         let mut inferred_units = prep.unit_report.inferred.clone();
         inferred_units.extend(prep.declared_units.clone());
-        let live = live.map(|c| {
+        let mut live = live;
+        if let Some(c) = live.as_deref_mut() {
             c.units = inferred_units.clone();
-            c
-        });
+        }
 
         let ode_tables = solve_dynamic_systems(
             doc,
