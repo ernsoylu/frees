@@ -125,6 +125,8 @@ pub fn check_units_full(
         warnings: Vec::new(),
         collect_warnings: false,
         current_equation: String::new(),
+        absolute: HashMap::new(),
+        literals: Vec::new(),
     };
     let mut derived: BTreeMap<String, String> = BTreeMap::new();
     for _pass in 0..8 {
@@ -168,10 +170,37 @@ pub fn check_units_full(
         }
     }
 
+    // FX1c: a variable set from a °C/°F literal holds an absolute temperature,
+    // whatever the author meant by it, and so does one set to a mean of them
+    // (`T[1] = T_left`, `Tm = (T1 + T2) / 2`). Iterated like the derivation.
+    for _pass in 0..8 {
+        let before = checker.absolute.len();
+        for eq in equations {
+            checker.literals = offset_literals(&eq.source_text);
+            for (var, value) in [(&eq.lhs, &eq.rhs), (&eq.rhs, &eq.lhs)] {
+                let Expr::Var(name) = var else { continue };
+                if checker.absolute.contains_key(name) {
+                    continue;
+                }
+                let form = checker.linear(value);
+                let mean = !form.opaque && (form.weight - 1.0).abs() < 1e-9;
+                if let Some(literal) = form.literal.filter(|_| mean) {
+                    checker.absolute.insert(name.clone(), literal);
+                }
+            }
+        }
+        if checker.absolute.len() == before {
+            break;
+        }
+    }
+
     // Check pass: warnings on.
     checker.collect_warnings = true;
     for eq in equations {
         checker.current_equation.clone_from(&eq.source_text);
+        checker.literals = offset_literals(&eq.source_text);
+        checker.temperature_misuse(&eq.lhs, false, false);
+        checker.temperature_misuse(&eq.rhs, false, false);
         let lhs = checker.dim_of(&eq.lhs);
         let rhs = checker.dim_of(&eq.rhs);
         if lhs.known && rhs.known && !lhs.quantity.same_dimensions_as(&rhs.quantity) {
@@ -377,9 +406,213 @@ struct Checker {
     warnings: Vec<String>,
     collect_warnings: bool,
     current_equation: String,
+    /// Variables set straight from a °C/°F literal, with that literal's text.
+    absolute: HashMap<String, (f64, String)>,
+    /// The current equation's °C/°F literals: SI value and source text.
+    literals: Vec<(f64, String)>,
+}
+
+/// The `<number> [C]` / `<number> [F]` literals in an equation's source, each
+/// with the SI value the parser gave it. A unary minus folds into the literal
+/// (`-value * factor + offset`), a binary one does not, so both are listed.
+fn offset_literals(text: &str) -> Vec<(f64, String)> {
+    let mut out = Vec::new();
+    for (open, _) in text.match_indices('[') {
+        let Some(close) = text[open..].find(']').map(|i| open + i) else {
+            continue;
+        };
+        let Ok(q) = UnitRegistry::parse_with_offset(&text[open + 1..close]) else {
+            continue;
+        };
+        if q.offset == 0.0 {
+            continue;
+        }
+        let head = text[..open].trim_end();
+        let start = head
+            .rfind(|c: char| !(c.is_ascii_digit() || c == '.' || c == 'e' || c == 'E'))
+            .map_or(0, |i| i + 1);
+        let Ok(value) = head[start..].parse::<f64>() else {
+            continue;
+        };
+        let literal = format!("{} [{}]", &head[start..], text[open + 1..close].trim());
+        out.push((value * q.factor + q.offset, literal.clone()));
+        out.push((-value * q.factor + q.offset, format!("-{literal}")));
+    }
+    out
+}
+
+fn bare_value(e: &Expr) -> Option<f64> {
+    match e {
+        Expr::Num {
+            value,
+            unit: None,
+            is_imaginary: false,
+        } => Some(*value),
+        _ => None,
+    }
+}
+
+/// A sum, a difference, a negation, or a scaling by a bare number: the nodes
+/// [`Checker::linear`] looks through.
+fn is_linear_node(e: &Expr) -> bool {
+    match e {
+        Expr::BinOp { op, left, right } => match op {
+            BinOp::Add | BinOp::Sub => true,
+            BinOp::Mul => bare_value(left).is_some() || bare_value(right).is_some(),
+            BinOp::Div => bare_value(right).is_some(),
+            _ => false,
+        },
+        Expr::Neg(_) => true,
+        _ => false,
+    }
+}
+
+/// A weighted sum of absolute temperatures: their total weight, how many
+/// there are, the last one's literal (value, text), and whether any other
+/// term is in it.
+struct Linear {
+    weight: f64,
+    leaves: usize,
+    literal: Option<(f64, String)>,
+    opaque: bool,
+}
+
+impl Linear {
+    fn opaque() -> Linear {
+        Linear {
+            weight: 0.0,
+            leaves: 0,
+            literal: None,
+            opaque: true,
+        }
+    }
+
+    fn plus(self, other: Linear, sign: f64) -> Linear {
+        Linear {
+            weight: self.weight + sign * other.weight,
+            leaves: self.leaves + other.leaves,
+            literal: other.literal.or(self.literal),
+            opaque: self.opaque || other.opaque,
+        }
+    }
+
+    fn times(self, c: f64) -> Linear {
+        Linear {
+            weight: self.weight * c,
+            ..self
+        }
+    }
+
+    fn is_difference_or_mean(&self) -> bool {
+        self.weight.abs() < 1e-9 || (self.weight - 1.0).abs() < 1e-9
+    }
 }
 
 impl Checker {
+    /// The °C/°F literal `e` is, or the one the variable `e` was set from.
+    fn absolute_literal(&self, e: &Expr) -> Option<(f64, String)> {
+        match e {
+            Expr::Num {
+                value,
+                unit: Some(_),
+                ..
+            } => self
+                .literals
+                .iter()
+                .find(|(v, _)| v.to_bits() == value.to_bits())
+                .cloned(),
+            Expr::Var(name) => self.absolute.get(name).cloned(),
+            _ => None,
+        }
+    }
+
+    /// `e` as a weighted sum of absolute temperatures. Any other term (a
+    /// solved temperature, a `[K]` step, a bare number) makes it `opaque`:
+    /// what that term is cannot be told from here.
+    fn linear(&self, e: &Expr) -> Linear {
+        if let Some(literal) = self.absolute_literal(e) {
+            return Linear {
+                weight: 1.0,
+                leaves: 1,
+                literal: Some(literal),
+                opaque: false,
+            };
+        }
+        match e {
+            Expr::BinOp { op, left, right } => match (op, bare_value(left), bare_value(right)) {
+                (BinOp::Add, ..) => self.linear(left).plus(self.linear(right), 1.0),
+                (BinOp::Sub, ..) => self.linear(left).plus(self.linear(right), -1.0),
+                (BinOp::Mul, Some(c), _) => self.linear(right).times(c),
+                (BinOp::Mul, _, Some(c)) => self.linear(left).times(c),
+                (BinOp::Div, _, Some(c)) if c != 0.0 => self.linear(left).times(1.0 / c),
+                _ => Linear::opaque(),
+            },
+            Expr::Neg(x) => self.linear(x).times(-1.0),
+            _ => Linear::opaque(),
+        }
+    }
+
+    /// FX1c: a weighted sum of absolute temperatures means something only when
+    /// its weights add up to 0 (a difference, `T2 - T1`) or 1 (a mean,
+    /// `(T1 + T2) / 2`). `T1 + dT` with `dT = 10 [C]` adds to 2, `2 * 20 [C]`
+    /// to 2: a °C/°F value meant as a difference. Only a sum made of nothing
+    /// but °C/°F values (and the variables set from them) is judged: with a
+    /// solved temperature in it (`T_cold - T_wb`), or under a dimensioned
+    /// factor (`m*cp*(T1 + T2)/2`), the weights are not all here.
+    fn temperature_misuse(&mut self, e: &Expr, in_sum: bool, under_factor: bool) {
+        let sum = is_linear_node(e);
+        if sum && !in_sum && !under_factor {
+            let form = self.linear(e);
+            let misused = !form.opaque && !form.is_difference_or_mean();
+            if let Some((value, text)) = form.literal.filter(|_| misused) {
+                let kelvin = format!("{value:.2}");
+                let kelvin = kelvin.trim_end_matches('0').trim_end_matches('.');
+                let (what, fix) = if form.leaves > 1 {
+                    (
+                        "adds absolute temperatures",
+                        "write a temperature difference",
+                    )
+                } else {
+                    ("scales an absolute temperature", "scale a difference")
+                };
+                let message = format!(
+                    "{}: {what}. A °C or °F value is absolute, so `{text}` is {kelvin} K; {fix} \
+                     in [K] or [R].",
+                    self.current_equation
+                );
+                self.warn(message);
+            }
+        }
+        match e {
+            Expr::BinOp { op, left, right } => {
+                let factor = matches!(op, BinOp::Mul | BinOp::Div) && !sum;
+                self.temperature_misuse(left, sum, under_factor || factor);
+                self.temperature_misuse(right, sum, under_factor || factor);
+            }
+            Expr::Neg(x) => self.temperature_misuse(x, true, under_factor),
+            Expr::Not(x) => self.temperature_misuse(x, false, false),
+            Expr::Call { args, .. } | Expr::ArrayLiteral(args) => {
+                for arg in args {
+                    self.temperature_misuse(arg, false, false);
+                }
+            }
+            Expr::ArrayAccess { indices, .. } => {
+                for index in indices {
+                    self.temperature_misuse(index, false, false);
+                }
+            }
+            Expr::Compare { left, right, .. } | Expr::Logical { left, right, .. } => {
+                self.temperature_misuse(left, false, false);
+                self.temperature_misuse(right, false, false);
+            }
+            Expr::Range { start, end } => {
+                self.temperature_misuse(start, false, false);
+                self.temperature_misuse(end, false, false);
+            }
+            Expr::Num { .. } | Expr::Str(_) | Expr::Var(_) => {}
+        }
+    }
+
     fn warn(&mut self, mut message: String) {
         if self.collect_warnings {
             message.push_str(&case_hint(&self.current_equation));
@@ -1420,6 +1653,53 @@ mod tests {
         assert!(report.warnings.is_empty(), "{:?}", report.warnings);
         assert_eq!(report.inferred.get("mu").map(String::as_str), Some("K"));
         assert_eq!(report.inferred.get("pct").map(String::as_str), Some("K"));
+    }
+
+    /// FX1c: a °C or °F value is absolute, so `T1 + dT` with `dT = 10 [C]`
+    /// gave 576.3 K, and `2 * 20 [C]` 586.3 K, without a word.
+    #[test]
+    fn adding_or_scaling_an_absolute_temperature_warns() {
+        let report = check_units(
+            &eqs("T1 = 20 [C]\ndT = 10 [C]\nT2 = T1 + dT\ny = 2 * 20 [C]\n\
+                  Tm = (T1 + 40 [C]) / 2\nz = Tm + dT"),
+            &units(&[]),
+        );
+        let expected = [
+            "T2 = T1 + dT: adds absolute temperatures. A °C or °F value is absolute, so \
+             `10 [C]` is 283.15 K; write a temperature difference in [K] or [R].",
+            "y = 2 * 20 [C]: scales an absolute temperature. A °C or °F value is absolute, so \
+             `20 [C]` is 293.15 K; scale a difference in [K] or [R].",
+            // A mean of absolute temperatures is one too.
+            "z = Tm + dT: adds absolute temperatures.",
+        ];
+        assert_eq!(
+            report.warnings.len(),
+            expected.len(),
+            "{:?}",
+            report.warnings
+        );
+        for (warning, start) in report.warnings.iter().zip(expected) {
+            assert!(warning.starts_with(start), "{warning}");
+        }
+    }
+
+    /// The controls: a difference, means, a kelvin step, a stencil whose
+    /// weights add to zero, and absolute temperatures in physics that wants
+    /// them.
+    #[test]
+    fn absolute_temperatures_used_as_absolutes_do_not_warn() {
+        let report = check_units(
+            &eqs(
+                "T1 = 20 [C]\nT2 = 68 [F]\ndT = T2 - T1\nTm = (T1 + T2) / 2\n\
+                  Tw = 0.5 * (T1 + T2 + 300 [K])\nT3 = T1 + 10 [K]\nT4 = T1 + 5\n\
+                  approach = T_cold - T1\nT5 = 2 * T_solved - T1\n\
+                  P = R * T1\nk = exp(-E / T1)\nr = T_m / 1 [K]\n\
+                  T[1] = T1\nT[2] = T2\nT[3] = 30 [C]\nd2 = T[1] - 2*T[2] + T[3]\n\
+                  q = m * cp * (T1 + T2) / 2",
+            ),
+            &units(&[]),
+        );
+        assert!(report.warnings.is_empty(), "{:?}", report.warnings);
     }
 
     /// FX1d: `If(3, 2 [m], 1 [m], 5 [m], 7 [s])` picked `7 [s]` and reported
