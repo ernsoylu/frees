@@ -274,6 +274,9 @@ export interface ConnectionDto {
   /** The connect(...) statement this node was written as; null for a shared
    *  stream, which no single statement owns. */
   range?: SourceRange
+  /** Per endpoint, aligned with `endpoints`, where the parser read it in the
+   *  statement; null for a shared stream. */
+  endpointRanges?: SourceRange[] | null
   /** The stream name a shared-stream junction joins on. */
   alias?: string | null
   /** Written inside a component definition: editing it changes every instance. */

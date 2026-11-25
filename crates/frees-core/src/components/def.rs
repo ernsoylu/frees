@@ -289,6 +289,10 @@ pub struct ConnectDecl {
     /// Byte range of the declaration in the parsed source; empty when
     /// synthesised. Outside equality, like [`ComponentInst::line`].
     pub span: Span,
+    /// Per endpoint, aligned with `ports`, its byte range in the parsed source,
+    /// so an edit can take one out without re-reading the text. Empty when
+    /// synthesised; outside equality, like `span`.
+    pub port_spans: Vec<Span>,
 }
 
 impl PartialEq for ConnectDecl {

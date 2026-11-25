@@ -153,6 +153,9 @@ pub struct Connection {
     /// The `connect(...)` statement this node was written as; `None` for a
     /// shared-stream junction, which no single statement owns.
     pub source: Option<Span>,
+    /// Per endpoint, aligned with `endpoints`, its range within `source`;
+    /// empty when `source` is `None`.
+    pub endpoint_spans: Vec<Span>,
     /// The stream name a shared-stream junction joins on; `None` for a `connect`.
     pub alias: Option<String>,
     /// Written inside a `COMPONENT` body, so changing it changes every instance.
@@ -924,6 +927,7 @@ fn flatten_instance<'d>(
                 .map(|r| !r.contains('.') && def.ports.contains(&r.to_ascii_lowercase()))
                 .collect(),
             span: sc.span,
+            port_spans: sc.port_spans.clone(),
         });
     }
     stack.pop();
@@ -2100,6 +2104,7 @@ impl Network<'_> {
                 .collect();
             out.push(Connection {
                 source: (c.span.end > c.span.start).then_some(c.span),
+                endpoint_spans: c.port_spans.clone(),
                 in_definition: !c.boundary.is_empty(),
                 ..self.connection(&streams, c.ports.clone(), endpoint_streams)
             });
@@ -2171,6 +2176,7 @@ impl Network<'_> {
             fluid,
             streams: endpoint_streams,
             source: None,
+            endpoint_spans: Vec::new(),
             alias: None,
             in_definition: false,
         }
@@ -2267,6 +2273,7 @@ mod tests {
             fluid: None,
             streams: endpoints.iter().map(|e| format!("S.{e}")).collect(),
             source: None,
+            endpoint_spans: Vec::new(),
             alias: None,
             in_definition: false,
         };
@@ -2398,6 +2405,7 @@ mod tests {
             source_text: format!("connect({})", refs.join(",")),
             boundary: Vec::new(),
             span: Default::default(),
+            port_spans: Vec::new(),
         }
     }
 

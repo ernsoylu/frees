@@ -1466,7 +1466,7 @@ export default function SchematicTab({
   // and, on a junction, the branch it takes; previewed before it is written.
   const [insertDraft, setInsertDraft] = useState<{ index: number; type: string | null; toA: string; toB: string; branch: string; block: string | null } | null>(null)
   const insertConn = insertDraft ? connections[insertDraft.index] : undefined
-  const insertEnds = insertConn?.range ? writtenEndpoints(text.slice(insertConn.range[0], insertConn.range[1])) : []
+  const insertEnds = insertConn ? writtenEndpoints(text, insertConn) : []
   const insertTypes = useMemo(() => {
     if (!insertConn) return []
     const local = (drawnCheck?.definitions ?? []).filter((d) => (d.ports?.length ?? 0) >= 2).map((d) => ({ type: localTypes.find((t) => t.toLowerCase() === d.name) ?? d.name, ports: d.ports ?? [] }))
@@ -4143,7 +4143,7 @@ export default function SchematicTab({
           routeControls={routeControls}
           onInsertComponent={() => {
             const conn = connections[wireCard.index]
-            const ends = conn.range ? writtenEndpoints(text.slice(conn.range[0], conn.range[1])) : []
+            const ends = writtenEndpoints(text, conn)
             setInsertDraft({ index: wireCard.index, type: null, toA: '', toB: '', branch: ends.at(-1) ?? '', block: null })
           }}
         />

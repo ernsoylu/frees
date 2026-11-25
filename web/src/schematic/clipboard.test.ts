@@ -15,6 +15,8 @@ connect(B1.b, SNK.in)
 Q = B1.a.mdot * 2
 `
 const at = (s: string): [number, number] => [TEXT.indexOf(s), TEXT.indexOf(s) + s.length]
+/** Per endpoint of `stmt`, where the parser read it. */
+const ends = (stmt: string, ...names: string[]) => names.map((n): [number, number] => [TEXT.indexOf(stmt) + stmt.indexOf(n), TEXT.indexOf(stmt) + stmt.indexOf(n) + n.length])
 const inst = (name: string, type: string, decl: string, localType = false) =>
   ({ name, label: name.toUpperCase(), type, line: 0, range: at(decl), localType, definedIn: null, params: [] as { name: string; range: [number, number] }[] })
 const src = inst('src', 'source', 'Source SRC(mdot=m_in)')
@@ -22,8 +24,8 @@ src.params = [{ name: 'mdot', range: at('m_in') }]
 const check = {
   instances: [src, inst('b1', 'box', 'Box B1()', true), inst('snk', 'sink', 'Sink SNK()')],
   connections: [
-    { domain: 'fluid', endpoints: ['src.out', 'b1.a'], range: at('connect(SRC.out, B1.a)') },
-    { domain: 'fluid', endpoints: ['b1.b', 'snk.in'], range: at('connect(B1.b, SNK.in)') },
+    { domain: 'fluid', endpoints: ['src.out', 'b1.a'], range: at('connect(SRC.out, B1.a)'), endpointRanges: ends('connect(SRC.out, B1.a)', 'SRC.out', 'B1.a') },
+    { domain: 'fluid', endpoints: ['b1.b', 'snk.in'], range: at('connect(B1.b, SNK.in)'), endpointRanges: ends('connect(B1.b, SNK.in)', 'B1.b', 'SNK.in') },
   ],
   definitions: [{ name: 'box', line: 1, range: at('function [a, b] = Box()\nport(a)\nport(b)\nend') }],
 } as unknown as CheckResponse

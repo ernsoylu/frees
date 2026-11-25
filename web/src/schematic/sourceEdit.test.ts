@@ -5,6 +5,16 @@ import { appendStatement, applyChanges, disconnectEndpoint, insertIntoConnection
 
 const TEXT = '// Kühler ✓ 🧊\nFan F(dP=1)\nconnect(A.out, F.in, B.in) // tee\nconnect(F.out, C.in)\nx = 1'
 const at = (s: string) => [TEXT.indexOf(s), TEXT.indexOf(s) + s.length] as [number, number]
+/** A connection as Check reports it: the statement's range and, per endpoint, where the parser read it. */
+const written = (text: string, stmt: string, ...ends: string[]) => {
+  const from = text.indexOf(stmt)
+  let pos = from
+  const endpointRanges = ends.map((e): [number, number] => {
+    pos = text.indexOf(e, pos)
+    return [pos, (pos += e.length)]
+  })
+  return { range: [from, from + stmt.length] as [number, number], endpointRanges }
+}
 
 describe('source transactions', () => {
   it('patches only the given ranges and inverts exactly', () => {
@@ -23,12 +33,21 @@ describe('source transactions', () => {
   })
 
   it('disconnects one endpoint of a junction, or removes a two-way connection', () => {
-    const tee: ConnectionDto = { domain: 'fluid', endpoints: ['a.out', 'f.in', 'b.in'], range: at('connect(A.out, F.in, B.in)') }
+    const tee: ConnectionDto = { domain: 'fluid', endpoints: ['a.out', 'f.in', 'b.in'], ...written(TEXT, 'connect(A.out, F.in, B.in)', 'A.out', 'F.in', 'B.in') }
     const edit = disconnectEndpoint(TEXT, tee, 'f.in')!
     expect(applyChanges(TEXT, edit.changes)).toContain('connect(A.out, B.in) // tee')
-    const pair: ConnectionDto = { domain: 'fluid', endpoints: ['f.out', 'c.in'], range: at('connect(F.out, C.in)') }
+    const pair: ConnectionDto = { domain: 'fluid', endpoints: ['f.out', 'c.in'], ...written(TEXT, 'connect(F.out, C.in)', 'F.out', 'C.in') }
     expect(applyChanges(TEXT, disconnectEndpoint(TEXT, pair, 'c.in')!.changes)).not.toContain('C.in')
-    expect(disconnectEndpoint(TEXT, { ...pair, range: null }, 'c.in')).toBeNull() // a shared stream has no statement
+    expect(disconnectEndpoint(TEXT, { ...pair, range: null, endpointRanges: null }, 'c.in')).toBeNull() // a shared stream has no statement
+  })
+
+  // U08: a comment beside an endpoint no longer hides it.
+  it('disconnects beside a comment, keeping the rest as written', () => {
+    const text = 'connect(V.n, {reference} G.port, R.b)\n'
+    const star: ConnectionDto = { domain: 'electrical', endpoints: ['v.n', 'g.port', 'r.b'], ...written(text, 'connect(V.n, {reference} G.port, R.b)', 'V.n', 'G.port', 'R.b') }
+    expect(applyChanges(text, disconnectEndpoint(text, star, 'g.port')!.changes)).toBe('connect(V.n, R.b)\n')
+    expect(applyChanges(text, disconnectEndpoint(text, star, 'v.n')!.changes)).toBe('connect({reference} G.port, R.b)\n')
+    expect(applyChanges(text, disconnectEndpoint(text, star, 'r.b')!.changes)).toBe('connect(V.n, {reference} G.port)\n')
   })
 
   it('renames at the scoped references and refuses clashes in that scope', () => {
@@ -115,9 +134,8 @@ describe('parameter bindings (COMP-04)', () => {
 
 describe('insertIntoConnection', () => {
   const text = 'VoltageSource VS(E=10 [V])\nResistor R1(R=5 [ohm])\nGround G()\nconnect(VS.p, R1.a)\nconnect(VS.n, R1.b, G.port)\n'
-  const at = (s: string): [number, number] => [text.indexOf(s), text.indexOf(s) + s.length]
-  const pair = { domain: 'electrical', endpoints: ['vs.p', 'r1.a'], range: at('connect(VS.p, R1.a)') }
-  const star = { domain: 'electrical', endpoints: ['vs.n', 'r1.b', 'g.port'], range: at('connect(VS.n, R1.b, G.port)') }
+  const pair = { domain: 'electrical', endpoints: ['vs.p', 'r1.a'], ...written(text, 'connect(VS.p, R1.a)', 'VS.p', 'R1.a') }
+  const star = { domain: 'electrical', endpoints: ['vs.n', 'r1.b', 'g.port'], ...written(text, 'connect(VS.n, R1.b, G.port)', 'VS.n', 'R1.b', 'G.port') }
 
   it('splits a two-ended wire through the new block', () => {
     const edit = insertIntoConnection(text, pair, 'Resistor R2(R=5 [ohm])', { toA: 'a', toB: 'b' })!

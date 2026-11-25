@@ -716,6 +716,13 @@ connect(FAN.out, SUP.in)\n";
     let conns = v["connections"].as_array().unwrap();
     let written = conns.iter().find(|c| c["alias"].is_null()).unwrap();
     assert_eq!(text(&written["range"]), "connect(FAN.out, SUP.in)");
+    let ends: Vec<String> = written["endpointRanges"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(text)
+        .collect();
+    assert_eq!(ends, ["FAN.out", "SUP.in"]);
     assert_eq!(written["inDefinition"], false);
     let shared = conns.iter().find(|c| c["alias"] == "s1").unwrap();
     assert!(
