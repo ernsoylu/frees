@@ -5962,6 +5962,59 @@ fn check_bounds(
     }
 }
 
+/// FX3d: warn once per distinct note when a property call, evaluated at the
+/// solution, reads a fluid above its equation of state's limits
+/// ([`crate::props::propfun::range_note`]). Checked after the solve, so a
+/// Newton iterate that strays out of range on the way is not reported.
+fn check_property_ranges(
+    equations: &[Equation],
+    values: &Scope,
+    ctx: EvalContext<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    fn walk(e: &Expr, values: &Scope, ctx: EvalContext<'_>, out: &mut BTreeSet<String>) {
+        match e {
+            Expr::Num { .. } | Expr::Str(_) | Expr::Var(_) => {}
+            Expr::Neg(inner) | Expr::Not(inner) => walk(inner, values, ctx, out),
+            Expr::BinOp { left, right, .. }
+            | Expr::Compare { left, right, .. }
+            | Expr::Logical { left, right, .. }
+            | Expr::Range {
+                start: left,
+                end: right,
+            } => {
+                walk(left, values, ctx, out);
+                walk(right, values, ctx, out);
+            }
+            Expr::ArrayLiteral(items) | Expr::ArrayAccess { indices: items, .. } => {
+                items.iter().for_each(|i| walk(i, values, ctx, out));
+            }
+            Expr::Call { function, args } => {
+                args.iter().for_each(|a| walk(a, values, ctx, out));
+                if !function.starts_with("prop$") {
+                    return;
+                }
+                let numbers: Option<Vec<f64>> = args
+                    .iter()
+                    .filter(|a| !matches!(a, Expr::Str(_)))
+                    .map(|a| eval_with(a, values, ctx).ok())
+                    .collect();
+                if let Some(note) =
+                    numbers.and_then(|n| crate::props::propfun::range_note(function, &n))
+                {
+                    out.insert(note);
+                }
+            }
+        }
+    }
+    let mut notes = BTreeSet::new();
+    for eq in equations {
+        walk(&eq.lhs, values, ctx, &mut notes);
+        walk(&eq.rhs, values, ctx, &mut notes);
+    }
+    diagnostics.extend(notes.into_iter().map(Diagnostic::warning));
+}
+
 // ---------------------------------------------------------------------------
 // Small helper on the error type
 // ---------------------------------------------------------------------------

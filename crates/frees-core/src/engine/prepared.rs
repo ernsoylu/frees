@@ -806,6 +806,7 @@ impl PreparedDocument {
             // `ctx`, not `base_ctx`: an ODE accessor line (`T = FinalValue('x')`)
             // must read the cached DYNAMIC table, or its residual reports the value.
             residuals_at(&prep.subsystem, &prep.report.blocks, &scope_mut, ctx);
+        check_property_ranges(&prep.subsystem, &scope_mut, ctx, &mut diagnostics);
         let block_equations = block_equation_texts(&prep.report.blocks, &prep.subsystem);
 
         let limit = RESIDUAL_GUARD.max(100.0 * solve_settings.rel_tolerance);

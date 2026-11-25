@@ -16,6 +16,8 @@ with `x=0` (liquid) or `x=1` (vapour); pressure and temperature at saturation do
 not determine the vapour fraction. `Quality` returns `-1` for a single-phase
 state, not an extrapolated fraction or a value to clamp to the interval 0–1.
 
+Each real fluid's equation of state has an upper validity limit, `Tmax` and `pmax`. A call whose `T=` or `P=` input lies above it still returns the equation's extrapolation, and the solve adds a warning that names the fluid and the limit. For example, `Enthalpy(Water, T=5000 [C], P=1 [atm])` is above Water's `Tmax` of 2000 K.
+
 Pass the fluid name first, then **two** named coordinates. The recognized coordinate keys are `T` (temperature), `P` (pressure), `h` (enthalpy), `s` (entropy), `v` (specific volume), `x` (quality: 0 saturated liquid, 1 saturated vapour), `u` (internal energy), `D` (density).
 
 ```
