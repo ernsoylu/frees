@@ -631,20 +631,41 @@ fn two_watches_crossed_in_one_step_pause_in_time_order_one_per_resume() {
 fn a_pause_condition_is_parsed_against_the_columns_in_si() {
     use frees_core::ode::live::Watch;
     let columns = ["t", "L", "body$port$T"].map(String::from);
-    let w = Watch::parse(" body.port.T >= 60 [C] ", &columns).unwrap();
+    // Per column, its unit as the block's table states it; L has none.
+    let units = ["s", "", "K"];
+    let w = Watch::parse(" body.port.T >= 60 [C] ", &columns, &units).unwrap();
     assert_eq!(
         (w.name.as_str(), w.column, w.direction),
         ("body.port.T >= 60 [C]", 2, 1)
     );
     assert!((w.threshold - 333.15).abs() < 1e-9);
-    assert_eq!(Watch::parse("l < -2", &columns).unwrap().threshold, -2.0);
+    assert_eq!(
+        Watch::parse("l < -2", &columns, &units).unwrap().threshold,
+        -2.0
+    );
+    // E08: a unit must measure what the column measures; a column with no
+    // known unit takes any, and a bare number is SI.
+    assert_eq!(
+        Watch::parse("t > 2 [min]", &columns, &units)
+            .unwrap()
+            .threshold,
+        120.0
+    );
+    assert_eq!(
+        Watch::parse("L > 2 [kg]", &columns, &units)
+            .unwrap()
+            .threshold,
+        2.0
+    );
     for (bad, says) in [
         ("L 2", "needs `>` or `<`"),
         ("x > 1", "not a column"),
         ("L > 1 [zz]", "known unit"),
         ("L > a + 1", "must be a number"),
+        ("t > 2 [kg]", "measures [s]"),
+        ("body.port.T > 60 [Pa]", "measures [K]"),
     ] {
-        let e = Watch::parse(bad, &columns).unwrap_err().to_string();
+        let e = Watch::parse(bad, &columns, &units).unwrap_err().to_string();
         assert!(e.contains(says), "{bad}: {e}");
     }
     // A watch the block cannot carry fails the open, by name.
@@ -657,6 +678,16 @@ fn a_pause_condition_is_parsed_against_the_columns_in_si() {
         .error
         .to_string();
     assert!(e.contains("`V`"), "{e}");
+    // The open passes the table's units, so time is in seconds there too.
+    let doc = PreparedDocument::new(TANK, &SolverSettings::default(), &[], &[])
+        .unwrap_or_else(|e| panic!("{}", e.error));
+    let e = doc
+        .open_live_watching(0, None, &["time > 2 [kg]".into()])
+        .err()
+        .expect("refused")
+        .error
+        .to_string();
+    assert!(e.contains("measures [s]"), "{e}");
 }
 
 // ── Phase L acceptance ───────────────────────────────────────────────────────

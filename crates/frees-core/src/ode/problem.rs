@@ -350,6 +350,24 @@ pub struct TableEventHit {
     pub time: f64,
 }
 
+/// Per column of an ODE table, its unit: the solve's inferred unit, `s` for
+/// the time column (column 0), which the solver keeps in seconds and the
+/// checker leaves a wildcard, and `""` where nothing is known.
+pub fn column_units<'a>(
+    columns: &[String],
+    inferred: &'a std::collections::BTreeMap<String, String>,
+) -> Vec<&'a str> {
+    columns
+        .iter()
+        .enumerate()
+        .map(|(i, column)| match inferred.get(column.as_str()) {
+            Some(unit) => unit.as_str(),
+            None if i == 0 => "s",
+            None => "",
+        })
+        .collect()
+}
+
 /// The first-class *ODE Table* produced by one solved `DYNAMIC` block — a
 /// sibling of the Parametric Table / Function Table family.
 ///

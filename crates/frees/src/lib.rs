@@ -1449,21 +1449,8 @@ fn ode_tables(solution: &Solution, zero_copy: bool) -> (Vec<Value>, Vec<Vec<f64>
         .ode_tables
         .iter()
         .map(|table| {
-            // The first column is the time variable, which the solver keeps in
-            // seconds (a span in [min] is converted); the checker leaves it a
-            // wildcard, so it has no inferred unit of its own.
-            let units: Vec<&str> = table
-                .columns
-                .iter()
-                .enumerate()
-                .map(
-                    |(i, column)| match solution.inferred_units.get(column.as_str()) {
-                        Some(unit) => unit.as_str(),
-                        None if i == 0 => "s",
-                        None => "",
-                    },
-                )
-                .collect();
+            let units =
+                frees_core::ode::problem::column_units(&table.columns, &solution.inferred_units);
             let rows_val = if zero_copy {
                 let num_rows = table.rows.len();
                 let num_cols = table.columns.len();

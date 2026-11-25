@@ -776,6 +776,9 @@ pub(crate) struct LiveCapture {
     pub(crate) session: Option<crate::ode::live::LiveSession>,
     /// Phase L4: pause conditions as written (`T > 60 [C]`), for this session only.
     pub(crate) watches: Vec<String>,
+    /// The solve's inferred units, so a pause condition's unit is checked
+    /// against its column's.
+    pub(crate) units: BTreeMap<String, String>,
 }
 
 /// Run every `DYNAMIC` block with the solved scalars as its base values, and
@@ -828,10 +831,11 @@ fn solve_dynamic_systems(
             _ => system,
         };
         let parse = |columns: &[String]| {
+            let units = crate::ode::problem::column_units(columns, &capture.units);
             capture
                 .watches
                 .iter()
-                .map(|w| crate::ode::live::Watch::parse(w, columns))
+                .map(|w| crate::ode::live::Watch::parse(w, columns, &units))
                 .collect::<crate::diag::Result<Vec<_>>>()
         };
         if !crate::ode::dynamic::is_ida_method(&system.options.method) {
