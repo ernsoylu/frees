@@ -361,11 +361,13 @@ impl<'a> Structure<'a> {
             ));
             self.append_redundant_relations(&mut sb, &matching, false);
             self.append_free_quantities(&mut sb, &matching, false);
-            sb.push_str(
+            if self.has_components() {
+                sb.push_str(
                 " A common cause: the same physics stated twice for one quantity while another \
                  is left with no defining relation — a boundary pinning a value a component \
                  already defines, or an element chain missing a constitutive law.",
-            );
+                );
+            }
         } else {
             let under = n < m;
             sb.push_str(&format!(
@@ -377,13 +379,23 @@ impl<'a> Structure<'a> {
                     "overspecified"
                 }
             ));
+            let hint = self.has_components();
             if under {
-                self.append_free_quantities(&mut sb, &matching, true);
+                self.append_free_quantities(&mut sb, &matching, hint);
             } else {
-                self.append_redundant_relations(&mut sb, &matching, true);
+                self.append_redundant_relations(&mut sb, &matching, hint);
             }
         }
         sb
+    }
+
+    /// FX4: the "common cause" hints talk about element chains and boundaries,
+    /// so they are shown only when the system holds component members, which
+    /// expansion names `inst$port$member`.
+    fn has_components(&self) -> bool {
+        self.vars
+            .iter()
+            .any(|v| v.trim_end_matches('$').contains('$'))
     }
 
     /// The unknowns a maximum matching leaves without a defining equation, in
@@ -923,7 +935,10 @@ mod tests {
         // Exactly one of x/y is free; the other is matched and merely coupled.
         assert!(message.contains("Coupled to: "), "{message}");
         assert!(message.contains('x') && message.contains('y'), "{message}");
-        assert!(message.contains("A common cause:"), "{message}");
+        // FX4: the element-chain hint needs component members.
+        assert!(!message.contains("A common cause:"), "{message}");
+        let system = [eqn("p$a$i + y = 1", &["p$a$i", "y"])];
+        assert!(err_message(&system, &none()).contains("A common cause:"));
     }
 
     #[test]
@@ -970,7 +985,10 @@ mod tests {
             message.contains("Redundant relation (no free variable left to determine): x = 2."),
             "{message}"
         );
-        assert!(message.contains("A common cause:"), "{message}");
+        // FX4: the boundary hint needs component members.
+        assert!(!message.contains("A common cause:"), "{message}");
+        let system = [eqn("p$a$i = 1", &["p$a$i"]), eqn("p$a$i = 2", &["p$a$i"])];
+        assert!(err_message(&system, &none()).contains("A common cause:"));
     }
 
     #[test]

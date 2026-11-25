@@ -69,3 +69,37 @@ fn a_named_argument_on_sum_is_not_a_fluid_property_call() {
         report.message
     );
 }
+
+#[test]
+fn the_component_chain_hint_needs_components() {
+    let report = check("N = 3\ns = x + N\n").unwrap();
+    assert!(
+        report.message.contains("underspecified"),
+        "{}",
+        report.message
+    );
+    assert!(
+        !report.message.contains("element chain"),
+        "{}",
+        report.message
+    );
+    let report = check("a = 1\na = 2\n").unwrap();
+    assert!(
+        !report.message.contains("A common cause"),
+        "{}",
+        report.message
+    );
+}
+
+#[test]
+fn deep_recursion_with_a_base_case_names_the_fixed_limit() {
+    let text = "FUNCTION h(n)\n  IF n <= 0 THEN\n    h := 0\n  ELSE\n    h := h(n - 1) + 1\n  END\nEND\ny = h(70)\n";
+    let message = solve_err(text);
+    assert!(message.contains("This is a fixed limit"), "{message}");
+    assert!(
+        message.contains("rewrite deep recursion as a FOR loop"),
+        "{message}"
+    );
+    let ok = solve("FUNCTION h(n)\n  IF n <= 0 THEN\n    h := 0\n  ELSE\n    h := h(n - 1) + 1\n  END\nEND\ny = h(50)\n", &SolverSettings::default()).unwrap();
+    assert_eq!(ok.values["y"], 50.0);
+}
