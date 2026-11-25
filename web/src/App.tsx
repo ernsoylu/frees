@@ -114,6 +114,7 @@ import { downloadValuesAsCsv } from './tablesGrid/csv'
 const SchematicTab = lazy(() => import('./schematic/SchematicTab'))
 const LessonPanel = lazy(() => import('./LessonPanel'))
 import { declaredInstances } from './schematic/declaration'
+import { solveWithUnits } from './schematic/readouts'
 import { diagnosisOwners, LOCAL_ENGINE_FAILURE, withEnclosing } from './schematic/wiring'
 import { EMPTY_PRESENTATION, type SchematicPresentation } from './schematic/presentation'
 import { instanceAt } from './schematic/sourceEdit'
@@ -597,7 +598,10 @@ export default function App() {
   // SYNC-09: the instance the editor caret is on, highlighted on the canvas.
   const [cursorInstance, setCursorInstance] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
-  const [result, setResult] = useState<SolveResponse | null>(null)
+  const [rawResult, setResult] = useState<SolveResponse | null>(null)
+  // FX2a: a component member's unit comes only on the check; every reader of
+  // the result sees it filled in, its value still SI.
+  const result = useMemo(() => solveWithUnits(rawResult, checkResult?.inferredUnits), [rawResult, checkResult?.inferredUnits])
   // Printable calculation report (browser print-to-PDF): the last successful
   // solve plus the document that produced it, in a self-contained new window.
   const handlePrintReport = useCallback(() => {

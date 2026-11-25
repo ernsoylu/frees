@@ -13,7 +13,7 @@
 //      transfer coefficients a document computes outside the component and
 //      injects, which are otherwise invisible on the drawing.
 
-import type { ComponentParamResult, ComponentResult, VariableResult } from '../api'
+import type { ComponentParamResult, ComponentResult, SolveResponse, VariableResult } from '../api'
 import type { SchematicEdge, SchematicNode } from './layout'
 import type { VariableFormat } from './presentation'
 
@@ -89,12 +89,31 @@ export function indexVariables(
   variables: readonly VariableResult[] | undefined,
   inferred?: Readonly<Record<string, string>>,
 ): Map<string, VariableResult> {
-  const out = new Map<string, VariableResult>()
-  for (const v of variables ?? []) {
-    const key = v.name.toLowerCase()
-    out.set(key, v.units ? v : { ...v, units: inferred?.[key] ?? '' })
+  return new Map(fillUnits(variables ?? [], inferred).map((v) => [v.name.toLowerCase(), v]))
+}
+
+/**
+ * FX2a: `variables` with each empty unit filled from a check's inferred units,
+ * which key a component member by its display name (lower-case) and a scalar
+ * as written. A solve leaves a member's unit empty so its value stays SI; the
+ * filled label is the SI unit, and no value changes.
+ */
+export function fillUnits(
+  variables: readonly VariableResult[],
+  inferred?: Readonly<Record<string, string>>,
+): VariableResult[] {
+  if (!inferred) return variables as VariableResult[]
+  return variables.map((v) => (v.units ? v : { ...v, units: inferred[v.name] ?? inferred[v.name.toLowerCase()] ?? '' }))
+}
+
+/** A solve result with [`fillUnits`] applied to its variables and every solution's. */
+export function solveWithUnits(result: SolveResponse | null, inferred?: Readonly<Record<string, string>>): SolveResponse | null {
+  if (!result || !inferred) return result
+  return {
+    ...result,
+    variables: fillUnits(result.variables ?? [], inferred),
+    solutions: result.solutions?.map((s) => ({ ...s, variables: fillUnits(s.variables, inferred) })),
   }
-  return out
 }
 
 /**
