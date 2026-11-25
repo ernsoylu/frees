@@ -3237,6 +3237,7 @@ pub(crate) fn unit_check(
         &declared,
         &function_units,
         &function_input_units,
+        &user_functions(defs),
     );
     // A port member's unit comes from its physical domain and nothing else can
     // derive it, so the report carries it too (Java
@@ -3426,6 +3427,56 @@ pub(crate) fn declared_function_units(defs: &Definitions) -> FunctionUnits {
         }
     }
     (outputs, inputs)
+}
+
+/// Every user callable as the unit checker sees it (FX2b): functions with
+/// their bodies, each output of a multi-output function under its lowered
+/// call name, and tables, which have arguments but no body.
+fn user_functions(defs: &Definitions) -> BTreeMap<String, crate::units::checker::UserFunction> {
+    use crate::units::checker::UserFunction;
+    let mut out = BTreeMap::new();
+    for f in &defs.functions {
+        let param_units = f
+            .param_units
+            .clone()
+            .unwrap_or_else(|| vec![None; f.params.len()]);
+        out.insert(
+            f.name.clone(),
+            UserFunction {
+                params: f.params.clone(),
+                param_units,
+                output: f.output.clone().unwrap_or_else(|| f.name.clone()),
+                body: f.body.clone(),
+            },
+        );
+    }
+    for p in &defs.procedures {
+        let param_units = p
+            .input_units
+            .clone()
+            .unwrap_or_else(|| vec![None; p.inputs.len()]);
+        for (k, output) in p.outputs.iter().enumerate() {
+            out.insert(
+                format!("proc${}${k}", p.name),
+                UserFunction {
+                    params: p.inputs.clone(),
+                    param_units: param_units.clone(),
+                    output: output.clone(),
+                    body: p.body.clone(),
+                },
+            );
+        }
+    }
+    for t in &defs.tables {
+        out.insert(
+            t.name.clone(),
+            UserFunction {
+                param_units: t.arg_units.clone().unwrap_or_default(),
+                ..UserFunction::default()
+            },
+        );
+    }
+    out
 }
 
 /// Every equation's residual at the final values, in source order, plus the

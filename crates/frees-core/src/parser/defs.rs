@@ -91,6 +91,9 @@ pub struct ProcedureDef {
     pub inputs: Vec<String>,
     pub outputs: Vec<String>,
     pub body: Vec<ProcStatement>,
+    /// Declared per-input units, aligned with `inputs`; `None` when the
+    /// declaration carried none at all (FX2b: the unit checker reads them).
+    pub input_units: Option<Vec<Option<String>>>,
 }
 
 /// `MODULE name(inputs : outputs) … END` — body contains `=` equations that

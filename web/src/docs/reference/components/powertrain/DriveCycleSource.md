@@ -59,7 +59,7 @@ Paste this complete document into the editor and select **Solve**. The `CHECK` c
 // EXPECT d_fx = 0 tol 1e-9
 // EXPECT fx_e = 3695.175 tol 0.01
 
-time = 0
+time = 0 [s]
 TABLE flat10(t [s]) [m/s]
   0    10
   100  10

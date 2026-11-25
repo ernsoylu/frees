@@ -767,8 +767,8 @@ impl<'a> Parser<'a> {
     ///                LPAREN paramList RPAREN unit? sep procBody END`
     ///
     /// Port of `AstBuilder.buildFunctionDef`. The multi-output form is lowered
-    /// to a [`ProcedureDef`] (see the module docs); its unit annotations are
-    /// parsed and discarded exactly as the Java builder ignores them.
+    /// to a [`ProcedureDef`] (see the module docs), which keeps its input
+    /// units for the unit checker (FX2b).
     fn function_def(&mut self) -> Result<ParsedDef> {
         let header = self.c.span();
         self.c.expect(&TokenKind::Function)?;
@@ -880,6 +880,7 @@ impl<'a> Parser<'a> {
                 inputs: params,
                 outputs,
                 body,
+                input_units: collapse_units(param_units),
             }),
             None => ParsedDef::Function(FunctionDef {
                 name,
@@ -895,14 +896,14 @@ impl<'a> Parser<'a> {
     /// `procedureDef : PROCEDURE IDENT LPAREN paramList COLON paramList RPAREN
     ///                 sep procBody END`
     ///
-    /// Port of `AstBuilder.buildProcedureDef` — parameter units are parsed and
-    /// discarded (`buildParamList` keeps names only).
+    /// Port of `AstBuilder.buildProcedureDef`. The input units are kept for
+    /// the unit checker (FX2b); the Java discarded them.
     fn procedure_def(&mut self) -> Result<ProcedureDef> {
         let header = self.c.span();
         self.c.expect(&TokenKind::Procedure)?;
         let name = self.c.expect_ident()?.to_ascii_lowercase();
         self.c.expect(&TokenKind::LParen)?;
-        let (inputs, _) = self.param_list()?;
+        let (inputs, input_units) = self.param_list()?;
         self.c.expect(&TokenKind::Colon)?;
         let (outputs, _) = self.param_list()?;
         self.c.expect(&TokenKind::RParen)?;
@@ -914,6 +915,7 @@ impl<'a> Parser<'a> {
             inputs,
             outputs,
             body,
+            input_units: collapse_units(input_units),
         })
     }
 
