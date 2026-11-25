@@ -1078,8 +1078,14 @@ pub const INTRINSICS: &[Intrinsic] = &[
         n, a[0], a[1], a[2], a[3], a[4], true
     )),
     // ----- pneumatics (ISO 6358) ---------------------------------------------
-    strict!("iso6358", Arity::Exact(5), |n, a| iso6358(
-        n, a[0], a[1], a[2], a[3], a[4]
+    strict!("iso6358", Arity::OneOf(&[5, 6]), |n, a| iso6358(
+        n,
+        a[0],
+        a[1],
+        a[2],
+        a[3],
+        a[4],
+        a.get(5).copied()
     )),
     // ----- flow networks (Darcy friction, Reynolds, minor losses) ------------
     strict!("friction_factor", Arity::Exact(2), |_, a| Ok(
@@ -4932,9 +4938,15 @@ fn wiebe(
 
 // --- ISO 6358 pneumatic mass flow (props/Pneumatics.java) -------------------
 
-fn iso6358(name: &str, c: f64, b: f64, p_up: f64, t_up: f64, p_down: f64) -> Result<f64> {
-    const RHO_ANR: f64 = 1.185;
-    const T_ANR: f64 = 293.15;
+fn iso6358(
+    name: &str,
+    c: f64,
+    b: f64,
+    p_up: f64,
+    t_up: f64,
+    p_down: f64,
+    t_down: Option<f64>,
+) -> Result<f64> {
     if c < 0.0 {
         return Err(domain(
             name,
@@ -4947,20 +4959,8 @@ fn iso6358(name: &str, c: f64, b: f64, p_up: f64, t_up: f64, p_down: f64) -> Res
             format_args!("critical pressure ratio b must be in [0, 1)"),
         ));
     }
-    if p_up <= 0.0 || t_up <= 0.0 {
-        // A Newton iterate may stray non-physical; no flow rather than an error.
-        return Ok(0.0);
-    }
-    let choked = c * RHO_ANR * p_up * libm::sqrt(T_ANR / t_up);
-    let pr = p_down / p_up;
-    if pr <= b {
-        return Ok(choked);
-    }
-    if pr >= 1.0 {
-        return Ok(0.0);
-    }
-    let x = (pr - b) / (1.0 - b);
-    Ok(choked * libm::sqrt(1.0 - x * x))
+    // The law itself, its regularisation near pr = 1 and its reversal.
+    crate::props::pneumatics::iso6358(c, b, p_up, t_up, p_down, t_down)
 }
 
 // --- Flow resistance (props/FlowResistance.java) ----------------------------

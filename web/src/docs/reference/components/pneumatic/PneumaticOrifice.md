@@ -44,7 +44,7 @@ $$
 \begin{aligned}
 out.h &= in.h \\
 t_{in} &= \text{Temperature}\left(\mathrm{fluid\$}, p=in.p, h=in.h\right) \\
-in.mdot &= \text{iso6358}\left(c, b, in.p, t_{in}, out.p\right) \\
+in.mdot &= \text{iso6358}\left(c, b, in.p, t_{in}, out.p, \text{Temperature}\left(\mathrm{fluid\$}, p=out.p, h=out.h\right)\right) \\
 out.mdot &= in.mdot
 \end{aligned}
 $$

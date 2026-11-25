@@ -44,10 +44,10 @@ $$
 t_{s} &= \text{Temperature}\left(\mathrm{fluid\$}, p=sup_{in.p}, h=sup_{in.h}\right) \\
 t_{a} &= \text{Temperature}\left(\mathrm{fluid\$}, p=wa.p, h=wa.h\right) \\
 t_{b} &= \text{Temperature}\left(\mathrm{fluid\$}, p=wb.p, h=wb.h\right) \\
-m_{sa} &= \text{iso6358}\left(u.sig\cdot c, b, sup_{in.p}, t_{s}, wa.p\right) \\
-m_{be} &= \text{iso6358}\left(u.sig\cdot c, b, wb.p, t_{b}, eb_{out.p}\right) \\
-m_{sb} &= \text{iso6358}\left(\left(1 - u.sig\right)\cdot c, b, sup_{in.p}, t_{s}, wb.p\right) \\
-m_{ae} &= \text{iso6358}\left(\left(1 - u.sig\right)\cdot c, b, wa.p, t_{a}, ea_{out.p}\right) \\
+m_{sa} &= \text{iso6358}\left(u.sig\cdot c, b, sup_{in.p}, t_{s}, wa.p, t_{a}\right) \\
+m_{be} &= \text{iso6358}\left(u.sig\cdot c, b, wb.p, t_{b}, eb_{out.p}, \text{Temperature}\left(\mathrm{fluid\$}, p=eb_{out.p}, h=eb_{out.h}\right)\right) \\
+m_{sb} &= \text{iso6358}\left(\left(1 - u.sig\right)\cdot c, b, sup_{in.p}, t_{s}, wb.p, t_{b}\right) \\
+m_{ae} &= \text{iso6358}\left(\left(1 - u.sig\right)\cdot c, b, wa.p, t_{a}, ea_{out.p}, \text{Temperature}\left(\mathrm{fluid\$}, p=ea_{out.p}, h=ea_{out.h}\right)\right) \\
 sup_{in.mdot} &= m_{sa} + m_{sb} \\
 wa.mdot &= m_{sa} - m_{ae} \\
 wb.mdot &= m_{sb} - m_{be} \\

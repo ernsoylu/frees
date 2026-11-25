@@ -58,6 +58,12 @@ end
 function [in, out] = TwoPhaseFlowRes(fluid$, L [m], D [m], domain$ = twophase)
 port(in)
 port(out)
+  // Either direction (FX8): the friction is signed with the flow, and Friedel's
+  // multiplier is taken at |G| floored at 1 kg/m²·s, so near zero flow the drop
+  // is laminar (linear in G) with a finite slope where the flow reverses. The
+  // properties stay at in.P: out.h = in.h, so on reversal the upstream state
+  // differs only by this element's own drop (an O(ΔP/P) error), and reading
+  // out.P would couple every instance into one implicit block.
   out.mdot = in.mdot
   out.h    = in.h
   hf       = Enthalpy(fluid$, P=in.P, x=0)
@@ -73,8 +79,8 @@ port(out)
   V_lo     = G / rho_l
   Re_lo    = reynolds(rho_l, V_lo, D, mu_l)
   f_lo     = friction_factor(Re_lo, 0)
-  dP_lo    = f_lo * (L / D) * rho_l * V_lo^2 / 2
-  phi2     = friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, G, D, sigma)
+  dP_lo    = f_lo * (L / D) * rho_l * V_lo * abs(V_lo) / 2
+  phi2     = friedel_phi2(x, rho_l, rho_g, mu_l, mu_g, max(abs(G), 1 [kg/m^2-s]), D, sigma)
   out.P    = in.P - phi2 * dP_lo
 end
 

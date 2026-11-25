@@ -43,8 +43,8 @@ $$
 \begin{aligned}
 t_{s} &= \text{Temperature}\left(\mathrm{fluid\$}, p=sup_{in.p}, h=sup_{in.h}\right) \\
 t_{w} &= \text{Temperature}\left(\mathrm{fluid\$}, p=work.p, h=work.h\right) \\
-m_{in} &= \text{iso6358}\left(u.sig\cdot c, b, sup_{in.p}, t_{s}, work.p\right) \\
-m_{out} &= \text{iso6358}\left(\left(1 - u.sig\right)\cdot c, b, work.p, t_{w}, exh_{out.p}\right) \\
+m_{in} &= \text{iso6358}\left(u.sig\cdot c, b, sup_{in.p}, t_{s}, work.p, t_{w}\right) \\
+m_{out} &= \text{iso6358}\left(\left(1 - u.sig\right)\cdot c, b, work.p, t_{w}, exh_{out.p}, \text{Temperature}\left(\mathrm{fluid\$}, p=exh_{out.p}, h=exh_{out.h}\right)\right) \\
 sup_{in.mdot} &= m_{in} \\
 work.mdot &= m_{in} - m_{out} \\
 exh_{out.mdot} &= m_{out} \\

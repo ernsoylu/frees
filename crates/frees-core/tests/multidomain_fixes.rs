@@ -403,3 +403,61 @@ fn moving_boundary_zones_stay_in_the_tube_through_zero_wall_superheat() {
         }
     }
 }
+
+/// FX3g + FX8 reverse flow, pneumatic side: `iso6358` returned 0 whenever
+/// the downstream pressure was the higher one, so an orifice could not flow
+/// back and a volume that overshot its supply kept the pressure trapped.
+#[test]
+fn a_pneumatic_orifice_flows_back_when_the_pressure_ratio_reverses() {
+    let v = values(
+        "PneumaticSupply SUP(fluid$=Air, P=500000 [Pa], T=300 [K])\n\
+         PneumaticOrifice ORI(fluid$=Air, C=1e-8, b=0.3)\n\
+         PneumaticAtmosphere ATM(P=600000 [Pa])\n\
+         connect(SUP.out, ORI.in)\nconnect(ORI.out, ATM.port)\n\
+         T_dn = Temperature(Air, P=600000, h=ORI.out.h)\n\
+         m_rev = -iso6358(1e-8, 0.3, 600000, T_dn, 500000)\n",
+    );
+    let (m, want) = (v["ori$in$mdot"], v["m_rev"]);
+    assert!(
+        m < 0.0 && close(m, want, 1e-12),
+        "reverse flow {m} kg/s, want {want}"
+    );
+
+    // A volume charged above its supply vents back down to it.
+    let src = "function [port] = GasCap(domain$ = gas)\nport(port)\n  port.mdot = 0\nend\n\
+         PneumaticSupply SUP(fluid$=Air, P=700000 [Pa], T=300 [K])\n\
+         PneumaticOrifice ORI(fluid$=Air, C=1e-8, b=0.3)\n\
+         PneumaticVolume VOL(V=0.001 [m^3], T=300 [K], R=287 [J/kg-K], P0=800000 [Pa])\n\
+         GasCap CAP()\n\
+         connect(SUP.out, ORI.in)\nconnect(ORI.out, VOL.in)\nconnect(VOL.out, CAP.port)\n\
+         DYNAMIC vent(method = ode23s, time = 0 .. 30, points = 30)\nEND\n\
+         Pf = FinalValue('vol.in.p')\n";
+    let pf = values(src)["pf"];
+    assert!(
+        (pf - 700000.0).abs() < 1.0,
+        "the volume ends at {pf} Pa, not the 700 kPa supply"
+    );
+}
+
+/// FX8 reverse and zero flow, two-phase side: Friedel needs a positive mass
+/// flux, so `TwoPhaseFlowRes` failed at zero flow, and its unsigned friction
+/// raised the pressure downstream of a reversed flow.
+#[test]
+fn a_two_phase_line_passes_zero_and_reversed_flow() {
+    let dp = |mdot: f64| {
+        let v = values(&format!(
+            "TwoPhaseSource SRC(fluid$=R134a, mdot={mdot} [kg/s], P=500000 [Pa], x=0.3)\n\
+             TwoPhaseFlowRes LINE(fluid$=R134a, L=2 [m], D=0.008 [m])\nTwoPhaseSink SNK()\n\
+             connect(SRC.out, LINE.in)\nconnect(LINE.out, SNK.in)\n"
+        ));
+        v["line$in$p"] - v["line$out$p"]
+    };
+    assert_eq!(dp(0.0), 0.0);
+    for m in [1e-6, 1e-3, 0.02] {
+        let (fwd, rev) = (dp(m), dp(-m));
+        assert!(
+            fwd > 0.0 && close(rev, -fwd, 1e-12),
+            "at {m} kg/s: {fwd} Pa forward, {rev} Pa reversed"
+        );
+    }
+}
