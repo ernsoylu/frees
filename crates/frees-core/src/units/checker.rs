@@ -29,6 +29,7 @@
 //!   `Unknown unit: '<name>' in '<expression>'` shape is identical.
 
 use std::collections::{BTreeMap, HashMap};
+use std::rc::Rc;
 
 use crate::ast::{BinOp, Equation, Expr, STEADY_DER_SUFFIX};
 use crate::diag::FreesError;
@@ -58,7 +59,28 @@ pub struct UnitReport {
 ///
 /// Port of the Java two-argument `UnitChecker.check`.
 pub fn check_units(equations: &[Equation], known_units: &BTreeMap<String, String>) -> UnitReport {
-    check_units_full(equations, known_units, &BTreeMap::new(), &BTreeMap::new())
+    check_units_full(
+        equations,
+        known_units,
+        &BTreeMap::new(),
+        &BTreeMap::new(),
+        &BTreeMap::new(),
+    )
+}
+
+/// A user `FUNCTION`, `TABLE` or multi-output function as the unit checker
+/// sees a call to it (FX2b). A multi-output function is one entry per output,
+/// under the lowered call name `proc$<name>$<k>`.
+#[derive(Debug, Clone, Default)]
+pub struct UserFunction {
+    /// Parameter names, lowercase; empty for a `TABLE`.
+    pub params: Vec<String>,
+    /// Declared parameter units, aligned with `params` where they exist.
+    pub param_units: Vec<Option<String>>,
+    /// The variable the body assigns the result to; empty when there is no
+    /// body to read the result's unit from.
+    pub output: String,
+    pub body: Vec<crate::parser::defs::ProcStatement>,
 }
 
 /// As [`check_units`], plus declared units for TABLE/FUNCTION calls: output
@@ -73,6 +95,7 @@ pub fn check_units_full(
     variable_units: &BTreeMap<String, String>,
     function_units: &BTreeMap<String, String>,
     function_input_units: &BTreeMap<String, Vec<Option<String>>>,
+    user_functions: &BTreeMap<String, UserFunction>,
 ) -> UnitReport {
     let mut warnings: Vec<String> = Vec::new();
     let mut dims: HashMap<String, Quantity> = HashMap::new();
@@ -127,6 +150,11 @@ pub fn check_units_full(
         current_equation: String::new(),
         absolute: HashMap::new(),
         literals: Vec::new(),
+        user_functions: user_functions
+            .iter()
+            .map(|(name, f)| (name.to_lowercase(), Rc::new(f.clone())))
+            .collect(),
+        body_depth: 0,
     };
     let mut derived: BTreeMap<String, String> = BTreeMap::new();
     for _pass in 0..8 {
@@ -410,6 +438,9 @@ struct Checker {
     absolute: HashMap<String, (f64, String)>,
     /// The current equation's °C/°F literals: SI value and source text.
     literals: Vec<(f64, String)>,
+    user_functions: HashMap<String, Rc<UserFunction>>,
+    /// How deep [`Checker::dim_of_body`] is, so a recursive function stops.
+    body_depth: usize,
 }
 
 /// The `<number> [C]` / `<number> [F]` literals in an equation's source, each
@@ -900,6 +931,9 @@ impl Checker {
     // -- calls ---------------------------------------------------------------
 
     fn dim_of_call(&mut self, function: &str, args: &[Expr]) -> Dim {
+        if let Some(user) = self.user_functions.get(function).cloned() {
+            return self.dim_of_user_call(function, &user, args);
+        }
         // User TABLE/FUNCTION with a declared output unit carries those dims.
         if let Some(declared) = self.function_dims.get(function).copied() {
             return Dim::of(declared);
@@ -1215,6 +1249,88 @@ impl Checker {
                 Dim::of(Quantity::dimensionless(1.0))
             }
         }
+    }
+
+    /// FX2b: a call to a user function checks each argument against its
+    /// declared unit, and carries the declared output unit, or else the unit
+    /// its body gives the result with the parameters bound, or else none. An
+    /// undeclared parameter is a wildcard.
+    fn dim_of_user_call(&mut self, function: &str, user: &UserFunction, args: &[Expr]) -> Dim {
+        let name = function
+            .strip_prefix("proc$")
+            .and_then(|rest| rest.rsplit_once('$'))
+            .map_or(function, |(name, _)| name);
+        let mut bound = Vec::with_capacity(args.len());
+        for (k, arg) in args.iter().enumerate() {
+            let dim = self.dim_of(arg);
+            let declared = user
+                .param_units
+                .get(k)
+                .cloned()
+                .flatten()
+                .and_then(|unit| UnitRegistry::parse(&unit).ok());
+            if let Some(declared) =
+                declared.filter(|q| dim.known && !q.same_dimensions_as(&dim.quantity))
+            {
+                let param = user
+                    .params
+                    .get(k)
+                    .cloned()
+                    .unwrap_or_else(|| format!("argument {}", k + 1));
+                let message = format!(
+                    "{}: {name} expects [{}] for {param} but gets [{}].",
+                    self.current_equation,
+                    declared.dimension_string(),
+                    dim.quantity.dimension_string()
+                );
+                // A multi-output call is one call per output; say it once.
+                if !self.warnings.iter().any(|w| w.starts_with(&message)) {
+                    self.warn(message);
+                }
+            }
+            bound.push(declared.map_or(dim, Dim::of));
+        }
+        if let Some(declared) = self.function_dims.get(function).copied() {
+            return Dim::of(declared);
+        }
+        self.dim_of_body(user, &bound)
+    }
+
+    /// The unit a straight-line body (assignments only) gives its result, with
+    /// the parameters bound to `bound`. A body with control flow, or one that
+    /// calls itself, says nothing.
+    fn dim_of_body(&mut self, user: &UserFunction, bound: &[Dim]) -> Dim {
+        let straight = user
+            .body
+            .iter()
+            .all(|s| matches!(s, crate::parser::defs::ProcStatement::Assign { .. }));
+        if user.output.is_empty() || !straight || self.body_depth >= 4 {
+            return Dim::unknown();
+        }
+        let globals = std::mem::take(&mut self.variable_dims);
+        let collect = std::mem::replace(&mut self.collect_warnings, false);
+        self.body_depth += 1;
+        for (param, dim) in user.params.iter().zip(bound) {
+            if dim.known {
+                self.variable_dims.insert(param.clone(), dim.quantity);
+            }
+        }
+        for statement in &user.body {
+            if let crate::parser::defs::ProcStatement::Assign { var_name, value } = statement {
+                let dim = self.dim_of(value);
+                let local = var_name.to_ascii_lowercase();
+                if dim.known {
+                    self.variable_dims.insert(local, dim.quantity);
+                } else {
+                    self.variable_dims.remove(&local);
+                }
+            }
+        }
+        let result = self.variable_dims.get(&user.output).copied();
+        self.body_depth -= 1;
+        self.collect_warnings = collect;
+        self.variable_dims = globals;
+        result.map_or_else(Dim::unknown, Dim::of)
     }
 
     /// `dimOf(args.get(0))`, degrading to agnostic when the call has no
@@ -1959,6 +2075,7 @@ mod tests {
             &units(&[("Q", "m^3/s")]),
             &units(&[("fancurve", "Pa")]),
             &BTreeMap::new(),
+            &BTreeMap::new(),
         );
         assert!(report.warnings.is_empty(), "{:?}", report.warnings);
         assert_eq!(report.inferred.get("dp").map(String::as_str), Some("Pa"));
@@ -1972,6 +2089,7 @@ mod tests {
             &eqs("dp = fancurve(Q)"),
             &no_units(),
             &units(&[("fancurve", "Pa")]),
+            &BTreeMap::new(),
             &BTreeMap::new(),
         );
         assert!(report.warnings.is_empty(), "{:?}", report.warnings);
@@ -1987,6 +2105,7 @@ mod tests {
             &no_units(),
             &units(&[("fancurve", "Pa")]),
             &input_units,
+            &BTreeMap::new(),
         );
         assert!(report.warnings.is_empty(), "{:?}", report.warnings);
         assert_eq!(report.inferred.get("q").map(String::as_str), Some("m^3/s"));
@@ -2004,6 +2123,7 @@ mod tests {
             &units(&[("f_rpm", "rad/s")]),
             &BTreeMap::new(),
             &input_units,
+            &BTreeMap::new(),
         );
         // Vair / (rad/s) = m^3/s  =>  Vair = m^3/s^2.
         assert_eq!(
@@ -2018,6 +2138,7 @@ mod tests {
             &eqs("y = f(x)"),
             &units(&[("x", "-")]),
             &units(&[("f", "blorp")]),
+            &BTreeMap::new(),
             &BTreeMap::new(),
         );
         // No warning for the bad declaration; f falls back to the default
