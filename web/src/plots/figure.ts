@@ -699,6 +699,18 @@ export function cleanPlotlyFigure(figure: PlotlyFigure): PlotlyFigure {
   return pruneUndefined(figure)
 }
 
+/** True when the (x, y) points are not all on one line, so a mesh can triangulate
+ *  them. The baseline is row 0 and the first row distinct from it, not row 1.
+ *  buildXYFigure has already dropped non-finite rows. */
+function spansArea(x: readonly (number | string | null)[], y: readonly number[]): boolean {
+  const x0 = Number(x[0])
+  const i1 = x.findIndex((xi, i) => Number(xi) !== x0 || y[i] !== y[0])
+  if (i1 < 0) return false
+  const dx = Number(x[i1]) - x0
+  const dy = y[i1] - y[0]
+  return x.some((xi, i) => dx * (y[i] - y[0]) !== dy * (Number(xi) - x0))
+}
+
 function scaleSizes(values: number[]): number[] {
   const min = Math.min(...values)
   const max = Math.max(...values)
@@ -865,17 +877,7 @@ export function buildXYFigure(
     })
   } else if (chartType === 'surface3d') {
     series.forEach((s) => {
-      const x0 = Number(s.x[0])
-      const x1 = Number(s.x[1])
-      if (
-        s.z &&
-        s.z.length >= 3 &&
-        s.x.some(
-          (x, i) =>
-            i > 1 &&
-            (x1 - x0) * (s.y[i] - s.y[0]) !== (s.y[1] - s.y[0]) * (Number(x) - x0),
-        )
-      ) {
+      if (s.z && s.z.length >= 3 && spansArea(s.x, s.y)) {
         traces.push({
           type: 'mesh3d',
           name: displayVar(s.name),
