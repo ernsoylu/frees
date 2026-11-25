@@ -745,6 +745,7 @@ export function buildXYFigure(
 ): PlotlyFigure {
   const chartType = config?.chartType || 'line'
   const traces: PlotlyTrace[] = []
+  const source: NonNullable<PlotlyFigure['source']> = {}
   const ribbonSeries = series.filter((s) => s.isRibbonLower || s.isRibbonUpper)
   const dataSeries = series.filter((s) => !s.isRibbonLower && !s.isRibbonUpper)
   series = [...ribbonSeries, ...dataSeries]
@@ -905,6 +906,9 @@ export function buildXYFigure(
       const color = format.lineColors?.[s.name]
       const dash = style?.dash
       const line = color || dash ? { ...(color ? { color } : {}), ...(dash ? { dash } : {}) } : undefined
+      if (renderSeries.x.length !== s.x.length) {
+        source[traces.length] = { name: displayVar(s.name), x: s.x, y: s.y, customdata: s.sampleIds }
+      }
 
       traces.push({
         type: 'scatter',
@@ -1036,7 +1040,7 @@ export function buildXYFigure(
     }
   }
 
-  return cleanPlotlyFigure({ data: traces, layout })
+  return { ...cleanPlotlyFigure({ data: traces, layout }), ...(Object.keys(source).length ? { source } : {}) }
 }
 
 export function buildBodeFigure(
