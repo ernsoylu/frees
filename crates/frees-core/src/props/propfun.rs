@@ -1228,6 +1228,43 @@ pub fn evaluate_with_tokens(encoded: &str, values: &[f64], tokens: &[String]) ->
     Ok(if output == VOLUME { 1.0 / raw } else { raw })
 }
 
+/// A warning when a real-fluid call's `T=` or `P=` input lies above the
+/// fluid's equation-of-state limit (`Tmax`, `pmax`), or `None` (FX3d). The
+/// value is still returned: it is CoolProp's extrapolation, so this only
+/// says so. `values` are the call's numeric arguments, as for
+/// [`evaluate_with_tokens`].
+// ponytail: direct T/P inputs only; a state reached through h, s or rho above
+// the limit is not flagged. Flash the state for its T and P if that matters.
+pub fn range_note(encoded: &str, values: &[f64]) -> Option<String> {
+    let parts: Vec<&str> = encoded.split('$').collect();
+    if parts.len() != 5 || values.len() != 2 || lookup(OUTPUTS, parts[1]).is_none() {
+        return None;
+    }
+    let token = parts[2];
+    if token == "airh2o" || token == "humidair" || idealgas::is_ideal_gas(token) {
+        return None;
+    }
+    let fluid = resolve_fluid(token).ok()?;
+    for (indicator, &value) in parts[3..].iter().zip(values) {
+        let (param, symbol, unit) = match *indicator {
+            "t" => ("Tmax", "T", "K"),
+            "p" => ("pmax", "P", "Pa"),
+            _ => continue,
+        };
+        let Ok(limit) = props1_si(&fluid, param) else {
+            continue;
+        };
+        if value > limit {
+            return Some(format!(
+                "{}({fluid}, …): {symbol} = {value} {unit} is above the equation of state's \
+                 limit for {fluid} ({param} = {limit} {unit}); the value is an extrapolation.",
+                capitalize(parts[1])
+            ));
+        }
+    }
+    None
+}
+
 /// The middle stage of `Combustion.molarMass`: a CoolProp real fluid's
 /// `molar_mass`, or `None` so the formula parser gets its turn.
 ///
