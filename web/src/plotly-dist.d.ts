@@ -148,6 +148,10 @@ declare module 'plotly.js/lib/bar' {
   const traceModule: unknown
   export default traceModule
 }
+declare module 'plotly.js/lib/box' {
+  const traceModule: unknown
+  export default traceModule
+}
 declare module 'plotly.js/lib/pie' {
   const traceModule: unknown
   export default traceModule

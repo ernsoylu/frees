@@ -1034,9 +1034,9 @@ export function buildXYFigure(
 
   if (chartType === 'surface3d') {
     layout.scene = {
-      xaxis: { title: format.xLabel || xLabel, color: THEMES[theme].font, gridcolor: THEMES[theme].grid },
-      yaxis: { title: format.yLabel || yLabel, color: THEMES[theme].font, gridcolor: THEMES[theme].grid },
-      zaxis: { title: config?.zVar || 'Z', color: THEMES[theme].font, gridcolor: THEMES[theme].grid },
+      xaxis: { title: { text: format.xLabel || xLabel }, color: THEMES[theme].font, gridcolor: THEMES[theme].grid },
+      yaxis: { title: { text: format.yLabel || yLabel }, color: THEMES[theme].font, gridcolor: THEMES[theme].grid },
+      zaxis: { title: { text: config?.zVar || 'Z' }, color: THEMES[theme].font, gridcolor: THEMES[theme].grid },
     }
   }
 

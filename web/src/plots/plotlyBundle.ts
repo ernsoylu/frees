@@ -1,16 +1,18 @@
 // Custom Plotly partial bundle: core (scatter) plus only the trace modules the
-// app actually renders (figure.ts, MonteCarloModal, the schematic's power Sankey). Replaces the
+// app actually renders (figure.ts, MonteCarloModal, the schematic's power Sankey).
+// plotlyBundle.test.ts validates every chart type the plot dialog offers against it. Replaces the
 // full plotly.js-dist-min bundle, which shipped maps, finance, polar, WebGL-2D
 // and every other trace family (~4.6 MB → ~2.6 MB; mesh3d drags the gl3d
 // stack and is the largest remaining piece — it backs the surface3d chart).
 // Always load this via `import('./plotlyBundle')` so Plotly stays code-split.
 import Plotly from 'plotly.js/lib/core'
 import bar from 'plotly.js/lib/bar'
+import box from 'plotly.js/lib/box'
 import pie from 'plotly.js/lib/pie'
 import histogram from 'plotly.js/lib/histogram'
 import mesh3d from 'plotly.js/lib/mesh3d'
 import sankey from 'plotly.js/lib/sankey'
 
-Plotly.register([bar, pie, histogram, mesh3d, sankey])
+Plotly.register([bar, box, pie, histogram, mesh3d, sankey])
 
 export default Plotly
