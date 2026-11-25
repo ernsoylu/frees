@@ -20,7 +20,7 @@ project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#
 three event goldens regenerated against closed forms, owner-approved); FX1a,
 case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
 refused (#143, owner decision); FX1b, the optimizer reads a capitalised
-decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145); FX8/E06, nonnegative regeneration loss (#146); FX8/E07, moving-boundary zones at zero wall superheat (#147); FX3g with FX8's reverse-flow policy, signed ISO 6358 flow with a linear zero-flow band and a bidirectional `TwoPhaseFlowRes` (#148); FX9/U03, raw statistics and the data table from the source series (#149); FX9/U05, the box plot registered and every offered chart type validated against the bundle (#150); FX9/U06, a 3D mesh kept whatever its row order (#151); FX9/U07, playback speed on coarse trajectories (#152); FX9/U08, disconnect beside a comment, from the parser's endpoint spans (#153); FX9/E08, a live watch's unit checked against its column (#154); FX9 docs, the table accessors' syntax shown as it parses (#155); FX2a, component members' units filled from the check, values still SI (#156); FX1f, a solve's property answers independent of what the process solved before (#157); FX1d, every `If` branch checked for one unit (#158).
+decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145); FX8/E06, nonnegative regeneration loss (#146); FX8/E07, moving-boundary zones at zero wall superheat (#147); FX3g with FX8's reverse-flow policy, signed ISO 6358 flow with a linear zero-flow band and a bidirectional `TwoPhaseFlowRes` (#148); FX9/U03, raw statistics and the data table from the source series (#149); FX9/U05, the box plot registered and every offered chart type validated against the bundle (#150); FX9/U06, a 3D mesh kept whatever its row order (#151); FX9/U07, playback speed on coarse trajectories (#152); FX9/U08, disconnect beside a comment, from the parser's endpoint spans (#153); FX9/E08, a live watch's unit checked against its column (#154); FX9 docs, the table accessors' syntax shown as it parses (#155); FX2a, component members' units filled from the check, values still SI (#156); FX1f, a solve's property answers independent of what the process solved before (#157); FX1d, every `If` branch checked for one unit (#158); FX1c, a warning when °C/°F values are added or scaled as if they were differences (#159).
 
 ---
 
@@ -42,9 +42,6 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - **Language changes need the owner.** FX5 changes how existing documents parse, so it waits for a decision. Items marked *owner decision* list the options.
 
 **FX1. Silent wrong numbers (one PR per item).**
-- **FX1c. A temperature difference written in °C or °F is read as absolute.** `T1 = 20 [C]; dT = 10 [C]; T2 = T1 + dT` gives 576.3 K with no warning, and `2 * 20 [C]` gives 586.3 K.
-  - Fix: the unit checker warns when two absolute temperatures are added, or when one is scaled, naming the °C/°F literal.
-  - *Owner decision:* add a difference spelling such as `[dC]`/`[dF]`. That is a language change; see FX5.
 - **FX1e. `Integral` gives two answers for one integral.** With constant limits, the optional `step` selects a trapezoid stepping driver: `Integral(t^2, t, 0, 2, 0.5)` gives 2.75. With a variable limit, `step` is ignored (`integral.rs:694`) and the result is the adaptive 2.6667. The dummy variable `t` also leaks out as a solved row, and the two paths report different units.
   - Fix: both paths give the same value for the same integral. The step becomes an accuracy hint for the adaptive rule, not a different method.
   - Keep `t` out of the variables.
@@ -90,9 +87,9 @@ each item carries its own repro, and each fix lands with that repro as a test.
 **FX5. Language-contract items (owner decision before any work).** Each changes how existing text parses, so each needs a migration-matrix row (§4) and a golden scan.
 - **Transpose and string literals.** `A' + A'`, and `C = A'` followed by any later `'string'`, lex the two quotes as one string (`lexer.rs`, pinned as Java behaviour). The fix: after an identifier, `)` or `]`, a quote is a transpose.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
-- **A temperature-difference unit** (FX1c).
+- **A temperature-difference unit** such as `[dC]`/`[dF]`. Until then the checker warns (FX1c, #159) when °C/°F values are combined with weights that sum to neither 0 (a difference) nor 1 (a mean).
 
-**Order.** FX1c (checker) → FX2b → FX1e → FX3 (FX3f first) → FX6 → FX4. E05 waits for `md-hpwh`'s block 22 (see E05). FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX2b → FX1e → FX3 (FX3f first) → FX6 → FX4. E05 waits for `md-hpwh`'s block 22 (see E05). FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.
