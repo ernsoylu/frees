@@ -79,13 +79,13 @@ DYNAMIC fill(method = ode23s, time = 0 .. 30, points = 100)
 END
 Pf = FinalValue('vol.in.p')
 
-{ CHECK Pf 700001.2966 0.7000012966479059 }
+{ CHECK Pf 700000 0.7 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-Pf = 700001.2966
+Pf = 700000
 ```
 
 <!-- verified-reference-example:end -->

@@ -55,8 +55,8 @@ g &= \frac{in.mdot}{a} \\
 v_{lo} &= \frac{g}{rho_{l}} \\
 re_{lo} &= \text{reynolds}\left(rho_{l}, v_{lo}, d, mu_{l}\right) \\
 f_{lo} &= \text{friction\_factor}\left(re_{lo}, 0\right) \\
-dp_{lo} &= \frac{f_{lo}\cdot \frac{l}{d}\cdot rho_{l}\cdot v_{lo}^{2}}{2} \\
-phi2 &= \text{friedel\_phi2}\left(x, rho_{l}, rho_{g}, mu_{l}, mu_{g}, g, d, sigma\right) \\
+dp_{lo} &= \frac{f_{lo}\cdot \frac{l}{d}\cdot rho_{l}\cdot v_{lo}\cdot \left|v_{lo}\right|}{2} \\
+phi2 &= \text{friedel\_phi2}\left(x, rho_{l}, rho_{g}, mu_{l}, mu_{g}, \text{max}\left(\left|g\right|, 1\,\left[kg/m^2-s\right]\right), d, sigma\right) \\
 out.p &= in.p - phi2\cdot dp_{lo}
 \end{aligned}
 $$

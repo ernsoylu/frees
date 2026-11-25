@@ -42,7 +42,8 @@ port(in)
 port(out)
   out.h    = in.h
   T_in     = Temperature(fluid$, P=in.P, h=in.h)
-  in.mdot  = iso6358(C, b, in.P, T_in, out.P)
+  // Signed (FX3g): a reversed pressure ratio flows back, from the outlet state.
+  in.mdot  = iso6358(C, b, in.P, T_in, out.P, Temperature(fluid$, P=out.P, h=out.h))
   out.mdot = in.mdot
 end
 
@@ -51,7 +52,7 @@ port(in)
 port(out)
   out.h    = in.h
   T_in     = Temperature(fluid$, P=in.P, h=in.h)
-  in.mdot  = iso6358(u * Cmax, b, in.P, T_in, out.P)
+  in.mdot  = iso6358(u * Cmax, b, in.P, T_in, out.P, Temperature(fluid$, P=out.P, h=out.h))
   out.mdot = in.mdot
 end
 
@@ -81,13 +82,14 @@ port(out)
 port(u)
   out.h    = in.h
   T_in     = Temperature(fluid$, P=in.P, h=in.h)
-  in.mdot  = iso6358(u.sig * Cmax, b, in.P, T_in, out.P)
+  in.mdot  = iso6358(u.sig * Cmax, b, in.P, T_in, out.P, Temperature(fluid$, P=out.P, h=out.h))
   out.mdot = in.mdot
 end
 
 // ── Fluid-power pro set (Wave 5) ───────────────────────────────────────────
 
-// Pneumatic check valve: ISO 6358 flow gated to forward ΔP.
+// Pneumatic check valve: ISO 6358 flow gated to forward ΔP. Forward-only by
+// design: the five-argument iso6358 returns 0 on a reversed ratio.
 function [in, out] = PneumaticCheckValve(fluid$, C [m^3/s-Pa], b [-], eps [Pa], domain$ = gas)
 port(in)
 port(out)
@@ -100,6 +102,7 @@ end
 
 // 3/2 directional valve: the spool command u blends supply->work (u·C) against
 // work->exhaust ((1-u)·C), both ISO 6358 paths — u=1 pressurizes, u=0 vents.
+// Both paths are signed (FX3g): a work port above the supply flows back.
 function [sup_in, work, exh_out, u] = PneumaticValve32(fluid$, C [m^3/s-Pa], b [-], domain$ = gas)
 port(sup_in)
 port(work)
@@ -107,8 +110,8 @@ port(exh_out)
 port(u)
   T_s          = Temperature(fluid$, P=sup_in.P, h=sup_in.h)
   T_w          = Temperature(fluid$, P=work.P, h=work.h)
-  m_in         = iso6358(u.sig * C, b, sup_in.P, T_s, work.P)
-  m_out        = iso6358((1 - u.sig) * C, b, work.P, T_w, exh_out.P)
+  m_in         = iso6358(u.sig * C, b, sup_in.P, T_s, work.P, T_w)
+  m_out        = iso6358((1 - u.sig) * C, b, work.P, T_w, exh_out.P, Temperature(fluid$, P=exh_out.P, h=exh_out.h))
   sup_in.mdot  = m_in
   work.mdot    = m_in - m_out
   exh_out.mdot = m_out
@@ -118,6 +121,7 @@ end
 
 // 5/2 directional valve: u=1 routes supply->A and B->exhaust; u=0 routes
 // supply->B and A->exhaust (four ISO 6358 paths, complementary commands).
+// All four paths are signed (FX3g).
 function [sup_in, wa, wb, ea_out, eb_out, u] = PneumaticValve52(fluid$, C [m^3/s-Pa], b [-], domain$ = gas)
 port(sup_in)
 port(wa)
@@ -128,10 +132,10 @@ port(u)
   T_s         = Temperature(fluid$, P=sup_in.P, h=sup_in.h)
   T_a         = Temperature(fluid$, P=wa.P, h=wa.h)
   T_b         = Temperature(fluid$, P=wb.P, h=wb.h)
-  m_sa        = iso6358(u.sig * C, b, sup_in.P, T_s, wa.P)
-  m_be        = iso6358(u.sig * C, b, wb.P, T_b, eb_out.P)
-  m_sb        = iso6358((1 - u.sig) * C, b, sup_in.P, T_s, wb.P)
-  m_ae        = iso6358((1 - u.sig) * C, b, wa.P, T_a, ea_out.P)
+  m_sa        = iso6358(u.sig * C, b, sup_in.P, T_s, wa.P, T_a)
+  m_be        = iso6358(u.sig * C, b, wb.P, T_b, eb_out.P, Temperature(fluid$, P=eb_out.P, h=eb_out.h))
+  m_sb        = iso6358((1 - u.sig) * C, b, sup_in.P, T_s, wb.P, T_b)
+  m_ae        = iso6358((1 - u.sig) * C, b, wa.P, T_a, ea_out.P, Temperature(fluid$, P=ea_out.P, h=ea_out.h))
   sup_in.mdot = m_sa + m_sb
   wa.mdot     = m_sa - m_ae
   wb.mdot     = m_sb - m_be

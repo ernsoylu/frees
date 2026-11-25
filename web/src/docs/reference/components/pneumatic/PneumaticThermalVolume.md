@@ -91,15 +91,15 @@ END
 p_end = FinalValue('tnk.in.p')
 t_end = FinalValue('tnk.t')
 
-{ CHECK p_end 599985.2636 0.5999852635647348 }
-{ CHECK t_end 315.5042778 0.00031550427777316036 }
+{ CHECK p_end 599882.4025 0.5998824025 }
+{ CHECK t_end 315.5032282 0.0003155032282 }
 ```
 
 Expected output (selected solution values; numerical rounding may vary):
 
 ```text
-p_end = 599985.2636
-t_end = 315.5042778
+p_end = 599882.4025
+t_end = 315.5032282
 ```
 
 <!-- verified-reference-example:end -->
