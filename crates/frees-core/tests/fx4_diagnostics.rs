@@ -103,3 +103,15 @@ fn deep_recursion_with_a_base_case_names_the_fixed_limit() {
     let ok = solve("FUNCTION h(n)\n  IF n <= 0 THEN\n    h := 0\n  ELSE\n    h := h(n - 1) + 1\n  END\nEND\ny = h(50)\n", &SolverSettings::default()).unwrap();
     assert_eq!(ok.values["y"], 50.0);
 }
+
+#[test]
+fn a_reversed_indexed_sum_is_empty_like_for() {
+    let ok = solve(
+        "s = Sum(i, 5, 1, i)\np = Product(i, 3, 1, i)\nt = Sum(i, 1, 5, i)\n",
+        &SolverSettings::default(),
+    )
+    .unwrap();
+    assert_eq!(ok.values["s"], 0.0);
+    assert_eq!(ok.values["p"], 1.0);
+    assert_eq!(ok.values["t"], 15.0);
+}

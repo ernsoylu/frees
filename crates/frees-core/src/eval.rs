@@ -3206,17 +3206,20 @@ fn eval_reduction<'a>(
         if let Expr::Var(index) = &args[0] {
             let lo = reduction_bound(name, "lower", eval_in(&args[1], env)?)?;
             let hi = reduction_bound(name, "upper", eval_in(&args[2], env)?)?;
-            let span = (hi - lo).abs() + 1;
+            // FX4: a reversed range is empty, as it is for `FOR` (§12). Java
+            // counted down with dir = -1.
+            if lo > hi {
+                return Ok(identity);
+            }
+            let span = hi - lo + 1;
             if span > MAX_REDUCTION_ITERATIONS {
                 return Err(domain(
                     name,
                     format_args!("{span} iterations exceeds the {MAX_REDUCTION_ITERATIONS} limit"),
                 ));
             }
-            let step = if lo <= hi { 1 } else { -1 };
             let mut acc = identity;
-            let mut i = lo;
-            loop {
+            for i in lo..=hi {
                 consume_work_budget(name, 1)?;
                 let inner = Env::Bind {
                     name: index.as_str(),
@@ -3224,10 +3227,6 @@ fn eval_reduction<'a>(
                     parent: env,
                 };
                 acc = combine(acc, eval_in(&args[3], &inner)?);
-                if i == hi {
-                    break;
-                }
-                i += step;
             }
             return Ok(acc);
         }
@@ -6535,9 +6534,14 @@ mod tests {
         );
         assert_eq!(eval(&e, &s).unwrap(), 6.0);
 
-        // A descending range still runs (Java iterates with dir = -1).
+        // FX4: a reversed range is empty, as for FOR (Java counted down).
         let down = Expr::call("sum", vec![Expr::var("i"), n(3.0), n(1.0), Expr::var("i")]);
-        assert_eq!(ev(&down), 6.0);
+        assert_eq!(ev(&down), 0.0);
+        let down = Expr::call(
+            "product",
+            vec![Expr::var("i"), n(3.0), n(1.0), Expr::var("i")],
+        );
+        assert_eq!(ev(&down), 1.0);
 
         // lo == hi runs exactly once.
         let once = Expr::call(
