@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { ActionIcon, Badge, Button, Group, Paper, Select, Slider, Stack, Text, Tooltip } from '@mantine/core'
 import { useReducedMotion } from '@mantine/hooks'
 import { IconPlayerPause, IconPlayerPlay, IconPlayerSkipBack, IconPlayerSkipForward, IconPlayerTrackNext, IconPlayerTrackPrev } from '@tabler/icons-react'
-import { advance, timeAt, timeLabel, type Timeline } from './playback'
+import { playTime, sampleAt, timeAt, timeLabel, type Timeline } from './playback'
 
 interface Props {
   timelines: Timeline[]
@@ -35,15 +35,33 @@ export default function PlaybackBar({ timelines, timeline: tl, onTimeline, index
   const last = tl.times.length - 1
   const k = index ?? last
   const canPlay = !reduced && !unavailable
+  // Run time counts from where play started (t at wall), so a sample holds
+  // across ticks until play reaches the next one. A speed change carries the
+  // run time over; a move to a sample play did not show (k) restarts it there.
+  const clock = useRef<{ t: number; wall: number; speed: number; tl: Timeline; k: number } | null>(null)
 
   useEffect(() => {
-    if (!playing) return
+    if (!playing) {
+      clock.current = null
+      return
+    }
     if (!canPlay || k >= last) {
       onPlaying(false)
       return
     }
-    const id = setTimeout(() => onIndex(advance(tl, k, TICK_MS / 1000, speed)), TICK_MS)
-    return () => clearTimeout(id)
+    const now = performance.now()
+    const c = clock.current
+    if (!c || c.tl !== tl || c.k !== k) clock.current = { t: tl.times[k], wall: now, speed, tl, k }
+    else if (c.speed !== speed) clock.current = { t: playTime(tl, c.t, (now - c.wall) / 1000, c.speed), wall: now, speed, tl, k }
+    const id = setInterval(() => {
+      const run = clock.current!
+      const next = sampleAt(tl, playTime(tl, run.t, (performance.now() - run.wall) / 1000, run.speed))
+      if (next !== k) {
+        run.k = next
+        onIndex(next)
+      }
+    }, TICK_MS)
+    return () => clearInterval(id)
   }, [playing, canPlay, k, last, tl, speed, onIndex, onPlaying])
 
   const before = tl.events.filter((e) => e.index < k).at(-1)
