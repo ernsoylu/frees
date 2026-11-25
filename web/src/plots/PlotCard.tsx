@@ -87,6 +87,13 @@ function isFiniteNumber(val: unknown): val is number {
   return typeof val === 'number' && Number.isFinite(val)
 }
 
+type TraceData = { name?: string; x?: unknown[]; y?: unknown[]; customdata?: unknown[] }
+
+/** The data behind trace `index`: its full series when the drawing was decimated. */
+export function traceData(figure: PlotlyFigure | null, index: number): TraceData | undefined {
+  return figure?.source?.[index] ?? (figure?.data[index] as TraceData | undefined)
+}
+
 export function computeTraceStats(trace: unknown): TraceStatistics | null {
   const t = trace as { name?: string; x?: unknown[]; y?: unknown[] } | undefined
   if (!t || !Array.isArray(t.x) || !Array.isArray(t.y)) return null
@@ -678,7 +685,7 @@ export default function PlotCard({
   }
 
   const activeTraceIndex = cursor1 ? cursor1.traceIndex : 0
-  const activeTrace = figure?.data[activeTraceIndex] as { name?: string; x?: unknown[]; y?: unknown[]; customdata?: unknown[] } | undefined
+  const activeTrace = traceData(figure, activeTraceIndex)
   const activeStats = useMemo(() => computeTraceStats(activeTrace), [activeTrace])
 
   // Overlay persistent cursors on the figure layout

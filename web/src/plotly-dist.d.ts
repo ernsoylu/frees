@@ -112,6 +112,9 @@ declare module 'plotly.js/lib/core' {
   export interface PlotlyFigure {
     data: PlotlyTrace[]
     layout: PlotlyLayout
+    /** App-side, never drawn: the full series of each trace the drawing
+     *  decimated, by trace index, for statistics and the data table. */
+    source?: Record<number, { name?: string; x: unknown[]; y: unknown[]; customdata?: unknown[] }>
   }
 
   export interface PlotlyImageOptions {
@@ -142,6 +145,10 @@ declare module 'plotly.js/lib/core' {
 }
 
 declare module 'plotly.js/lib/bar' {
+  const traceModule: unknown
+  export default traceModule
+}
+declare module 'plotly.js/lib/box' {
   const traceModule: unknown
   export default traceModule
 }
