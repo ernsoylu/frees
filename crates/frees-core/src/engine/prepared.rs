@@ -464,6 +464,7 @@ impl PreparedDocument {
             base: None,
             session: None,
             watches: watches.to_vec(),
+            units: BTreeMap::new(),
         });
         let solved = self.solve_with_pins(&[], None);
         let session = self.live.take().and_then(|c| c.session);
@@ -516,6 +517,7 @@ impl PreparedDocument {
             base: None,
             session: None,
             watches: Vec::new(),
+            units: BTreeMap::new(),
         });
         let solved = self.solve_with_pins(pins, None);
         let base = self.live.take().and_then(|c| c.base);
@@ -546,6 +548,16 @@ impl PreparedDocument {
                 ctx.parametric = parametric;
                 ctx
             };
+            let (_, unit_report) = unit_check(
+                &[],
+                &self.doc.dynamics,
+                &self.overrides,
+                &self.component_member_units,
+                &self.doc.defs,
+            );
+            if let Some(live) = self.live.as_mut() {
+                live.units = unit_report.inferred.clone();
+            }
             let ode_tables = solve_dynamic_systems(
                 &self.doc,
                 &Scope::default(),
@@ -555,13 +567,6 @@ impl PreparedDocument {
                 None,
                 self.live.as_mut(),
             )?;
-            let (_, unit_report) = unit_check(
-                &[],
-                &self.doc.dynamics,
-                &self.overrides,
-                &self.component_member_units,
-                &self.doc.defs,
-            );
             return Ok(Solution {
                 registered_calls: self.doc.registered_calls.clone(),
                 values: BTreeMap::new(),
@@ -833,6 +838,10 @@ impl PreparedDocument {
 
         let mut inferred_units = prep.unit_report.inferred.clone();
         inferred_units.extend(prep.declared_units.clone());
+        let live = live.map(|c| {
+            c.units = inferred_units.clone();
+            c
+        });
 
         let ode_tables = solve_dynamic_systems(
             doc,

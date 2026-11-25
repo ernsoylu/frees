@@ -108,7 +108,10 @@ impl Watch {
     /// Parse `column > value` or `column < value` against the block's columns.
     /// The column is written as a variable (`body.port.T`) and matched without
     /// case; the value is a literal, its unit converted to SI as in a document.
-    pub fn parse(text: &str, columns: &[String]) -> Result<Watch> {
+    /// A unit must measure what the column measures (`units`, per column, as
+    /// the block's table states them); a column with no known unit takes any,
+    /// and a bare number is SI.
+    pub fn parse(text: &str, columns: &[String], units: &[&str]) -> Result<Watch> {
         let text = text.trim();
         let fail = |why: String| {
             FreesError::solver(format!("Live mode: the pause condition `{text}` {why}"))
@@ -131,9 +134,20 @@ impl Watch {
                     "names `{left}`, which is not a column of the block's table."
                 ))
             })?;
-        let threshold = literal(right).ok_or_else(|| {
+        let (threshold, unit) = literal(right).ok_or_else(|| {
             fail(format!("compares with `{right}`; the right side must be a number, with a known unit if it has one."))
         })?;
+        let measures = units.get(column).copied().unwrap_or("");
+        if let (Some(unit), Ok(col)) = (
+            unit,
+            crate::units::UnitRegistry::parse_with_offset(measures),
+        ) {
+            if !measures.is_empty() && !unit.quantity().same_dimensions_as(&col.quantity()) {
+                return Err(fail(format!(
+                    "compares `{left}`, which measures [{measures}], with `{right}`, a different dimension."
+                )));
+            }
+        }
         Ok(Watch {
             name: text.to_string(),
             column,
@@ -153,9 +167,9 @@ impl Watch {
     }
 }
 
-/// A number literal, its unit converted to SI; `None` for anything else, an
-/// unknown unit included.
-fn literal(src: &str) -> Option<f64> {
+/// A number literal, its unit converted to SI, and that unit; `None` for
+/// anything else, an unknown unit included.
+fn literal(src: &str) -> Option<(f64, Option<crate::units::OffsetQuantity>)> {
     use crate::ast::Expr;
     let tokens = crate::lexer::tokenize(src).ok()?;
     let mut cursor = crate::parser::Cursor::new(&tokens, src);
@@ -170,19 +184,19 @@ fn literal(src: &str) -> Option<f64> {
     };
     // The parser keeps an unknown unit's raw value (a document only warns),
     // which a pause threshold must not do.
-    let unit_known = match (src.find('['), src.rfind(']')) {
+    let unit = match (src.find('['), src.rfind(']')) {
         (Some(a), Some(b)) if a < b => {
-            crate::units::UnitRegistry::parse_with_offset(src[a + 1..b].trim()).is_ok()
+            Some(crate::units::UnitRegistry::parse_with_offset(src[a + 1..b].trim()).ok()?)
         }
-        (None, None) => true,
-        _ => false,
+        (None, None) => None,
+        _ => return None,
     };
     match expr {
         Expr::Num {
             value,
             is_imaginary: false,
             ..
-        } if unit_known => Some(if negate { -value } else { value }),
+        } => Some((if negate { -value } else { value }, unit)),
         _ => None,
     }
 }
