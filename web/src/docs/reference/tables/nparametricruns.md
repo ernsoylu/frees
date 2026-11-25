@@ -16,12 +16,13 @@ Total number of configured parametric runs
 ## Syntax
 
 ```
-NParametricRuns()
+NParametricRuns(0)
 ```
 
 ## Description
 
-Total number of configured parametric runs
+Total number of configured parametric runs. The argument is a placeholder and is ignored: a call needs at least
+one argument, so `NParametricRuns()` is refused with "expected an expression".
 
 
 ## Mathematical Formulation

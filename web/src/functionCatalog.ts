@@ -230,8 +230,8 @@ export const FUNCTION_CATEGORIES: FunctionCategory[] = [
     category: 'Table Accessors',
     items: [
       { label: 'TableValue', snippet: 'TableValue($0, col)', description: 'Value of a cell in the current Parametric Table by row and column.', usage: 'v = TableValue(run#, 2)' },
-      { label: 'TableRun#', snippet: 'TableRun#()', description: 'Current parametric run index (1-based).', usage: 'i = TableRun#()' },
-      { label: 'NParametricRuns', snippet: 'NParametricRuns()', description: 'Total number of parametric runs in the active Parametric Table.', usage: 'n = NParametricRuns()' },
+      { label: 'TableRun#', snippet: 'TableRun#(0)', description: 'Current parametric run index (1-based). The 0 is a placeholder argument.', usage: 'i = TableRun#(0)' },
+      { label: 'NParametricRuns', snippet: 'NParametricRuns(0)', description: 'Total number of parametric runs in the active Parametric Table. The 0 is a placeholder argument.', usage: 'n = NParametricRuns(0)' },
       { label: 'Table Sum', snippet: "TableSum('$0')", description: 'Sum of all values in a named Parametric Table column.', usage: "S = TableSum('Q_dot')" },
       { label: 'Table Avg', snippet: "TableAvg('$0')", description: 'Arithmetic mean of all values in a named column.', usage: "mu = TableAvg('T_out')" },
       { label: 'Table Min', snippet: "TableMin('$0')", description: 'Minimum value across all runs in a named column.', usage: "lo = TableMin('P')" },

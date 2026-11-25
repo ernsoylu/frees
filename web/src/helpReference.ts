@@ -291,8 +291,8 @@ export const TABLE_FUNCTIONS: FuncEntry[] = [
 
 export const PARAMETRIC_ACCESSORS: FuncEntry[] = [
   { name: 'TableValue(run, col)', desc: 'A cell in the parametric table' },
-  { name: 'TableRun#()', desc: 'Current run index (1-based)' },
-  { name: 'NParametricRuns()', desc: 'Total configured runs' },
+  { name: 'TableRun#(0)', desc: 'Current run index (1-based); the 0 is a placeholder' },
+  { name: 'NParametricRuns(0)', desc: 'Total configured runs; the 0 is a placeholder' },
   { name: "TableSum('col')", desc: 'Sum of a column' },
   { name: "TableAvg('col')", desc: 'Average of a column' },
   { name: "TableMin('col')", desc: 'Minimum of a column' },
