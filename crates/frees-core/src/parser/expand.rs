@@ -164,6 +164,38 @@ fn parse_err(message: impl Into<String>) -> FreesError {
     FreesError::parse(message)
 }
 
+/// A FOR loop's iterations, `(first, step, count)` (FX3a). Both bounds must
+/// be integers, to rounding noise (`0.1 * 30` counts as 3); the step is 1
+/// unless written, and a range the step points away from runs zero times, so
+/// `FOR i = 3 TO 1` is empty and a descending loop is written `3 : -1 : 1`.
+/// Every FOR (equations, `DYNAMIC` bodies, function bodies) counts here.
+pub(crate) fn for_range(
+    start: f64,
+    end: f64,
+    step: Option<f64>,
+) -> std::result::Result<(i64, i64, u64), String> {
+    fn bound(v: f64, what: &str) -> std::result::Result<i64, String> {
+        let r = libm::round(v);
+        if v.is_finite() && (v - r).abs() <= 1e-9 * r.abs().max(1.0) {
+            Ok(r as i64)
+        } else {
+            Err(format!("FOR range {what} must be an integer, got {v}"))
+        }
+    }
+    let first = bound(start, "start")?;
+    let last = bound(end, "end")?;
+    let step = match step {
+        None => 1,
+        Some(v) if v.is_finite() && v != 0.0 && v.fract() == 0.0 => v as i64,
+        Some(_) => return Err("FOR range step must be a finite nonzero integer".into()),
+    };
+    if (step > 0 && last < first) || (step < 0 && last > first) {
+        return Ok((first, step, 0));
+    }
+    let count = (last as i128 - first as i128) / step as i128 + 1;
+    Ok((first, step, count as u64))
+}
+
 /// `Math.round` semantics: half-up (not half-away-from-zero), NaN → 0.
 /// `libm` for wasm/native bit determinism, per the port convention.
 fn java_round(v: f64) -> i64 {
@@ -483,49 +515,24 @@ impl Flattener<'_> {
     ) -> Result<()> {
         let start_val = self.eval_index_expr(&self.expand_expr(start, loop_vars)?, loop_vars)?;
         let end_val = self.eval_index_expr(&self.expand_expr(end, loop_vars)?, loop_vars)?;
-        let start_int = java_round(start_val);
-        let end_int = java_round(end_val);
-        let span = (end_int as i128 - start_int as i128).abs() + 1;
-        if span > MAX_RANGE_SPAN {
+        let step_val = match step {
+            Some(expr) => {
+                Some(self.eval_index_expr(&self.expand_expr(expr, loop_vars)?, loop_vars)?)
+            }
+            None => None,
+        };
+        let (first, step, count) = for_range(start_val, end_val, step_val).map_err(parse_err)?;
+        if i128::from(count) > MAX_RANGE_SPAN {
             return Err(parse_err(format!(
-                "FOR loop range is too large ({span} iterations; limit {MAX_RANGE_SPAN}). \
+                "FOR loop range is too large ({count} iterations; limit {MAX_RANGE_SPAN}). \
                  Reduce the loop bounds."
             )));
         }
-        let step: i64 = match step {
-            None => {
-                if start_int <= end_int {
-                    1
-                } else {
-                    -1
-                }
-            }
-            Some(expr) => {
-                let value = self.eval_index_expr(&self.expand_expr(expr, loop_vars)?, loop_vars)?;
-                if !value.is_finite() || value == 0.0 || value.fract() != 0.0 {
-                    return Err(parse_err("FOR range step must be a finite nonzero integer"));
-                }
-                value as i64
-            }
-        };
-        if (step > 0 && start_int > end_int) || (step < 0 && start_int < end_int) {
-            return Ok(());
-        }
         let var_name = var_name.to_ascii_lowercase();
-        let mut i = start_int;
-        loop {
-            let done = if start_int <= end_int {
-                i > end_int
-            } else {
-                i < end_int
-            };
-            if done {
-                break;
-            }
+        for k in 0..count as i64 {
             let mut new_loop_vars = loop_vars.clone();
-            new_loop_vars.insert(var_name.clone(), i as f64);
+            new_loop_vars.insert(var_name.clone(), (first + k * step) as f64);
             self.flatten(body, &new_loop_vars)?;
-            i += step;
         }
         Ok(())
     }
@@ -4682,7 +4689,9 @@ mod tests {
 
     #[test]
     fn for_loop_iterates_descending_bounds() {
-        let eqs = expand("FOR i = 3 TO 1\n  x[i] = i\nEND");
+        // FX3a: a reversed range is empty; counting down takes a step.
+        assert!(expand("FOR i = 3 TO 1\n  x[i] = i\nEND").is_empty());
+        let eqs = expand("FOR i = 3 : -1 : 1\n  x[i] = i\nEND");
         assert_eq!(
             sides(&eqs),
             vec![

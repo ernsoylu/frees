@@ -645,47 +645,25 @@ fn execute_one(
             end,
             body,
         } => {
-            let start_val = eval_proc_expr(start, locals, defs)?;
-            let end_val = eval_proc_expr(end, locals, defs)?;
-            // `(int) Math.round(...)`: floor(x + 0.5); NaN → 0, ±inf saturate.
-            let start_int = libm::floor(start_val + 0.5) as i64;
-            let end_int = libm::floor(end_val + 0.5) as i64;
-            let step: i64 = match step {
-                None => {
-                    if start_int <= end_int {
-                        1
-                    } else {
-                        -1
-                    }
-                }
-                Some(expr) => {
-                    let value = eval_proc_expr(expr, locals, defs)?;
-                    if !value.is_finite() || value == 0.0 || value.fract() != 0.0 {
-                        return Err(FreesError::evaluation(
-                            "FOR range step must be a finite nonzero integer",
-                        ));
-                    }
-                    value as i64
-                }
+            let step = match step {
+                Some(expr) => Some(eval_proc_expr(expr, locals, defs)?),
+                None => None,
             };
-            if (step > 0 && start_int > end_int) || (step < 0 && start_int < end_int) {
-                return Ok(());
+            let (first, step, count) = crate::parser::expand::for_range(
+                eval_proc_expr(start, locals, defs)?,
+                eval_proc_expr(end, locals, defs)?,
+                step,
+            )
+            .map_err(FreesError::evaluation)?;
+            if count > MAX_ITERATIONS {
+                // Deviation: Java has no FOR ceiling (see module docs).
+                return Err(FreesError::evaluation(format!(
+                    "FOR loop exceeded {MAX_ITERATIONS} iterations"
+                )));
             }
-            // i128 keeps `end + step` from overflowing at the i64 rim.
-            let sentinel = end_int as i128 + step as i128;
-            let mut i = start_int as i128;
-            let mut iterations: u64 = 0;
-            while i != sentinel {
-                iterations += 1;
-                if iterations > MAX_ITERATIONS {
-                    // Deviation: Java has no FOR ceiling (see module docs).
-                    return Err(FreesError::evaluation(format!(
-                        "FOR loop exceeded {MAX_ITERATIONS} iterations"
-                    )));
-                }
-                locals.insert(var_name.clone(), i as f64);
+            for k in 0..count as i64 {
+                locals.insert(var_name.clone(), (first + k * step) as f64);
                 execute_body(body, locals, defs)?;
-                i += i128::from(step);
             }
         }
 
@@ -1448,9 +1426,9 @@ mod tests {
 
     #[test]
     fn a_descending_for_loop_runs_inclusive() {
-        // Java: step = -1 when start > end; `FOR i = 3 TO 1` runs 3, 2, 1.
+        // FX3a: `FOR i = 3 TO 1` is empty; a descending loop takes a step.
         let defs =
-            defs_of("FUNCTION CountDown(n)\n  s := 0\n  FOR i = n TO 1\n    s = s + i\n  END\n  CountDown := s\nEND");
+            defs_of("FUNCTION CountDown(n)\n  s := 0\n  FOR i = n : -1 : 1\n    s = s + i\n  END\n  CountDown := s\nEND");
         let f = defs.function("countdown").unwrap();
         assert_eq!(
             call_function(f, &[3.0], &defs, &empty_scope()).unwrap(),

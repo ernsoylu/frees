@@ -1514,33 +1514,19 @@ impl<'a> DynamicSolver<'a> {
         else {
             return Ok(());
         };
-        let lo = java_round(self.eval_index(start, loop_vars)?);
-        let hi = java_round(self.eval_index(end, loop_vars)?);
-        let step: i64 = match step {
-            None => {
-                if lo <= hi {
-                    1
-                } else {
-                    -1
-                }
-            }
-            Some(expr) => {
-                let value = self.eval_index(expr, loop_vars)?;
-                if !value.is_finite() || value == 0.0 || value.fract() != 0.0 {
-                    return Err(FreesError::solver(
-                        "FOR range step must be a finite nonzero integer",
-                    ));
-                }
-                value as i64
-            }
+        let step = match step {
+            Some(expr) => Some(self.eval_index(expr, loop_vars)?),
+            None => None,
         };
-        if (step > 0 && lo > hi) || (step < 0 && lo < hi) {
-            return Ok(());
-        }
-        let mut i = lo;
-        while if lo <= hi { i <= hi } else { i >= hi } {
+        let (first, step, count) = crate::parser::expand::for_range(
+            self.eval_index(start, loop_vars)?,
+            self.eval_index(end, loop_vars)?,
+            step,
+        )
+        .map_err(FreesError::solver)?;
+        for k in 0..count as i64 {
             let mut lv = loop_vars.clone();
-            lv.insert(var_name.to_ascii_lowercase(), i as f64);
+            lv.insert(var_name.to_ascii_lowercase(), (first + k * step) as f64);
             for st in body {
                 match st {
                     Statement::Eq(eq) => out.push(Equation::new(
@@ -1559,7 +1545,6 @@ impl<'a> DynamicSolver<'a> {
                     self.system.name
                 )));
             }
-            i += step;
         }
         Ok(())
     }

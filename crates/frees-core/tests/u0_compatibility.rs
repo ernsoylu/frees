@@ -18,9 +18,17 @@ fn function_value(source: &str, name: &str, args: &[f64], scope: &Scope) -> f64 
 }
 
 #[test]
-fn descending_for_is_inclusive_and_implicit_reverse() {
+fn descending_for_is_inclusive_and_takes_a_step() {
+    // §12: a range whose step points away from its stop is empty (FX3a), so
+    // the Java implicit reverse is gone; counting down writes the step.
     let source =
         "FUNCTION total(n)\n  total := 0\n  FOR i = n TO 1\n    total = total + i\n  END\nEND";
+    assert_eq!(
+        function_value(source, "total", &[3.0], &Scope::default()),
+        0.0
+    );
+    let source =
+        "FUNCTION total(n)\n  total := 0\n  FOR i = n : -1 : 1\n    total = total + i\n  END\nEND";
     assert_eq!(
         function_value(source, "total", &[3.0], &Scope::default()),
         6.0
