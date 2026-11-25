@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import type { OdeTableDto } from './api'
-import { advance, playbackVariables, timeLabel, timelineOf, variablesAt } from './playback'
+import { PLAY_SECONDS, playbackVariables, playTime, sampleAt, timeLabel, timelineOf, variablesAt } from './playback'
 
 const table: OdeTableDto = {
   name: 'Tank',
@@ -46,11 +46,26 @@ it('reads one recorded sample, leaving a missing value out instead of showing th
   ])
 })
 
-it('advances by whole samples at the chosen speed and stops at the end', () => {
+it('holds a sample until play reaches the next one and stops at the end', () => {
   const tl = timelineOf(table)!
   // 4 s of run in 10 s of wall time at 1×: 0.1 s of wall time is less than one sample.
-  expect(advance(tl, 0, 0.1, 1)).toBe(1)
-  expect(advance(tl, 0, 5, 1)).toBe(2)
-  expect(advance(tl, 0, 5, 2)).toBe(4)
-  expect(advance(tl, 4, 1, 4)).toBe(4)
+  expect(sampleAt(tl, playTime(tl, 0, 0.1, 1))).toBe(0)
+  expect(sampleAt(tl, playTime(tl, 0, 5, 1))).toBe(2)
+  expect(sampleAt(tl, playTime(tl, 0, 5, 2))).toBe(4)
+  expect(sampleAt(tl, playTime(tl, 4, 1, 4))).toBe(4)
+})
+
+// U07: a whole run plays in PLAY_SECONDS / speed of wall time, however coarse,
+// dense or irregular its grid. Ticks of 100 ms, as the playback bar's.
+it.each([
+  ['sparse', Array.from({ length: 11 }, (_, i) => i * 100)],
+  ['dense', Array.from({ length: 1001 }, (_, i) => i)],
+  ['irregular', [0, 1, 2, 3, 500, 501, 990, 1000]],
+])('plays a %s grid in PLAY_SECONDS / speed', (_, times) => {
+  const tl = { table: 'ode', timeVar: 'time', timeUnit: 's', times, events: [], stopped: false }
+  for (const speed of [0.25, 1, 4]) {
+    let wall = 0
+    while (sampleAt(tl, playTime(tl, times[0], wall, speed)) < times.length - 1) wall += 0.1
+    expect(Math.abs(wall - PLAY_SECONDS / speed), `${speed}×`).toBeLessThan(0.1 + 1e-9)
+  }
 })
