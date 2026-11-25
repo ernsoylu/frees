@@ -20,7 +20,7 @@ project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#
 three event goldens regenerated against closed forms, owner-approved); FX1a,
 case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
 refused (#143, owner decision); FX1b, the optimizer reads a capitalised
-decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145); FX8/E06, nonnegative regeneration loss (#146); FX8/E07, moving-boundary zones at zero wall superheat (#147); FX3g with FX8's reverse-flow policy, signed ISO 6358 flow with a linear zero-flow band and a bidirectional `TwoPhaseFlowRes` (#148); FX9/U03, raw statistics and the data table from the source series (#149); FX9/U05, the box plot registered and every offered chart type validated against the bundle (#150).
+decision's guess (#144); FX8/E04, vapour-side superheat from the dew point (#145); FX8/E06, nonnegative regeneration loss (#146); FX8/E07, moving-boundary zones at zero wall superheat (#147); FX3g with FX8's reverse-flow policy, signed ISO 6358 flow with a linear zero-flow band and a bidirectional `TwoPhaseFlowRes` (#148); FX9/U03, raw statistics and the data table from the source series (#149); FX9/U05, the box plot registered and every offered chart type validated against the bundle (#150); FX9/U06, a 3D mesh kept whatever its row order (#151); FX9/U07, playback speed on coarse trajectories (#152); FX9/U08, disconnect beside a comment, from the parser's endpoint spans (#153).
 
 ---
 
@@ -65,11 +65,6 @@ each item carries its own repro, and each fix lands with that repro as a test.
   - **Blocked on FX1f (measured 2026-11-24).** The fix delivers exactly the set superheat, where the Java goldens deliver 6.92 K (`ev-thermal-management`) and 6.77/9.77 K (`new-library-components`) for SH = 5/8 at dP = 20 kPa; both goldens and the four reference pages sharing the `aux` example move for this cause. But `multidomain_examples.md[md-hpwh]` then fails in WASM only. Its 53-equation block stalls cold on both targets, and the ladder's consistent-start rung starts 1.4e-12 apart on the two (the sweep's property calls), reaches 1e-7 after one step and 1 % after two, then converges natively in 28 iterations and stalls in WASM after 195. With `rustprop_warm` bypassed, WASM solves it, agreeing with native to 1.5e-13. Land E05 after FX1f, with `md-hpwh` as a second repro.
 
 **FX9. What the display shows must match the data.**
-- **U06. A repeated first point hides a valid 3D mesh.** The collinearity test (`figure.ts:866`) takes rows 0 and 1 as its baseline. Pick two distinct finite points first. Test: reordering valid rows keeps the mesh.
-- **U07. Playback speed does nothing on coarse trajectories.** `advance` (`playback.ts:69`) always moves at least one sample per tick, so 11 samples finish in 1 s at 0.25×, 1× and 4×.
-  - Fix: accumulate wall time from the start, and allow a sample to hold across ticks.
-  - Test: durations on sparse, dense and irregular grids.
-- **U08. Disconnect fails beside a comment.** `sourceEdit.ts:66` splits `connect(...)` on commas and compares text, so `connect(V.n, {reference} G.port, R.b)` gives no edit. Use the parser's endpoint spans.
 - **E08. A live watch ignores dimensions.** `time > 2 [kg]` pauses at 2 s (`live.rs:107`). Pass the column units into watch parsing, and refuse an incompatible dimension.
 - **Docs.** The syntax panels show `TableRun#()` and `NParametricRuns()`, which the parser refuses; the working form takes a dummy argument. Make the panels match the executable examples, or accept the empty call.
 
