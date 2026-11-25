@@ -88,5 +88,6 @@ a = 55   b = 120   c = 1   d = 0.5
 | Error | Cause | Fix |
 | --- | --- | --- |
 | `FUNCTION f never assigned a return value ('y := ...' missing)` | A branch leaves the output unassigned. | Assign the output on every path. |
+| `` `f` is already defined as a FUNCTION; … names are case-insensitive and must be unique `` | Two definitions share a name, in any case (`f` and `F`), or a FUNCTION reuses a TABLE, MODULE or PROCEDURE name. | Rename one. |
 | `SYMBOLIC declarations are not allowed inside a PROCEDURE or FUNCTION.` | `SYMBOLIC` in a body. | Move it to the top level. |
 | `FUNCTION f defines 'y' with the equation … and also assigns it elsewhere` | A body both assigns `y := …` and defines it with an equation `y = …`. | An equation defines a variable once; use `:=` for every assignment to it. |

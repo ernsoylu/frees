@@ -59,13 +59,11 @@
 //!
 //! # Definition name collisions
 //!
-//! Java stores every definition in one `LinkedHashMap` keyed by the lowercase
-//! name (`AstBuilder.buildProgram`), so a later definition of a name replaces
-//! an earlier one **across kinds** (a `MODULE f` shadows an earlier
-//! `FUNCTION f`). [`record_def`] mirrors that by evicting the name from all
-//! four [`Definitions`] lists before inserting. (Java's `LinkedHashMap.put`
-//! keeps the original insertion *slot* while this port re-appends; nothing
-//! consumes the relative order of defs, only name lookups.)
+//! Function, procedure, module and table names share one case-insensitive
+//! namespace. Java let a later definition replace an earlier one silently
+//! (`AstBuilder.buildProgram`'s `LinkedHashMap`), so `FUNCTION f` then
+//! `FUNCTION F` kept the second. [`record_def`] refuses the second instead
+//! (FX3b), pointing at it, as a repeated variable definition is refused.
 //!
 //! # Disambiguation
 //!
@@ -306,7 +304,7 @@ impl<'a> Parser<'a> {
                 doc.definition_spans.0.push((parsed_def_name(&def), span));
                 match def {
                     ParsedDef::Component(component) => doc.components.defs.push(component),
-                    other => record_def(&mut doc.defs, other),
+                    other => record_def(&mut doc.defs, other, span)?,
                 }
             }
             TokenKind::Procedure => {
@@ -314,18 +312,20 @@ impl<'a> Parser<'a> {
                 let def = self.procedure_def()?;
                 let span = self.span_since(start);
                 doc.definition_spans.0.push((def.name.clone(), span));
-                record_def(&mut doc.defs, ParsedDef::Procedure(def));
+                record_def(&mut doc.defs, ParsedDef::Procedure(def), span)?;
             }
             TokenKind::Module => {
                 let start = self.c.pos();
                 let def = self.module_def()?;
                 let span = self.span_since(start);
                 doc.definition_spans.0.push((def.name.clone(), span));
-                record_def(&mut doc.defs, ParsedDef::Module(def));
+                record_def(&mut doc.defs, ParsedDef::Module(def), span)?;
             }
             TokenKind::Table => {
+                let start = self.c.pos();
                 let def = self.table_def()?;
-                record_def(&mut doc.defs, ParsedDef::Table(def));
+                let span = self.span_since(start);
+                record_def(&mut doc.defs, ParsedDef::Table(def), span)?;
             }
             TokenKind::Parametric => {
                 let table = self.parametric_def()?;
@@ -2980,16 +2980,30 @@ fn parsed_def_name(def: &ParsedDef) -> String {
     }
 }
 
-/// Insert a definition, evicting any earlier definition of the same name from
-/// **all four** kinds first — the Java `LinkedHashMap<String, ProcDef>` keyed
-/// by lowercase name (`AstBuilder.buildProgram`) makes a later definition
-/// replace an earlier one across kinds. See the module docs.
-fn record_def(defs: &mut Definitions, def: ParsedDef) {
+/// Insert a definition, refusing a name any of the four kinds already holds
+/// (FX3b; see the module docs). `span` is the second definition's.
+fn record_def(defs: &mut Definitions, def: ParsedDef, span: Span) -> Result<()> {
     let name = parsed_def_name(&def);
-    defs.functions.retain(|d| d.name != name);
-    defs.procedures.retain(|d| d.name != name);
-    defs.modules.retain(|d| d.name != name);
-    defs.tables.retain(|d| d.name != name);
+    let earlier = if defs.function(&name).is_some() {
+        Some("FUNCTION")
+    } else if defs.procedure(&name).is_some() {
+        Some("PROCEDURE")
+    } else if defs.module(&name).is_some() {
+        Some("MODULE")
+    } else if defs.table(&name).is_some() {
+        Some("TABLE")
+    } else {
+        None
+    };
+    if let Some(kind) = earlier {
+        return Err(FreesError::parse_at(
+            format!(
+                "`{name}` is already defined as a {kind}; function, procedure, module \
+                 and table names are case-insensitive and must be unique"
+            ),
+            span,
+        ));
+    }
     match def {
         ParsedDef::Function(d) => defs.functions.push(d),
         ParsedDef::Procedure(d) => defs.procedures.push(d),
@@ -2997,6 +3011,7 @@ fn record_def(defs: &mut Definitions, def: ParsedDef) {
         ParsedDef::Module(d) => defs.modules.push(d),
         ParsedDef::Table(d) => defs.tables.push(d),
     }
+    Ok(())
 }
 
 /// The SI display name of an optional raw unit annotation, or `None` when the
@@ -4700,15 +4715,18 @@ END
     }
 
     #[test]
-    fn a_later_definition_replaces_an_earlier_one_across_kinds() {
-        // Java keys all defs in one map: MODULE f shadows FUNCTION f.
-        let doc = ok_real(
-            "FUNCTION f(x)\n  f := x\nEND\nMODULE f(a : b)\n  b = a\nEND\nFUNCTION g(x)\n  g := x\nEND\nFUNCTION g(y)\n  g := y + 1\nEND",
+    fn a_repeated_definition_name_is_refused_across_kinds_and_case() {
+        // FX3b: Java let the later definition win silently.
+        let message = err_real("FUNCTION f(x)\n  f := x\nEND\nFUNCTION F(x)\n  F := 2*x\nEND");
+        assert!(
+            message.contains("`f` is already defined as a FUNCTION"),
+            "{message}"
         );
-        assert!(doc.defs.function("f").is_none(), "shadowed by the MODULE");
-        assert!(doc.defs.module("f").is_some());
-        assert_eq!(doc.defs.functions.len(), 1, "g replaced in place");
-        assert_eq!(doc.defs.function("g").unwrap().params, vec!["y"]);
+        let message = err_real("FUNCTION f(x)\n  f := x\nEND\nMODULE f(a : b)\n  b = a\nEND");
+        assert!(
+            message.contains("`f` is already defined as a FUNCTION"),
+            "{message}"
+        );
     }
 
     #[test]
