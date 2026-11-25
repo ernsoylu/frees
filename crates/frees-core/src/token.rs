@@ -56,6 +56,9 @@ pub enum TokenKind {
     /// Identifier in its **original case**, including any trailing `$` or `#`.
     /// AST constructors lowercase it; diagnostics want the user's spelling.
     Ident(String),
+    /// A non-ASCII unit symbol (`Ω`, the ohm sign), valid only inside a unit
+    /// bracket: the engine prints `[Ω]`, so a reported unit pastes back (FX3f).
+    UnitSymbol(String),
 
     // ── Operators ───────────────────────────────────────────────────────────
     /// `=`
@@ -220,6 +223,7 @@ impl TokenKind {
             TokenKind::ImagNumber { text, .. } => format!("imaginary number `{text}`"),
             TokenKind::StringLiteral(s) => format!("string `'{s}'`"),
             TokenKind::Ident(name) => format!("identifier `{name}`"),
+            TokenKind::UnitSymbol(symbol) => format!("unit symbol `{symbol}`"),
             TokenKind::Newline => "end of line".to_string(),
             TokenKind::Eof => "end of input".to_string(),
             other => format!("`{}`", other.spelling()),
@@ -298,6 +302,7 @@ impl TokenKind {
             TokenKind::ImagNumber { .. } => "<imaginary>",
             TokenKind::StringLiteral(_) => "<string>",
             TokenKind::Ident(_) => "<identifier>",
+            TokenKind::UnitSymbol(_) => "<unit symbol>",
         }
     }
 }

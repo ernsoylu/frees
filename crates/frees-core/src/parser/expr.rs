@@ -246,6 +246,7 @@ fn is_unit_content(kind: &TokenKind) -> bool {
     matches!(
         kind,
         TokenKind::Ident(_)
+            | TokenKind::UnitSymbol(_)
             | TokenKind::Number { .. }
             | TokenKind::Times
             | TokenKind::Div
