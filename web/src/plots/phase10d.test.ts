@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildFigure, computeTraceStats, formatPlotValue } from './PlotCard'
+import { buildFigure, computeTraceStats, formatPlotValue, traceData } from './PlotCard'
 import { buildXYFigure, cleanPlotlyFigure, pruneUndefined, type XYSeries } from './figure'
 import { resolvePlotSource } from './sources'
 import { defaultFormat, newPlotSpec, PlotSpec } from './types'
@@ -361,5 +361,24 @@ describe('Phase 10D: Plot inspection, statistics, and cursor measurement', () =>
       expect('title' in figClean.layout).toBe(false)
     })
   })
-})
 
+  // U03: the card and the accessible table read the data, not the drawing.
+  describe('raw statistics on both sides of the decimation threshold', () => {
+    it.each([1500, 5000])('counts, sums and averages all %i samples', (n) => {
+      // Every tenth sample spikes to 11, the rest are 1: the mean is exactly 2.
+      const x = Array.from({ length: n }, (_, i) => i)
+      const y = x.map((i) => (i % 10 === 0 ? 11 : 1))
+      const fig = buildXYFigure([{ name: 'p', x, y }], defaultFormat('xy'), 'X', 'Y', 'dark', { chartType: 'line', xVar: 'x', yVars: ['p'] })
+      const drawn = (fig.data[0] as { x: unknown[] }).x.length
+      if (n > 2000) expect(drawn).toBeLessThan(n)
+      else expect(drawn).toBe(n)
+      const data = traceData(fig, 0)
+      expect(data?.x).toHaveLength(n)
+      const stats = computeTraceStats(data)!
+      expect(stats.count).toBe(n)
+      expect(stats.valid).toBe(n)
+      expect(stats.sumY).toBe(2 * n)
+      expect(stats.meanY).toBe(2)
+    })
+  })
+})
