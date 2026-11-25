@@ -20,7 +20,7 @@ Interpolate1('t', x)
 
 ## Description
 
-Cubic-spline interpolation of table t at x
+Cubic-spline interpolation of table t at x. On a table declared `XLOG` or `YLOG` the spline is fitted in log10 space on that axis, the same space `Interpolate` uses, so a power law tabulated on log axes is followed exactly.
 
 ## Mathematical Formulation
 

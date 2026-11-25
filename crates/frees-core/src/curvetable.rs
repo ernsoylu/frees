@@ -234,9 +234,9 @@ pub fn differentiate(
 
 /// Cubic-spline interpolation of the table's first curve (1-D). Falls back to
 /// piecewise-linear when there are fewer than three points. Arguments outside
-/// the tabulated range clamp to the nearest edge, matching [`lookup`].
-/// Note the Java ignores the `XLOG`/`YLOG` flags on this path, and so does
-/// this port.
+/// the tabulated range clamp to the nearest edge, matching [`lookup`]. The
+/// spline runs in the same log10 space as [`lookup`] per the `XLOG`/`YLOG`
+/// flags (FX3c; the Java ignored them here, so the two rules disagreed).
 ///
 /// Port of `CurveInterpolator.cubicEvaluate`.
 pub fn cubic_lookup(table: &FunctionTableDef, x: f64) -> Result<f64> {
@@ -256,8 +256,10 @@ pub fn cubic_lookup(table: &FunctionTableDef, x: f64) -> Result<f64> {
     if x >= xs[xs.len() - 1] {
         return Ok(ys[ys.len() - 1]);
     }
-    let spline = natural_spline(xs, ys, &table.name)?;
-    Ok(spline.value_at(x))
+    let sx: Vec<f64> = xs.iter().map(|&v| scale(v, table.x_log)).collect();
+    let sy: Vec<f64> = ys.iter().map(|&v| scale(v, table.y_log)).collect();
+    let spline = natural_spline(&sx, &sy, &table.name)?;
+    Ok(unscale(spline.value_at(scale(x, table.x_log)), table.y_log))
 }
 
 /// Port of the private `CurveInterpolator.interpolate`: piecewise-linear along
