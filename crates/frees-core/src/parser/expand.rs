@@ -164,6 +164,12 @@ fn parse_err(message: impl Into<String>) -> FreesError {
     FreesError::parse(message)
 }
 
+/// A size limit (FX4). The document is well formed, so this is not a syntax
+/// error; it is raised as an evaluation failure and reported as the limit.
+fn limit_err(message: impl Into<String>) -> FreesError {
+    FreesError::evaluation(message)
+}
+
 /// A FOR loop's iterations, `(first, step, count)` (FX3a). Both bounds must
 /// be integers, to rounding noise (`0.1 * 30` counts as 3); the step is 1
 /// unless written, and a range the step points away from runs zero times, so
@@ -523,7 +529,7 @@ impl Flattener<'_> {
         };
         let (first, step, count) = for_range(start_val, end_val, step_val).map_err(parse_err)?;
         if i128::from(count) > MAX_RANGE_SPAN {
-            return Err(parse_err(format!(
+            return Err(limit_err(format!(
                 "FOR loop range is too large ({count} iterations; limit {MAX_RANGE_SPAN}). \
                  Reduce the loop bounds."
             )));
@@ -3133,7 +3139,7 @@ impl Flattener<'_> {
             return Err(parse_err(format!("{function} dimensions must be >= 1")));
         }
         if (rows as i128) * (cols as i128) > MAX_RANGE_SPAN {
-            return Err(parse_err(format!(
+            return Err(limit_err(format!(
                 "{function} matrix is too large (limit {MAX_RANGE_SPAN})."
             )));
         }
@@ -3261,7 +3267,7 @@ impl Flattener<'_> {
         let num_rows = (r_end as i128 - r_start as i128).abs() + 1;
         let num_cols = (c_end as i128 - c_start as i128).abs() + 1;
         if num_rows * num_cols > MAX_RANGE_SPAN {
-            return Err(parse_err(format!(
+            return Err(limit_err(format!(
                 "Matrix '{name}[...]' is too large ({} elements; limit {MAX_RANGE_SPAN}). \
                  Reduce the index ranges.",
                 num_rows * num_cols
@@ -3308,7 +3314,7 @@ impl Flattener<'_> {
         let v_end = java_round(self.eval_index_expr(end, loop_vars)?);
         let span = (v_end as i128 - v_start as i128).abs() + 1;
         if span > MAX_RANGE_SPAN {
-            return Err(parse_err(format!(
+            return Err(limit_err(format!(
                 "Vector '{name}[...]' is too large ({span} elements; limit {MAX_RANGE_SPAN}). \
                  Reduce the index range."
             )));
@@ -3472,7 +3478,7 @@ impl Flattener<'_> {
         for dim in &index_possibilities {
             total *= dim.len() as i128;
             if total > MAX_RANGE_SPAN {
-                return Err(parse_err(format!(
+                return Err(limit_err(format!(
                     "Array expansion of '{name}[...]' is too large ({total} elements; \
                      limit {MAX_RANGE_SPAN}). Reduce the index ranges."
                 )));
@@ -3516,7 +3522,7 @@ impl Flattener<'_> {
         let end = java_round(self.eval_index_expr(end_expr, loop_vars)?);
         let count = (end as i128 - start as i128).abs() + 1;
         if count > MAX_RANGE_SPAN {
-            return Err(parse_err(format!(
+            return Err(limit_err(format!(
                 "Array range is too large ({count} elements; limit {MAX_RANGE_SPAN}). \
                  Reduce the index range."
             )));
@@ -3536,8 +3542,13 @@ impl Flattener<'_> {
         for (name, value) in loop_vars {
             combined.insert(name.clone(), *value);
         }
-        eval::eval_with(e, &combined, EvalContext::with_defs(self.defs))
-            .map_err(|_| parse_err("Array index expression cannot be evaluated to a constant"))
+        eval::eval_with(e, &combined, EvalContext::with_defs(self.defs)).map_err(|err| {
+            limit_err(format!(
+                "An index or bound must be a number known before solving; this one \
+                 cannot be evaluated: {}",
+                err.to_string_message()
+            ))
+        })
     }
 
     /// Evaluate a compile-time integer. Port of `EquationParser.constIndex`.

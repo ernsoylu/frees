@@ -4704,6 +4704,29 @@ fn solve_block(
         // than carry an unused one through every successful call.
         Err(other) => return Err(annotate(other, index, &block_equations())),
     }
+    // FX4: an explicit one-equation block (`x = f(knowns)`) cannot be helped
+    // by Newton or by guesses, so a refusal or a non-finite value at the probe
+    // is final and is reported as itself. Checked only on that failure path.
+    if n == 1 && (last_property_error.is_some() || !probe[0].is_finite()) {
+        if let Some(eq) = equations
+            .get(block.equations[0])
+            .filter(|eq| explicit_in(eq, &block.variables[0]))
+        {
+            let reason = match &last_property_error {
+                Some(message) => format!("`{}` cannot be evaluated: {message}", eq.source_text),
+                None => format!(
+                    "`{}` is not finite: a function overflowed or was evaluated outside \
+                     its valid range.",
+                    eq.source_text
+                ),
+            };
+            return Err(annotate(
+                FreesError::evaluation(reason),
+                index,
+                &block_equations(),
+            ));
+        }
+    }
 
     x.clear();
     match &slot_state {
@@ -5903,6 +5926,17 @@ fn integral_point_failure(ie: &IntegralEquation, t: f64, err: &FreesError) -> Fr
         ie.integration_var,
         err.to_string_message()
     ))
+}
+
+/// `x = f(…)` or `f(…) = x` where `f` does not mention `x`: the equation
+/// fixes `x` by evaluation alone.
+fn explicit_in(eq: &Equation, unknown: &str) -> bool {
+    match (&eq.lhs, &eq.rhs) {
+        (Expr::Var(name), other) | (other, Expr::Var(name)) if name == unknown => {
+            !other.variables().contains(unknown)
+        }
+        _ => false,
+    }
 }
 
 /// Prefix a block failure with the equations it came from, quoted verbatim.

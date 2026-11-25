@@ -2333,7 +2333,7 @@ fn named_arg(arg: &Expr) -> Option<(&str, &Expr)> {
         .and_then(|name| args.first().map(|value| (name, value)))
 }
 
-fn intrinsic_argument_index(function: &str, name: &str, count: usize) -> Option<usize> {
+pub(crate) fn intrinsic_argument_index(function: &str, name: &str, count: usize) -> Option<usize> {
     let name = name.to_ascii_lowercase();
     if let Some(index) = name
         .strip_prefix("arg")

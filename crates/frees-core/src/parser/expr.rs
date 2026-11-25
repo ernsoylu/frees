@@ -908,9 +908,11 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
 
     let property_shape = args.iter().any(|a| a.name.is_some())
         && (is_property_function(&name)
-            || args
-                .first()
-                .is_some_and(|arg| arg.name.is_none() && is_fluid_name(unquote(&arg.raw))));
+            // FX4: a known intrinsic (`sum(i, i=1, N)`) is not a fluid call.
+            || (crate::eval::lookup_intrinsic(&name.to_ascii_lowercase()).is_none()
+                && args
+                    .first()
+                    .is_some_and(|arg| arg.name.is_none() && is_fluid_name(unquote(&arg.raw)))));
     if property_shape {
         // A property call consumes only its first (positional) argument as a
         // token; the indicator values stay real expressions.
@@ -957,6 +959,29 @@ fn parse_call_atom(c: &mut Cursor<'_>, name: String) -> Result<Expr> {
             c.forget_display_name_if_new(token, mark);
         }
         return call;
+    }
+    // FX4: an intrinsic's named argument must be one it accepts, refused here
+    // rather than surfacing later as a free variable (`sum(i, i=1, N)`).
+    if crate::eval::lookup_intrinsic(&lower).is_some() {
+        let count = args.len();
+        if let Some(arg) = args.iter().find(|a| {
+            a.name
+                .as_deref()
+                .is_some_and(|n| crate::eval::intrinsic_argument_index(&lower, n, count).is_none())
+        }) {
+            let hint = if lower == "sum" || lower == "product" {
+                format!(" An indexed {lower} is written {lower}(i, 1, N, body).")
+            } else {
+                String::new()
+            };
+            return Err(FreesError::parse_at(
+                format!(
+                    "{name}(...) has no argument named `{}`.{hint}",
+                    arg.name.as_deref().unwrap_or_default()
+                ),
+                arg.span,
+            ));
+        }
     }
     Ok(Expr::call(&name, encode_call_args(args)))
 }
