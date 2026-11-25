@@ -47,8 +47,9 @@ pub fn document_span(source: &str) -> Span {
 /// A byte-oriented scanner. Every construct in the grammar is ASCII, so the
 /// scanner walks bytes and only decodes UTF-8 when it has to quote an offending
 /// character in a diagnostic. `pos` is therefore always on a char boundary:
-/// the only way to reach a non-ASCII byte is the error path, which never
-/// advances past it.
+/// the only ways to reach a non-ASCII byte are a unit symbol (`Ω`, which
+/// advances by its whole char) and the error path, which never advances past
+/// it.
 struct Lexer<'a> {
     src: &'a str,
     bytes: &'a [u8],
@@ -397,7 +398,12 @@ impl<'a> Lexer<'a> {
             b']' => (TokenKind::RBracket, 1),
             b';' => (TokenKind::Semi, 1),
             b',' => (TokenKind::Comma, 1),
-            _ => return Err(self.unexpected(start)),
+            _ => match self.src[start..].chars().next() {
+                Some(ch @ ('Ω' | '\u{2126}')) => {
+                    (TokenKind::UnitSymbol(ch.to_string()), ch.len_utf8())
+                }
+                _ => return Err(self.unexpected(start)),
+            },
         };
         self.pos = start + len;
         self.push(kind, start);

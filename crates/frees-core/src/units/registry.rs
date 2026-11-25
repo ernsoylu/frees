@@ -210,6 +210,7 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("ohm", 1.0, RESISTANCE),
     ("ohms", 1.0, RESISTANCE),
     ("kohm", 1e3, RESISTANCE),
+    ("kω", 1e3, RESISTANCE),
     // Capacitance: F = s⁴·A²·kg⁻¹·m⁻²
     ("farad", 1.0, CAPACITANCE),
     ("uf", 1e-6, CAPACITANCE),
