@@ -13,6 +13,8 @@ references: []
 
 Generates one equation per index value. At the top level each iteration adds an equation to the system; inside a function body it is an ordinary loop over `:=` assignments.
 
+Both bounds must be integers. The step is 1 unless written, and a range the step points away from runs zero times: `FOR i = 3 TO 1` generates nothing. To count down, write the step: `FOR i = 3 : -1 : 1`.
+
 ## Syntax
 
 ```
@@ -21,6 +23,10 @@ FOR i = 1 TO n
 END
 
 FOR i = 1 : n
+  …
+END
+
+FOR i = n : -1 : 1
   …
 END
 ```
@@ -54,4 +60,6 @@ Q_total = 100
 | Error | Cause | Fix |
 | --- | --- | --- |
 | ``unterminated FOR block: expected `END` `` | Missing `END`. | Close the loop. |
+| `FOR range end must be an integer, got 2.5` | A bound is not a whole number. | Round the bound, e.g. `floor(n)`. |
+| A reversed loop such as `FOR i = 3 TO 1` creates no equations | The default step is `+1`, so a descending range is empty. | Write the step: `FOR i = 3 : -1 : 1`. |
 | `CALL is not supported inside a FOR loop within a PROCEDURE or FUNCTION …` | Legacy `CALL` in a loop body. | Call the function directly. |
