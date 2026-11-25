@@ -534,6 +534,7 @@ impl PreparedDocument {
         parametric: Option<&ParametricAccessors>,
         warm_start: Option<&Scope>,
     ) -> std::result::Result<Solution, SolveFailure> {
+        let _history = crate::props::propfun::history_scope();
         if let Some(mut document) = self.with_source_pins(pinned)? {
             let result = document.solve_with_pins_and_warm(&[], parametric, warm_start);
             self.prep_count += document.prep_count;
@@ -892,6 +893,7 @@ impl PreparedDocument {
         pinned: &[(String, f64)],
         parametric: Option<&ParametricAccessors>,
     ) -> std::result::Result<Vec<Solution>, SolveFailure> {
+        let _history = crate::props::propfun::history_scope();
         if let Some(mut document) = self.with_source_pins(pinned)? {
             let result = document.solve_all_with_pins(&[], parametric);
             self.prep_count += document.prep_count;

@@ -62,7 +62,7 @@
 // obviously deliberate — same treatment as `eval.rs`, `linalg.rs`, `nasa.rs`.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 use crate::diag::{FreesError, Result};
 use crate::props::{combustion, idealgas, solids};
@@ -521,7 +521,8 @@ pub fn backend_description() -> String {
 /// is re-asked rather than served a stored `NaN` — the same value, one backend
 /// call later.
 mod cache {
-    use super::Mutex;
+    use std::cell::RefCell;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     /// One remembered call: the last one this façade answered.
     ///
@@ -543,11 +544,14 @@ mod cache {
         /// empty names would otherwise match a call with empty names, which
         /// [`props1_si`](super::props1_si)'s shape makes reachable.
         occupied: bool,
+        /// The [`GENERATION`] it was written in.
+        generation: u64,
     }
 
     impl Slot {
         fn matches(&self, names: [&str; 4], values: [u64; 3]) -> bool {
             self.occupied
+                && self.generation == GENERATION.load(Ordering::Acquire)
                 && self.values == values
                 && self.names[0] == names[0]
                 && self.names[1] == names[1]
@@ -563,15 +567,25 @@ mod cache {
             self.values = values;
             self.value = value;
             self.occupied = true;
+            self.generation = GENERATION.load(Ordering::Acquire);
         }
     }
 
-    static PROPS: Mutex<Option<Slot>> = Mutex::new(None);
-    static HA: Mutex<Option<Slot>> = Mutex::new(None);
+    /// Bumped when the backend changes, which retires every thread's slots.
+    static GENERATION: AtomicU64 = AtomicU64::new(0);
 
-    fn with<T>(which: &Mutex<Option<Slot>>, f: impl FnOnce(&mut Slot) -> T) -> T {
-        let mut guard = which.lock().unwrap_or_else(|e| e.into_inner());
-        f(guard.get_or_insert_with(Slot::default))
+    thread_local! {
+        // Per thread: a value remembered by another thread's solve was
+        // computed from that solve's warm-start seeds (FX1f).
+        static PROPS: RefCell<Slot> = RefCell::default();
+        static HA: RefCell<Slot> = RefCell::default();
+    }
+
+    fn with<T>(
+        which: &'static std::thread::LocalKey<RefCell<Slot>>,
+        f: impl FnOnce(&mut Slot) -> T,
+    ) -> T {
+        which.with_borrow_mut(f)
     }
 
     /// `PropsSI`: `(output, name1, value1, name2, value2, fluid)`.
@@ -640,6 +654,11 @@ mod cache {
     /// same question differently by construction — that is what installing one
     /// *means* — so an entry must not outlive the backend that wrote it.
     pub(super) fn clear() {
+        GENERATION.fetch_add(1, Ordering::AcqRel);
+    }
+
+    /// Forgets this thread's remembered calls (a new solve's history).
+    pub(super) fn forget() {
         with(&PROPS, |s| s.occupied = false);
         with(&HA, |s| s.occupied = false);
     }
@@ -653,6 +672,35 @@ mod cache {
 /// backend directly.
 pub fn clear_cache() {
     cache::clear();
+}
+
+thread_local! {
+    static HISTORY_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// Held for the length of a solve: the outermost one on a thread forgets the
+/// remembered call and the `(P,h)`/`(P,s)` warm-start seeds, so its answer is
+/// the same double whatever the process solved before (FX1f). A nested solve
+/// (a pinned copy, an integration's steps) keeps the history of the solve it
+/// is part of, which is what lets the warm start pay. Both caches are per
+/// thread, so concurrent native solves do not see each other's history.
+pub fn history_scope() -> HistoryScope {
+    if HISTORY_DEPTH.get() == 0 {
+        cache::forget();
+        #[cfg(feature = "rustprop-backend")]
+        super::rustprop_warm::forget_seeds();
+    }
+    HISTORY_DEPTH.set(HISTORY_DEPTH.get() + 1);
+    HistoryScope(())
+}
+
+/// See [`history_scope`].
+pub struct HistoryScope(());
+
+impl Drop for HistoryScope {
+    fn drop(&mut self) {
+        HISTORY_DEPTH.set(HISTORY_DEPTH.get() - 1);
+    }
 }
 
 fn no_backend(what: &str) -> FreesError {

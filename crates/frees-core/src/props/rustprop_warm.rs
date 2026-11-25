@@ -67,6 +67,7 @@
 //! [`accept_state`] may call `PtFlash::sat`, which *panics* on a pseudo-pure),
 //! and Air is still served — by rustprop, one delegation away.
 
+use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -352,9 +353,16 @@ struct Seed {
     cp: f64,
 }
 
-/// The last converged state per (fluid, input pair). At most one entry per
-/// pair per linked fluid, so a `Vec` scanned linearly is the whole index.
-static SEEDS: Mutex<Vec<Seed>> = Mutex::new(Vec::new());
+thread_local! {
+    /// The last converged state per (fluid, input pair). At most one entry per
+    /// pair per linked fluid, so a `Vec` scanned linearly is the whole index.
+    ///
+    /// Per thread, and forgotten when a solve begins
+    /// ([`super::propfun::history_scope`]): a seeded answer agrees with the
+    /// cold one only to `~1e-10`, so a seed left by another solve, or by another
+    /// thread mid-solve, made the result depend on what ran before (FX1f).
+    static SEEDS: RefCell<Vec<Seed>> = const { RefCell::new(Vec::new()) };
+}
 
 /// One `PtFlash` per fluid. rustprop keeps its own equivalent cache behind a
 /// private function, so the adapter keeps its own rather than reaching into
@@ -394,27 +402,33 @@ pub fn stats() -> WarmStats {
 pub fn reset() {
     WARM_SERVED.store(0, Ordering::Relaxed);
     COLD_FALLBACKS.store(0, Ordering::Relaxed);
-    SEEDS.lock().unwrap_or_else(|e| e.into_inner()).clear();
+    forget_seeds();
+}
+
+/// Forgets this thread's cached states, leaving the counters alone.
+pub(crate) fn forget_seeds() {
+    SEEDS.with_borrow_mut(Vec::clear);
 }
 
 fn seed_of(fluid: usize, caloric: Caloric) -> Option<Seed> {
-    SEEDS
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .iter()
-        .find(|s| s.fluid == fluid && s.caloric == caloric)
-        .copied()
+    SEEDS.with_borrow(|seeds| {
+        seeds
+            .iter()
+            .find(|s| s.fluid == fluid && s.caloric == caloric)
+            .copied()
+    })
 }
 
 fn remember(seed: Seed) {
-    let mut seeds = SEEDS.lock().unwrap_or_else(|e| e.into_inner());
-    match seeds
-        .iter_mut()
-        .find(|s| s.fluid == seed.fluid && s.caloric == seed.caloric)
-    {
-        Some(slot) => *slot = seed,
-        None => seeds.push(seed),
-    }
+    SEEDS.with_borrow_mut(|seeds| {
+        match seeds
+            .iter_mut()
+            .find(|s| s.fluid == seed.fluid && s.caloric == seed.caloric)
+        {
+            Some(slot) => *slot = seed,
+            None => seeds.push(seed),
+        }
+    });
 }
 
 // ---------------------------------------------------------------------------
