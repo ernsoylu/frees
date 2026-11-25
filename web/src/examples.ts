@@ -1805,10 +1805,10 @@ END
     description: 'Solve (F2), then inspect the dynamic table. A spring-loaded diaphragm fills through an orifice until the spring balances 20 kPa.',
     category: 'Pneumatics',
     text: `{ A 1774 mm2 diaphragm on a 1.33 N/mm spring is fed at 20 kPa gauge through an
-  ISO 6358 orifice into a 15 cm3 chamber. The stem (0.1 kg) is critically damped:
-  the orifice passes forward flow only, so an overshoot would trap a little extra
-  pressure in the chamber. At rest the stroke is dP*A/k = 26.68 mm and the
-  chamber holds the full 20.0 kPa, the textbook answer. }
+  ISO 6358 orifice into a 15 cm3 chamber. The stem (0.1 kg) is critically damped.
+  Near equal pressures the orifice flow is linear in the pressure difference, so
+  the chamber settles exponentially; by 2 s it is at rest. Then the stroke is
+  dP*A/k = 26.68 mm and the chamber holds the full 20.0 kPa, the textbook answer. }
 PneumaticSupply supply(fluid$=Air, P=120000 [Pa], T=293.15 [K])
 PneumaticOrifice feed(fluid$=Air, C=2e-9 [m^3/s-Pa], b=0.3)
 PneumaticVolume chamber(V=15e-6 [m^3], T=293.15 [K], R=287 [J/kg-K], P0=100000 [Pa])
@@ -1822,13 +1822,13 @@ connect(feed.out, chamber.in)
 connect(chamber.out, diaphragm.in)
 connect(diaphragm.rod, stem.port, spring.a, damper.a)
 connect(spring.b, damper.b, ground.port)
-DYNAMIC fill(method=ode45, time=0..1, points=201)
+DYNAMIC fill(method=ode45, time=0..2, points=201)
 END
 z_final = FinalValue('spring.x') * 1 [m]
 dP_final = FinalValue('chamber.in.P') * 1 [Pa] - 100000 [Pa]
 z_static = 20000 [Pa] * 0.001774 [m^2] / 1330 [N/m]
-{ CHECK z_final 0.0266767055718817 1e-07 }
-{ CHECK dP_final 20000.0103451566 0.1 }
+{ CHECK z_final 0.0266766917293233 1e-12 }
+{ CHECK dP_final 20000 0.001 }
 { CHECK z_static 0.0266766917293233 1e-12 }`,
   },
   {
