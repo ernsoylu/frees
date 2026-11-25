@@ -281,3 +281,27 @@ describe('Phase 10E: Thermo diagram caching and in-flight deduplication', () => 
     expect(diagramMock).toHaveBeenCalledTimes(2)
   })
 })
+
+// U06: the mesh is drawn whenever the rows span an area, whatever their order.
+describe('3D mesh area test', () => {
+  const mesh = (rows: [number, number, number][]) =>
+    buildXYFigure(
+      [{ name: 'z', x: rows.map((r) => r[0]), y: rows.map((r) => r[1]), z: rows.map((r) => r[2]) }],
+      defaultFormat('xy'), 'X', 'Y', 'dark', { chartType: 'surface3d', xVar: 'x', yVars: ['y'], zVar: 'z' },
+    ).data.filter((t) => (t as { type?: string }).type === 'mesh3d').length
+  const plane: [number, number, number][] = [[0, 0, 1], [1, 0, 2], [0, 1, 3], [1, 1, 4]]
+
+  it.each([
+    ['in order', plane],
+    ['reversed', [...plane].reverse()],
+    ['with a repeated first point', [plane[0], ...plane]],
+    ['with a non-finite first row', [[Number.NaN, 0, 0], ...plane] as [number, number, number][]],
+  ])('keeps a planar mesh %s', (_, rows) => {
+    expect(mesh(rows)).toBe(1)
+  })
+
+  it('drops collinear rows, which span no area', () => {
+    expect(mesh([[0, 0, 1], [0, 0, 1], [1, 1, 2], [2, 2, 3]])).toBe(0)
+    expect(mesh([[Number.NaN, 0, 0], [0, 0, 1], [1, 1, 2], [2, 2, 3]])).toBe(0)
+  })
+})
