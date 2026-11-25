@@ -42,7 +42,7 @@ export function copyFragment(text: string, check: CheckResponse | null, ids: Rea
       if (mine.length > 0) external.push(`${mine.join(', ')} share stream ${c.alias ?? '?'} (rename it in the copy)`)
       continue
     }
-    const ends = writtenEndpoints(text.slice(c.range[0], c.range[1]))
+    const ends = writtenEndpoints(text, c)
     const inside = ends.filter((e) => ids.has(head(e)))
     const outside = ends.filter((e) => !ids.has(head(e)))
     if (inside.length >= 2) connects.push(inside)
@@ -176,7 +176,7 @@ export function deleteImpact(text: string, check: CheckResponse | null, ids: Rea
   for (const c of check?.connections ?? []) {
     if (c.inDefinition || !c.range) continue
     const written = text.slice(c.range[0], c.range[1])
-    const ends = writtenEndpoints(written)
+    const ends = writtenEndpoints(text, c)
     const kept = ends.filter((e) => !ids.has(head(e)))
     if (kept.length === ends.length) continue
     if (kept.length < 2) {

@@ -63,28 +63,32 @@ export function appendStatement(text: string, statement: string): SourceChange {
   return { from: text.length, to: text.length, insert: `${lead}${statement}\n` }
 }
 
-/** The endpoints of a `connect(...)` statement as written. */
-export function writtenEndpoints(statement: string): string[] {
-  const open = statement.indexOf('(')
-  const close = statement.lastIndexOf(')')
-  return open < 0 || close < open ? [] : statement.slice(open + 1, close).split(',').map((s) => s.trim())
+/** The endpoints of a `connect(...)` statement as written, read where the parser found them. */
+export function writtenEndpoints(text: string, conn: ConnectionDto): string[] {
+  return (conn.endpointRanges ?? []).flatMap((r) => (r ? [text.slice(r[0], r[1])] : []))
 }
 
 /**
  * Take one endpoint out of an authored connection. With two endpoints left
- * there is nothing to join, so the statement goes; otherwise only that
- * statement is rewritten, keeping the other endpoints' spelling.
+ * there is nothing to join, so the statement goes; otherwise the endpoint goes
+ * with the separator before it (after it, for the first), and the rest of the
+ * statement, comments included, stays as written.
  */
 export function disconnectEndpoint(text: string, conn: ConnectionDto, endpoint: string): SourceEdit | null {
-  if (!conn.range) return null
-  const [from, to] = conn.range
-  const ends = writtenEndpoints(text.slice(from, to))
-  const kept = ends.filter((e) => canonRef(e) !== canonRef(endpoint))
-  if (kept.length === ends.length) return null
-  if (kept.length < 2) {
-    return { label: `Remove ${text.slice(from, to)}`, changes: [removeStatement(text, [from, to])] }
+  const ranges = conn.endpointRanges ?? []
+  if (!conn.range || ranges.length === 0 || ranges.some((r) => !r)) return null
+  const at = ranges as [number, number][]
+  const i = at.findIndex(([a, b]) => canonRef(text.slice(a, b)) === canonRef(endpoint))
+  if (i < 0) return null
+  if (at.length <= 2) {
+    return { label: `Remove ${text.slice(conn.range[0], conn.range[1])}`, changes: [removeStatement(text, conn.range)] }
   }
-  return { label: `Disconnect ${endpoint}`, changes: [{ from, to, insert: `connect(${kept.join(', ')})` }] }
+  if (i > 0) return { label: `Disconnect ${endpoint}`, changes: [{ from: at[i - 1][1], to: at[i][1], insert: '' }] }
+  // The first endpoint takes its comma and the space after it, so a comment
+  // before the second stays. ponytail: a comment between the first endpoint
+  // and its comma goes with it (to the second); no lexing here.
+  const sep = /^\s*,\s*/.exec(text.slice(at[0][1], at[1][0]))
+  return { label: `Disconnect ${endpoint}`, changes: [{ from: at[0][0], to: sep ? at[0][1] + sep[0].length : at[1][0], insert: '' }] }
 }
 
 export const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
@@ -254,7 +258,7 @@ export function insertIntoConnection(
 ): SourceEdit | null {
   const decl = lastDeclaration(block)
   if (!conn.range || conn.alias || conn.inDefinition || !decl) return null
-  const ends = writtenEndpoints(text.slice(conn.range[0], conn.range[1]))
+  const ends = writtenEndpoints(text, conn)
   const branch = map.branch ?? ends.at(-1)!
   const rest = ends.filter((e) => canonRef(e) !== canonRef(branch))
   if (rest.length === ends.length || rest.length === 0) return null
