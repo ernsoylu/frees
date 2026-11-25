@@ -56,7 +56,7 @@ interface Props {
   onClose: () => void
 }
 
-const CHART_TYPE_OPTIONS = [
+export const CHART_TYPE_OPTIONS = [
   { value: 'line', label: 'Line chart' },
   { value: 'scatter', label: 'Scatter (points / bubble)' },
   { value: 'bar', label: 'Bar chart' },
