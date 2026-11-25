@@ -66,12 +66,14 @@ export const timeLabel = (tl: Timeline, k: number) => timeAt(tl, tl.times[k])
 /** A whole run plays in ten seconds at 1×. */
 export const PLAY_SECONDS = 10
 
-/** The sample to show `wallSeconds` after sample `k` at `speed`: always at least the next one, never past the end. */
-export function advance(tl: Timeline, k: number, wallSeconds: number, speed: number): number {
-  const last = tl.times.length - 1
-  const span = tl.times[last] - tl.times[0]
-  const target = tl.times[k] + (span / PLAY_SECONDS) * speed * wallSeconds
-  let next = k + 1
-  while (next < last && tl.times[next + 1] <= target) next++
-  return Math.min(next, last)
+/** The run time reached `wallSeconds` of play after run time `t` at `speed`. */
+export function playTime(tl: Timeline, t: number, wallSeconds: number, speed: number): number {
+  return t + ((tl.times[tl.times.length - 1] - tl.times[0]) / PLAY_SECONDS) * speed * wallSeconds
+}
+
+/** The last sample at or before run time `t`: a sample holds until play reaches the next one. */
+export function sampleAt(tl: Timeline, t: number): number {
+  let k = 0
+  while (k < tl.times.length - 1 && tl.times[k + 1] <= t) k++
+  return k
 }

@@ -62,7 +62,7 @@ export function extractSubsystem(
       if (mine.length > 0) blocked.push(`${mine.join(', ')} join by the shared stream ${c.alias ?? '?'}; write it as a connect(...) first.`)
       continue
     }
-    const ends = writtenEndpoints(text.slice(c.range[0], c.range[1]))
+    const ends = writtenEndpoints(text, c)
     const inside = ends.filter((e) => ids.has(head(e)))
     if (inside.length === 0) continue
     const outside = ends.filter((e) => !ids.has(head(e)))
@@ -252,8 +252,7 @@ export function editInterface(text: string, check: CheckResponse | null, type: s
   const instances = new Set(users.map((i) => i.name.toLowerCase()))
   for (const c of check?.connections ?? []) {
     if (!c.range) continue
-    const written = text.slice(c.range[0], c.range[1])
-    const ends = writtenEndpoints(written)
+    const ends = writtenEndpoints(text, c)
     const ownEnd = c.range[0] >= from && c.range[1] <= to
     const keep = ends.filter((e) => (ownEnd ? e.toLowerCase() !== p.toLowerCase() : !(instances.has(e.split('.')[0].trim().toLowerCase()) && e.split('.')[1]?.trim().toLowerCase() === p.toLowerCase())))
     if (keep.length === ends.length) continue
