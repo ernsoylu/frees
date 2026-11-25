@@ -933,8 +933,9 @@ impl Checker {
             // inputs.
             "normalcdf" | "normalpdf" | "normalinvcdf" => Dim::unknown(),
             // If(cond, then, else) / If(a, b, lt, eq, gt): the value is one of
-            // the branches, so it carries the first branch with known units
-            // (a bare `0` branch adapts, as everywhere).
+            // the branches, so it carries the first branch with known units,
+            // and every other known branch must agree (FX1d; a bare `0` branch
+            // adapts, as everywhere).
             "if" => {
                 let branches = if args.len() == 5 {
                     &args[2..]
@@ -942,10 +943,23 @@ impl Checker {
                     args.get(1..).unwrap_or_default()
                 };
                 let mut result = Dim::unknown();
+                let mut warned = false;
                 for branch in branches {
                     let dim = self.dim_of(branch);
-                    if dim.known && !result.known {
+                    if !dim.known {
+                        continue;
+                    }
+                    if !result.known {
                         result = dim;
+                    } else if !warned && !result.quantity.same_dimensions_as(&dim.quantity) {
+                        warned = true;
+                        let message = format!(
+                            "{}: If branches have different units [{}] vs [{}].",
+                            self.current_equation,
+                            result.quantity.dimension_string(),
+                            dim.quantity.dimension_string()
+                        );
+                        self.warn(message);
                     }
                 }
                 result
@@ -1406,6 +1420,22 @@ mod tests {
         assert!(report.warnings.is_empty(), "{:?}", report.warnings);
         assert_eq!(report.inferred.get("mu").map(String::as_str), Some("K"));
         assert_eq!(report.inferred.get("pct").map(String::as_str), Some("K"));
+    }
+
+    /// FX1d: `If(3, 2 [m], 1 [m], 5 [m], 7 [s])` picked `7 [s]` and reported
+    /// it as `7 [m]` without a word. Every branch is checked, as `max` does; a
+    /// bare number still adapts.
+    #[test]
+    fn if_branches_must_share_a_unit() {
+        let report = check_units(
+            &eqs("y = If(3, 2 [m], 1 [m], 5 [m], 7 [s])\nz = If(c, a, 0)"),
+            &units(&[("a", "m")]),
+        );
+        assert_eq!(
+            report.warnings,
+            vec!["y = If(3, 2 [m], 1 [m], 5 [m], 7 [s]): If branches have different units [m] vs [s]."]
+        );
+        assert_eq!(report.inferred.get("y").map(String::as_str), Some("m"));
     }
 
     #[test]
