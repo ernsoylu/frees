@@ -23,6 +23,463 @@ export interface Example {
 
 export const EXAMPLES: Example[] = [
   {
+    id: 'ideal-gas',
+    title: 'Ideal Gas Law',
+    description: 'Mass of air in a rigid tank — note the implicit equation.',
+    category: 'Thermodynamics',
+    featured: true,
+    text: `// Ideal Gas Law
+{ Mass of air in a rigid tank. Note the implicit equation:
+  you do not have to write "m = ...". }
+P = 500 [kPa]
+Vol = 0.05 [m^3]
+T = 25 [C]
+R = 0.287 [kJ/kg-K]    { gas constant for air }
+P * Vol = m * R * T    { ideal gas equation }
+
+{ CHECK m 0.2921617103380253 3e-10 }`,
+  },
+  {
+    id: 'linear-regression-diagnostics',
+    title: 'Linear regression with diagnostics',
+    description: 'Slope, intercept, standard error and correlation of seven points.',
+    category: 'Data & Analysis',
+    featured: true,
+    text: `{ Least-squares line through seven points, with the standard error of the
+  estimate s_y/x = sqrt(S_r / (n - 2)) and the correlation coefficient.
+  Data and published answers: Chapra & Canale, Numerical Methods for
+  Engineers, Examples 17.1-17.2 (a1 = 0.8392857, a0 = 0.07142857,
+  s_y/x = 0.7735, r = 0.932). The original problem's data was not kept. }
+x = [1, 2, 3, 4, 5, 6, 7]
+y = [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5]
+[a_1, a_0, r_sq] = linfit(x, y)
+r = pearson([1, 2, 3, 4, 5, 6, 7], [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5])
+r_cc = corrcoef([1, 2, 3, 4, 5, 6, 7], [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5])
+n = 7
+FOR i = 1 TO 7
+  e2[i] = (y[i] - (a_0 + a_1 * x[i]))^2
+END
+S_r = sum(e2[1:7])
+s_yx = sqrt(S_r / (n - 2))
+{ CHECK a_1 0.839285714285714 1e-12 }
+{ CHECK a_0 0.0714285714285714 1e-12 }
+{ CHECK r_sq 0.868317610062893 1e-12 }
+{ CHECK r 0.931835613218819 1e-12 }
+{ CHECK S_r 2.99107142857143 1e-10 }
+{ CHECK s_yx 0.773443136703847 1e-10 }`,
+  },
+  {
+    id: 'pump-valve-operating-point',
+    title: 'Pump, pipe and throttling valve: the operating point',
+    description: 'Solve, then open the Schematic and click P1 or V1: each card draws its curve and the point it runs at.',
+    category: 'Fluids & Fluid Power',
+    featured: true,
+    text: `// frees-language: 2
+{ A centrifugal pump lifts water from one open tank to another at the same
+  level through 120 m of 80 mm steel pipe and a control valve. The pump runs
+  where its head curve meets the system: the pipe's friction and the valve's
+  drop, both growing with the flow. Closing the valve steepens the system
+  curve and moves the point up the pump curve, to less flow at more head.
+
+  The head curve is the manufacturer's table; the valve passes
+  m_dot*|m_dot| = (u*Cv)^2*rho*dP at opening u.
+
+  On the Schematic, click P1 for the pump curve with the operating point on
+  it, or V1 for the valve's drop at the present opening. Pin u_v as a slider
+  and move it: the valve's curve and both points follow.
+
+  Source: Y. A. Cengel and J. M. Cimbala, Fluid Mechanics, 4th ed.,
+  McGraw-Hill, 2018, Sec. 14-2 (matching a pump to a piping system). }
+
+TABLE pump_head(Q [m^3/s]) [m]
+  0       32
+  0.005   31
+  0.010   28
+  0.015   23
+  0.020   16
+  0.025   7
+END
+
+rho = 998 [kg/m^3]
+u_v = 0.6 [-] { valve opening }
+
+PumpMap P1(a, b, rho=rho, map$=pump_head)
+Duct    L1(b, c, rho=rho, mu=1.0e-3 [Pa-s], L=120 [m], D=0.08 [m], rough=4.5e-5 [m])
+Valve   V1(c, d, Cv=0.0015 [m^2], rho=rho, u=u_v, model$=linear)
+Sink    TANK(d) { the upper tank }
+
+a.P = 101325 [Pa] { both tanks open to the atmosphere }
+d.P = 101325 [Pa]
+c.h = 100000 [J/kg] { water near 24 C; nothing here changes it }
+
+Q_op = P1.q    { operating flow, m^3/s }
+H_op = P1.head { operating head, m }
+dP_valve = c.P - d.P
+
+{ CHECK Q_op 0.0119058453909063 1e-9 }
+{ CHECK H_op 26.0941546090937 1e-7 }
+{ CHECK dP_valve 174648.958226199 1e-3 }`,
+  },
+  {
+    id: 'rankine-cycle',
+    title: 'Rankine Cycle',
+    description: 'Ideal steam power cycle efficiency using real-water properties.',
+    category: 'Thermodynamics',
+    featured: true,
+    text: `// Rankine Cycle (Steam)
+{ Ideal steam Rankine cycle using real-water properties. }
+P_boiler = 8000 [kPa]
+P_cond = 10 [kPa]
+
+{ State 1: saturated liquid leaving the condenser }
+h1 = Enthalpy(Water, P=P_cond, x=0)
+v1 = Volume(Water, P=P_cond, x=0)
+
+{ Pump (state 1 -> 2) }
+w_pump = v1 * (P_boiler - P_cond)
+h2 = h1 + w_pump
+
+{ State 3: boiler exit (superheated) }
+h3 = Enthalpy(Water, P=P_boiler, T=480 [C])
+s3 = Entropy(Water, P=P_boiler, T=480 [C])
+
+{ State 4: turbine exit (isentropic, s4 = s3) }
+h4 = Enthalpy(Water, P=P_cond, s=s3)
+
+{ Performance }
+q_in = h3 - h2
+w_turb = h3 - h4
+eta_th = (w_turb - w_pump) / q_in
+
+{ CHECK q_in 3149767.154885827 3.2e-3 }
+{ CHECK w_turb 1240252.0387124298 1.3e-3 }
+{ CHECK eta_th 0.39119716208990235 4e-10 }`,
+  },
+  {
+   id: 'hydraulic-metering-restriction',
+   "title": "Oil flow through a metering restriction",
+    "description": "A 10 bar drop across a CdA = 1e-5 m² orifice passes 0.41 kg/s of oil, 485 W of hydraulic power.",
+    "category": "Fluids & Fluid Power",
+    "featured": true,
+    "text": "HydraulicSupply supply(P=1100000 [Pa])\nHydraulicOrifice restriction(CdA=1e-5 [m^2], rho=850 [kg/m^3])\nHydraulicTank tank(P=100000 [Pa])\nconnect(supply.out, restriction.in)\nconnect(restriction.out, tank.port)\nmass_flow = restriction.in.mdot\nvolume_flow = mass_flow / 850 [kg/m^3]\nhydraulic_power = 1000000 [Pa] * volume_flow\nGUESS restriction.in.mdot = 0.4\n{ CHECK mass_flow 0.412310562561766 1e-7 }\n{ CHECK hydraulic_power 485.071250072666 1e-3 }"
+  },
+  {
+    id: 'tank-draining',
+    title: 'Tank Draining (ODE)',
+    description: 'First-order ODE via Integral — Torricelli draining of a tank.',
+    category: 'Fluids & Fluid Power',
+    featured: true,
+    text: `// Tank Draining (Torricelli) — first-order ODE
+{ Water height h in a tank emptying through a small orifice obeys
+  dh/dt = -(a/A)*sqrt(2*g*h).  Press Solve (F2).
+
+  How the ODE is written: frees integrates an ODE only when the
+  integrand references the integral's OWN result, and that result
+  starts at 0. So we integrate the DROP from the initial level and
+  rebuild h = h0 - drop. Integration limits must be plain numbers
+  (here 0 to 60 seconds). }
+g = 9.81 [m/s^2]
+A_tank = 1.0 [m^2]        { tank cross-section }
+a_orifice = 0.0015 [m^2]  { orifice area }
+h0 = 2.0 [m]              { initial water height }
+
+drop = Integral((a_orifice/A_tank)*sqrt(2*g*(h0 - drop)), tau, 0, 60)
+h = h0 - drop            { water height after 60 s }
+
+{ CHECK h 1.475953951579557 1.5e-9 }
+{ CHECK drop 0.5240460484204431 5.3e-10 }`,
+  },
+  {
+    id: 'sounding-rocket-trajectory',
+    title: 'Sounding Rocket Trajectory (loss-accurate)',
+    description: 'Coupled h/v/m ODE with drag, burnout and an apogee event; apogee read back via an accessor.',
+    category: 'Aerospace & Compressible Flow',
+    featured: true,
+    text: `// Loss-Accurate Sounding-Rocket Trajectory (DYNAMIC)
+{ The coupled multi-state system der(h)=v, der(v)=(F - D - m g)/m, der(m)=-mdot,
+  with aerodynamic drag against an exponential atmosphere computed every step as
+  an algebraic auxiliary, thrust gated off at burnout via If(), and an apogee
+  EVENT (v = 0, falling) that stops the integration. The ODE Table (Tables
+  window) plots altitude / velocity / mass vs time, or mass vs altitude.
+
+  The apogee altitude is read back into the analytic solution with MaxValue('h').
+  Change t_burn and re-solve to trade burn time for apogee — or, to SIZE the
+  rocket, open Variable Settings, give t_burn a guess near 27 and bounds
+  [5, 55], add the equation  MaxValue('h') = h_target  and let frees solve for
+  the burn time that reaches 100 km. }
+
+g0     = 9.81 [m/s^2]
+m0     = 600 [kg]   { lift-off mass }
+mdot   = 9 [kg/s]   { propellant mass flow during burn }
+F0     = 28000 [N]  { motor thrust }
+Cd     = 0.3        { drag coefficient }
+A      = 0.03 [m^2] { reference area }
+rho0   = 1.225 [kg/m^3] { sea-level air density }
+Hscale = 8000 [m]   { atmospheric scale height }
+t_burn = 27 [s]     { motor burn time }
+
+DYNAMIC ascent (method = ode45, time = 0 .. 600, points = 500, rtol = 1e-7, atol = 1e-3)
+  thrust = If(time, t_burn, F0, F0, 0)         { thrust on until burnout }
+  mflow  = If(time, t_burn, mdot, mdot, 0)     { mass flow on until burnout }
+  rho    = rho0 * exp(-h / Hscale)             { exponential atmosphere }
+  drag   = 0.5 * rho * v * v * Cd * A          { aerodynamic drag }
+  der(h) = v
+  der(v) = (thrust - drag - m * g0) / m
+  der(m) = -mflow
+  h(0) = 0 [m]
+  v(0) = 0 [m/s]
+  m(0) = m0
+  EVENT apogee: v = 0 | falling -> stop        { stop at the top of the arc }
+END
+
+{ Read the trajectory back into the analytic solution }
+apogee = MaxValue('h') * 1 [m]     { peak altitude reached }
+v_burnout = ODEValue('v', t_burn) * 1 [m/s]    { speed at burnout }
+m_final   = FinalValue('m') * 1 [kg]          { burnout / coasting mass }
+
+{ CHECK apogee 98571.74729819218 1e-4 }
+{ CHECK v_burnout 1292.4475052767484 1.3e-6 }
+{ CHECK m_final 357.00041513103366 3.6e-7 }`,
+  },
+  {
+    id: 'projectile-trajectory',
+    title: 'Projectile Trajectory (table)',
+    description: 'Parametric time sweep — full flight path sampled over time.',
+    category: 'Mechanics',
+    featured: true,
+    text: `// Projectile Trajectory (parametric time sweep)
+{ The whole flight path, sampled in time. This uses a PARAMETRIC
+  table: the base system is underspecified by one on purpose, t
+  being the swept column the table fills in, so Solve opens the
+  table and runs it (Solve Table in the Tables tab does the same).
+
+  Variables listed in the header with no range (time, x, y, vx, vy,
+  v) become solved OUTPUT columns. Afterward, chart y vs x (the arc)
+  or y vs time in the Plots tab. }
+g  = 9.81 [m/s^2]
+v0 = 20 [m/s]
+theta = 35 * pi# / 180
+
+vx0 = v0 * cos(theta)
+vy0 = v0 * sin(theta)
+
+time = t * 1 [s]                 { give the swept index t units of seconds }
+x  = vx0 * time                 { horizontal position }
+y  = vy0 * time - 0.5*g*time^2  { vertical position }
+vx = vx0                        { dx/dt }
+vy = vy0 - g*time               { dy/dt }
+v  = sqrt(vx^2 + vy^2)          { speed }
+
+PARAMETRIC trajectory (t, time, x, y, vx, vy, v)
+  t = 0:0.05:4
+END
+
+{ Graded on the table's last row, t = 4 s, below the launch height. }
+{ CHECK x 65.5321635431193 1e-10 }
+{ CHECK y -32.5938850919163 1e-10 }
+{ CHECK v 32.2411542210169 1e-10 }`,
+  },
+  {
+    id: 'step-impulse-response',
+    title: 'Step & Impulse Response',
+    description: 'Time-domain analysis of a second-order system: step response, impulse response, and forced response (lsim).',
+    category: 'Control Systems',
+    featured: true,
+    text: `{ Step & Impulse Response Analysis }
+{ Second-order system: G(s) = wn^2 / (s^2 + 2*zeta*wn*s + wn^2) }
+{ Natural frequency and damping ratio }
+wn = 2 [rad/s]
+zeta = 0.3
+
+{ Transfer function coefficients (descending powers of s) }
+{ num(s) = wn^2,  den(s) = s^2 + 2*zeta*wn*s + wn^2 }
+num = [wn^2]
+den = [1, 2*zeta*wn, wn^2]
+
+{ 1. Unit Step Response (uses default 10s time vector) }
+[y_step, t] = step(num, den)
+
+{ 2. Impulse Response (uses default 10s time vector) }
+[y_imp] = impulse(num, den)
+
+{ 3. Forced Response: ramp input u(t) = t }
+u = t
+[y_ramp] = lsim(num, den, u, t)
+
+{ 4. Stability check: poles of the system }
+[pr, pi] = pole(num, den)
+
+PLOT 'Step Response'
+  kind = xy
+  x = t
+  y = y_step
+  xlabel = 'Time [s]'
+  ylabel = 'Amplitude'
+  title = 'Unit Step Response'
+END
+
+PLOT 'Impulse Response'
+  kind = xy
+  x = t
+  y = y_imp
+  xlabel = 'Time [s]'
+  ylabel = 'Amplitude'
+  title = 'Impulse Response'
+END
+
+PLOT 'Ramp Response (lsim)'
+  kind = xy
+  x = t
+  y = y_ramp
+  xlabel = 'Time [s]'
+  ylabel = 'Amplitude'
+  title = 'Ramp Response via lsim'
+END
+
+{ CHECK pr[1] -0.6 6e-10 }
+{ CHECK y_step[50] 0.9974089580786609 1e-9 }
+{ CHECK y_imp[50] 0.0011808598375713535 1.2e-12 }`,
+  },
+  {
+    id: 'cruise-control',
+    title: 'Cruise Control System Design',
+    description: 'Models a 1000 kg car with drag, tunes a PI controller, and performs frequency & stability analysis.',
+    category: 'Control Systems',
+    featured: true,
+    text: `// Car Dynamics & Cruise Control
+{ This example models a 1000 kg car under viscous drag, converts the state-space model to a transfer function, designs a proportional-integral (PI) controller for a feedback loop, and performs frequency & stability analysis.
+
+  Press Solve (F2). }
+
+m = 1000 [kg]           { car mass }
+c_drag = 50 [N-s/m]     { viscous drag coefficient (named c_drag, not c, since
+                          names are case-insensitive and C is the output matrix) }
+
+{ State Space Model: states are [position; velocity], input is traction force. }
+A[1,1] = 0; A[1,2] = 1
+A[2,1] = 0; A[2,2] = -c_drag/m
+B[1] = 0
+B[2] = 1/m
+C[1] = 0; C[2] = 1      { output is velocity }
+D = 0.0
+
+{ 1. Convert State Space to Transfer Function }
+[num_car, den_car] = ss2tf(A, B, C, D)
+
+{ 2. Design PI Controller: C(s) = Kp + Ki/s = (Kp*s + Ki)/s }
+Kp = 800 [N-s/m]
+Ki = 40 [N/m]
+num_pi = [Kp, Ki]
+den_pi = [1.0, 0.0]
+
+{ 3. Open-Loop System: L(s) = C(s) * G(s) }
+[num_ol, den_ol] = series(num_pi, den_pi, num_car, den_car)
+
+{ 4. Closed-Loop System: T(s) = L(s) / (1 + L(s)), unity feedback H(s) = 1 }
+num_h = [1]
+den_h = [1]
+[num_cl, den_cl] = feedback(num_ol, den_ol, num_h, den_h)
+
+{ 5. Stability & Frequency Margin Analysis }
+[gm, pm, w_cg, w_cp] = margin(num_ol, den_ol)
+
+{ 6. Closed-Loop Poles and Zeros (unity-feedback loop has one finite zero) }
+[cl_pr, cl_pi] = pole(num_cl, den_cl)
+[cl_zr, cl_zi] = zero(num_cl, den_cl)
+
+{ 7. Frequency sweeps for Bode and Nyquist plots }
+omega = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
+[mag_ol, phase_ol] = bode(num_ol, den_ol, omega)
+[real_ol, imag_ol] = nyquist(num_ol, den_ol, omega)
+
+PLOT 'Bode Diagram'
+  kind = bode
+  omega = omega
+  mag = mag_ol
+  phase = phase_ol
+END
+
+PLOT 'Nyquist Diagram'
+  kind = nyquist
+  real = real_ol
+  imag = imag_ol
+END
+
+PLOT 'Pole-Zero Map'
+  kind = polezero
+  pr = cl_pr
+  pi = cl_pi
+  zr = cl_zr
+  zi = cl_zi
+END
+
+{ CHECK pm 90 9.1e-8 }
+{ CHECK w_cg 0.8000059198449195 8.1e-10 }
+{ CHECK cl_pr[1] -0.7999999999999994 8e-10 }`,
+  },
+  {
+    id: 'ev-battery-cooling-pid',
+    title: 'EV Battery Cooling with Closed-Loop EXV Control',
+    description: 'Five domains in one transient solve: pack discharge (electrical) heats the cell thermal state, a coolant loop carries it to an R134a chiller, and a reverse-acting PID on a signal wire modulates the electronic expansion valve to hold the pack at 303 K.',
+    category: 'Systems',
+    featured: true,
+    text: `// Five domains in one solve: electrical (pack discharge) -> heat (cell thermal
+// state) -> liquid (coolant loop) -> twophase (R134a chiller) -> signal (PID).
+// The PID modulates the electronic expansion valve to hold the pack at 303 K;
+// with Ki > 0 the steady error vanishes.
+TABLE ocv(soc) [V]
+  0   3.0
+  1   4.2
+END
+TABLE dudt(soc) [V/K]
+  0   -5e-5
+  1   -5e-5
+END
+BatteryPack   BP(Ns=96, Np=2, ocv$=ocv, dudt$=dudt, R0ref=0.002 [ohm], Tref=298.15 [K], Ea=0 [J/mol], Q0=60, C_th=50000 [J/K], SOC0=0.9, T0=306 [K])
+CurrentSource LOAD(I=-60)
+Ground        G()
+connect(BP.p, LOAD.p)
+connect(BP.n, LOAD.n, G.port)
+
+LiquidSource CSRC(fluid$=Water, mdot=0.05, P=200000, T=305)
+Chiller      CH(ref$=R134a, cool$=Water, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.1, UA_cool=600)
+LiquidWallHX PLATE(fluid$=Water, UA=500)
+LiquidSink   CSNK()
+connect(CSRC.out, CH.cool_in)
+connect(CH.cool_out, PLATE.in)
+connect(PLATE.out, CSNK.in)
+connect(PLATE.wall, BP.heat, TB.port)
+
+function [out] = PHSupply(P, h, domain$ = twophase)
+  port(out)
+  out.P = P
+  out.h = h
+end
+hliq = Enthalpy(R134a, P=1200000, x=0)
+PHSupply             RSRC(P=1200000, h=hliq)
+EXVCmd               EXV(fluid$=R134a, CdA_max=2e-7 [m^2])
+TwoPhasePressureSink RSNK(P=350000)
+connect(RSRC.out, EXV.in)
+connect(EXV.out, CH.ref_in)
+connect(CH.ref_out, RSNK.in)
+
+SigConstant     SP(k=303 [K])
+SigThermalProbe TB()
+SigPID          PID(model$=clamped, Kp=0.05 [1/K], Ki=0.005 [1/K-s], Kd=0 [s/K], tau=1 [s], i0=0.2 [K-s], d0=0 [K], umin=0.02, umax=1, Taw=2000 [s])
+// Reverse-acting: opening the EXV COOLS, so the measurement drives sp and
+// the setpoint drives pv (equivalent to negating the gains).
+connect(TB.out, PID.sp)
+connect(SP.out, PID.pv)
+connect(PID.out, EXV.u)
+DYNAMIC cool(method = ode23s, time = 0 .. 4000, points = 400)
+END
+t_bat      = FinalValue('bp.t') * 1 [K]
+q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))
+
+{ CHECK t_bat 302.99984375521336 3.1e-7 }
+{ CHECK hliq 265947.2005481485 2.7e-4 }`,
+  },
+  {
     id: 'ev-thermal-management',
     title: 'EV Thermal Management System',
     // NOTE (wasm port): this catalog entry keeps the real EV component model
@@ -39,11 +496,165 @@ export const EXAMPLES: Example[] = [
     text: EV_THERMAL_EXAMPLE_TEXT,
   },
   {
+    id: 'multi-objective-beam',
+    title: 'Multi-Objective Beam Design (Pareto)',
+    description: 'Trade off mass against deflection — run via Min/Max > Pareto.',
+    category: 'Data & Analysis',
+    featured: true,
+    text: `// Multi-Objective Cantilever Beam
+{ A steel cantilever with a tip load. Solve (F2) to evaluate one
+  design, then open Tools > Min/Max, switch to 'Multi-objective
+  (Pareto)', and MINIMIZE both 'mass' and 'delta' over the decisions
+  b (0.01 .. 0.06) and h (0.02 .. 0.10) to trace the trade-off front.
+  Material properties come from the built-in solid database. }
+L = 1 [m]                { beam length }
+F = 500 [N]              { tip load }
+E = E_(Steel)            { Young's modulus }
+rho = rho_(Steel)        { density }
+
+b = 0.03 [m]             { cross-section width  (decision) }
+h = 0.05 [m]             { cross-section height (decision) }
+
+I = b * h^3 / 12         { second moment of area }
+mass = rho * L * b * h               { objective 1: minimize }
+delta = F * L^3 / (3 * E * I)        { objective 2: tip deflection, minimize }
+
+{ CHECK mass 11.781 1.2e-8 }
+{ CHECK delta 0.0026666666666666657 2.7e-12 }`,
+  },
+  {
+   id: 'correlated-temperature-heat-loss',
+   "title": "Correlated temperature measurements in heat-loss estimation",
+    "description": "Heat loss from two temperature readings whose errors correlate at ρ = 0.5, which narrows the propagated spread.",
+    "category": "Data & Analysis",
+    "featured": true,
+    "text": "inside_temp = 293.15 [K]\noutside_temp = 273.15 [K]\nheat_loss = 10 [W/K]*(inside_temp-outside_temp)\nUncertaintyOf(inside_temp) = 0.2\nUncertaintyOf(outside_temp) = 0.3\nCorrelation(inside_temp, outside_temp) = 0.5\nheat_sigma = UncertaintyOf(heat_loss)\n{ CHECK heat_loss 200 1e-8 }\n{ CHECK heat_sigma 2.64575131106459 1e-7 }"
+  },
+  {
+   id: 'vibration-tone-spectrum',
+   "title": "Recover a vibration tone and check spectral power",
+    "description": "The FFT of a sampled sine finds its frequency bin, checks Parseval's power and inverts back exactly.",
+    "category": "Data & Analysis",
+    "featured": true,
+    "text": "signal = [0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1]\nimaginary = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n[spectrum_real, spectrum_imag] = FFT(signal, imaginary)\n[recovered, recovered_imag] = IFFT(spectrum_real[1:32], spectrum_imag[1:32])\n[frequency, psd] = Welch(signal, 32, 16)\npower = sum(psd[1:9])*(frequency[2]-frequency[1])\nreconstruction_error = recovered[3]-signal[3]\ntone_peak = peakindex(1, 0, 0, psd[1:9])\nPLOT 'Vibration power spectrum'\n kind = xy\n x = frequency\n y = psd\n xlabel = 'Frequency [Hz]'\n ylabel = 'Power density [amplitude squared per Hz]'\nEND\n{ CHECK frequency[3] 4 1e-9 }\n{ CHECK tone_peak 3 1e-9 }\n{ CHECK power 1 0.01 }\n{ CHECK reconstruction_error 0 1e-9 }"
+  },
+  {
+    id: 'lab-air-mixing',
+    title: 'Lab — outdoor-air mixing on the psychrometric chart',
+    description: 'A graded live lab: a ventilated room and its mixed supply trace paths on the psychrometric chart; raise the outdoor-air fraction live and watch the room cool and dry. Run it live from the lesson panel.',
+    category: 'Lessons & Labs',
+    featured: true,
+    text: `// frees-language: 2
+{ Lab — outdoor-air mixing on the psychrometric chart.
+
+  A ventilated room holds m_room of dry air. A fan supplies m_dot of dry
+  air, mixed from outdoor air (fraction f_oa) and air returned from the
+  room. Mixing is adiabatic, so humidity ratio and enthalpy per kg of dry
+  air mix in proportion to the flows:
+    w_mix = f_oa*w_out + (1 - f_oa)*w_room,  h_mix likewise.
+  The people and lights in the room add Q_int of heat and m_w of
+  moisture, which leaves as vapour at h_w.
+
+  In the steady state the outdoor part of the supply carries the gains
+  away:
+    w_ss = w_out + m_w/(f_oa*m_dot),
+    h_ss = h_out + (Q_int + m_w*h_w)/(f_oa*m_dot),
+  so more outdoor air brings the room closer to the outdoor state. The
+  chart traces the room and the mixed air as they move.
+
+  Source: ASHRAE Handbook, Fundamentals, ch. 1 (psychrometrics: adiabatic
+  mixing of two streams). }
+
+P      = 101325 [Pa]
+T_out  = 288.15 [K]        { outdoor dry bulb }
+RH_out = 0.8               { outdoor relative humidity }
+f_oa   = 0.2               { outdoor-air fraction: the lab's slider }
+m_dot  = 0.5 [kg/s]        { supply, dry air }
+m_room = 60 [kg]           { dry air in the room }
+Q_int  = 800 [W]           { sensible gains }
+m_w    = 0.0002 [kg/s]     { moisture gains }
+h_w    = 2.5e6 [J/kg]      { enthalpy of the added vapour }
+w_out  = HumRat(AirH2O, T=T_out, P=P, R=RH_out)
+h_out  = Enthalpy(AirH2O, T=T_out, P=P, W=w_out)
+w_0    = HumRat(AirH2O, T=297.15 [K], P=P, R=0.5)     { the room at the start }
+h_0    = Enthalpy(AirH2O, T=297.15 [K], P=P, W=w_0)
+
+DYNAMIC room (method = ida, time = 0 .. 8000, points = 801)
+  w_mix  = f_oa*w_out + (1 - f_oa)*w_room
+  h_mix  = f_oa*h_out + (1 - f_oa)*h_room
+  T_mix  = Temperature(AirH2O, H=h_mix, P=P, W=w_mix)
+  T_room = Temperature(AirH2O, H=h_room, P=P, W=w_room)
+  m_room*der(w_room) = m_dot*(w_mix - w_room) + m_w
+  m_room*der(h_room) = m_dot*(h_mix - h_room) + Q_int + m_w*h_w
+  w_room(0) = w_0
+  h_room(0) = h_0
+END
+
+w_ss = w_out + m_w/(f_oa*m_dot)
+h_ss = h_out + (Q_int + m_w*h_w)/(f_oa*m_dot)
+T_ss = Temperature(AirH2O, H=h_ss, P=P, W=w_ss)
+
+{ CHECK w_ss 0.0105256953110218 1e-12 }
+{ CHECK T_ss 295.89533483557 1e-6 }
+PLOT 'Room and mixed air'
+  kind = psychro
+  overlaystates = false
+  tmin = 10
+  tmax = 30
+  ymax = 0.02
+  x = T_room, T_mix     { paired in order with y: the room and the mixed air }
+  y = w_room, w_mix
+END`,
+  },
+  {
+    id: 'lesson-rc-charging',
+    title: 'Lesson — RC charging',
+    description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson.',
+    category: 'Lessons & Labs',
+    featured: true,
+    text: `// frees-language: 2
+{ Lesson — RC charging. Pairs with the thermal-mass lesson.
+
+  A 10 V step charges a capacitor C through a resistor R. The capacitor
+  voltage rises as v(t) = E·(1 − exp(−t/τ)) with τ = R·C: after one time
+  constant it has covered 63.2 % of the step, whatever R and C are.
+
+  Source: J. W. Nilsson and S. A. Riedel, Electric Circuits, 11th ed.,
+  Pearson, 2019, §7.4 (the step response of RC circuits). }
+
+R_s = 1000 [ohm]       { series resistance: the lesson's slider }
+C_s = 1e-6 [farad]     { capacitance }
+E_s = 10 [V]           { step voltage }
+
+VoltageSource VS(E=E_s)
+Resistor      R(R=R_s)
+Capacitor     CAP(C=C_s, V0=0 [V])
+Ground        G()
+connect(VS.p, R.a)
+connect(R.b, CAP.p)
+connect(CAP.n, VS.n, G.port)
+
+DYNAMIC charge (method = ode45, time = 0 .. 0.01, points = 201)
+END
+
+tau   = R_s * C_s                                { time constant }
+v_1ms = ODEValue('cap.vc', 0.001) * 1 [V]        { capacitor voltage at 1 ms }
+share = v_1ms / E_s                              { fraction of the step covered }
+
+{ CHECK tau 0.001 1e-12 }
+{ CHECK v_1ms 6.32120558828558 1e-6 }
+{ CHECK share 0.632120558828558 1e-7 }
+PLOT 'Capacitor voltage'
+  kind = xy
+  x = time
+  y = 'cap.vc'
+END`,
+  },
+  {
     id: 'pressure-cooker',
     title: 'Pressure Cooker (transient)',
     description: 'Multi-domain boil-off: an electric element heats a steel body and the water; a lifting relief valve holds the cooker at its ~2 atm setpoint. Solve, then open the Plots tab.',
     category: 'Systems',
-    featured: true,
     text: `// Pressure Cooker (transient boil-off)
 { A 5 L rigid stainless cooker holds 3 L of tap water at 20 C, lid sealed,
   heated by a 220 V resistive element (32.27 ohm -> 1.5 kW). A spring relief
@@ -100,7 +711,6 @@ END
     title: 'Pump Sizing',
     description: 'Hydraulic and shaft power from flow rate, head, and efficiency.',
     category: 'Mechanics',
-    featured: true,
     text: `// Pump Sizing
 { A worked example — edit any value and press Solve (F2).
   Equations may be written in any order; frees figures out
@@ -123,7 +733,6 @@ P_shaft = P_hydraulic / eta          { required shaft power }
     title: 'Projectile Motion',
     description: 'Range, flight time, and peak height of a launched projectile.',
     category: 'Mechanics',
-    featured: true,
     text: `// Projectile Motion
 { A ball launched from the ground at an angle.
   Edit v0 or theta_deg and press Solve (F2). }
@@ -147,7 +756,6 @@ h_max = vy^2 / (2 * g)   { peak height }
     title: 'Heat Conduction',
     description: "Steady 1-D conduction through a wall (Fourier's law).",
     category: 'Heat Transfer',
-    featured: true,
     text: `// Heat Conduction Through a Wall
 { Steady 1-D conduction (Fourier's law). }
 k = 0.8 [W/m-K]        { thermal conductivity }
@@ -160,28 +768,10 @@ Q = k * A * (T_in - T_out) / L   { heat loss rate, watts }
 { CHECK Q 998.4000000000001 1e-6 }`,
   },
   {
-    id: 'ideal-gas',
-    title: 'Ideal Gas Law',
-    description: 'Mass of air in a rigid tank — note the implicit equation.',
-    category: 'Thermodynamics',
-    featured: true,
-    text: `// Ideal Gas Law
-{ Mass of air in a rigid tank. Note the implicit equation:
-  you do not have to write "m = ...". }
-P = 500 [kPa]
-Vol = 0.05 [m^3]
-T = 25 [C]
-R = 0.287 [kJ/kg-K]    { gas constant for air }
-P * Vol = m * R * T    { ideal gas equation }
-
-{ CHECK m 0.2921617103380253 3e-10 }`,
-  },
-  {
     id: 'dc-circuit',
     title: 'DC Circuit',
     description: 'Current and power dissipation from Ohm’s law.',
     category: 'Electrical & Powertrain',
-    featured: true,
     text: `// DC Circuit — Power Dissipation
 V = 12 [V]
 R = 220 [ohm]
@@ -190,41 +780,6 @@ P = V * I       { power dissipated }
 
 { CHECK I 0.05454545454545454 5.5e-11 }
 { CHECK P 0.6545454545454545 6.6e-10 }`,
-  },
-  {
-    id: 'rankine-cycle',
-    title: 'Rankine Cycle',
-    description: 'Ideal steam power cycle efficiency using real-water properties.',
-    category: 'Thermodynamics',
-    featured: true,
-    text: `// Rankine Cycle (Steam)
-{ Ideal steam Rankine cycle using real-water properties. }
-P_boiler = 8000 [kPa]
-P_cond = 10 [kPa]
-
-{ State 1: saturated liquid leaving the condenser }
-h1 = Enthalpy(Water, P=P_cond, x=0)
-v1 = Volume(Water, P=P_cond, x=0)
-
-{ Pump (state 1 -> 2) }
-w_pump = v1 * (P_boiler - P_cond)
-h2 = h1 + w_pump
-
-{ State 3: boiler exit (superheated) }
-h3 = Enthalpy(Water, P=P_boiler, T=480 [C])
-s3 = Entropy(Water, P=P_boiler, T=480 [C])
-
-{ State 4: turbine exit (isentropic, s4 = s3) }
-h4 = Enthalpy(Water, P=P_cond, s=s3)
-
-{ Performance }
-q_in = h3 - h2
-w_turb = h3 - h4
-eta_th = (w_turb - w_pump) / q_in
-
-{ CHECK q_in 3149767.154885827 3.2e-3 }
-{ CHECK w_turb 1240252.0387124298 1.3e-3 }
-{ CHECK eta_th 0.39119716208990235 4e-10 }`,
   },
   {
     id: 'thermo-compliance',
@@ -312,32 +867,6 @@ END
 { CHECK href_2 437787.9473383412 4.4e-4 }`,
   },
   {
-    id: 'tank-draining',
-    title: 'Tank Draining (ODE)',
-    description: 'First-order ODE via Integral — Torricelli draining of a tank.',
-    category: 'Fluids & Fluid Power',
-    featured: true,
-    text: `// Tank Draining (Torricelli) — first-order ODE
-{ Water height h in a tank emptying through a small orifice obeys
-  dh/dt = -(a/A)*sqrt(2*g*h).  Press Solve (F2).
-
-  How the ODE is written: frees integrates an ODE only when the
-  integrand references the integral's OWN result, and that result
-  starts at 0. So we integrate the DROP from the initial level and
-  rebuild h = h0 - drop. Integration limits must be plain numbers
-  (here 0 to 60 seconds). }
-g = 9.81 [m/s^2]
-A_tank = 1.0 [m^2]        { tank cross-section }
-a_orifice = 0.0015 [m^2]  { orifice area }
-h0 = 2.0 [m]              { initial water height }
-
-drop = Integral((a_orifice/A_tank)*sqrt(2*g*(h0 - drop)), tau, 0, 60)
-h = h0 - drop            { water height after 60 s }
-
-{ CHECK h 1.475953951579557 1.5e-9 }
-{ CHECK drop 0.5240460484204431 5.3e-10 }`,
-  },
-  {
     id: 'newton-cooling',
     title: "Newton's Cooling (ODE)",
     description: 'First-order ODE via Integral — a hot body cooling to ambient.',
@@ -359,44 +888,6 @@ T = T0 - drop            { temperature after 30 s }
 
 { CHECK T 308.76911265027184 3.1e-7 }
 { CHECK drop 54.38088734972817 5.5e-8 }`,
-  },
-  {
-    id: 'projectile-trajectory',
-    title: 'Projectile Trajectory (table)',
-    description: 'Parametric time sweep — full flight path sampled over time.',
-    category: 'Mechanics',
-    featured: true,
-    text: `// Projectile Trajectory (parametric time sweep)
-{ The whole flight path, sampled in time. This uses a PARAMETRIC
-  table: the base system is underspecified by one on purpose, t
-  being the swept column the table fills in, so Solve opens the
-  table and runs it (Solve Table in the Tables tab does the same).
-
-  Variables listed in the header with no range (time, x, y, vx, vy,
-  v) become solved OUTPUT columns. Afterward, chart y vs x (the arc)
-  or y vs time in the Plots tab. }
-g  = 9.81 [m/s^2]
-v0 = 20 [m/s]
-theta = 35 * pi# / 180
-
-vx0 = v0 * cos(theta)
-vy0 = v0 * sin(theta)
-
-time = t * 1 [s]                 { give the swept index t units of seconds }
-x  = vx0 * time                 { horizontal position }
-y  = vy0 * time - 0.5*g*time^2  { vertical position }
-vx = vx0                        { dx/dt }
-vy = vy0 - g*time               { dy/dt }
-v  = sqrt(vx^2 + vy^2)          { speed }
-
-PARAMETRIC trajectory (t, time, x, y, vx, vy, v)
-  t = 0:0.05:4
-END
-
-{ Graded on the table's last row, t = 4 s, below the launch height. }
-{ CHECK x 65.5321635431193 1e-10 }
-{ CHECK y -32.5938850919163 1e-10 }
-{ CHECK v 32.2411542210169 1e-10 }`,
   },
   {
     id: 'damped-oscillator',
@@ -604,57 +1095,6 @@ E0        = ODEValue('energy', 0) * 1 [J]  { initial energy }
 { CHECK E0 10 1e-8 }`,
   },
   {
-    id: 'sounding-rocket-trajectory',
-    title: 'Sounding Rocket Trajectory (loss-accurate)',
-    description: 'Coupled h/v/m ODE with drag, burnout and an apogee event; apogee read back via an accessor.',
-    category: 'Aerospace & Compressible Flow',
-    text: `// Loss-Accurate Sounding-Rocket Trajectory (DYNAMIC)
-{ The coupled multi-state system der(h)=v, der(v)=(F - D - m g)/m, der(m)=-mdot,
-  with aerodynamic drag against an exponential atmosphere computed every step as
-  an algebraic auxiliary, thrust gated off at burnout via If(), and an apogee
-  EVENT (v = 0, falling) that stops the integration. The ODE Table (Tables
-  window) plots altitude / velocity / mass vs time, or mass vs altitude.
-
-  The apogee altitude is read back into the analytic solution with MaxValue('h').
-  Change t_burn and re-solve to trade burn time for apogee — or, to SIZE the
-  rocket, open Variable Settings, give t_burn a guess near 27 and bounds
-  [5, 55], add the equation  MaxValue('h') = h_target  and let frees solve for
-  the burn time that reaches 100 km. }
-
-g0     = 9.81 [m/s^2]
-m0     = 600 [kg]   { lift-off mass }
-mdot   = 9 [kg/s]   { propellant mass flow during burn }
-F0     = 28000 [N]  { motor thrust }
-Cd     = 0.3        { drag coefficient }
-A      = 0.03 [m^2] { reference area }
-rho0   = 1.225 [kg/m^3] { sea-level air density }
-Hscale = 8000 [m]   { atmospheric scale height }
-t_burn = 27 [s]     { motor burn time }
-
-DYNAMIC ascent (method = ode45, time = 0 .. 600, points = 500, rtol = 1e-7, atol = 1e-3)
-  thrust = If(time, t_burn, F0, F0, 0)         { thrust on until burnout }
-  mflow  = If(time, t_burn, mdot, mdot, 0)     { mass flow on until burnout }
-  rho    = rho0 * exp(-h / Hscale)             { exponential atmosphere }
-  drag   = 0.5 * rho * v * v * Cd * A          { aerodynamic drag }
-  der(h) = v
-  der(v) = (thrust - drag - m * g0) / m
-  der(m) = -mflow
-  h(0) = 0 [m]
-  v(0) = 0 [m/s]
-  m(0) = m0
-  EVENT apogee: v = 0 | falling -> stop        { stop at the top of the arc }
-END
-
-{ Read the trajectory back into the analytic solution }
-apogee = MaxValue('h') * 1 [m]     { peak altitude reached }
-v_burnout = ODEValue('v', t_burn) * 1 [m/s]    { speed at burnout }
-m_final   = FinalValue('m') * 1 [kg]          { burnout / coasting mass }
-
-{ CHECK apogee 98571.74729819218 1e-4 }
-{ CHECK v_burnout 1292.4475052767484 1.3e-6 }
-{ CHECK m_final 357.00041513103366 3.6e-7 }`,
-  },
-  {
     id: 'partial-fractions',
     title: 'Partial Fractions (Laplace)',
     description: 'Decompose a transfer function and read the residues A, B as solved variables.',
@@ -681,83 +1121,6 @@ y_initial = A + B        { y(0) }
 { CHECK A 2 2e-9 }
 { CHECK B -1 1e-9 }
 { CHECK y_initial 1 1e-9 }`,
-  },
-  {
-    id: 'cruise-control',
-    title: 'Cruise Control System Design',
-    description: 'Models a 1000 kg car with drag, tunes a PI controller, and performs frequency & stability analysis.',
-    category: 'Control Systems',
-    featured: true,
-    text: `// Car Dynamics & Cruise Control
-{ This example models a 1000 kg car under viscous drag, converts the state-space model to a transfer function, designs a proportional-integral (PI) controller for a feedback loop, and performs frequency & stability analysis.
-
-  Press Solve (F2). }
-
-m = 1000 [kg]           { car mass }
-c_drag = 50 [N-s/m]     { viscous drag coefficient (named c_drag, not c, since
-                          names are case-insensitive and C is the output matrix) }
-
-{ State Space Model: states are [position; velocity], input is traction force. }
-A[1,1] = 0; A[1,2] = 1
-A[2,1] = 0; A[2,2] = -c_drag/m
-B[1] = 0
-B[2] = 1/m
-C[1] = 0; C[2] = 1      { output is velocity }
-D = 0.0
-
-{ 1. Convert State Space to Transfer Function }
-[num_car, den_car] = ss2tf(A, B, C, D)
-
-{ 2. Design PI Controller: C(s) = Kp + Ki/s = (Kp*s + Ki)/s }
-Kp = 800 [N-s/m]
-Ki = 40 [N/m]
-num_pi = [Kp, Ki]
-den_pi = [1.0, 0.0]
-
-{ 3. Open-Loop System: L(s) = C(s) * G(s) }
-[num_ol, den_ol] = series(num_pi, den_pi, num_car, den_car)
-
-{ 4. Closed-Loop System: T(s) = L(s) / (1 + L(s)), unity feedback H(s) = 1 }
-num_h = [1]
-den_h = [1]
-[num_cl, den_cl] = feedback(num_ol, den_ol, num_h, den_h)
-
-{ 5. Stability & Frequency Margin Analysis }
-[gm, pm, w_cg, w_cp] = margin(num_ol, den_ol)
-
-{ 6. Closed-Loop Poles and Zeros (unity-feedback loop has one finite zero) }
-[cl_pr, cl_pi] = pole(num_cl, den_cl)
-[cl_zr, cl_zi] = zero(num_cl, den_cl)
-
-{ 7. Frequency sweeps for Bode and Nyquist plots }
-omega = [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
-[mag_ol, phase_ol] = bode(num_ol, den_ol, omega)
-[real_ol, imag_ol] = nyquist(num_ol, den_ol, omega)
-
-PLOT 'Bode Diagram'
-  kind = bode
-  omega = omega
-  mag = mag_ol
-  phase = phase_ol
-END
-
-PLOT 'Nyquist Diagram'
-  kind = nyquist
-  real = real_ol
-  imag = imag_ol
-END
-
-PLOT 'Pole-Zero Map'
-  kind = polezero
-  pr = cl_pr
-  pi = cl_pi
-  zr = cl_zr
-  zi = cl_zi
-END
-
-{ CHECK pm 90 9.1e-8 }
-{ CHECK w_cg 0.8000059198449195 8.1e-10 }
-{ CHECK cl_pr[1] -0.7999999999999994 8e-10 }`,
   },
   {
     id: 'multi-output-destructuring',
@@ -790,66 +1153,6 @@ omega = [0.1, 1, 10]
 { CHECK den2[3] 2 2e-9 }
 { CHECK mag[1] -6.074657464028251 6.1e-9 }
 { CHECK mag[3] -40.21354713081423 4.1e-8 }`,
-  },
-  {
-    id: 'step-impulse-response',
-    title: 'Step & Impulse Response',
-    description: 'Time-domain analysis of a second-order system: step response, impulse response, and forced response (lsim).',
-    category: 'Control Systems',
-    text: `{ Step & Impulse Response Analysis }
-{ Second-order system: G(s) = wn^2 / (s^2 + 2*zeta*wn*s + wn^2) }
-{ Natural frequency and damping ratio }
-wn = 2 [rad/s]
-zeta = 0.3
-
-{ Transfer function coefficients (descending powers of s) }
-{ num(s) = wn^2,  den(s) = s^2 + 2*zeta*wn*s + wn^2 }
-num = [wn^2]
-den = [1, 2*zeta*wn, wn^2]
-
-{ 1. Unit Step Response (uses default 10s time vector) }
-[y_step, t] = step(num, den)
-
-{ 2. Impulse Response (uses default 10s time vector) }
-[y_imp] = impulse(num, den)
-
-{ 3. Forced Response: ramp input u(t) = t }
-u = t
-[y_ramp] = lsim(num, den, u, t)
-
-{ 4. Stability check: poles of the system }
-[pr, pi] = pole(num, den)
-
-PLOT 'Step Response'
-  kind = xy
-  x = t
-  y = y_step
-  xlabel = 'Time [s]'
-  ylabel = 'Amplitude'
-  title = 'Unit Step Response'
-END
-
-PLOT 'Impulse Response'
-  kind = xy
-  x = t
-  y = y_imp
-  xlabel = 'Time [s]'
-  ylabel = 'Amplitude'
-  title = 'Impulse Response'
-END
-
-PLOT 'Ramp Response (lsim)'
-  kind = xy
-  x = t
-  y = y_ramp
-  xlabel = 'Time [s]'
-  ylabel = 'Amplitude'
-  title = 'Ramp Response via lsim'
-END
-
-{ CHECK pr[1] -0.6 6e-10 }
-{ CHECK y_step[50] 0.9974089580786609 1e-9 }
-{ CHECK y_imp[50] 0.0011808598375713535 1.2e-12 }`,
   },
   {
     id: 'controller-design-lqr-pid',
@@ -3359,7 +3662,6 @@ y_test = siyavula_data(0)
     title: 'Radiation View Factors',
     description: 'Closed-form diffuse view factors for standard configurations.',
     category: 'Heat Transfer',
-    featured: true,
     text: `// Radiation View Factors
 { Analytic (Howell-catalog) diffuse view factors — no chart lookup
   needed. Each returns the dimensionless fraction of radiation that
@@ -3396,7 +3698,6 @@ q = k * A * (T_hot - T_cold) / L   { heat rate through the plate }
     title: 'Engine Map (2-D Interpolation)',
     description: 'Bilinear lookup of a brake-specific-fuel-consumption map.',
     category: 'Electrical & Powertrain',
-    featured: true,
     text: `// Engine Map - 2-D Interpolation
 { A brake-specific fuel consumption map: rows are engine speed,
   columns are load. Call the table with two arguments to bilinearly
@@ -3412,33 +3713,6 @@ g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, classic-solver name }
 
 { CHECK g_per_kWh 268 2.7e-7 }
 { CHECK g_check 268 2.7e-7 }`,
-  },
-  {
-    id: 'multi-objective-beam',
-    title: 'Multi-Objective Beam Design (Pareto)',
-    description: 'Trade off mass against deflection — run via Min/Max > Pareto.',
-    category: 'Data & Analysis',
-    featured: true,
-    text: `// Multi-Objective Cantilever Beam
-{ A steel cantilever with a tip load. Solve (F2) to evaluate one
-  design, then open Tools > Min/Max, switch to 'Multi-objective
-  (Pareto)', and MINIMIZE both 'mass' and 'delta' over the decisions
-  b (0.01 .. 0.06) and h (0.02 .. 0.10) to trace the trade-off front.
-  Material properties come from the built-in solid database. }
-L = 1 [m]                { beam length }
-F = 500 [N]              { tip load }
-E = E_(Steel)            { Young's modulus }
-rho = rho_(Steel)        { density }
-
-b = 0.03 [m]             { cross-section width  (decision) }
-h = 0.05 [m]             { cross-section height (decision) }
-
-I = b * h^3 / 12         { second moment of area }
-mass = rho * L * b * h               { objective 1: minimize }
-delta = F * L^3 / (3 * E * I)        { objective 2: tip deflection, minimize }
-
-{ CHECK mass 11.781 1.2e-8 }
-{ CHECK delta 0.0026666666666666657 2.7e-12 }`,
   },
   {
     id: 'driving-cycle-energy',
@@ -3484,7 +3758,6 @@ END
     title: 'Rankine Cycle (with component efficiencies)',
     description: 'Steam power cycle with turbine and pump isentropic efficiencies.',
     category: 'Thermodynamics',
-    featured: true,
     text: `// Ideal Rankine Cycle
 { Steam power cycle: pump -> boiler -> turbine -> condenser.
   Real-water properties, computed in the browser. Press Solve (F2). }
@@ -3521,7 +3794,6 @@ eta_th = w_net / q_in
     title: 'Brayton Cycle',
     description: 'Gas-turbine cycle, cold air-standard with component efficiencies.',
     category: 'Thermodynamics',
-    featured: true,
     text: `// Air-Standard Brayton Cycle
 { Gas-turbine cycle, cold air-standard (constant properties). }
 cp = 1004 [J/kg-K]
@@ -3576,7 +3848,6 @@ eta_ideal = 1 - 1 / r^(k - 1)   { closed-form air-standard efficiency }
     title: 'Refrigeration Cycle',
     description: 'Vapor-compression R134a cycle COP with real-refrigerant properties.',
     category: 'Thermodynamics',
-    featured: true,
     text: `// Vapor-Compression Refrigeration (R134a)
 { Ideal VCR cycle. Real-refrigerant properties, computed in the browser. }
 T_evap = 263.15 [K]      { -10 C }
@@ -3607,7 +3878,6 @@ COP = q_L / w_c
     title: 'Nozzle with a Normal Shock',
     description: 'Air shocks where A/A* = 2 in the diverging section: Mach, pressure and stagnation-pressure loss across it.',
     category: 'Aerospace & Compressible Flow',
-    featured: true,
     text: `// Converging-Diverging Nozzle with a Normal Shock
 { Air (k = 1.4) expands from a reservoir through a C-D nozzle. A normal
   shock stands in the diverging section where the local A/A* = 2.0. }
@@ -3633,7 +3903,6 @@ P02 = P0 * P02_P01_shock(M1, k)      { stagnation pressure after the loss }
     title: 'Heat Exchanger (Effectiveness-NTU)',
     description: 'Counterflow exchanger duty and outlet temperatures via effectiveness-NTU.',
     category: 'Heat Transfer',
-    featured: true,
     text: `// Heat Exchanger — Effectiveness-NTU Method
 { Counterflow water-to-water exchanger rated with the effectiveness-NTU method. }
 mdot_h = 2.0 [kg/s]
@@ -3687,7 +3956,6 @@ Psat_300 = eos_psat('co2', 'PR', 300)          { saturation pressure at 300 K }
     title: 'Engine Cycle (Wiebe Heat Release)',
     description: 'Crank-angle single-zone SI-engine pressure trace via a DYNAMIC block.',
     category: 'Electrical & Powertrain',
-    featured: true,
     text: `// Single-Zone Engine Cycle (Wiebe Heat Release)
 { Crank-angle single-zone first-law model of a spark-ignition engine over the
   compression-combustion-expansion strokes. Cylinder volume follows slider-crank
@@ -3726,7 +3994,6 @@ p_max = MaxValue('p') * 1 [Pa]      { peak cylinder pressure }
     title: 'Adiabatic Flame Temperature',
     description: 'Methane-air flame temperature, stoichiometric AFR, and heating value.',
     category: 'Thermodynamics',
-    featured: true,
     text: `// Adiabatic Flame Temperature
 { Complete combustion of methane in air (products frozen, no dissociation).
   Edit phi: 1.0 is stoichiometric, < 1.0 is excess air (lower flame temp). }
@@ -3741,159 +4008,76 @@ LHV     = HeatingValue('CH4', 'LHV')
 { CHECK LHV 50009973.19703297 5.1e-2 }`,
   },
   {
-    id: 'ev-battery-cooling-pid',
-    title: 'EV Battery Cooling with Closed-Loop EXV Control',
-    description: 'Five domains in one transient solve: pack discharge (electrical) heats the cell thermal state, a coolant loop carries it to an R134a chiller, and a reverse-acting PID on a signal wire modulates the electronic expansion valve to hold the pack at 303 K.',
-    category: 'Systems',
-    featured: true,
-    text: `// Five domains in one solve: electrical (pack discharge) -> heat (cell thermal
-// state) -> liquid (coolant loop) -> twophase (R134a chiller) -> signal (PID).
-// The PID modulates the electronic expansion valve to hold the pack at 303 K;
-// with Ki > 0 the steady error vanishes.
-TABLE ocv(soc) [V]
-  0   3.0
-  1   4.2
-END
-TABLE dudt(soc) [V/K]
-  0   -5e-5
-  1   -5e-5
-END
-BatteryPack   BP(Ns=96, Np=2, ocv$=ocv, dudt$=dudt, R0ref=0.002 [ohm], Tref=298.15 [K], Ea=0 [J/mol], Q0=60, C_th=50000 [J/K], SOC0=0.9, T0=306 [K])
-CurrentSource LOAD(I=-60)
-Ground        G()
-connect(BP.p, LOAD.p)
-connect(BP.n, LOAD.n, G.port)
-
-LiquidSource CSRC(fluid$=Water, mdot=0.05, P=200000, T=305)
-Chiller      CH(ref$=R134a, cool$=Water, U_tp=2000, U_sh=200, D=0.01, L=5, eps_zone=0.1, UA_cool=600)
-LiquidWallHX PLATE(fluid$=Water, UA=500)
-LiquidSink   CSNK()
-connect(CSRC.out, CH.cool_in)
-connect(CH.cool_out, PLATE.in)
-connect(PLATE.out, CSNK.in)
-connect(PLATE.wall, BP.heat, TB.port)
-
-function [out] = PHSupply(P, h, domain$ = twophase)
-  port(out)
-  out.P = P
-  out.h = h
-end
-hliq = Enthalpy(R134a, P=1200000, x=0)
-PHSupply             RSRC(P=1200000, h=hliq)
-EXVCmd               EXV(fluid$=R134a, CdA_max=2e-7 [m^2])
-TwoPhasePressureSink RSNK(P=350000)
-connect(RSRC.out, EXV.in)
-connect(EXV.out, CH.ref_in)
-connect(CH.ref_out, RSNK.in)
-
-SigConstant     SP(k=303 [K])
-SigThermalProbe TB()
-SigPID          PID(model$=clamped, Kp=0.05 [1/K], Ki=0.005 [1/K-s], Kd=0 [s/K], tau=1 [s], i0=0.2 [K-s], d0=0 [K], umin=0.02, umax=1, Taw=2000 [s])
-// Reverse-acting: opening the EXV COOLS, so the measurement drives sp and
-// the setpoint drives pv (equivalent to negating the gains).
-connect(TB.out, PID.sp)
-connect(SP.out, PID.pv)
-connect(PID.out, EXV.u)
-DYNAMIC cool(method = ode23s, time = 0 .. 4000, points = 400)
-END
-t_bat      = FinalValue('bp.t') * 1 [K]
-q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))
-
-{ CHECK t_bat 302.99984375521336 3.1e-7 }
-{ CHECK hliq 265947.2005481485 2.7e-4 }`,
-  },
-  {
    id: 'pneumatic-spring-actuator',
    "title": "Spring-return pneumatic actuator",
     "description": "Air at 1.2 barA against a 1330 N/m return spring: 35.5 N of force and a 26.7 mm stroke.",
     "category": "Fluids & Fluid Power",
     "text": "PneumaticSupply supply(fluid$=Air, P=120000 [Pa], T=293.15 [K])\nPneumaticActuator actuator(fluid$=Air, area=0.001774 [m^2], Patm=100000 [Pa])\nTransSpring spring(k=1330 [N/m], x0=0 [m])\nTransGround ground()\nconnect(supply.out, actuator.in)\nconnect(actuator.rod, spring.a)\nconnect(spring.b, ground.port)\nstroke = spring.x\nforce = -actuator.rod.f\n{ CHECK stroke 0.0266766917293233 1e-8 }\n{ CHECK force 35.48 1e-6 }"
   },
-{
+  {
    id: 'hydraulic-spring-actuator',
    "title": "Hydraulic actuator holding a spring load",
     "description": "Oil at 11 barA on a 10 cm² piston carries 1 kN and compresses a 50 kN/m spring 20 mm.",
     "category": "Fluids & Fluid Power",
     "text": "HydraulicSupply supply(P=1100000 [Pa])\nHydraulicCylinder cylinder(rho=850 [kg/m^3], beta=1.5e9 [Pa], V0=0.0001 [m^3], area=0.001 [m^2], Patm=100000 [Pa], P0=1100000 [Pa])\nTransSpring spring(k=50000 [N/m], x0=0.02 [m])\nTransGround ground()\nconnect(supply.out, cylinder.in)\nconnect(cylinder.rod, spring.a)\nconnect(spring.b, ground.port)\nload = -cylinder.rod.f\nstroke = spring.x\n{ CHECK load 1000 1e-6 }\n{ CHECK stroke 0.02 1e-8 }"
   },
-{
-   id: 'hydraulic-metering-restriction',
-   "title": "Oil flow through a metering restriction",
-    "description": "A 10 bar drop across a CdA = 1e-5 m² orifice passes 0.41 kg/s of oil, 485 W of hydraulic power.",
-    "category": "Fluids & Fluid Power",
-    "text": "HydraulicSupply supply(P=1100000 [Pa])\nHydraulicOrifice restriction(CdA=1e-5 [m^2], rho=850 [kg/m^3])\nHydraulicTank tank(P=100000 [Pa])\nconnect(supply.out, restriction.in)\nconnect(restriction.out, tank.port)\nmass_flow = restriction.in.mdot\nvolume_flow = mass_flow / 850 [kg/m^3]\nhydraulic_power = 1000000 [Pa] * volume_flow\nGUESS restriction.in.mdot = 0.4\n{ CHECK mass_flow 0.412310562561766 1e-7 }\n{ CHECK hydraulic_power 485.071250072666 1e-3 }"
-  },
-{
+  {
    id: 'pneumatic-sonic-restriction',
    "title": "Air supply through a sonic restriction",
     "description": "7 barA air exhausts to atmosphere through an ISO 6358 restriction; at a pressure ratio of 0.14 the flow is choked.",
     "category": "Fluids & Fluid Power",
     "text": "PneumaticSupply supply(fluid$=Air, P=700000 [Pa], T=293.15 [K])\nPneumaticOrifice restriction(fluid$=Air, C=1e-8, b=0.35)\nPneumaticAtmosphere atmosphere(P=100000 [Pa])\nconnect(supply.out, restriction.in)\nconnect(restriction.out, atmosphere.port)\npressure_ratio = restriction.out.P / restriction.in.P\nmass_flow = restriction.in.mdot\n{ CHECK pressure_ratio 0.142857142857143 1e-9 }\n{ CHECK mass_flow 0.008295 1e-7 }"
   },
-{
+  {
    id: 'damped-actuator-motion',
    "title": "Damped actuator motion",
     "description": "The pneumatic actuator's 35.5 N drives a 0.1 kg mass on a spring and damper to its 26.7 mm rest stroke.",
     "category": "Mechanics",
     "text": "ForceSource drive(F=35.48 [N])\nTransMass moving(m=0.1 [kg], v0=0 [m/s])\nTransSpring spring(k=1330 [N/m], x0=0 [m])\nTransDamper damper(c=23.0651251893416 [N-s/m])\nTransGround ground()\nconnect(drive.a, moving.port, spring.a, damper.a)\nconnect(drive.b, spring.b, damper.b, ground.port)\nDYNAMIC motion(method=ode45, time=0..0.2, points=101)\nEND\nfinal_stroke = FinalValue('spring.x') * 1 [m]\n{ CHECK final_stroke 0.0266766917 1e-6 }"
   },
-{
+  {
    id: 'reduction-gear-viscous-load',
    "title": "Reduction gear driving a viscous load",
     "description": "A 12 N·m torque through a 3:1 reduction turns a viscous load at 60 rad/s, absorbing 2.16 kW.",
     "category": "Mechanics",
     "text": "TorqueSource drive(T=12 [N-m])\nGear gear(ratio=3)\nRotationalDamper load(c=0.6 [N-m-s])\nMechGround ground()\nconnect(drive.a, gear.in)\nconnect(gear.out, load.a)\nconnect(drive.b, load.b, ground.port)\ninput_speed = gear.in.w\noutput_speed = gear.out.w\nload_power = load.a.tau * load.a.w\n{ CHECK input_speed 180 1e-6 }\n{ CHECK output_speed 60 1e-6 }\n{ CHECK load_power 2160 1e-4 }"
   },
-{
+  {
    id: 'pi-temperature-regulation',
    "title": "PI temperature regulation of a thermal mass",
     "description": "A PI heater brings a 5 kJ/K mass from 300 K to a 350 K setpoint against conduction to ambient.",
     "category": "Heat Transfer",
     "text": "PIThermostat controller(Kp=100 [W/K], Ki=0.5 [W/K-s], Tref=350 [K])\nThermalMass body(C=5000 [J/K], T0=300 [K])\nConduction wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])\nThermalSource ambient(T=300 [K])\nconnect(controller.port, body.port, wall.a)\nconnect(wall.b, ambient.port)\nDYNAMIC heating(method=ode45, time=0..2000, points=201)\nEND\nfinal_temperature = FinalValue('body.port.t') * 1 [K]\nfinal_heat = -FinalValue('controller.port.qdot') * 1 [W]\n{ CHECK final_temperature 350 0.02 }\n{ CHECK final_heat 1000 0.5 }"
   },
-{
+  {
    id: 'glazed-opening-heat-loss',
    "title": "Heat loss through a glazed opening",
     "description": "Inner film, glass and outer film in series between 20 °C inside and 0 °C outside, across 0.9 m² of single glazing.",
     "category": "Heat Transfer",
     "text": "ThermalSource inside(T=293.15 [K])\nConvection inner_film(htc=8 [W/m^2-K], area=0.9 [m^2])\nConduction glass(k=0.81 [W/m-K], area=0.9 [m^2], L=0.003 [m])\nConvection outer_film(htc=25 [W/m^2-K], area=0.9 [m^2])\nThermalSource outside(T=273.15 [K])\nconnect(inside.port, inner_film.a)\nconnect(inner_film.b, glass.a)\nconnect(glass.b, outer_film.a)\nconnect(outer_film.b, outside.port)\nheat_loss = glass.Q\nresistance = 1/(8 [W/m^2-K]*0.9 [m^2]) + 0.003 [m]/(0.81 [W/m-K]*0.9 [m^2]) + 1/(25 [W/m^2-K]*0.9 [m^2])\nexpected_heat = 20 [K]/resistance\nbalance_error = heat_loss - expected_heat\n{ CHECK balance_error 0 1e-7 }"
   },
-{
+  {
    id: 'sensor-detrend-smooth-window',
    "title": "Remove drift and smooth a sampled sensor trace",
     "description": "Detrend, a three-point moving average and a Hann window applied to an eight-sample trace.",
     "category": "Data & Analysis",
     "text": "trace = [1, 3, 2, 6, 4, 9, 5, 12]\n[detrended] = Detrend(trace)\n[centered] = Detrend(trace, 'constant')\n[smoothed] = Smooth(trace, 3)\n[tapered] = Window(detrended[1:8], 'hann')\ncentered_mean = sum(centered[1:8])/8\nresidual_mean = sum(detrended[1:8])/8\nleft_edge = smoothed[1]\n{ CHECK centered_mean 0 1e-9 }\n{ CHECK residual_mean 0 1e-9 }\n{ CHECK left_edge 2 1e-9 }\n{ CHECK tapered[1] 0 1e-9 }\n{ CHECK tapered[8] 0 1e-9 }"
   },
-{
-   id: 'vibration-tone-spectrum',
-   "title": "Recover a vibration tone and check spectral power",
-    "description": "The FFT of a sampled sine finds its frequency bin, checks Parseval's power and inverts back exactly.",
-    "category": "Data & Analysis",
-    "text": "signal = [0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1]\nimaginary = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n[spectrum_real, spectrum_imag] = FFT(signal, imaginary)\n[recovered, recovered_imag] = IFFT(spectrum_real[1:32], spectrum_imag[1:32])\n[frequency, psd] = Welch(signal, 32, 16)\npower = sum(psd[1:9])*(frequency[2]-frequency[1])\nreconstruction_error = recovered[3]-signal[3]\ntone_peak = peakindex(1, 0, 0, psd[1:9])\nPLOT 'Vibration power spectrum'\n kind = xy\n x = frequency\n y = psd\n xlabel = 'Frequency [Hz]'\n ylabel = 'Power density [amplitude squared per Hz]'\nEND\n{ CHECK frequency[3] 4 1e-9 }\n{ CHECK tone_peak 3 1e-9 }\n{ CHECK power 1 0.01 }\n{ CHECK reconstruction_error 0 1e-9 }"
-  },
-{
+  {
    id: 'causal-zero-phase-filter',
    "title": "Causal filtering, zero-phase filtering and convolution",
     "description": "A two-tap average on an impulse: Filter delays it, FiltFilt keeps it centred and Convolve gives the full response.",
     "category": "Data & Analysis",
     "text": "samples = [0, 0, 0, 1, 0, 0, 0]\nb = [0.5, 0.5]\na = [1]\n[causal] = Filter(b, a, samples)\n[zero_phase] = FiltFilt(b, a, samples)\n[full_response] = Convolve(samples, b)\nsymmetry_error = zero_phase[3]-zero_phase[5]\n{ CHECK causal[4] 0.5 1e-9 }\n{ CHECK causal[5] 0.5 1e-9 }\n{ CHECK full_response[8] 0 1e-9 }\n{ CHECK symmetry_error 0 1e-9 }"
   },
-{
+  {
    id: 'transport-delay-peak-detection',
    "title": "Measure transport delay and detect peaks",
     "description": "Cross-correlation finds a one-sample (0.1 s) lag between two pulses, and peakcount counts three peaks.",
     "category": "Data & Analysis",
     "text": "late = [0, 0, 1, 2, 1, 0, 0]\nearly = [0, 1, 2, 1, 0, 0, 0]\n[correlation] = XCorr(late, early)\npeak_position = peakindex(1, 0, 0, correlation[1:13])\nlag_samples = peak_position - 7\ndelay_seconds = 0.1 [s]*lag_samples\npulses = [0, 3, 0, 0, 5, 0, 0, 2, 0]\ncount = peakcount(0, 0, pulses)\n{ CHECK lag_samples 1 1e-9 }\n{ CHECK delay_seconds 0.1 1e-9 }\n{ CHECK count 3 1e-9 }"
   },
-{
-   id: 'correlated-temperature-heat-loss',
-   "title": "Correlated temperature measurements in heat-loss estimation",
-    "description": "Heat loss from two temperature readings whose errors correlate at ρ = 0.5, which narrows the propagated spread.",
-    "category": "Data & Analysis",
-    "text": "inside_temp = 293.15 [K]\noutside_temp = 273.15 [K]\nheat_loss = 10 [W/K]*(inside_temp-outside_temp)\nUncertaintyOf(inside_temp) = 0.2\nUncertaintyOf(outside_temp) = 0.3\nCorrelation(inside_temp, outside_temp) = 0.5\nheat_sigma = UncertaintyOf(heat_loss)\n{ CHECK heat_loss 200 1e-8 }\n{ CHECK heat_sigma 2.64575131106459 1e-7 }"
-  },
-{
+  {
    id: 'uniform-area-tolerance',
    "title": "Uniform dimensional tolerance and propagated spread",
     "description": "A ±10 % uniform tolerance on piston area spreads a 35.5 N force by 2.05 N (one standard deviation).",
@@ -3906,8 +4090,8 @@ q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))
     "description": "Gas mass in a tank from pressure, volume and temperature readings, each carrying its own uncertainty.",
     "category": "Data & Analysis",
     "text": "pressure = 934000 [Pa]\nvolume = 0.010 [m^3]\ntemperature = 295.45 [K]\nmass = pressure*volume/(208.1 [J/kg-K]*temperature)\nUncertaintyOf(pressure) = 22000\nUncertaintyOf(volume) = 0.0004\nUncertaintyOf(temperature) = 1.2\nmass_sigma = UncertaintyOf(mass)\n{ CHECK mass 0.151911552344956 1e-9 }\n{ CHECK mass_sigma 0.00707868056268796 1e-8 }"
-  }
-  ,{
+  },
+  {
     id: 'rc-step-charging',
     title: 'RC step charging',
     description: 'A 10 V step charges a 1 µF capacitor through 1 kΩ.',
@@ -4638,34 +4822,6 @@ u_y_worst = rel_worst * y
 { CHECK u_y_worst 0.01148175 1e-09 }`,
   },
   {
-    id: 'linear-regression-diagnostics',
-    title: 'Linear regression with diagnostics',
-    description: 'Slope, intercept, standard error and correlation of seven points.',
-    category: 'Data & Analysis',
-    text: `{ Least-squares line through seven points, with the standard error of the
-  estimate s_y/x = sqrt(S_r / (n - 2)) and the correlation coefficient.
-  Data and published answers: Chapra & Canale, Numerical Methods for
-  Engineers, Examples 17.1-17.2 (a1 = 0.8392857, a0 = 0.07142857,
-  s_y/x = 0.7735, r = 0.932). The original problem's data was not kept. }
-x = [1, 2, 3, 4, 5, 6, 7]
-y = [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5]
-[a_1, a_0, r_sq] = linfit(x, y)
-r = pearson([1, 2, 3, 4, 5, 6, 7], [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5])
-r_cc = corrcoef([1, 2, 3, 4, 5, 6, 7], [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5])
-n = 7
-FOR i = 1 TO 7
-  e2[i] = (y[i] - (a_0 + a_1 * x[i]))^2
-END
-S_r = sum(e2[1:7])
-s_yx = sqrt(S_r / (n - 2))
-{ CHECK a_1 0.839285714285714 1e-12 }
-{ CHECK a_0 0.0714285714285714 1e-12 }
-{ CHECK r_sq 0.868317610062893 1e-12 }
-{ CHECK r 0.931835613218819 1e-12 }
-{ CHECK S_r 2.99107142857143 1e-10 }
-{ CHECK s_yx 0.773443136703847 1e-10 }`,
-  },
-  {
     id: 'quadratic-regression',
     title: 'Quadratic regression',
     description: 'Second-order polynomial fit of six points, with its standard error.',
@@ -5198,57 +5354,6 @@ q_B_equal_f = q_total / (1 + sqrt(149.8 / 80))
 { CHECK f_A 0.0273706365406121 3e-08 }
 { CHECK f_B 0.0287740439831863 3e-08 }
 { CHECK q_B_equal_f 0.000532767919714017 1e-09 }`,
-  },
-  {
-    id: 'pump-valve-operating-point',
-    title: 'Pump, pipe and throttling valve: the operating point',
-    description: 'Solve, then open the Schematic and click P1 or V1: each card draws its curve and the point it runs at.',
-    category: 'Fluids & Fluid Power',
-    text: `// frees-language: 2
-{ A centrifugal pump lifts water from one open tank to another at the same
-  level through 120 m of 80 mm steel pipe and a control valve. The pump runs
-  where its head curve meets the system: the pipe's friction and the valve's
-  drop, both growing with the flow. Closing the valve steepens the system
-  curve and moves the point up the pump curve, to less flow at more head.
-
-  The head curve is the manufacturer's table; the valve passes
-  m_dot*|m_dot| = (u*Cv)^2*rho*dP at opening u.
-
-  On the Schematic, click P1 for the pump curve with the operating point on
-  it, or V1 for the valve's drop at the present opening. Pin u_v as a slider
-  and move it: the valve's curve and both points follow.
-
-  Source: Y. A. Cengel and J. M. Cimbala, Fluid Mechanics, 4th ed.,
-  McGraw-Hill, 2018, Sec. 14-2 (matching a pump to a piping system). }
-
-TABLE pump_head(Q [m^3/s]) [m]
-  0       32
-  0.005   31
-  0.010   28
-  0.015   23
-  0.020   16
-  0.025   7
-END
-
-rho = 998 [kg/m^3]
-u_v = 0.6 [-] { valve opening }
-
-PumpMap P1(a, b, rho=rho, map$=pump_head)
-Duct    L1(b, c, rho=rho, mu=1.0e-3 [Pa-s], L=120 [m], D=0.08 [m], rough=4.5e-5 [m])
-Valve   V1(c, d, Cv=0.0015 [m^2], rho=rho, u=u_v, model$=linear)
-Sink    TANK(d) { the upper tank }
-
-a.P = 101325 [Pa] { both tanks open to the atmosphere }
-d.P = 101325 [Pa]
-c.h = 100000 [J/kg] { water near 24 C; nothing here changes it }
-
-Q_op = P1.q    { operating flow, m^3/s }
-H_op = P1.head { operating head, m }
-dP_valve = c.P - d.P
-
-{ CHECK Q_op 0.0119058453909063 1e-9 }
-{ CHECK H_op 26.0941546090937 1e-7 }
-{ CHECK dP_valve 174648.958226199 1e-3 }`,
   },
   {
     id: 'pipeline-pump-head',
@@ -7496,49 +7601,6 @@ Q_C = (FinalValue('cond.q1') + FinalValue('cond.q2') + FinalValue('cond.q3')) * 
 { CHECK Q_C -873.3709061010791 0.00087 }`,
   },
   {
-    id: 'lesson-rc-charging',
-    title: 'Lesson — RC charging',
-    description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson.',
-    category: 'Lessons & Labs',
-    text: `// frees-language: 2
-{ Lesson — RC charging. Pairs with the thermal-mass lesson.
-
-  A 10 V step charges a capacitor C through a resistor R. The capacitor
-  voltage rises as v(t) = E·(1 − exp(−t/τ)) with τ = R·C: after one time
-  constant it has covered 63.2 % of the step, whatever R and C are.
-
-  Source: J. W. Nilsson and S. A. Riedel, Electric Circuits, 11th ed.,
-  Pearson, 2019, §7.4 (the step response of RC circuits). }
-
-R_s = 1000 [ohm]       { series resistance: the lesson's slider }
-C_s = 1e-6 [farad]     { capacitance }
-E_s = 10 [V]           { step voltage }
-
-VoltageSource VS(E=E_s)
-Resistor      R(R=R_s)
-Capacitor     CAP(C=C_s, V0=0 [V])
-Ground        G()
-connect(VS.p, R.a)
-connect(R.b, CAP.p)
-connect(CAP.n, VS.n, G.port)
-
-DYNAMIC charge (method = ode45, time = 0 .. 0.01, points = 201)
-END
-
-tau   = R_s * C_s                                { time constant }
-v_1ms = ODEValue('cap.vc', 0.001) * 1 [V]        { capacitor voltage at 1 ms }
-share = v_1ms / E_s                              { fraction of the step covered }
-
-{ CHECK tau 0.001 1e-12 }
-{ CHECK v_1ms 6.32120558828558 1e-6 }
-{ CHECK share 0.632120558828558 1e-7 }
-PLOT 'Capacitor voltage'
-  kind = xy
-  x = time
-  y = 'cap.vc'
-END`,
-  },
-  {
     id: 'lesson-thermal-mass',
     title: 'Lesson — a cooling thermal mass',
     description: 'Predict, change one input, observe: doubling h halves τ = C/(hA). The same exponential as RC charging, in heat.',
@@ -8304,73 +8366,6 @@ PLOT 'Pack temperature'
   kind = xy
   x = time
   y = T_pack
-END`,
-  },
-  {
-    id: 'lab-air-mixing',
-    title: 'Lab — outdoor-air mixing on the psychrometric chart',
-    description: 'A graded live lab: a ventilated room and its mixed supply trace paths on the psychrometric chart; raise the outdoor-air fraction live and watch the room cool and dry. Run it live from the lesson panel.',
-    category: 'Lessons & Labs',
-    text: `// frees-language: 2
-{ Lab — outdoor-air mixing on the psychrometric chart.
-
-  A ventilated room holds m_room of dry air. A fan supplies m_dot of dry
-  air, mixed from outdoor air (fraction f_oa) and air returned from the
-  room. Mixing is adiabatic, so humidity ratio and enthalpy per kg of dry
-  air mix in proportion to the flows:
-    w_mix = f_oa*w_out + (1 - f_oa)*w_room,  h_mix likewise.
-  The people and lights in the room add Q_int of heat and m_w of
-  moisture, which leaves as vapour at h_w.
-
-  In the steady state the outdoor part of the supply carries the gains
-  away:
-    w_ss = w_out + m_w/(f_oa*m_dot),
-    h_ss = h_out + (Q_int + m_w*h_w)/(f_oa*m_dot),
-  so more outdoor air brings the room closer to the outdoor state. The
-  chart traces the room and the mixed air as they move.
-
-  Source: ASHRAE Handbook, Fundamentals, ch. 1 (psychrometrics: adiabatic
-  mixing of two streams). }
-
-P      = 101325 [Pa]
-T_out  = 288.15 [K]        { outdoor dry bulb }
-RH_out = 0.8               { outdoor relative humidity }
-f_oa   = 0.2               { outdoor-air fraction: the lab's slider }
-m_dot  = 0.5 [kg/s]        { supply, dry air }
-m_room = 60 [kg]           { dry air in the room }
-Q_int  = 800 [W]           { sensible gains }
-m_w    = 0.0002 [kg/s]     { moisture gains }
-h_w    = 2.5e6 [J/kg]      { enthalpy of the added vapour }
-w_out  = HumRat(AirH2O, T=T_out, P=P, R=RH_out)
-h_out  = Enthalpy(AirH2O, T=T_out, P=P, W=w_out)
-w_0    = HumRat(AirH2O, T=297.15 [K], P=P, R=0.5)     { the room at the start }
-h_0    = Enthalpy(AirH2O, T=297.15 [K], P=P, W=w_0)
-
-DYNAMIC room (method = ida, time = 0 .. 8000, points = 801)
-  w_mix  = f_oa*w_out + (1 - f_oa)*w_room
-  h_mix  = f_oa*h_out + (1 - f_oa)*h_room
-  T_mix  = Temperature(AirH2O, H=h_mix, P=P, W=w_mix)
-  T_room = Temperature(AirH2O, H=h_room, P=P, W=w_room)
-  m_room*der(w_room) = m_dot*(w_mix - w_room) + m_w
-  m_room*der(h_room) = m_dot*(h_mix - h_room) + Q_int + m_w*h_w
-  w_room(0) = w_0
-  h_room(0) = h_0
-END
-
-w_ss = w_out + m_w/(f_oa*m_dot)
-h_ss = h_out + (Q_int + m_w*h_w)/(f_oa*m_dot)
-T_ss = Temperature(AirH2O, H=h_ss, P=P, W=w_ss)
-
-{ CHECK w_ss 0.0105256953110218 1e-12 }
-{ CHECK T_ss 295.89533483557 1e-6 }
-PLOT 'Room and mixed air'
-  kind = psychro
-  overlaystates = false
-  tmin = 10
-  tmax = 30
-  ymax = 0.02
-  x = T_room, T_mix     { paired in order with y: the room and the mixed air }
-  y = w_room, w_mix
 END`,
   },
   {

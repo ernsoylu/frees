@@ -26,6 +26,24 @@ async function openLesson(page: Page, example: string, lesson: string) {
   return solvedLesson(page, lesson)
 }
 
+/** Opens a Help-library example, which the picker no longer lists (EC4), and
+ *  returns the editor tab it opens in with its lesson panel, solved. */
+async function openFromHelp(page: Page, example: string, lesson: string) {
+  await page.goto('/help#examples')
+  await page.getByPlaceholder('Filter examples…').fill(example.replace(/^(Lesson|Lab) — /, ''))
+  await page.getByRole('button', { name: example }).click()
+  const [editor] = await Promise.all([
+    page.context().waitForEvent('page'),
+    page.getByRole('button', { name: 'Open in Editor', exact: true }).click(),
+  ])
+  await expect(editor.locator('.cm-content')).toBeVisible({ timeout: 60_000 })
+  await discardIfAsked(editor)
+  // A fresh tab greets first-time visitors, as the other journeys meet it.
+  const welcome = editor.getByRole('dialog').filter({ hasText: 'Welcome to frees' })
+  if (await welcome.waitFor({ timeout: 10_000 }).then(() => true, () => false)) await editor.keyboard.press('Escape')
+  return { editor, panel: await solvedLesson(editor, lesson) }
+}
+
 async function solvedLesson(page: Page, lesson: string) {
   const panel = page.getByRole('region', { name: `Lesson: ${lesson}` })
   await expect(panel).toBeVisible()
@@ -80,15 +98,15 @@ test('I2: RC charging lesson — predict, change, observe, check, reset; then th
 })
 
 test('I3: the ringing RLC circuit and its mass-spring-damper pair overshoot by the same law', async ({ page }) => {
-  const rlc = await openLesson(page, 'Lesson — a ringing RLC circuit', 'A ringing RLC circuit')
+  const { editor, panel: rlc } = await openFromHelp(page, 'Lesson — a ringing RLC circuit', 'A ringing RLC circuit')
   await predictAndChange(rlc, 'falls', 'Double the resistance to 8 Ω', /^The overshoot past the step went from 0\.5266\d* to 0\.2538\d*: it falls\.$/)
-  const msd = await openPair(page, rlc, 'A mass on a spring and damper')
+  const msd = await openPair(editor, rlc, 'A mass on a spring and damper')
   await predictAndChange(msd, 'falls', 'Double the damping to 8 N·s/m', /^The overshoot past F\/k went from 0\.5266\d* to 0\.2538\d*: it falls\.$/)
 })
 
 test('I3: a wrong prediction is marked, and the throttling lesson opens on its P-h chart', async ({ page }) => {
-  const lesson = await openLesson(page, 'Lesson — throttling on the P-h chart', 'Throttling on the P-h chart')
-  const chart = page.locator('.js-plotly-plot').first()
+  const { editor, panel: lesson } = await openFromHelp(page, 'Lesson — throttling on the P-h chart', 'Throttling on the P-h chart')
+  const chart = editor.locator('.js-plotly-plot').first()
   await expect(chart).toBeVisible({ timeout: 60_000 })
   // The dome and the overlaid inlet and exit states, one h apart by nothing.
   await expect.poll(() => chart.evaluate((gd) => ((gd as unknown as { data?: unknown[] }).data ?? []).length)).toBeGreaterThan(1)
@@ -99,9 +117,9 @@ test('I3: a wrong prediction is marked, and the throttling lesson opens on its P
 })
 
 test('I6 acceptance: under reduced motion a chart lesson still predicts, changes and resets', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  const lesson = await openLesson(page, 'Lesson — a slow sensor in a speed loop', 'A slow sensor in a speed loop')
-  await expect(page.locator('.js-plotly-plot').first()).toBeVisible({ timeout: 60_000 })
+  const { editor, panel: lesson } = await openFromHelp(page, 'Lesson — a slow sensor in a speed loop', 'A slow sensor in a speed loop')
+  await editor.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(editor.locator('.js-plotly-plot').first()).toBeVisible({ timeout: 60_000 })
   const before = await lesson.getByTestId('lesson-observe').innerText()
   await lesson.getByText('rises', { exact: true }).click()
   await lesson.getByRole('button', { name: 'Slow the sensor to τ = 2 s' }).click()
@@ -142,18 +160,6 @@ test('I6: a share link carries the open lesson and its sliders; past the cap the
   await expect(page.getByText(/longer than 16,000 characters.*send the \.frees file instead/)).toBeVisible()
 })
 
-test('EC4: a lesson opened from Help opens with its panel', async ({ page, context }) => {
-  await page.goto('/help#examples')
-  await page.getByPlaceholder('Filter examples…').fill('cooling thermal mass')
-  await page.getByRole('button', { name: 'Lesson — a cooling thermal mass' }).click()
-  const [editor] = await Promise.all([
-    context.waitForEvent('page'),
-    page.getByRole('button', { name: 'Open in Editor', exact: true }).click(),
-  ])
-  await expect(editor.locator('.cm-content')).toBeVisible({ timeout: 60_000 })
-  await discardIfAsked(editor)
-  // A fresh tab greets first-time visitors, as the other journeys meet it.
-  const welcome = editor.getByRole('dialog').filter({ hasText: 'Welcome to frees' })
-  if (await welcome.waitFor({ timeout: 10_000 }).then(() => true, () => false)) await editor.keyboard.press('Escape')
-  await solvedLesson(editor, 'A cooling thermal mass')
+test('EC4: a lesson opened from Help opens with its panel', async ({ page }) => {
+  await openFromHelp(page, 'Lesson — a cooling thermal mass', 'A cooling thermal mass')
 })
