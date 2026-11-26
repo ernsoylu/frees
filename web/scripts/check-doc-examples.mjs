@@ -28,7 +28,7 @@
 //
 //   3. ```json analysis blocks of the shape
 //      {operation, text, request, checks:[{path, value, tolerance}]} where
-//      operation is monte_carlo | parameter_fit | sensitivity | solve_table |
+//      operation is monte_carlo | parameter_fit | curve_fit | sensitivity | solve_table |
 //      optimize | optimize_multi — the paths that have no equation-document form.
 //
 // Run: node scripts/check-doc-examples.mjs     (needs web/src/wasm/pkg built)
@@ -68,7 +68,7 @@ function markdownFiles(dir) {
   return out
 }
 
-const ANALYSIS = new Set(['monte_carlo', 'parameter_fit', 'sensitivity', 'solve_table', 'repl_evaluate', 'optimize', 'optimize_multi'])
+const ANALYSIS = new Set(['monte_carlo', 'parameter_fit', 'curve_fit', 'sensitivity', 'solve_table', 'repl_evaluate', 'optimize', 'optimize_multi'])
 
 const CHECK_MARKER = /\{\s*CHECK\s+(\S+)\s+(\S+)\s+(\S+)\s*\}/g
 
@@ -213,8 +213,9 @@ function runAnalysis(c) {
   }
   if (typeof c.text === 'string') assertUnitClean(JSON.parse(engine.check(c.text, '{}')))
   const payload = JSON.stringify(c.request)
-  const raw = c.operation === 'parameter_fit'
-    ? engine.parameter_fit(payload)
+  // The two fits carry their model inside the request; the rest take the text.
+  const raw = c.operation === 'parameter_fit' || c.operation === 'curve_fit'
+    ? engine[c.operation](payload)
     : engine[c.operation](c.text, payload)
   const result = JSON.parse(raw)
   if (result.error) throw new Error(`${c.operation}: ${result.error}`)
