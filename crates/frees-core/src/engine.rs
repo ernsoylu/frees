@@ -1259,7 +1259,7 @@ fn dense_plan(
 fn pinned_block_cache(
     blocks: &[Block],
     subsystem: &[Equation],
-    template_len: usize,
+    pins: std::ops::Range<usize>,
     specs: &BTreeMap<String, VarSpec>,
 ) -> PinnedBlockCache {
     let per_block = blocks
@@ -1270,7 +1270,7 @@ fn pinned_block_cache(
             for &i in &block.equations {
                 if let Some(equation) = subsystem.get(i) {
                     block_equations.push(equation);
-                    volatile.push(i >= template_len);
+                    volatile.push(pins.contains(&i));
                 }
             }
             let bounds: Vec<(f64, f64)> = block
@@ -1470,8 +1470,12 @@ impl crate::ode::dynamic::AlgebraicSolve for PreparedPinnedSolver<'_> {
             let mut seeded = self.specs.clone();
             seed_property_argument_guesses(&subsystem, &mut seeded, Missing::Create);
             let unknown_names = unknowns(&subsystem, &knowns);
-            let mut block_cache =
-                pinned_block_cache(&report.blocks, &subsystem, ordinary.len(), &seeded);
+            let mut block_cache = pinned_block_cache(
+                &report.blocks,
+                &subsystem,
+                ordinary.len()..subsystem.len(),
+                &seeded,
+            );
             // Wave I: the value map, built once in the exact insertion order
             // the per-call build used (constants, then unknowns), so its
             // layout — and every clone's — matches the old fresh build. The

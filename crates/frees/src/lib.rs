@@ -3623,6 +3623,27 @@ END\n\
         assert_eq!(literal_pins_of(&["a = -2 [kPa]", "b = a + 1"]), None);
     }
 
+    /// A drag on a document with a variable-limit `Integral` lists its blocks
+    /// and residuals as the text solve does. Lowering moves the integral's
+    /// equations behind the ordinary ones, so the pins go in ahead of them,
+    /// where the appended override lines land (EC2 found it on paris-fatigue).
+    #[test]
+    fn slider_drag_lists_pins_ahead_of_a_lowered_integral() {
+        let text = "C = 2; m = 3\na_i = 1\na_c = 2 * m\nN = Integral(1/(C*a), a, a_i, a_c)\n";
+        let request = |mode: &str| {
+            format!(r#"{{"overrides":["a_i = 1.5","C = 2.5"],"sliderSolve":"{mode}"}}"#)
+        };
+        let listing = |mode: &str| {
+            let v = parsed(&solve(text, &request(mode)));
+            assert_eq!(v["success"], true, "{v}");
+            (
+                v["blocks"].to_string(),
+                v["residuals"].to_string().replace(char::is_numeric, ""),
+            )
+        };
+        assert_eq!(listing("drag"), listing("release"));
+    }
+
     fn literal_pins_of(lines: &[&str]) -> Option<String> {
         let lines: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
         let (_, pins) = super::literal_pins(&lines)?;
