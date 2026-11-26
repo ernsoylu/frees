@@ -23,6 +23,8 @@ product(i, lo, hi, term)
 
 Product series Pi(term) over i = lo..hi
 
+The index runs upward from `lo` to `hi`. When `lo > hi` the range is empty and the product is 1, as with `FOR` (`Sum` gives 0).
+
 ## Mathematical Formulation
 
 $$ \prod_{i=\text{lo}}^{\text{hi}} \text{term}(i) $$
