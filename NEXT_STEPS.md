@@ -15,7 +15,7 @@ schematic CR-SCHEMATIC-01 (01a–01e); the programmes of 2026-11-05 (A–E, lazy
 fluid chunks), 2026-11-06 (F–M, interactive simulation and teaching),
 2026-11-12 (N–R, workspace shell) and 2026-11-19 (D.2 component coverage);
 removal of the (P,h) table path (D12, #136); EC1, which runs one solve-and-CHECK
-gate over every example (#137); EC2, the Help library folded into `EXAMPLES`: all 85 entries graded by the EC1 gate, 248 examples in one catalogue, Help listing the 226 non-featured ones, and `helpExamples.ts` deleted (#139, #171–#174, #176); the slider drag it caught listing pins after a lowered `Integral` (#175); FX0, the three
+gate over every example (#137); EC2, the Help library folded into `EXAMPLES`: all 85 entries graded by the EC1 gate, 263 examples in one catalogue, Help listing the 241 non-featured ones, and `helpExamples.ts` deleted (#139, #171–#174, #176); the slider drag it caught listing pins after a lowered `Integral` (#175); FX0, the three
 project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#142;
 three event goldens regenerated against closed forms, owner-approved); FX1a,
 case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
