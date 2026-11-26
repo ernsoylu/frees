@@ -8839,4 +8839,25 @@ END
   },
 ]
 
+/** What an "Open in Editor" handoff from Help loads: the example it names,
+ *  so a lesson or lab opens with its panel, or else a documentation snippet.
+ *  `null` for a malformed or stale (> 5 min) handoff, a leftover rather than
+ *  intent. A named example must still carry its own text. */
+export function exampleFromHandoff(raw: string, now: number): Example | null {
+  try {
+    const snip = JSON.parse(raw)
+    if (typeof snip?.text !== 'string' || !snip.text.trim()) return null
+    if (typeof snip.ts !== 'number' || now - snip.ts > 5 * 60_000) return null
+    return EXAMPLES.find((e) => e.id === snip.example && e.text === snip.text) ?? {
+      id: 'doc-snippet',
+      title: String(snip.title || 'Documentation example'),
+      description: 'Loaded from the documentation',
+      category: 'Documentation',
+      text: snip.text,
+    }
+  } catch {
+    return null
+  }
+}
+
 /** The document new/blank workspaces start from. */

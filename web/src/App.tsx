@@ -172,7 +172,7 @@ const ShortcutsModal = lazy(() => import('./ShortcutsModal'))
 const FunctionBrowserModal = lazy(() => import('./FunctionBrowserModal'))
 const GettingStartedModal = lazy(() => import('./GettingStartedModal'))
 import { DEFAULT_EXAMPLE_TEXT } from './defaultExample'
-import type { Example } from './examples'
+import { exampleFromHandoff, type Example } from './examples'
 import { lessonFor, LESSONS, type Lesson } from './lessons'
 import type { LabResult, LabTimelineEntry } from './labs'
 import { clearExampleParam, EMBED, fullAppUrl } from './embed'
@@ -2166,20 +2166,8 @@ export default function App() {
     const raw = localStorage.getItem('frees.pendingSnippet')
     if (!raw) return
     localStorage.removeItem('frees.pendingSnippet')
-    try {
-      const snip = JSON.parse(raw)
-      if (typeof snip?.text !== 'string' || !snip.text.trim()) return
-      if (typeof snip.ts !== 'number' || Date.now() - snip.ts > 5 * 60_000) return
-      loadExample({
-        id: 'doc-snippet',
-        title: String(snip.title || 'Documentation example'),
-        description: 'Loaded from the documentation',
-        category: 'Documentation',
-        text: snip.text,
-      })
-    } catch {
-      // Malformed handoff: nothing to load.
-    }
+    const example = exampleFromHandoff(raw, Date.now())
+    if (example) loadExample(example)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
