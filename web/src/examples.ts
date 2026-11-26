@@ -2134,6 +2134,347 @@ total_end = FinalValue('a') + FinalValue('b') + FinalValue('cc')   { mass at t =
 { CHECK total_end 1.0000000000000049 1e-6 }`,
   },
   {
+    id: 'ev-longitudinal',
+    title: 'EV Longitudinal Road-Load, Power & Range',
+    description: 'The longitudinal road-load model for an electric car: tractive force as the sum of rolling resistance, aerodynamic drag and road grade, then wheel power, battery power through the drivetrain efficiency, the energy consumed per metre, and the range from a usable pack. Change the grade angle alpha to see hill-climb demand. (Grounded in the Electric Vehicle Design text in the linked notebook.)',
+    category: 'Electrical & Powertrain',
+    text: `{ EV Longitudinal Road-Load, Power & Range }
+{ Flat 120 km/h cruise: tractive force ≈ 617 N, battery power ≈ 24 kW,
+  consumption ≈ 721 J/m (≈ 200 Wh/km), and ≈ 2.995e5 m ≈ 300 km of range
+  from a 60 kWh pack. Set alpha = 5 [deg] and the climb term M·g·sin(alpha)
+  dominates. }
+{ EV longitudinal road-load: force, power, consumption and range }
+{ F_trac = rolling + grade + aero; P_batt = P_wheel / drivetrain efficiency. }
+M = 1500 [kg]          { vehicle mass }
+g = 9.81 [m/s^2]
+Crr = 0.012            { rolling-resistance coefficient }
+rho = 1.2 [kg/m^3]     { air density }
+Cd = 0.30              { drag coefficient }
+A_f = 2.2 [m^2]        { frontal area }
+alpha = 0 [deg]        { road grade angle (0 = flat) }
+V = 120 [km/h]         { cruise speed (auto-converts to m/s) }
+eta_t = 0.90           { transmission efficiency }
+eta_m = 0.95           { motor + inverter efficiency }
+E_pack = 60 [kWh]      { usable battery energy }
+
+F_roll  = M*g*Crr*cos(alpha)
+F_grade = M*g*sin(alpha)
+F_aero  = 0.5*rho*Cd*A_f*V^2
+F_trac  = F_roll + F_grade + F_aero
+P_wheel = F_trac*V
+P_batt  = P_wheel/(eta_t*eta_m)
+cons    = P_batt/V          { energy per distance [J/m]; divide by 3.6 for Wh/km }
+Range   = E_pack/cons       { [m]; /1000 for km }
+{ CHECK F_trac 616.5800000000002 7e-4 }
+{ CHECK P_batt 24038.20662768032 3e-2 }
+{ CHECK cons 721.1461988304095 8e-4 }
+{ CHECK Range 299523.1762301728 3e-1 }`,
+  },
+  {
+    id: 'ev-lateral',
+    title: 'Lateral Bicycle Model & Understeer Gradient',
+    description: 'The steady-state single-track (bicycle) model: axle loads from the CG position, the understeer gradient from front/rear cornering stiffness, the front steer angle to hold a curve (Ackermann plus the dynamic term), and the characteristic speed of the understeering vehicle. Kus > 0 confirms a stable, understeering layout.',
+    category: 'Electrical & Powertrain',
+    text: `{ Lateral Bicycle Model & Understeer Gradient }
+{ With the front-biased CG and equal axle stiffness, Kus ≈ 0.037
+  (understeer). At R = 100 m and 25 m/s the required steer is δ ≈ 3.0°, and
+  the characteristic speed (steer = twice Ackermann, peak yaw gain) is ≈
+  27.6 m/s ≈ 99 km/h. }
+{ Steady-state lateral (bicycle) model: understeer gradient and steer angle }
+m = 1730 [kg]
+g = 9.81 [m/s^2]
+a = 1.189 [m]          { CG to front axle }
+b = 1.696 [m]          { CG to rear axle }
+Cf = 80000 [N/rad]     { front axle cornering stiffness }
+Cr = 80000 [N/rad]     { rear axle cornering stiffness }
+R = 100 [m]            { turn radius }
+V = 25 [m/s]           { cornering speed }
+
+L = a + b                       { wheelbase }
+W_f = m*g*b/L                   { static front axle load }
+W_r = m*g*a/L                   { static rear axle load }
+Kus = W_f/Cf - W_r/Cr           { understeer gradient (>0 understeer) }
+a_y = V^2/(g*R)                 { lateral acceleration [g] }
+delta = L/R + Kus*a_y           { front steer angle [rad] }
+delta_deg = delta*Convert('rad','deg')
+u_char = sqrt(g*L/Kus)          { characteristic speed [m/s] }
+{ CHECK Kus 0.0372809753032929 4e-8 }
+{ CHECK delta_deg 3.0138666111556214 4e-6 }
+{ CHECK u_char 27.552675651992605 3e-5 }`,
+  },
+  {
+    id: 'ev-sizing',
+    title: 'Motor & Battery Sizing (acceleration, gradeability, range)',
+    description: 'Sizes the traction motor and battery from performance targets. The motor must satisfy the harder of two demands — mean power to reach 100 km/h in the acceleration time, and steady power to hold a 6° grade at 60 km/h — taken with max(). The battery is sized from the cruise road-load and a target range. (Methodology from the Electric Vehicle Design text in the linked notebook.)',
+    category: 'Electrical & Powertrain',
+    text: `{ Motor & Battery Sizing (acceleration, gradeability, range) }
+{ Acceleration (≈93 kW) dominates gradeability (≈37 kW), so size the motor
+  at ≈93 kW. A 400 km range at 110 km/h needs E_need ≈ 2.5e8 J ≈ 69 kWh of
+  usable energy. }
+{ EV motor + battery sizing from acceleration, gradeability and range }
+M = 1600 [kg]
+g = 9.81 [m/s^2]
+Crr = 0.012
+rho = 1.2 [kg/m^3]
+Cd = 0.28
+A_f = 2.3 [m^2]
+eta = 0.88             { combined drivetrain efficiency }
+
+{ 1) Acceleration: mean power to reach V_f in t_acc (energy method) }
+V_f = 100 [km/h]
+t_acc = 7 [s]
+delta = 1.05           { rotational-inertia mass factor }
+E_kin = 0.5*M*delta*V_f^2
+P_acc = E_kin/t_acc
+
+{ 2) Gradeability: hold a grade at steady speed }
+theta = 6 [deg]
+V_grade = 60 [km/h]
+F_grade = M*g*(Crr*cos(theta)+sin(theta)) + 0.5*rho*Cd*A_f*V_grade^2
+P_grade = F_grade*V_grade/eta
+
+{ Motor must cover the harder requirement }
+P_motor = max(P_acc, P_grade)
+
+{ 3) Battery sizing from cruise road-load and target range }
+V_cr = 110 [km/h]
+F_cr = M*g*Crr + 0.5*rho*Cd*A_f*V_cr^2
+cons = F_cr/eta            { [J/m] }
+Range_target = 400 [km]
+E_need = cons*Range_target { usable energy [J]; /3.6e6 for kWh }
+{ CHECK P_acc 92592.5925925926 1e-1 }
+{ CHECK P_grade 36654.02047005355 4e-2 }
+{ CHECK P_motor 92592.5925925926 1e-1 }
+{ CHECK E_need 249596026.93602696 3e2 }`,
+  },
+  {
+    id: 'ev-battery-pack',
+    title: 'Battery Pack Design & Cell Selection (Batemo database)',
+    description: 'Designs a pack from a target voltage, energy and peak power, then checks a real cell against the load. The cell is the Molicel INR21700-P42A taken from the Batemo Cell Explorer database in the linked notebook. Series count sets voltage, parallel count sets energy; the per-cell peak current must stay under the cell\'s rating. Battery quantities use conventional units (V, Ah, A, Wh, kWh) rather than SI, so they are kept unitless here.',
+    category: 'Electrical & Powertrain',
+    text: `{ Battery Pack Design & Cell Selection (Batemo database) }
+{ 112S × 42P ≈ 4700 cells gives ~400 V, ~175 Ah and ~70 kWh. A 150 kW peak
+  draws 375 A from the pack (2.1C) = 9 A per cell — well under the P42A's 45
+  A continuous limit (36 A headroom). Round Ns/Np up to whole cells in
+  practice. The solver keeps the unrounded counts, Ns = 111.1 and Np = 41.67
+  (4630 cells), so the pack energy is exactly 70 kWh and each cell carries
+  exactly 9 A. }
+{ Battery pack design + cell selection (engineering units, see comments) }
+{ Cell: Molicel INR21700-P42A from the Batemo Cell Explorer database. }
+V_pack = 400           { target nominal pack voltage [V] }
+E_target = 70          { required usable energy [kWh] }
+P_peak = 150           { peak power demand [kW] }
+
+V_cell = 3.6           { cell nominal voltage [V] }
+Q_cell = 4.2           { cell capacity [Ah] }
+I_cell_max = 45        { cell max continuous discharge [A] }
+E_cell = V_cell*Q_cell { cell energy [Wh] }
+
+Ns = V_pack/V_cell             { cells in series (round up) }
+Np = E_target*1000/(Ns*E_cell) { parallel strings (kWh -> Wh) }
+N_cells = Ns*Np
+E_pack = N_cells*E_cell/1000   { pack energy [kWh] }
+Q_pack = Np*Q_cell             { pack capacity [Ah] }
+I_peak = P_peak*1000/V_pack    { peak pack current [A] }
+I_cell = I_peak/Np             { current per cell [A] }
+C_rate = I_peak/Q_pack         { pack C-rate [1/h] }
+margin = I_cell_max - I_cell   { per-cell headroom [A], must be > 0 }
+{ CHECK Ns 111.11111111111111 2e-4 }
+{ CHECK Np 41.666666666666664 5e-5 }
+{ CHECK I_cell 9 9e-6 }
+{ CHECK C_rate 2.142857142857143 3e-6 }
+{ CHECK margin 36 4e-5 }`,
+  },
+  {
+    id: 'ev-regen',
+    title: 'Regenerative Braking Energy Recovery',
+    description: 'How much kinetic energy a regenerative brake can return. The motor-as-generator recovers a fraction (regen efficiency) of the vehicle\'s ½·m·V² when slowing from a speed, with the rotational-inertia mass factor included. Shows the energy per stop, how many stops fill 1 kWh, and the total recovered over a stop-and-go trip.',
+    category: 'Electrical & Powertrain',
+    text: `{ Regenerative Braking Energy Recovery }
+{ From 50 km/h a 1600 kg car holds ≈ 162 kJ of kinetic energy; at 65% regen
+  ≈ 105 kJ (0.029 kWh) returns per stop, so ≈ 34 such stops bank 1 kWh, and
+  a 20-stop city run recovers ≈ 2.1 MJ (≈ 0.58 kWh). (Source caveat: the
+  books note real-world regen return is drive-cycle dependent, often 10–30%
+  of pack energy in stop-and-go.) }
+{ Regenerative braking: kinetic energy recovered per stop and per trip }
+M = 1600 [kg]
+V = 50 [km/h]          { speed before braking }
+eta_regen = 0.65       { fraction of kinetic energy returned to the battery }
+delta = 1.05           { rotational-inertia mass factor }
+
+E_kin = 0.5*M*delta*V^2        { kinetic energy [J] }
+E_regen = eta_regen*E_kin      { recovered per stop [J]; /3.6e6 for kWh }
+
+E_oneKWh = 1 [kWh]
+stops_per_kWh = E_oneKWh/E_regen   { stops to bank 1 kWh }
+
+N_stops = 20                   { stops on a city run }
+E_recovered = E_regen*N_stops  { total recovered [J] }
+{ CHECK E_kin 162037.03703703705 2e-1 }
+{ CHECK E_regen 105324.07407407409 2e-1 }
+{ CHECK stops_per_kWh 34.18021978021977 4e-5 }
+{ CHECK E_recovered 2106481.481481482 3e0 }`,
+  },
+  {
+    id: 'ev-drive-cycle',
+    title: 'Combined Drive-Cycle Consumption & Range',
+    description: 'A two-phase (city + highway) drive-cycle estimate. The flat road-load consumption is computed at each phase speed, the city phase gets a regenerative-braking credit, and the phases are blended by distance fraction into a combined consumption and the resulting range from a usable pack.',
+    category: 'Electrical & Powertrain',
+    text: `{ Combined Drive-Cycle Consumption & Range }
+{ 55% city / 45% highway: city ≈ 183 J/m (after a 25% regen credit), highway
+  ≈ 596 J/m, blended ≈ 369 J/m (≈ 102 Wh/km), giving ≈ 5.86e5 m ≈ 586 km
+  from a 60 kWh pack. }
+{ Combined city/highway drive-cycle consumption and range }
+M = 1550 [kg]
+g = 9.81 [m/s^2]
+Crr = 0.011
+rho = 1.2 [kg/m^3]
+Cd = 0.29
+A_f = 2.2 [m^2]
+eta = 0.88
+E_pack = 60 [kWh]
+regen_credit = 0.25        { city energy returned by regen }
+
+V_city = 40 [km/h]
+V_hwy = 110 [km/h]
+frac_city = 0.55
+frac_hwy = 0.45
+
+F_city = M*g*Crr + 0.5*rho*Cd*A_f*V_city^2
+F_hwy  = M*g*Crr + 0.5*rho*Cd*A_f*V_hwy^2
+cons_city = F_city/eta*(1 - regen_credit)   { [J/m] }
+cons_hwy  = F_hwy/eta
+cons_avg  = frac_city*cons_city + frac_hwy*cons_hwy
+Range     = E_pack/cons_avg                 { [m]; /1000 for km }
+{ CHECK cons_city 182.82934027777776 2e-4 }
+{ CHECK cons_hwy 596.2030092592593 6e-4 }
+{ CHECK cons_avg 368.84749131944443 4e-4 }
+{ CHECK Range 585607.8869543695 6e-1 }`,
+  },
+  {
+    id: 'fcev-sizing',
+    title: 'Hydrogen Fuel-Cell Vehicle (FCEV) Sizing & Range',
+    description: 'Sizes a hydrogen fuel-cell vehicle from its 700-bar tank. Usable electrical energy is the stored hydrogen mass times its lower heating value times the net fuel-cell system efficiency; range follows from the cruise road-load, and the continuous stack power must cover that load. Hydrogen consumption per 100 km falls out for comparison with real cars. (Grounded in the hydrogen-vehicle books in the linked notebook; Toyota Mirai II ≈ 5.6 kg tank.)',
+    category: 'Electrical & Powertrain',
+    text: `{ Hydrogen Fuel-Cell Vehicle (FCEV) Sizing & Range }
+{ 5.6 kg H2 at 45% net FC efficiency ≈ 3.02e8 J usable → ≈ 5.15e5 m ≈ 515
+  km. Continuous stack power at 100 km/h ≈ 16.3 kW; hydrogen consumption
+  cons_H2 ≈ 1.09e-5 kg/m ≈ 1.09 kg/100 km — right in the 1.0–1.16 kg/100 km
+  band for passenger FCEVs. }
+{ Hydrogen fuel-cell vehicle: usable energy, range and consumption }
+m_H2 = 5.6 [kg]        { usable hydrogen (700 bar tank, Mirai-II class) }
+LHV = 120 [MJ/kg]      { hydrogen lower heating value }
+eta_fc = 0.45          { net fuel-cell system efficiency }
+E_usable = m_H2*LHV*eta_fc      { electrical energy to the drivetrain [J] }
+
+M = 1800 [kg]
+g = 9.81 [m/s^2]
+Crr = 0.011
+rho = 1.2 [kg/m^3]
+Cd = 0.29
+A_f = 2.4 [m^2]
+eta_dt = 0.88
+V = 100 [km/h]
+
+F_cr = M*g*Crr + 0.5*rho*Cd*A_f*V^2
+cons = F_cr/eta_dt              { road-load energy per distance [J/m] }
+Range = E_usable/cons           { [m]; /1000 for km }
+P_fc = cons*V                   { continuous stack power at cruise [W] }
+cons_H2 = m_H2/Range            { hydrogen use [kg/m]; *1e5 for kg/100 km }
+{ CHECK E_usable 302400000 4e2 }
+{ CHECK Range 515261.3667998955 6e-1 }
+{ CHECK P_fc 16302.40600448934 2e-2 }
+{ CHECK cons_H2 0.000010868270669659559 2e-11 }`,
+  },
+  {
+    id: 'ev-fast-charge',
+    title: 'DC Fast Charging Time, C-rate & Grid Energy',
+    description: 'DC fast-charge sizing over the usual 10→80% SOC window. From the charge current it finds the constant-current charge time, the charge C-rate, the DC power, the energy added, and the grid energy once the charger\'s efficiency is included. Battery quantities use conventional units (V, Ah, A, kWh) and are kept unitless. (Grounded in the EV fast-charging book in the linked notebook.)',
+    category: 'Electrical & Powertrain',
+    text: `{ DC Fast Charging Time, C-rate & Grid Energy }
+{ 175 Ah / 400 V pack, 10→80% at 350 A: ≈ 21 min on the CC phase, 2.0C, 140
+  kW DC, 49 kWh added, ≈ 52.7 kWh drawn from the grid at 93% charger
+  efficiency. Real charges add a tapering CV phase past ~80%. }
+{ EV DC fast charge: time, C-rate, power and grid energy (engineering units) }
+V_pack = 400           { nominal pack voltage [V] }
+Q_pack = 175           { pack capacity [Ah] }
+E_pack = 70            { pack energy [kWh] }
+SOC_start = 10         { start state of charge [%] }
+SOC_end = 80           { end state of charge [%] }
+I_charge = 350         { DC charge current [A] }
+eta_charger = 0.93     { charger (grid->DC) efficiency }
+
+dSOC = (SOC_end - SOC_start)/100
+Ah_added = dSOC*Q_pack             { charge delivered [Ah] }
+t_charge_h = Ah_added/I_charge     { CC-phase time [h] }
+t_charge_min = t_charge_h*60
+C_rate = I_charge/Q_pack           { charge C-rate [1/h] }
+P_charge = V_pack*I_charge/1000    { DC charge power [kW] }
+E_added = dSOC*E_pack              { energy added to pack [kWh] }
+E_grid = E_added/eta_charger       { energy drawn from grid [kWh] }
+{ CHECK t_charge_min 21 3e-5 }
+{ CHECK C_rate 2 2e-6 }
+{ CHECK P_charge 140 2e-4 }
+{ CHECK E_grid 52.68817204301075 6e-5 }`,
+  },
+  {
+    id: 'hev-power-split',
+    title: 'Parallel Hybrid (HEV) Power Split',
+    description: 'A parallel-hybrid power split at a peak demand point. The total wheel power for hard acceleration on the move is computed from the road load plus the inertial term; the engine is sized to cover about half of the peak, and the electric motor supplies the balance, drawing current from the battery. (Power-split relation and sizing rule from the hybrid-vehicle material in the linked notebook.)',
+    category: 'Electrical & Powertrain',
+    text: `{ Parallel Hybrid (HEV) Power Split }
+{ At 120 km/h with 1.5 m/s² acceleration the wheels need ≈ 126 kW; sizing
+  the engine at 50% leaves ≈ 63 kW for the motor, which pulls ≈ 228 A from a
+  300 V battery at 92% motor efficiency. }
+{ Parallel HEV power split: P_load = P_engine + P_motor }
+M = 1700 [kg]
+g = 9.81 [m/s^2]
+Crr = 0.011
+rho = 1.2 [kg/m^3]
+Cd = 0.30
+A_f = 2.3 [m^2]
+eta_dt = 0.88
+V_peak = 120 [km/h]    { speed at the peak-power point }
+a_peak = 1.5 [m/s^2]   { simultaneous acceleration }
+delta = 1.05
+
+F_peak = M*g*Crr + 0.5*rho*Cd*A_f*V_peak^2 + M*delta*a_peak
+P_load = F_peak*V_peak/eta_dt      { total wheel power demand }
+P_engine = 0.5*P_load              { ICE sized for ~half of peak }
+P_motor = P_load - P_engine        { motor supplies the rest }
+
+V_batt = 300 [V]
+eta_m = 0.92
+I_batt = P_motor/(V_batt*eta_m)    { battery current for the motor [A] }
+{ CHECK P_load 125793.44696969699 2e-1 }
+{ CHECK P_motor 62896.723484848495 7e-2 }
+{ CHECK I_batt 227.88667929292933 3e-4 }`,
+  },
+  {
+    id: 'cell-to-pack-density',
+    title: 'Cell-to-Pack Mass & Gravimetric Energy Density',
+    description: 'Scales single-cell mass and energy up to a full pack, then compares cell- and pack-level specific energy. The pack mass adds structure, busbars, cooling and the BMS via a cell-mass fraction (cell-to-pack mass efficiency), which dilutes the gravimetric energy density from cell to pack level.',
+    category: 'Electrical & Powertrain',
+    text: `{ Cell-to-Pack Mass & Gravimetric Energy Density }
+{ 4700 × 21700 cells (70 g, 15.1 Wh each): cell-level ≈ 7.77e5 J/kg ≈ 216
+  Wh/kg, but at a 0.70 cell-mass fraction the 470 kg pack delivers ≈ 5.44e5
+  J/kg ≈ 151 Wh/kg (divide J/kg by 3600 for Wh/kg). }
+{ Cell-to-pack mass and gravimetric energy density }
+N_cells = 4700
+m_cell = 0.070 [kg]        { 21700 cell mass (~70 g) }
+E_cell = 54.4 [kJ]         { cell energy (~15.1 Wh) }
+pack_mass_factor = 0.70    { cell mass / pack mass (cell-to-pack efficiency) }
+
+m_cells = N_cells*m_cell
+m_pack = m_cells/pack_mass_factor      { pack mass incl. structure/cooling/BMS }
+E_pack = N_cells*E_cell
+e_cell_grav = E_cell/m_cell            { cell specific energy [J/kg]; /3600 = Wh/kg }
+e_pack_grav = E_pack/m_pack            { pack specific energy [J/kg]; /3600 = Wh/kg }
+{ CHECK e_cell_grav 777142.857142857 8e-1 }
+{ CHECK m_pack 470.0000000000001 5e-4 }
+{ CHECK e_pack_grav 543999.9999999999 6e-1 }`,
+  },
+  {
     id: 'radiation-view-factors',
     title: 'Radiation View Factors',
     description: 'Closed-form diffuse view factors for standard configurations.',
