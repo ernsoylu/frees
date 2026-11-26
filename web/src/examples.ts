@@ -1162,6 +1162,571 @@ Ts = 0.1 [s]
 { CHECK numz_t[1] 0.09090909090909091 9.1e-11 }`,
   },
   {
+    id: 'pid-pole-placement',
+    title: 'PID Design by Pole Placement',
+    description: 'A PID controller is designed for a DC-motor plant K/(s(τs+1)) so that the closed-loop characteristic polynomial matches a target — a dominant second-order pair (ζ, ωₙ) plus a fast real pole. Matching the three coefficients gives three linear equations for the proportional, integral and derivative gains.',
+    category: 'Control Systems',
+    text: `{ PID Design by Pole Placement }
+{ For ζ = 0.7, ωₙ = 10 rad/s and a pole at −50, the gains are Kc = 200, Ki =
+  1250, Kd = 15.5; the dominant pair gives 4.6% overshoot and a 0.57 s
+  settling time. Each matched coefficient checks out exactly. }
+{ Controls: PID design by pole placement for plant G(s)=K/(s(tau s+1)) }
+Kp_plant = 2.0      { plant DC gain }
+tau = 0.5 [s]
+{ Desired poles: a complex pair (zeta, wn) + a fast real pole at -p }
+zeta = 0.7
+wn = 10 [rad/s]
+p = 50 [rad/s]
+{ Closed-loop char. poly  s^3 + ((1+Kp_plant*Kd)/tau) s^2
+     + (Kp_plant*Kc/tau) s + Kp_plant*Ki/tau
+   matched to (s+p)(s^2 + 2 zeta wn s + wn^2) }
+(1 + Kp_plant*Kd)/tau = p + 2*zeta*wn
+Kp_plant*Kc/tau       = wn^2 + 2*zeta*wn*p
+Kp_plant*Ki/tau       = p*wn^2
+ts = 4/(zeta*wn)                              { settling time }
+Mp = exp(-pi#*zeta/sqrt(1-zeta^2))*100         { percent overshoot }
+{ CHECK Kc 200 2e-4 }
+{ CHECK Ki 1250 2e-3 }
+{ CHECK Kd 15.5 2e-5 }
+{ CHECK Mp 4.598791026026775 5e-6 }
+{ CHECK ts 0.5714285714285714 6e-7 }`,
+  },
+  {
+    id: 'partial-fraction-real',
+    title: 'Partial-Fraction Expansion (Real Poles)',
+    description: 'Inverse Laplace transform by partial fractions. Declaring s as SYMBOLIC turns the next equation into an identity that must hold for all s; frees matches coefficients and solves for the residues, which appear in the Solution window like any other variable. tf(num, den) builds the rational function from descending-power coefficient arrays.',
+    category: 'Control Systems',
+    text: `{ Partial-Fraction Expansion (Real Poles) }
+{ 32/[s(s+4)(s+8)] expands to K1/s + K2/(s+4) + K3/(s+8) with K1 = 1, K2 =
+  −2, K3 = 1 — i.e. the time response y(t) = 1 − 2e^(−4t) + e^(−8t). }
+{ Partial-fraction expansion of Y(s) = 32 / [s(s+4)(s+8)] }
+{ den = s(s+4)(s+8) = s^3 + 12 s^2 + 32 s  ->  [1, 12, 32, 0] }
+SYMBOLIC s
+tf([32], [1, 12, 32, 0]) = K1/s + K2/(s+4) + K3/(s+8)
+{ CHECK K1 1 1e-6 }
+{ CHECK K2 -2 2e-6 }
+{ CHECK K3 1 1e-6 }`,
+  },
+  {
+    id: 'partial-fraction-complex',
+    title: 'Partial Fractions with a Complex Pole Pair',
+    description: 'When the denominator has a complex (oscillatory) root pair, the corresponding partial-fraction term keeps a first-order numerator (K2·s + K3) over the quadratic factor. The SYMBOLIC identity solves for all three residues at once.',
+    category: 'Control Systems',
+    text: `{ Partial Fractions with a Complex Pole Pair }
+{ 3/[s(s²+2s+5)] = K1/s + (K2·s + K3)/(s²+2s+5) gives K1 = 0.6, K2 = −0.6,
+  K3 = −1.2. }
+{ Partial fractions with a complex pole pair }
+{ den = s(s^2 + 2s + 5) = s^3 + 2 s^2 + 5 s  ->  [1, 2, 5, 0] }
+SYMBOLIC s
+tf([3], [1, 2, 5, 0]) = K1/s + (K2*s + K3)/(s^2 + 2*s + 5)
+{ CHECK K1 0.6 6e-7 }
+{ CHECK K2 -0.6 6e-7 }
+{ CHECK K3 -1.2 2e-6 }`,
+  },
+  {
+    id: 'tf-to-ss',
+    title: 'Transfer Function to State Space',
+    description: 'ss/tf models are plain array and matrix variables — a transfer function is its num/den coefficient arrays (descending powers). tf2ss returns a controllable-canonical realization (A, B, C, D); any phase-variable form is a similarity transform of it.',
+    category: 'Control Systems',
+    text: `{ Transfer Function to State Space }
+{ (s²+7s+2)/(s³+9s²+26s+24) realizes as A = [[−9,−26,−24],[1,0,0],[0,1,0]],
+  B = [1,0,0], C = [1,7,2], D = 0. Converting it straight back with ss2tf
+  recovers the original coefficients exactly. }
+{ Transfer function -> state space (controllable canonical form) }
+num = [0, 1, 7, 2]
+den = [1, 9, 26, 24]
+[A, B, C, D] = tf2ss(num[1:4], den[1:4])
+{ CHECK A[1,1] -9 9e-6 }
+{ CHECK A[1,2] -26 3e-5 }
+{ CHECK A[1,3] -24 3e-5 }
+{ CHECK C[2] 7 7e-6 }
+{ CHECK C[3] 2 2e-6 }`,
+  },
+  {
+    id: 'ss-to-tf',
+    title: 'State Space to Transfer Function',
+    description: 'The inverse conversion: build the A, B, C, D matrices entry by entry, then call ss2tf for the equivalent transfer-function coefficient arrays. The solver registers the output array shapes so num and den are usable downstream as bare names.',
+    category: 'Control Systems',
+    text: `{ State Space to Transfer Function }
+{ The phase-variable system below converts to T(s) =
+  10(s²+3s+2)/(s³+3s²+2s+1), i.e. num = [0, 10, 30, 20] and den = [1, 3, 2,
+  1]. }
+{ State space -> transfer function }
+A[1,1]=0; A[1,2]=1; A[1,3]=0
+A[2,1]=0; A[2,2]=0; A[2,3]=1
+A[3,1]=-1; A[3,2]=-2; A[3,3]=-3
+B[1]=10; B[2]=0; B[3]=0
+C[1]=1; C[2]=0; C[3]=0
+D=0
+[num, den] = ss2tf(A[1:3,1:3], B[1:3], C[1:3], D)
+{ CHECK num[2] 10 1e-5 }
+{ CHECK num[3] 30 3e-5 }
+{ CHECK num[4] 20 2e-5 }
+{ CHECK den[4] 1 1e-6 }`,
+  },
+  {
+    id: 'first-order-poles-zeros',
+    title: 'Poles & Zeros of a First-Order System',
+    description: 'pole and zero return the real/imaginary parts of a system\'s poles and zeros; tf2zp additionally factors the system into zero–pole–gain form. Poles in the left half-plane mean a stable system.',
+    category: 'Control Systems',
+    text: `{ Poles & Zeros of a First-Order System }
+{ G(s) = (s+2)/(s+5) has a single zero at s = −2 and a single pole at s =
+  −5; tf2zp returns the same factors with gain k = 1. }
+{ Poles, zeros and zero-pole-gain factoring of G(s) = (s+2)/(s+5) }
+num = [1, 2]
+den = [1, 5]
+[pr, pi] = pole(num[1:2], den[1:2])
+[zr, zi] = zero(num[1:2], den[1:2])
+[zzr, zzi, ppr, ppi, k] = tf2zp(num[1:2], den[1:2])
+{ CHECK pr[1] -5 5e-6 }
+{ CHECK zr[1] -2 2e-6 }
+{ CHECK k 1 1e-6 }`,
+  },
+  {
+    id: 'underdamped-poles',
+    title: 'Complex Poles of an Underdamped System',
+    description: 'A second-order system with a complex-conjugate pole pair. The real part sets the decay rate and the imaginary part the damped oscillation frequency.',
+    category: 'Control Systems',
+    text: `{ Complex Poles of an Underdamped System }
+{ G(s) = 200/(s²+10s+200) has poles at s = −5 ± j13.23 (natural frequency ≈
+  14.1 rad/s, damping ratio ≈ 0.354). }
+{ Complex poles of an underdamped second-order system }
+num = [0, 0, 200]
+den = [1, 10, 200]
+[pr, pi] = pole(num[1:3], den[1:3])
+{ CHECK pr[1] -5 5e-6 }
+{ CHECK pi[2] 13.228756555322953 2e-5 }`,
+  },
+  {
+    id: 'thirdorder-poles-zeros',
+    title: 'Poles & Zeros of a Third-Order System',
+    description: 'pole and zero handle mixed real-and-complex root sets. Here a real pole, a complex pole pair, and a single finite zero are all extracted from one transfer function.',
+    category: 'Control Systems',
+    text: `{ Poles & Zeros of a Third-Order System }
+{ G(s) = (s+2)/[(s+3)(s²+2s+2)] returns poles at s = −3 and s = −1 ± j1,
+  with a zero at s = −2. }
+{ Poles and zeros of a third-order system with a complex pole pair }
+{ den = (s+3)(s^2+2s+2) = s^3 + 5 s^2 + 8 s + 6 }
+num = [0, 0, 1, 2]
+den = [1, 5, 8, 6]
+[pr, pi] = pole(num[1:4], den[1:4])
+[zr, zi] = zero(num[1:4], den[1:4])
+{ CHECK pr[1] -3.000000000000001 3e-6 }
+{ CHECK pr[2] -1.0000000000000004 1e-6 }
+{ CHECK pi[3] 0.9999999999999994 1e-6 }
+{ CHECK zr[1] -2 2e-6 }`,
+  },
+  {
+    id: 'zpk-feedback',
+    title: 'Zero-Pole-Gain to TF and Unity Feedback',
+    description: 'Build a forward-path transfer function from its zeros, poles and gain with zp2tf, then close the loop with unity feedback. feedback forms T(s) = G/(1 + G·H); the result\'s array length is L1 + L2 − 1.',
+    category: 'Control Systems',
+    text: `{ Zero-Pole-Gain to TF and Unity Feedback }
+{ Forward loop G(s) = (s+3)(s+4)/[(s+1)(s+2)] with unity feedback gives T(s)
+  = (s²+7s+12)/(2s²+10s+14), whose closed-loop poles are s = −2.5 ± j0.866. }
+{ Zero-pole-gain -> transfer function, then close with unity feedback }
+zr = [-3, -4]
+zi = [0, 0]
+pr = [-1, -2]
+pi = [0, 0]
+k = 1
+[numG, denG] = zp2tf(zr[1:2], zi[1:2], pr[1:2], pi[1:2], k)
+numH = [1]
+denH = [1]
+[numT, denT] = feedback(numG[1:3], denG[1:3], numH[1:1], denH[1:1])
+[tpr, tpi] = pole(numT[1:3], denT[1:3])
+{ CHECK denT[1] 2 2e-6 }
+{ CHECK denT[2] 10 1e-5 }
+{ CHECK denT[3] 14 2e-5 }
+{ CHECK tpr[1] -2.5 3e-6 }
+{ CHECK tpi[2] 0.8660254037844386 9e-7 }`,
+  },
+  {
+    id: 'parallel-interconnect',
+    title: 'Parallel Interconnection of Blocks',
+    description: 'parallel adds two transfer functions, G(s) = G1(s) + G2(s) (series multiplies them, feedback closes a loop). Here the three first-order terms of a partial-fraction expansion are recombined to reconstruct the original system.',
+    category: 'Control Systems',
+    text: `{ Parallel Interconnection of Blocks }
+{ Adding 1/s, −2/(s+4) and 1/(s+8) reproduces 32/[s³+12s²+32s] — exactly the
+  transfer function whose partial fractions were 1, −2, 1, closing the loop
+  on the first example. }
+{ Parallel sum of partial-fraction terms reconstructs the original G(s) }
+n1 = [0, 1]
+d1 = [1, 0]
+n2 = [0, -2]
+d2 = [1, 4]
+[n12, d12] = parallel(n1[1:2], d1[1:2], n2[1:2], d2[1:2])
+n3 = [0, 1]
+d3 = [1, 8]
+[nsum, dsum] = parallel(n12[1:3], d12[1:3], n3[1:2], d3[1:2])
+{ CHECK nsum[4] 32 4e-5 }
+{ CHECK dsum[2] 12 2e-5 }
+{ CHECK dsum[3] 32 4e-5 }`,
+  },
+  {
+    id: 'second-order-step',
+    title: 'Second-Order Step Response & Metrics',
+    description: 'step integrates the unit step response on a supplied time vector (it routes through the same ODE engine as DYNAMIC blocks, so y plots directly with the xy plot kind). Alongside it the closed-form second-order metrics — natural frequency, damping ratio, peak time, percent overshoot and settling time — are computed from the coefficients.',
+    category: 'Control Systems',
+    text: `{ Second-Order Step Response & Metrics }
+{ G(s) = 100/(s²+15s+100): ωn = 10 rad/s, ζ = 0.75, peak time Tp = 0.475 s,
+  percent overshoot %OS = 2.84%, settling time Ts = 0.533 s. }
+{ Second-order step response and the standard performance metrics }
+num = [0, 0, 100]
+den = [1, 15, 100]
+wn = sqrt(100)
+zeta = 15 / (2*wn)
+Tp = pi# / (wn*sqrt(1 - zeta^2))
+OS = 100 * exp(-zeta*pi#/sqrt(1 - zeta^2))
+Ts = 4 / (zeta*wn)
+t = 0:0.02:1
+N = 51
+[y] = step(num[1:3], den[1:3], t[1:N])
+
+PLOT 'Step Response'
+  kind = xy
+  x = t
+  y = y
+  xlabel = Time [s]
+  ylabel = Amplitude
+END
+{ CHECK Tp 0.4749641646894904 5e-7 }
+{ CHECK OS 2.837544174570507 3e-6 }
+{ CHECK Ts 0.5333333333333333 6e-7 }
+{ CHECK y[25] 1.0283404699952876 2e-6 }`,
+  },
+  {
+    id: 'impulse-response',
+    title: 'Impulse & Step Response',
+    description: 'impulse returns the impulse response y(t) = C·e^(At)·B on the supplied time grid; here it is plotted next to the step response of the same plant for comparison.',
+    category: 'Control Systems',
+    text: `{ Impulse & Step Response }
+{ 450/[(s+5)(s+20)] = 450/(s²+25s+100) is overdamped — both responses settle
+  smoothly with no overshoot. The step response saturates at the DC gain
+  G(0) = 450/100 = 4.5, not 1. }
+{ Impulse and step response of an overdamped second-order system }
+num = [0, 0, 450]
+den = [1, 25, 100]
+t = 0:0.02:1
+N = 51
+[y_imp] = impulse(num[1:3], den[1:3], t[1:N])
+[y_step] = step(num[1:3], den[1:3], t[1:N])
+
+PLOT 'Impulse vs Step'
+  kind = xy
+  x = t
+  y = y_imp
+  xlabel = Time [s]
+  ylabel = Amplitude
+END
+{ CHECK y_step[51] 4.459572290446109 5e-6 }
+{ CHECK y_imp[4] 13.188722315983663 2e-5 }`,
+  },
+  {
+    id: 'forced-response-lsim',
+    title: 'Forced Response to an Arbitrary Input (lsim)',
+    description: 'lsim simulates the response to any input signal u(t), linearly interpolated between samples (u and t must be the same length). Here the underdamped second-order system is driven by a unit ramp.',
+    category: 'Control Systems',
+    text: `{ Forced Response to an Arbitrary Input (lsim) }
+{ Driving 100/(s²+15s+100) (ωn = 10, ζ = 0.75) with a unit ramp u(t) = t;
+  the output tracks the ramp with the expected lag. A unit ramp into a
+  type-0 system with unit DC gain lags by 2ζ/ωn = 0.15 s at steady state, so
+  y(1) ≈ 1 − 0.15 = 0.85. }
+{ Forced (lsim) response to a unit-ramp input }
+num = [0, 0, 100]
+den = [1, 15, 100]
+t = 0:0.02:1
+N = 51
+u = 0:0.02:1
+[y] = lsim(num[1:3], den[1:3], u[1:N], t[1:N])
+
+PLOT 'Ramp Response'
+  kind = xy
+  x = t
+  y = y
+  xlabel = 'Time [s]'
+  ylabel = 'Output'
+END
+{ CHECK y[51] 0.8500818526757855 9e-7 }`,
+  },
+  {
+    id: 'bode-response',
+    title: 'Bode Frequency Response',
+    description: 'bode evaluates magnitude (dB) and unwrapped phase (degrees) at a vector of frequencies; the bode plot kind draws the stacked magnitude/phase diagram. Build a logarithmic frequency sweep with the start:count:end | Log range form.',
+    category: 'Control Systems',
+    text: `{ Bode Frequency Response }
+{ G(s) = (s+3)/[(s+2)(s²+2s+25)] has DC gain 3/50, so the low-frequency
+  magnitude sits at 20·log10(0.06) = −24.44 dB, with break frequencies near
+  2, 3 and 5 rad/s. }
+{ Bode response of a first-over-second-order system }
+num = [0, 0, 1, 3]
+den = [1, 4, 29, 50]
+G0 = 3/50
+dB0 = 20*log10(G0)        { low-frequency magnitude, dB }
+Nw = 50
+omega = 0.1:50:100 | Log
+[mag, phase] = bode(num[1:4], den[1:4], omega[1:Nw])
+
+PLOT 'Bode Diagram'
+  kind = bode
+  omega = omega
+  mag = mag
+  phase = phase
+END
+{ CHECK dB0 -24.436974992327126 3e-5 }
+{ CHECK mag[1] -24.43979910099266 3e-5 }`,
+  },
+  {
+    id: 'gain-phase-margin',
+    title: 'Gain & Phase Margins',
+    description: 'margin returns the gain margin (dB), phase margin (degrees) and the two crossover frequencies for an open-loop transfer function. The loop here is an antenna-azimuth position servo built up with series from a power amplifier and a motor/load block, scaled by a preamplifier gain.',
+    category: 'Control Systems',
+    text: `{ Gain & Phase Margins }
+{ With preamplifier gain 20 the open loop has a 32.4 dB gain margin and a
+  43.9° phase margin (gain crossover 1.72 rad/s, phase crossover 13.1 rad/s)
+  — a comfortably stable design. }
+{ Gain and phase margins of an antenna-azimuth position servo }
+Kpre = 20
+num_pa = [0, 100*Kpre*0.2083]   { preamp * power amp * motor gain }
+den_pa = [1, 100]
+num_mo = [0, 0, 1]
+den_mo = [1, 1.71, 0]
+[num_ol, den_ol] = series(num_pa[1:2], den_pa[1:2], num_mo[1:3], den_mo[1:3])
+[gm, pm, w_cg, w_cp] = margin(num_ol[1:4], den_ol[1:4])
+Nw = 50
+omega = 0.01:50:100 | Log
+[mag, phase] = bode(num_ol[1:4], den_ol[1:4], omega[1:Nw])
+
+PLOT 'Open-Loop Bode'
+  kind = bode
+  omega = omega
+  mag = mag
+  phase = phase
+END
+{ CHECK gm 32.41232232919962 4e-5 }
+{ CHECK pm 43.87668562421513 5e-5 }
+{ CHECK w_cg 1.7183098366852971 2e-6 }
+{ CHECK w_cp 13.076697063872832 2e-5 }`,
+  },
+  {
+    id: 'nyquist-stability',
+    title: 'Nyquist Diagram & Stability',
+    description: 'nyquist evaluates the real and imaginary parts of the open-loop frequency response; the nyquist plot kind draws the polar plot with the −1 + j0 critical point marked. margin quantifies how far the locus stays from that point.',
+    category: 'Control Systems',
+    text: `{ Nyquist Diagram & Stability }
+{ G(s) = 50/[s(s+3)(s+6)] has a 10.2 dB gain margin and a 35.0° phase margin
+  — a stable but moderately damped loop. }
+{ Nyquist diagram and stability margins of a type-1 loop }
+num = [0, 0, 0, 50]
+den = [1, 9, 18, 0]
+Nw = 50
+omega = 0.1:50:100 | Log
+[re, im] = nyquist(num[1:4], den[1:4], omega[1:Nw])
+[gm, pm, w_cg, w_cp] = margin(num[1:4], den[1:4])
+
+PLOT 'Nyquist Diagram'
+  kind = nyquist
+  real = re
+  imag = im
+END
+{ CHECK gm 10.21083850339182 2e-5 }
+{ CHECK pm 35.014496947549844 4e-5 }`,
+  },
+  {
+    id: 'closed-loop-position-servo',
+    title: 'Closed-Loop Position Servo (series + feedback)',
+    description: 'A complete block-diagram reduction: cascade a power amplifier and a motor/load block with series, then close the loop with unity feedback. pole confirms the closed-loop stability and step shows the transient.',
+    category: 'Control Systems',
+    text: `{ Closed-Loop Position Servo (series + feedback) }
+{ Antenna-azimuth plant (preamp 50 · 100/(s+100) · 0.2083/[s(s+1.71)]) under
+  unity feedback has stable closed-loop poles at −100.1 and −0.80 ± j3.12,
+  giving a lightly damped step response. }
+{ Closed-loop position servo: cascade then feed back }
+Kpre = 50
+num_pa = [0, 100*Kpre]
+den_pa = [1, 100]
+num_mo = [0, 0, 0.2083]
+den_mo = [1, 1.71, 0]
+[num_g, den_g] = series(num_pa[1:2], den_pa[1:2], num_mo[1:3], den_mo[1:3])
+num_h = [1]
+den_h = [1]
+[num_cl, den_cl] = feedback(num_g[1:4], den_g[1:4], num_h[1:1], den_h[1:1])
+[cpr, cpi] = pole(num_cl[1:4], den_cl[1:4])
+t = 0:0.05:3
+N = 61
+[y] = step(num_cl[1:4], den_cl[1:4], t[1:N])
+
+PLOT 'Closed-Loop Step'
+  kind = xy
+  x = t
+  y = y
+  xlabel = Time [s]
+  ylabel = Position
+END
+{ CHECK cpr[1] -100.10573628077249 2e-4 }
+{ CHECK cpr[2] -0.8021318596137694 9e-7 }
+{ CHECK cpi[3] 3.1241932843517843 4e-6 }
+{ CHECK y[61] 1.0885569185278223 2e-6 }`,
+  },
+  {
+    id: 'pid-auto-tune',
+    title: 'PID Auto-Tuning by Loop Shaping',
+    description: 'pidtune sizes a P, PI or PID controller (quoted type) so the open loop crosses over at the target frequency wc with a 60° phase-margin objective. The tuned controller is then assembled as (Kd·s² + Kp·s + Ki)/s, cascaded with the plant via series, and verified with margin.',
+    category: 'Control Systems',
+    text: `{ PID Auto-Tuning by Loop Shaping }
+{ For plant (s+8)/[(s+3)(s+6)(s+10)] at wc = 5 rad/s the gains are Kp ≈
+  48.3, Ki ≈ 195.3, Kd ≈ 2.98; the closed verification confirms a 60.0°
+  phase margin at exactly 5 rad/s. }
+{ PID auto-tuning for plant G(s) = (s+8) / [(s+3)(s+6)(s+10)] }
+num = [0, 0, 1, 8]
+den = [1, 19, 108, 180]
+wc = 5 [rad/s]
+[Kp, Ki, Kd] = pidtune(num[1:4], den[1:4], 'PID', wc)
+{ Assemble C(s) = Kp + Ki/s + Kd s = (Kd s^2 + Kp s + Ki)/s and check the loop }
+num_c = [Kd, Kp, Ki]
+den_c = [0, 1, 0]
+[num_ol, den_ol] = series(num_c[1:3], den_c[1:3], num[1:4], den[1:4])
+[gm, pm, w_cg, w_cp] = margin(num_ol[1:6], den_ol[1:6])
+{ CHECK Kp 48.25945855220656 5e-5 }
+{ CHECK Ki 195.3411531711528 2e-4 }
+{ CHECK Kd 2.9806511607305244 3e-6 }
+{ CHECK pm 60.000326960680795 7e-5 }
+{ CHECK w_cg 5.000087816619355 6e-6 }`,
+  },
+  {
+    id: 'pole-placement',
+    title: 'Pole Placement by State Feedback',
+    description: 'place computes the state-feedback gain K (Ackermann\'s formula) that relocates the eigenvalues of A − B·K to the requested locations, supplied as real/imaginary arrays (complex poles in conjugate pairs). The closed-loop matrix is rebuilt and pole confirms the placement.',
+    category: 'Control Systems',
+    text: `{ Pole Placement by State Feedback }
+{ Relocating the phase-variable plant (den s³+9s²+26s+24) to poles −10 and
+  −2 ± j2 gives K = [56, 22, 5]; the closed-loop A − B·K poles land exactly
+  on the targets. }
+{ State-feedback pole placement via Ackermann's formula }
+A[1,1]=0; A[1,2]=1; A[1,3]=0
+A[2,1]=0; A[2,2]=0; A[2,3]=1
+A[3,1]=-24; A[3,2]=-26; A[3,3]=-9
+B[1]=0; B[2]=0; B[3]=1
+{ Desired closed-loop poles: -10 and -2 +/- j2 }
+des_pr = [-2, -2, -10]
+des_pi = [2, -2, 0]
+[K] = place(A[1:3,1:3], B[1:3], des_pr[1:3], des_pi[1:3])
+{ Verify: rebuild Acl = A - B K and read its poles }
+Acl[1,1]=A[1,1]-B[1]*K[1]; Acl[1,2]=A[1,2]-B[1]*K[2]; Acl[1,3]=A[1,3]-B[1]*K[3]
+Acl[2,1]=A[2,1]-B[2]*K[1]; Acl[2,2]=A[2,2]-B[2]*K[2]; Acl[2,3]=A[2,3]-B[2]*K[3]
+Acl[3,1]=A[3,1]-B[3]*K[1]; Acl[3,2]=A[3,2]-B[3]*K[2]; Acl[3,3]=A[3,3]-B[3]*K[3]
+[ppr, ppi] = pole(Acl[1:3,1:3])
+{ CHECK K[1] 56 6e-5 }
+{ CHECK K[2] 22 3e-5 }
+{ CHECK K[3] 5 5e-6 }
+{ CHECK ppr[1] -9.999999999999986 1e-5 }`,
+  },
+  {
+    id: 'lqr-regulator',
+    title: 'LQR Optimal State-Feedback Regulator',
+    description: 'lqr returns the state-feedback gain K that minimizes ∫(x\'Qx + u\'Ru) dt, solving the algebraic Riccati equation via the matrix sign function of the Hamiltonian. The closed-loop A − B·K is guaranteed stable.',
+    category: 'Control Systems',
+    text: `{ LQR Optimal State-Feedback Regulator }
+{ With Q = I and R = 1 on a third-order plant the optimal gain is K ≈
+  [1.019, −0.101, −0.191]; the closed-loop poles −9.95, −2.23 and −1.01 are
+  all in the left half-plane. }
+{ LQR optimal regulator: minimize the quadratic cost integral }
+A[1,1]=0; A[1,2]=1; A[1,3]=0
+A[2,1]=0; A[2,2]=0; A[2,3]=1
+A[3,1]=-1; A[3,2]=-2; A[3,3]=-3
+B[1]=10; B[2]=0; B[3]=0
+Q[1,1]=1; Q[1,2]=0; Q[1,3]=0
+Q[2,1]=0; Q[2,2]=1; Q[2,3]=0
+Q[3,1]=0; Q[3,2]=0; Q[3,3]=1
+R = 1
+[K] = lqr(A[1:3,1:3], B[1:3], Q[1:3,1:3], R)
+{ Verify the closed-loop poles are stable }
+Acl[1,1]=A[1,1]-B[1]*K[1]; Acl[1,2]=A[1,2]-B[1]*K[2]; Acl[1,3]=A[1,3]-B[1]*K[3]
+Acl[2,1]=A[2,1]-B[2]*K[1]; Acl[2,2]=A[2,2]-B[2]*K[2]; Acl[2,3]=A[2,3]-B[2]*K[3]
+Acl[3,1]=A[3,1]-B[3]*K[1]; Acl[3,2]=A[3,2]-B[3]*K[2]; Acl[3,3]=A[3,3]-B[3]*K[3]
+[ppr, ppi] = pole(Acl[1:3,1:3])
+{ CHECK K[1] 1.018888843248274 2e-6 }
+{ CHECK K[2] -0.10052524206339133 2e-7 }
+{ CHECK K[3] -0.19067237447902688 2e-7 }
+{ CHECK ppr[1] -9.950447060618899 1e-5 }`,
+  },
+  {
+    id: 'control-analysis-report-third-order',
+    title: 'End-to-End Analysis Report',
+    description: 'A single document that walks through a complete plant analysis — poles/zeros, stability margins, Bode, Nyquist and step response — with the narrative in comments and each figure declared by a named PLOT block. Solve, then open the Plots window.',
+    category: 'Control Systems',
+    text: `{ End-to-End Analysis Report }
+{ Analyzes G(s) = (s+3)/[(s+2)(s²+2s+25)]: all poles are left-half-plane
+  (stable), and the lightly damped pole pair produces a pronounced, slowly
+  decaying step response. The poles are s = −2 and s = −1 ± j√24 = −1 ±
+  j4.90, and the zero is s = −3. This copy analyses a third-order plant; the
+  gallery's control-analysis-report analyses (s+2)/(s²+4s+25). }
+{ Control System Analysis Report
+
+  This document analyzes the plant G(s) end to end: poles and zeros, gain and
+  phase margins, frequency response (Bode and Nyquist), and the unit step
+  response. Press Solve (F2), then open the Plots window — each PLOT block
+  below declares a named figure. }
+
+{ 1. Plant model — the numerator and denominator coefficients (descending
+  powers of s) define a third-order plant with one real zero, one real pole,
+  and a lightly damped second-order pole pair. }
+num = [0, 0, 1, 3]
+den = [1, 4, 29, 50]
+
+{ 2. Poles, zeros and stability margins — all three poles lie in the left
+  half-plane, so the open-loop plant is stable. }
+[pr, pi] = pole(num[1:4], den[1:4])
+[zr, zi] = zero(num[1:4], den[1:4])
+[gm, pm, w_cg, w_cp] = margin(num[1:4], den[1:4])
+
+{ 3. Frequency response — sweep 50 logarithmically spaced frequencies, then
+  evaluate the Bode and Nyquist responses. }
+Nw = 50
+omega = 0.1:50:100 | Log
+[mag, phase] = bode(num[1:4], den[1:4], omega[1:Nw])
+[re, im] = nyquist(num[1:4], den[1:4], omega[1:Nw])
+
+{ 4. Time-domain step response — the lightly damped pole pair produces a
+  pronounced, slowly decaying oscillation over 6 seconds. }
+Nt = 121
+t = 0:0.05:6
+[y] = step(num[1:4], den[1:4], t[1:Nt])
+
+PLOT 'Pole-Zero Map'
+  kind = polezero
+  pr = pr
+  pi = pi
+  zr = zr
+  zi = zi
+END
+
+PLOT 'Bode Diagram'
+  kind = bode
+  omega = omega
+  mag = mag
+  phase = phase
+END
+
+PLOT 'Nyquist Diagram'
+  kind = nyquist
+  real = re
+  imag = im
+END
+
+PLOT 'Step Response'
+  kind = xy
+  x = t
+  y = y
+  xlabel = Time [s]
+  ylabel = Amplitude
+END
+{ CHECK pr[1] -2 2e-6 }
+{ CHECK pi[2] -4.89897948556636 5e-6 }
+{ CHECK zr[1] -3 3e-6 }
+{ CHECK y[121] 0.06007954183190265 7e-8 }`,
+  },
+  {
     id: 'radiation-view-factors',
     title: 'Radiation View Factors',
     description: 'Closed-form diffuse view factors for standard configurations.',
