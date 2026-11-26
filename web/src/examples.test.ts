@@ -3,7 +3,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import { EXAMPLES } from './examples'
-import { CYCLE_EXAMPLES } from './helpExamples'
 import { check, initSync, install_property_table, solve, solve_table } from './wasm/pkg/frees.js'
 import { installPackedFluids } from '../scripts/packed-fluids.mjs'
 
@@ -167,12 +166,8 @@ it.each(EXAMPLES.map((e) => [e.id, e] as const))('%s solves with physical units 
   // (NEXT_STEPS EC1); the transfer-function examples take a few seconds.
 }, 120_000)
 
-it('every gallery and Help example is dimensionally consistent', () => {
-  const documents: [string, string][] = [
-    ...EXAMPLES.map((e): [string, string] => [e.id, e.text]),
-    ...CYCLE_EXAMPLES.map((e): [string, string] => [e.value, e.code]),
-  ]
-  const warned = documents.flatMap(([id, text]) => {
+it('every example is dimensionally consistent', () => {
+  const warned = EXAMPLES.map((e): [string, string] => [e.id, e.text]).flatMap(([id, text]) => {
     const warnings: string[] = JSON.parse(check(text, '{}')).unitWarnings
     return warnings.length ? [`${id}: ${warnings.join(' | ')}`] : []
   })

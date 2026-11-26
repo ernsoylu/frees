@@ -57,7 +57,6 @@ import {
   UTILITY_PROPERTY_FUNCS,
   type FuncEntry
 } from './helpReference';
-import { CYCLE_EXAMPLES } from './helpExamples';
 import {
   SolverPipelineDiagram,
   DegreesOfFreedomDiagram,
@@ -542,30 +541,6 @@ function ConstantsReference() {
 }
 
 
-// Examples are titled "Discipline: Specific title"; split on the first colon
-// so the library can group them by discipline and show a short label.
-function exampleCategory(title: string): string {
-  const idx = title.indexOf(':');
-  return idx >= 0 ? title.slice(0, idx).trim() : 'Other';
-}
-
-function exampleShortTitle(title: string): string {
-  const idx = title.indexOf(':');
-  return idx >= 0 ? title.slice(idx + 1).trim() : title;
-}
-
-// Grouped as [category, examples[]] in first-appearance order.
-const EXAMPLE_CATEGORIES: [string, typeof CYCLE_EXAMPLES][] = (() => {
-  const groups = new Map<string, typeof CYCLE_EXAMPLES>();
-  for (const ex of CYCLE_EXAMPLES) {
-    const category = exampleCategory(ex.title);
-    const bucket = groups.get(category) ?? [];
-    bucket.push(ex);
-    groups.set(category, bucket);
-  }
-  return Array.from(groups.entries());
-})();
-
 // Workspace examples (from examples.ts) that are NOT featured in the "Open an
 // Example" picker are surfaced here instead, grouped by their own category.
 const WORKSPACE_EXAMPLE_CATEGORIES: [string, typeof EXAMPLES][] = (() => {
@@ -584,7 +559,6 @@ const WORKSPACE_EXAMPLE_CATEGORIES: [string, typeof EXAMPLES][] = (() => {
 const ALL_EXAMPLE_CATEGORY_NAMES: string[] = (() => {
   const names: string[] = [];
   for (const [cat] of WORKSPACE_EXAMPLE_CATEGORIES) if (!names.includes(cat)) names.push(cat);
-  for (const [cat] of EXAMPLE_CATEGORIES) if (!names.includes(cat)) names.push(cat);
   return names;
 })();
 
@@ -1806,11 +1780,7 @@ export default function HelpPage() {
         .filter(([cat]) => !exampleCat || cat === exampleCat)
         .map(([cat, exs]) => [cat, exs.filter((ex) => matches(ex.title, ex.description, ex.text))] as const)
         .filter(([, exs]) => exs.length > 0);
-      const cycleCats = EXAMPLE_CATEGORIES
-        .filter(([cat]) => !exampleCat || cat === exampleCat)
-        .map(([cat, exs]) => [cat, exs.filter((ex) => matches(ex.title, ex.description, ex.code))] as const)
-        .filter(([, exs]) => exs.length > 0);
-      const nothing = wsCats.length === 0 && cycleCats.length === 0;
+      const nothing = wsCats.length === 0;
       return (
         <Stack gap="md">
           <Title order={2} c="teal.4">Engineering Examples Library</Title>
@@ -1850,10 +1820,10 @@ export default function HelpPage() {
           )}
           <Alert color="teal" variant="light" icon={<IconBook size={18} />}>
             <Text size="sm">
-              Examples that solve an implicit or transcendental equation mention a{' '}
-              <b>guess</b> (e.g. “set a guess <Code>yn ≈ 0.6</Code>”). Open{' '}
-              <Code>Ctrl + I</Code> (Variable Info), enter it, then solve — a good
-              guess is usually what makes a nonlinear problem converge. Examples
+              If a model built on an implicit or transcendental equation does not
+              converge, open <Code>Ctrl + I</Code> (Variable Info), enter a{' '}
+              <b>guess</b>, then solve — a good guess is usually what makes a
+              nonlinear problem converge. Examples
               built on a <Code>PARAMETRIC</Code> table are solved from the Tables
               tab with <b>Solve Table</b>, not the main Solve.
             </Text>
@@ -1890,29 +1860,6 @@ export default function HelpPage() {
               ))}
             </Stack>
           )}
-          {cycleCats.map(([category, examples]) => (
-            <Stack gap="xs" key={category}>
-              <Title order={4} c="teal.3" mt="sm">{category}</Title>
-              <MantineAccordion variant="separated">
-                {examples.map((ex) => (
-                  <MantineAccordion.Item value={ex.value} key={ex.value}>
-                    <MantineAccordion.Control>
-                      <Text fw={600} c="teal.3">{exampleShortTitle(ex.title)}</Text>
-                    </MantineAccordion.Control>
-                    <MantineAccordion.Panel>
-                      <Text size="sm" mb="xs">{ex.description}</Text>
-                      {ex.note && (
-                        <Alert color="gray" py="xs" mb="sm">
-                          {ex.note}
-                        </Alert>
-                      )}
-                      <RunnableCode code={ex.code} title={exampleShortTitle(ex.title)} />
-                    </MantineAccordion.Panel>
-                  </MantineAccordion.Item>
-                ))}
-              </MantineAccordion>
-            </Stack>
-          ))}
         </Stack>
       );
     }
