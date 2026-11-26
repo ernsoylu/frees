@@ -70,17 +70,24 @@ each item carries its own repro, and each fix lands with that repro as a test.
 - A one-decision BOBYQA request runs Nelder-Mead. The response should carry a warning saying so.
 - User `FUNCTION` recursion stops at 64 levels, so `h(70)` with a base case fails. Raise the limit under the evaluator's work budget, or name it in the message and the reference page.
 
-**FX6. Measure, then optimise.**
-- Profile `ev-battery-cooling-pid` (16 s alone; IDA over the R134a loop) before changing anything. Split the time between residual assembly, the Jacobian, the factorisation and property calls. The engine already factors sparse Jacobians (Phase 4.1), so "no sparsity" is not the working hypothesis. Property evaluation and the number of Jacobian refreshes are.
-  - Acceptance: a recorded profile, and the gate timeout back near the suite's normal limit.
-- `step`/`stepinfo`: the 2026-10-31 finding ("seconds over a few hundred samples") did not reproduce at the default length (41–90 ms on 2026-11-23). Retest with a long explicit time vector. If it is still fast, close the finding.
+**FX6. Measure, then optimise.** Both profiles were recorded on 2026-11-25 (native release build, `fx3e`, callgrind with line tables). The next step for each changes numbers or representation, so each waits on an *owner decision*.
+- **`ev-battery-cooling-pid`** takes 15.0 s natively. It runs `ode23s` (Rosenbrock), not IDA, over 0–4000 s.
+  - Counts: 1,432 steps, one ODE Jacobian refresh per step, 10,426 algebraic solves (about 7 per step), 396,194 Newton block solves, 4.74 M residual evaluations, and 774,428 property calls (28,324 cold flashes).
+  - Inclusive split: the ODE Jacobian (`ode::methods::jacobian`, finite differences, each state column a full nested algebraic solve) takes 57 %. Newton residuals take 76 % and the line search 25 %. `props_si` takes 19.6 %, about half of it cold flashes. Sparse factorisation does not appear in the profile.
+  - The lever is the per-step Jacobian refresh. It could be reused across steps (a W-method), or made analytic from the block structure. Property calls come second.
+  - *Owner decision:* either option changes this model's integration path, so its golden values move and need regenerating for that cause.
+- **`step`/`stepinfo` with a long time vector:** the 2026-10-31 finding reproduces and is quadratic in the sample count N. `[y] = step(num, den, t)` takes 5.6 s at N = 1000, 23 s at 2000 and 146 s at 5000. A 2000-equation baseline without `step` takes 0.07 s, and `check` alone takes 10.7 s at 2000.
+  - Cause: `step` emits one equation `y[i] = step$i(…, t[1], …, t[N])` per sample, so every equation names all N samples. At N = 1000, 66 % of the instructions are `Equation::variables` rebuilding `BTreeSet<String>`s. The passes involved are the unit check (28.5 %), the blocker (22.9 %), display names (14.3 %), `unknowns` (13.2 %) and `builtin_constants` (10.9 %).
+  - Rerunning the simulation per sample is only about 15 %. A memo for it was measured (23 s → 20 s at N = 2000) and not kept.
+  - *Owner decision:* the fix is representational. Options are to substitute a constant time vector's values into the call, so the samples are not variables, or to make the time responses one vector-valued call node.
+  - Note that 25,000 equations is the generator's limit, so N above about 20,000 is refused.
 
 **FX5. Language-contract items (owner decision before any work).** Each changes how existing text parses, so each needs a migration-matrix row (§4) and a golden scan.
 - **Transpose and string literals.** `A' + A'`, and `C = A'` followed by any later `'string'`, lex the two quotes as one string (`lexer.rs`, pinned as Java behaviour). The fix: after an identifier, `)` or `]`, a quote is a transpose.
 - **Matrix names depend on statement order** (`parser/expand.rs:52`). A matrix used before its declaring statement, a `FOR` body reading a matrix declared outside it, and `[A; A]` all fail as underspecified. The fix: pre-register shapes over the whole document, and let `FOR` bodies see the enclosing scope.
 - **A temperature-difference unit** such as `[dC]`/`[dF]`. Until then the checker warns (FX1c, #159) when °C/°F values are combined with weights that sum to neither 0 (a difference) nor 1 (a mean).
 
-**Order.** FX6 → FX4. FX3e's gauge and unknown-unit parts wait for decisions (see FX3e). FX1e waits for the golden decision (see FX1e). E05 waits for `md-hpwh`'s block 22 (see E05). FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
+**Order.** FX4. FX6 is measured and its two fixes wait for decisions (see FX6). FX3e's gauge and unknown-unit parts wait for decisions (see FX3e). FX1e waits for the golden decision (see FX1e). E05 waits for `md-hpwh`'s block 22 (see E05). FX5 waits for decisions. Each item is its own PR with its repro as a test. Rebuild the WASM module before treating `check-examples` as evidence.
 
 **Process lessons from this cycle.**
 - **Stacked PRs:** when the base PR is squash-merged, merge `main` into the dependent branch rather than rebasing it. A rebase needs a force-push, and the agent sandbox blocks force-pushes.
