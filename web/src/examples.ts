@@ -1727,6 +1727,413 @@ END
 { CHECK y[121] 0.06007954183190265 7e-8 }`,
   },
   {
+    id: 'ode-decay',
+    title: 'Radioactive Decay — ode1 (Euler)',
+    description: 'First-order decay dc/dt = -k·c. Verify: c(20) = 100·e^(-0.175·20) ≈ 3.02.',
+    category: 'Dynamics & ODEs',
+    text: `{ Radioactive Decay — ode1 (Euler) }
+{ Fixed-step Euler (ode1) — lowest order; many points keep it accurate.
+  Euler with h = 0.025 s gives c(20) = 100(1 − kh)^800 = 2.997 exactly,
+  against the exact 100·e^(−3.5) = 3.020; the 0.8 % gap is ode1's truncation
+  error. }
+{ Radioactive decay — verify c(20) = 100 e^(-0.175*20) = 3.02 }
+k = 0.175
+DYNAMIC decay (method = ode1, t = 0 .. 20, points = 800)
+  der(c) = -k * c
+  c(0) = 100
+END
+{ Read-backs }
+c_end = FinalValue('c')            { c(20) }
+{ CHECK c_end 2.996610729654572 3e-6 }`,
+  },
+  {
+    id: 'ode-rc',
+    title: 'RC Circuit Charging — ode2 (Heun)',
+    description: 'Capacitor charging de/dt = (es-e)/(RC). Verify: e(0.006) = 10(1-e^(-6)) ≈ 9.975 V.',
+    category: 'Dynamics & ODEs',
+    text: `{ RC Circuit Charging — ode2 (Heun) }
+{ RC charging — verify e -> es = 10 V; e(0.006) = 9.975 V }
+R = 1000
+C = 1e-6
+es = 10
+DYNAMIC rc (method = ode2, t = 0 .. 0.006, points = 400)
+  der(e) = (es - e) / (R * C)
+  e(0) = 0
+END
+{ Read-backs }
+e_end = FinalValue('e')            { e(0.006) }
+{ CHECK e_end 9.97520680880523 1e-5 }`,
+  },
+  {
+    id: 'ode-reaction',
+    title: 'First-Order Reaction A→B — ode3',
+    description: 'cA = e^(-k·t), cB = 1 - e^(-k·t). Verify: cA(5) ≈ 0.030, cB(5) ≈ 0.970.',
+    category: 'Dynamics & ODEs',
+    text: `{ First-Order Reaction A→B — ode3 }
+{ Irreversible reaction A -> B; cA + cB is conserved = 1 }
+k = 0.7
+DYNAMIC reaction (method = ode3, t = 0 .. 5, points = 300)
+  der(cA) = -k * cA
+  der(cB) =  k * cA
+  cA(0) = 1
+  cB(0) = 0
+END
+{ Read-backs }
+cA_end = FinalValue('cA')          { cA(5) }
+cB_end = FinalValue('cB')          { cB(5) }
+{ CHECK cA_end 0.030197376292403516 4e-8 }
+{ CHECK cB_end 0.969802623707596 1e-6 }`,
+  },
+  {
+    id: 'ode-rl',
+    title: 'RL Circuit Decay — ode4 (RK4)',
+    description: 'L·di/dt + R·i = 0 → i = 0.5·e^(-1.5·t). Verify: i(2) = 0.5·e^(-3) ≈ 0.0249 A.',
+    category: 'Dynamics & ODEs',
+    text: `{ RL Circuit Decay — ode4 (RK4) }
+{ Classic fourth-order Runge–Kutta. }
+{ RL natural response — verify i(2) = 0.5 e^(-3) = 0.0249 A }
+L = 1
+R = 1.5
+DYNAMIC rl (method = ode4, t = 0 .. 2, points = 200)
+  der(i) = -(R / L) * i
+  i(0) = 0.5
+END
+{ Read-backs }
+i_end = FinalValue('i')            { i(2) }
+{ CHECK i_end 0.024893534216482525 3e-8 }`,
+  },
+  {
+    id: 'ode-cooling',
+    title: 'Newton Cooling — ode5',
+    description: 'T = Ta + (T0-Ta)·e^(-k·t). Verify: T(30) = 20 + 70·e^(-3) ≈ 23.48 °C.',
+    category: 'Dynamics & ODEs',
+    text: `{ Newton Cooling — ode5 }
+{ Time is named 'time' because a state T collides with a time variable t. }
+{ Newton cooling — verify T(30) = 20 + 70 e^(-3) = 23.48 }
+k = 0.1
+Ta = 20
+DYNAMIC cooling (method = ode5, time = 0 .. 30, points = 200)
+  der(T) = -k * (T - Ta)
+  T(0) = 90
+END
+{ Read-backs }
+T_end = FinalValue('T')            { T(30) }
+{ CHECK T_end 23.48509478575282 3e-5 }`,
+  },
+  {
+    id: 'ode-parachutist',
+    title: 'Falling Parachutist (linear drag) — ode45',
+    description: 'dv/dt = g - (c/m)·v. Verify: terminal v = g·m/c = 53.44 m/s.',
+    category: 'Dynamics & ODEs',
+    text: `{ Falling Parachutist (linear drag) — ode45 }
+{ Adaptive Dormand–Prince 5(4) — the default method. At t = 30 s, v =
+  (g·m/c)(1 − e^(−c·t/m)) = 53.23 m/s. }
+{ Falling parachutist — verify terminal velocity g*m/c = 53.44 m/s }
+g = 9.81
+m = 68.1
+c = 12.5
+DYNAMIC fall (method = ode45, t = 0 .. 30, points = 600, rtol = 1e-8)
+  der(v) = g - (c / m) * v
+  v(0) = 0
+END
+{ Read-backs }
+v_end = FinalValue('v')            { v(30) }
+{ CHECK v_end 53.227901516828524 6e-5 }`,
+  },
+  {
+    id: 'ode-tank',
+    title: 'Draining Tank (Torricelli) — ode23',
+    description: 'dy/dt = -k·√y → y = (√3 - 0.03·t)². Verify: y(20) = (√3-0.6)² ≈ 1.281 m.',
+    category: 'Dynamics & ODEs',
+    text: `{ Draining Tank (Torricelli) — ode23 }
+{ Adaptive Bogacki–Shampine 3(2). }
+{ Torricelli draining — verify y(20) = (sqrt(3) - 0.6)^2 = 1.281 m }
+k = 0.06
+DYNAMIC tank (method = ode23, t = 0 .. 20, points = 200, rtol = 1e-8)
+  der(y) = -k * sqrt(y)
+  y(0) = 3
+END
+{ Read-backs }
+y_end = FinalValue('y')            { y(20) }
+{ CHECK y_end 1.2815390252541548 2e-6 }`,
+  },
+  {
+    id: 'ode-logistic',
+    title: 'Logistic Population Growth — ode45',
+    description: 'dp/dt = r(1-p/K)p → p = K/(1+3.6967·e^(-r·t)). Verify: p(100) ≈ 9414 million.',
+    category: 'Dynamics & ODEs',
+    text: `{ Logistic Population Growth — ode45 }
+{ Logistic growth — verify p(100) = 12000/(1 + 3.6967 e^(-2.6)) = 9414 }
+r = 0.026
+K = 12000
+DYNAMIC logistic (method = ode45, t = 0 .. 100, points = 200, rtol = 1e-9)
+  der(p) = r * (1 - p / K) * p
+  p(0) = 2555
+END
+{ Read-backs }
+p_end = FinalValue('p')            { p(100) }
+{ CHECK p_end 9414.97580117947 1e-2 }`,
+  },
+  {
+    id: 'ode-quadratic-drag',
+    title: 'Terminal Velocity (quadratic drag) — ode45',
+    description: 'dv/dt = g - (c/m)·v² → v = v_t·tanh(t·√(gc/m)), v_t = √(g·m/c) ≈ 52.41 m/s.',
+    category: 'Dynamics & ODEs',
+    text: `{ Terminal Velocity (quadratic drag) — ode45 }
+{ At t = 20 s, v = 52.41·tanh(20·√(g·c/m)) = 52.35 m/s. }
+{ Quadratic drag — verify terminal velocity sqrt(g*m/c) = 52.41 m/s }
+g = 9.81
+m = 70
+c = 0.25
+DYNAMIC fall2 (method = ode45, t = 0 .. 20, points = 300, rtol = 1e-9)
+  der(v) = g - (c / m) * v * v
+  v(0) = 0
+END
+{ Read-backs }
+v_end = FinalValue('v')            { v(20) }
+{ CHECK v_end 52.35123054492861 6e-5 }`,
+  },
+  {
+    id: 'ode-msd',
+    title: 'Mass-Spring-Damper (underdamped) — ode45',
+    description: 'm·x\'\' + c·x\' + k·x = 0 (two states). Verify: x(5) ≈ 0.066 m (decaying sinusoid).',
+    category: 'Dynamics & ODEs',
+    text: `{ Mass-Spring-Damper (underdamped) — ode45 }
+{ A true two-state ODE; plot x vs time, or v vs x (phase portrait). }
+{ Underdamped vibration — m=20, c=5, k=20. Verify x(5) = 0.066 m }
+m = 20
+c = 5
+k = 20
+DYNAMIC vib (method = ode45, t = 0 .. 15, points = 600, rtol = 1e-9)
+  der(x) = v
+  der(v) = -(c/m) * v - (k/m) * x
+  x(0) = 1
+  v(0) = 0
+END
+{ Read-backs }
+x_5 = ODEValue('x', 5)             { x(5) }
+{ CHECK x_5 0.06621259237649049 7e-8 }`,
+  },
+  {
+    id: 'ode-shm',
+    title: 'Undamped Oscillator (energy check) — ode4',
+    description: 'x\'\' + ω²x = 0 → x = cos(ωt). Verify: x(2π) = 1 and energy E = 2 is conserved.',
+    category: 'Dynamics & ODEs',
+    text: `{ Undamped Oscillator (energy check) — ode4 }
+{ Energy E = ½v² + ½ω²x² is an algebraic auxiliary column you can plot. }
+{ Simple harmonic motion — verify x(2pi)=1 and E stays 2 }
+w = 2
+DYNAMIC shm (method = ode4, t = 0 .. 6.283185307, points = 400)
+  der(x) = v
+  der(v) = -w*w * x
+  E = 0.5 * v*v + 0.5 * w*w * x*x
+  x(0) = 1
+  v(0) = 0
+END
+{ Read-backs }
+x_end = FinalValue('x')            { x(2 pi) }
+E_end = FinalValue('E')            { energy at 2 pi }
+{ CHECK x_end 0.9999999972961708 1e-6 }
+{ CHECK E_end 1.9999999891847047 2e-6 }`,
+  },
+  {
+    id: 'ode-pendulum',
+    title: 'Simple Pendulum (small angle) — ode5',
+    description: 'θ\'\' + (g/l)θ = 0 → θ = (π/4)cos(√(g/l)·t). Verify: θ(1) ≈ -0.506 rad.',
+    category: 'Dynamics & ODEs',
+    text: `{ Simple Pendulum (small angle) — ode5 }
+{ θ(1) = (π/4)·cos(√(g/l)) = −0.5059 rad. }
+{ Small-angle pendulum — g=32.2 ft/s^2, l=2 ft. Verify theta(1) = -0.506 rad }
+g = 32.2
+l = 2
+DYNAMIC pend (method = ode5, t = 0 .. 3, points = 600)
+  der(theta) = omega
+  der(omega) = -(g/l) * theta
+  theta(0) = pi# / 4
+  omega(0) = 0
+END
+{ Read-backs }
+theta_1 = ODEValue('theta', 1)     { theta(1) }
+{ CHECK theta_1 -0.5058896310934342 6e-7 }`,
+  },
+  {
+    id: 'ode-rlc',
+    title: 'Series RLC Circuit (underdamped) — ode23',
+    description: 'L·q\'\' + R·q\' + q/C = 0. Verify: q(0.05) ≈ 0.153 C (decaying oscillation).',
+    category: 'Dynamics & ODEs',
+    text: `{ Series RLC Circuit (underdamped) — ode23 }
+{ Capacitance is named Cap because C is conventionally a constant elsewhere. }
+{ Series RLC — L=5, R=280, C=1e-4. Verify q(0.05) = 0.153 C }
+L = 5
+R = 280
+Cap = 1e-4
+DYNAMIC rlc (method = ode23, t = 0 .. 0.2, points = 400, rtol = 1e-9)
+  der(q) = i
+  der(i) = -(R/L) * i - (1/(L*Cap)) * q
+  q(0) = 1
+  i(0) = 0
+END
+{ Read-backs }
+q_005 = ODEValue('q', 0.05)        { q(0.05) }
+{ CHECK q_005 0.1526785683271647 2e-7 }`,
+  },
+  {
+    id: 'ode-lotka',
+    title: 'Lotka–Volterra Predator–Prey — ode45',
+    description: 'Coupled nonlinear system; the invariant V = d·x - c·ln x + b·y - a·ln y stays constant.',
+    category: 'Dynamics & ODEs',
+    text: `{ Lotka–Volterra Predator–Prey — ode45 }
+{ No closed-form time solution — verified via the conserved invariant V (an
+  aux column). The CHECKs grade V at t = 30 against its value at t = 0. }
+{ Predator-prey — V = d*x - c*ln(x) + b*y - a*ln(y) is conserved.
+  Plot y vs x for the closed phase-plane orbit. }
+a = 1.2
+b = 0.6
+cc = 0.8
+d = 0.3
+DYNAMIC lv (method = ode45, t = 0 .. 30, points = 600, rtol = 1e-9)
+  der(x) = a*x - b*x*y
+  der(y) = -cc*y + d*x*y
+  V = d*x - cc*ln(x) + b*y - a*ln(y)
+  x(0) = 2
+  y(0) = 1
+END
+{ Read-backs }
+V_0 = ODEValue('V', 0)             { invariant at t = 0 }
+V_end = FinalValue('V')            { invariant at t = 30 }
+{ CHECK V_0 0.6454822555520437 7e-7 }
+{ CHECK V_end 0.6454822555520437 7e-7 }`,
+  },
+  {
+    id: 'ode-tanks',
+    title: 'Coupled Mixing Tanks — ode23',
+    description: 'Two tanks exchanging fluid. Verify: both approach the mean (5), total stays 10.',
+    category: 'Dynamics & ODEs',
+    text: `{ Coupled Mixing Tanks — ode23 }
+{ Coupled mixing — verify c1,c2 -> 5 and total = c1+c2 stays 10 }
+kk = 0.5
+DYNAMIC tanks (method = ode23, t = 0 .. 20, points = 200, rtol = 1e-8)
+  der(c1) = kk * (c2 - c1)
+  der(c2) = kk * (c1 - c2)
+  total = c1 + c2
+  c1(0) = 10
+  c2(0) = 0
+END
+{ Read-backs }
+c1_end = FinalValue('c1')          { c1(20) }
+total_end = FinalValue('total')    { c1 + c2 at t = 20 }
+{ CHECK c1_end 5.000000010262159 6e-6 }
+{ CHECK total_end 10.000000000000012 1e-5 }`,
+  },
+  {
+    id: 'ode-orbit',
+    title: 'Two-Body Circular Orbit — ode45',
+    description: 'Four-state gravitational orbit (r=1, μ=1, v=1). Verify: returns to (1,0) at t=2π.',
+    category: 'Dynamics & ODEs',
+    text: `{ Two-Body Circular Orbit — ode45 }
+{ Plot y vs x for the circular trajectory; r is an aux column that stays 1. }
+{ Circular orbit — verify x(2pi)=1, y(2pi)=0, radius r stays 1 }
+mu = 1
+DYNAMIC orbit (method = ode45, t = 0 .. 6.283185307, points = 400, rtol = 1e-10)
+  r = sqrt(x*x + y*y)
+  der(x) = vx
+  der(y) = vy
+  der(vx) = -mu * x / r^3
+  der(vy) = -mu * y / r^3
+  x(0) = 1
+  y(0) = 0
+  vx(0) = 0
+  vy(0) = 1
+END
+{ Read-backs }
+x_end = FinalValue('x')            { x(2 pi) }
+r_end = FinalValue('r')            { radius at 2 pi }
+{ CHECK x_end 1.0000000030301097 2e-6 }
+{ CHECK r_end 1.0000000030301097 2e-6 }`,
+  },
+  {
+    id: 'ode-stiff-linear',
+    title: 'Classic Stiff Linear ODE — ode15s',
+    description: 'y\' = -1000y + 3000 - 2000·e^(-t) → y = 3 - 0.998·e^(-1000t) - 2.002·e^(-t). Verify: y(0.4) ≈ 1.658.',
+    category: 'Dynamics & ODEs',
+    text: `{ Classic Stiff Linear ODE — ode15s }
+{ Stiff: explicit methods need tiny steps; ode15s (implicit BDF) handles it
+  easily. }
+{ Stiff linear ODE — verify y(0.4) = 3 - 2.002 e^(-0.4) = 1.658 }
+DYNAMIC stiff (method = ode15s, t = 0 .. 0.4, points = 200, rtol = 1e-7)
+  der(y) = -1000*y + 3000 - 2000*exp(-t)
+  y(0) = 0
+END
+{ Read-backs }
+y_end = FinalValue('y')            { y(0.4) }
+{ CHECK y_end 1.6580178836156905 2e-6 }`,
+  },
+  {
+    id: 'ode-vanderpol',
+    title: 'Van der Pol Oscillator (stiff) — ode23s',
+    description: 'μ = 1000 relaxation oscillator. Verify: the slow manifold keeps y1 bounded (≈ 2).',
+    category: 'Dynamics & ODEs',
+    text: `{ Van der Pol Oscillator (stiff) — ode23s }
+{ Very stiff — needs the implicit Rosenbrock solver ode23s (or ode15s). }
+{ Van der Pol, mu = 1000 — extremely stiff. Verify |y1| stays near 2 }
+mu = 1000
+DYNAMIC vdp (method = ode23s, t = 0 .. 1, points = 100, rtol = 1e-4, atol = 1e-7)
+  der(y1) = y2
+  der(y2) = mu * (1 - y1*y1) * y2 - y1
+  y1(0) = 2
+  y2(0) = 0
+END
+{ Read-backs }
+y1_end = FinalValue('y1')          { y1(1) }
+{ CHECK y1_end 1.99933337050631 2e-6 }`,
+  },
+  {
+    id: 'ode-robertson',
+    title: 'Robertson Chemical Kinetics (stiff) — ode23s',
+    description: 'Three-species stiff kinetics with rates 0.04 / 1e4 / 3e7. Verify: c1+c2+c3 = 1 (mass conserved).',
+    category: 'Dynamics & ODEs',
+    text: `{ Robertson Chemical Kinetics (stiff) — ode23s }
+{ A standard stiff benchmark; the fast transient dies quickly. }
+{ Robertson kinetics — verify total concentration c1+c2+c3 stays 1 }
+DYNAMIC rob (method = ode23s, t = 0 .. 40, points = 100, rtol = 1e-6, atol = 1e-10)
+  der(c1) = -0.04*c1 + 1e4*c2*c3
+  der(c2) = 0.04*c1 - 1e4*c2*c3 - 3e7*c2*c2
+  der(c3) = 3e7*c2*c2
+  c1(0) = 1
+  c2(0) = 0
+  c3(0) = 0
+END
+{ Read-backs }
+c1_end = FinalValue('c1')          { c1(40) }
+total_end = FinalValue('c1') + FinalValue('c2') + FinalValue('c3')   { mass at t = 40 }
+{ CHECK c1_end 0.7158271282510661 8e-7 }
+{ CHECK total_end 0.9999999999999998 1e-6 }`,
+  },
+  {
+    id: 'ode-chain',
+    title: 'Stiff Reaction Chain A→B→C — ode15s',
+    description: 'Disparate rates (k1=1000 fast, k2=1 slow). Verify: A is consumed and a+b+c = 1.',
+    category: 'Dynamics & ODEs',
+    text: `{ Stiff Reaction Chain A→B→C — ode15s }
+{ C(5) = 1 − (k1·e^(−k2·t) − k2·e^(−k1·t))/(k1 − k2) = 0.99326. }
+{ Stiff chain A->B->C — verify A -> 0 fast and total mass stays 1 }
+k1 = 1000
+k2 = 1
+DYNAMIC chain (method = ode15s, t = 0 .. 5, points = 150, rtol = 1e-7)
+  der(a) = -k1 * a
+  der(b) =  k1 * a - k2 * b
+  der(cc) = k2 * b
+  a(0) = 1
+  b(0) = 0
+  cc(0) = 0
+END
+{ Read-backs }
+cc_end = FinalValue('cc')          { C formed by t = 5 }
+total_end = FinalValue('a') + FinalValue('b') + FinalValue('cc')   { mass at t = 5 }
+{ CHECK cc_end 0.9932553045825778 1e-6 }
+{ CHECK total_end 1.0000000000000049 1e-6 }`,
+  },
+  {
     id: 'radiation-view-factors',
     title: 'Radiation View Factors',
     description: 'Closed-form diffuse view factors for standard configurations.',
