@@ -33,7 +33,7 @@ export const EXAMPLES: Example[] = [
     // property gaps it needed — INCOMP::MEG for the EG50 coolant, R1234yf for
     // the refrigerant, air transport for htc_extair, and saturation-line
     // transport for htc_evap / htc_cond / dp_2phase.
-    description: 'Coupled refrigerant + coolant loops with wide branches and a discretized radiator; every HX UA and the evaporator dP are computed from correlations + geometry and injected. Reports the steady cycle performance — cooling duties, compressor power and COP. Solve (F2).',
+    description: 'Coupled refrigerant + coolant loops with wide branches and a discretized radiator; every HX UA and the evaporator dP are computed from correlations + geometry and injected. Reports the steady cycle performance — cooling duties, compressor power and COP.',
     category: 'Systems',
     featured: true,
     text: EV_THERMAL_EXAMPLE_TEXT,
@@ -99,7 +99,7 @@ END
     id: 'pump-sizing',
     title: 'Pump Sizing',
     description: 'Hydraulic and shaft power from flow rate, head, and efficiency.',
-    category: 'Mechanical',
+    category: 'Mechanics',
     featured: true,
     text: `// Pump Sizing
 { A worked example — edit any value and press Solve (F2).
@@ -180,7 +180,7 @@ P * Vol = m * R * T    { ideal gas equation }
     id: 'dc-circuit',
     title: 'DC Circuit',
     description: 'Current and power dissipation from Ohm’s law.',
-    category: 'Electrical',
+    category: 'Electrical & Powertrain',
     featured: true,
     text: `// DC Circuit — Power Dissipation
 V = 12 [V]
@@ -315,7 +315,7 @@ END
     id: 'tank-draining',
     title: 'Tank Draining (ODE)',
     description: 'First-order ODE via Integral — Torricelli draining of a tank.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     featured: true,
     text: `// Tank Draining (Torricelli) — first-order ODE
 { Water height h in a tank emptying through a small orifice obeys
@@ -433,7 +433,7 @@ END
     id: 'karman-rocket',
     title: 'Sounding Rocket to the Kármán Line',
     description: 'Sizes a CH4/LOX rocket to loft a 10 kg payload to 100 km — combustion, Isp, and an implicit mass/Δv solve.',
-    category: 'Aerospace',
+    category: 'Aerospace & Compressible Flow',
     text: `// Sounding Rocket to the Kármán Line
 { A single-stage methane / liquid-oxygen rocket sized to carry a 10 kg
   payload to the Karman line (100 km), then release it at apogee.
@@ -607,7 +607,7 @@ E0        = ODEValue('energy', 0) * 1 [J]  { initial energy }
     id: 'sounding-rocket-trajectory',
     title: 'Sounding Rocket Trajectory (loss-accurate)',
     description: 'Coupled h/v/m ODE with drag, burnout and an apogee event; apogee read back via an accessor.',
-    category: 'Aerospace',
+    category: 'Aerospace & Compressible Flow',
     text: `// Loss-Accurate Sounding-Rocket Trajectory (DYNAMIC)
 { The coupled multi-state system der(h)=v, der(v)=(F - D - m g)/m, der(m)=-mdot,
   with aerodynamic drag against an exponential atmosphere computed every step as
@@ -3395,7 +3395,7 @@ q = k * A * (T_hot - T_cold) / L   { heat rate through the plate }
     id: 'engine-map-2d',
     title: 'Engine Map (2-D Interpolation)',
     description: 'Bilinear lookup of a brake-specific-fuel-consumption map.',
-    category: 'Powertrain',
+    category: 'Electrical & Powertrain',
     featured: true,
     text: `// Engine Map - 2-D Interpolation
 { A brake-specific fuel consumption map: rows are engine speed,
@@ -3417,7 +3417,7 @@ g_check   = Interpolate2D('bsfc', 2500, 0.6) { same value, classic-solver name }
     id: 'multi-objective-beam',
     title: 'Multi-Objective Beam Design (Pareto)',
     description: 'Trade off mass against deflection — run via Min/Max > Pareto.',
-    category: 'Optimization',
+    category: 'Data & Analysis',
     featured: true,
     text: `// Multi-Objective Cantilever Beam
 { A steel cantilever with a tip load. Solve (F2) to evaluate one
@@ -3444,7 +3444,7 @@ delta = F * L^3 / (3 * E * I)        { objective 2: tip deflection, minimize }
     id: 'driving-cycle-energy',
     title: 'Driving-Cycle Energy (Parametric)',
     description: 'Integrate tractive power over a speed profile with IntegralValue.',
-    category: 'Powertrain',
+    category: 'Electrical & Powertrain',
     text: `// Driving-Cycle Energy
 { Tractive power over a speed profile, integrated to total energy.
   This uses a PARAMETRIC table: the base system leaves the speed
@@ -3605,8 +3605,8 @@ COP = q_L / w_c
   {
     id: 'cd-nozzle-shock',
     title: 'Nozzle with a Normal Shock',
-    description: 'Compressible flow: supersonic nozzle with a normal shock (gas dynamics).',
-    category: 'Aerospace',
+    description: 'Air shocks where A/A* = 2 in the diverging section: Mach, pressure and stagnation-pressure loss across it.',
+    category: 'Aerospace & Compressible Flow',
     featured: true,
     text: `// Converging-Diverging Nozzle with a Normal Shock
 { Air (k = 1.4) expands from a reservoir through a C-D nozzle. A normal
@@ -3686,7 +3686,7 @@ Psat_300 = eos_psat('co2', 'PR', 300)          { saturation pressure at 300 K }
     id: 'engine-cycle-wiebe',
     title: 'Engine Cycle (Wiebe Heat Release)',
     description: 'Crank-angle single-zone SI-engine pressure trace via a DYNAMIC block.',
-    category: 'Powertrain',
+    category: 'Electrical & Powertrain',
     featured: true,
     text: `// Single-Zone Engine Cycle (Wiebe Heat Release)
 { Crank-angle single-zone first-law model of a spark-ignition engine over the
@@ -3743,7 +3743,7 @@ LHV     = HeatingValue('CH4', 'LHV')
   {
     id: 'ev-battery-cooling-pid',
     title: 'EV Battery Cooling with Closed-Loop EXV Control',
-    description: 'Five domains in one transient solve: pack discharge (electrical) heats the cell thermal state, a coolant loop carries it to an R134a chiller, and a reverse-acting PID on a signal wire modulates the electronic expansion valve to hold the pack at 303 K. Solve (F2).',
+    description: 'Five domains in one transient solve: pack discharge (electrical) heats the cell thermal state, a coolant loop carries it to an R134a chiller, and a reverse-acting PID on a signal wire modulates the electronic expansion valve to hold the pack at 303 K.',
     category: 'Systems',
     featured: true,
     text: `// Five domains in one solve: electrical (pack discharge) -> heat (cell thermal
@@ -3805,113 +3805,113 @@ q_positive = 0.5 * (1 + tanh(FinalValue('ch.ev.q')))
   {
    id: 'pneumatic-spring-actuator',
    "title": "Spring-return pneumatic actuator",
-    "description": "Solve (F2). Spring-return pneumatic actuator",
-    "category": "Pneumatics",
+    "description": "Air at 1.2 barA against a 1330 N/m return spring: 35.5 N of force and a 26.7 mm stroke.",
+    "category": "Fluids & Fluid Power",
     "text": "PneumaticSupply supply(fluid$=Air, P=120000 [Pa], T=293.15 [K])\nPneumaticActuator actuator(fluid$=Air, area=0.001774 [m^2], Patm=100000 [Pa])\nTransSpring spring(k=1330 [N/m], x0=0 [m])\nTransGround ground()\nconnect(supply.out, actuator.in)\nconnect(actuator.rod, spring.a)\nconnect(spring.b, ground.port)\nstroke = spring.x\nforce = -actuator.rod.f\n{ CHECK stroke 0.0266766917293233 1e-8 }\n{ CHECK force 35.48 1e-6 }"
   },
 {
    id: 'hydraulic-spring-actuator',
    "title": "Hydraulic actuator holding a spring load",
-    "description": "Solve (F2). Hydraulic actuator holding a spring load",
-    "category": "Hydraulics",
+    "description": "Oil at 11 barA on a 10 cm² piston carries 1 kN and compresses a 50 kN/m spring 20 mm.",
+    "category": "Fluids & Fluid Power",
     "text": "HydraulicSupply supply(P=1100000 [Pa])\nHydraulicCylinder cylinder(rho=850 [kg/m^3], beta=1.5e9 [Pa], V0=0.0001 [m^3], area=0.001 [m^2], Patm=100000 [Pa], P0=1100000 [Pa])\nTransSpring spring(k=50000 [N/m], x0=0.02 [m])\nTransGround ground()\nconnect(supply.out, cylinder.in)\nconnect(cylinder.rod, spring.a)\nconnect(spring.b, ground.port)\nload = -cylinder.rod.f\nstroke = spring.x\n{ CHECK load 1000 1e-6 }\n{ CHECK stroke 0.02 1e-8 }"
   },
 {
    id: 'hydraulic-metering-restriction',
    "title": "Oil flow through a metering restriction",
-    "description": "Solve (F2). Oil flow through a metering restriction",
-    "category": "Hydraulics",
+    "description": "A 10 bar drop across a CdA = 1e-5 m² orifice passes 0.41 kg/s of oil, 485 W of hydraulic power.",
+    "category": "Fluids & Fluid Power",
     "text": "HydraulicSupply supply(P=1100000 [Pa])\nHydraulicOrifice restriction(CdA=1e-5 [m^2], rho=850 [kg/m^3])\nHydraulicTank tank(P=100000 [Pa])\nconnect(supply.out, restriction.in)\nconnect(restriction.out, tank.port)\nmass_flow = restriction.in.mdot\nvolume_flow = mass_flow / 850 [kg/m^3]\nhydraulic_power = 1000000 [Pa] * volume_flow\nGUESS restriction.in.mdot = 0.4\n{ CHECK mass_flow 0.412310562561766 1e-7 }\n{ CHECK hydraulic_power 485.071250072666 1e-3 }"
   },
 {
    id: 'pneumatic-sonic-restriction',
    "title": "Air supply through a sonic restriction",
-    "description": "Solve (F2). Air supply through a sonic restriction",
-    "category": "Pneumatics",
+    "description": "7 barA air exhausts to atmosphere through an ISO 6358 restriction; at a pressure ratio of 0.14 the flow is choked.",
+    "category": "Fluids & Fluid Power",
     "text": "PneumaticSupply supply(fluid$=Air, P=700000 [Pa], T=293.15 [K])\nPneumaticOrifice restriction(fluid$=Air, C=1e-8, b=0.35)\nPneumaticAtmosphere atmosphere(P=100000 [Pa])\nconnect(supply.out, restriction.in)\nconnect(restriction.out, atmosphere.port)\npressure_ratio = restriction.out.P / restriction.in.P\nmass_flow = restriction.in.mdot\n{ CHECK pressure_ratio 0.142857142857143 1e-9 }\n{ CHECK mass_flow 0.008295 1e-7 }"
   },
 {
    id: 'damped-actuator-motion',
    "title": "Damped actuator motion",
-    "description": "Solve (F2), then inspect the dynamic table. Damped actuator motion",
-    "category": "Mechanical",
+    "description": "The pneumatic actuator's 35.5 N drives a 0.1 kg mass on a spring and damper to its 26.7 mm rest stroke.",
+    "category": "Mechanics",
     "text": "ForceSource drive(F=35.48 [N])\nTransMass moving(m=0.1 [kg], v0=0 [m/s])\nTransSpring spring(k=1330 [N/m], x0=0 [m])\nTransDamper damper(c=23.0651251893416 [N-s/m])\nTransGround ground()\nconnect(drive.a, moving.port, spring.a, damper.a)\nconnect(drive.b, spring.b, damper.b, ground.port)\nDYNAMIC motion(method=ode45, time=0..0.2, points=101)\nEND\nfinal_stroke = FinalValue('spring.x') * 1 [m]\n{ CHECK final_stroke 0.0266766917 1e-6 }"
   },
 {
    id: 'reduction-gear-viscous-load',
    "title": "Reduction gear driving a viscous load",
-    "description": "Solve (F2). Reduction gear driving a viscous load",
-    "category": "Mechanical",
+    "description": "A 12 N·m torque through a 3:1 reduction turns a viscous load at 60 rad/s, absorbing 2.16 kW.",
+    "category": "Mechanics",
     "text": "TorqueSource drive(T=12 [N-m])\nGear gear(ratio=3)\nRotationalDamper load(c=0.6 [N-m-s])\nMechGround ground()\nconnect(drive.a, gear.in)\nconnect(gear.out, load.a)\nconnect(drive.b, load.b, ground.port)\ninput_speed = gear.in.w\noutput_speed = gear.out.w\nload_power = load.a.tau * load.a.w\n{ CHECK input_speed 180 1e-6 }\n{ CHECK output_speed 60 1e-6 }\n{ CHECK load_power 2160 1e-4 }"
   },
 {
    id: 'pi-temperature-regulation',
    "title": "PI temperature regulation of a thermal mass",
-    "description": "Solve (F2), then inspect the dynamic table. PI temperature regulation of a thermal mass",
-    "category": "Thermal",
+    "description": "A PI heater brings a 5 kJ/K mass from 300 K to a 350 K setpoint against conduction to ambient.",
+    "category": "Heat Transfer",
     "text": "PIThermostat controller(Kp=100 [W/K], Ki=0.5 [W/K-s], Tref=350 [K])\nThermalMass body(C=5000 [J/K], T0=300 [K])\nConduction wall(k=2 [W/m-K], area=1 [m^2], L=0.1 [m])\nThermalSource ambient(T=300 [K])\nconnect(controller.port, body.port, wall.a)\nconnect(wall.b, ambient.port)\nDYNAMIC heating(method=ode45, time=0..2000, points=201)\nEND\nfinal_temperature = FinalValue('body.port.t') * 1 [K]\nfinal_heat = -FinalValue('controller.port.qdot') * 1 [W]\n{ CHECK final_temperature 350 0.02 }\n{ CHECK final_heat 1000 0.5 }"
   },
 {
    id: 'glazed-opening-heat-loss',
    "title": "Heat loss through a glazed opening",
-    "description": "Solve (F2). Heat loss through a glazed opening",
-    "category": "Thermal",
+    "description": "Inner film, glass and outer film in series between 20 °C inside and 0 °C outside, across 0.9 m² of single glazing.",
+    "category": "Heat Transfer",
     "text": "ThermalSource inside(T=293.15 [K])\nConvection inner_film(htc=8 [W/m^2-K], area=0.9 [m^2])\nConduction glass(k=0.81 [W/m-K], area=0.9 [m^2], L=0.003 [m])\nConvection outer_film(htc=25 [W/m^2-K], area=0.9 [m^2])\nThermalSource outside(T=273.15 [K])\nconnect(inside.port, inner_film.a)\nconnect(inner_film.b, glass.a)\nconnect(glass.b, outer_film.a)\nconnect(outer_film.b, outside.port)\nheat_loss = glass.Q\nresistance = 1/(8 [W/m^2-K]*0.9 [m^2]) + 0.003 [m]/(0.81 [W/m-K]*0.9 [m^2]) + 1/(25 [W/m^2-K]*0.9 [m^2])\nexpected_heat = 20 [K]/resistance\nbalance_error = heat_loss - expected_heat\n{ CHECK balance_error 0 1e-7 }"
   },
 {
    id: 'sensor-detrend-smooth-window',
    "title": "Remove drift and smooth a sampled sensor trace",
-    "description": "Solve (F2). Remove drift and smooth a sampled sensor trace",
-    "category": "Signal Processing",
+    "description": "Detrend, a three-point moving average and a Hann window applied to an eight-sample trace.",
+    "category": "Data & Analysis",
     "text": "trace = [1, 3, 2, 6, 4, 9, 5, 12]\n[detrended] = Detrend(trace)\n[centered] = Detrend(trace, 'constant')\n[smoothed] = Smooth(trace, 3)\n[tapered] = Window(detrended[1:8], 'hann')\ncentered_mean = sum(centered[1:8])/8\nresidual_mean = sum(detrended[1:8])/8\nleft_edge = smoothed[1]\n{ CHECK centered_mean 0 1e-9 }\n{ CHECK residual_mean 0 1e-9 }\n{ CHECK left_edge 2 1e-9 }\n{ CHECK tapered[1] 0 1e-9 }\n{ CHECK tapered[8] 0 1e-9 }"
   },
 {
    id: 'vibration-tone-spectrum',
    "title": "Recover a vibration tone and check spectral power",
-    "description": "Solve (F2), then plot the spectrum. Recover a vibration tone and check spectral power",
-    "category": "Signal Processing",
+    "description": "The FFT of a sampled sine finds its frequency bin, checks Parseval's power and inverts back exactly.",
+    "category": "Data & Analysis",
     "text": "signal = [0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1,0,1,1.4142135623730951,1,0,-1,-1.4142135623730951,-1]\nimaginary = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n[spectrum_real, spectrum_imag] = FFT(signal, imaginary)\n[recovered, recovered_imag] = IFFT(spectrum_real[1:32], spectrum_imag[1:32])\n[frequency, psd] = Welch(signal, 32, 16)\npower = sum(psd[1:9])*(frequency[2]-frequency[1])\nreconstruction_error = recovered[3]-signal[3]\ntone_peak = peakindex(1, 0, 0, psd[1:9])\nPLOT 'Vibration power spectrum'\n kind = xy\n x = frequency\n y = psd\n xlabel = 'Frequency [Hz]'\n ylabel = 'Power density [amplitude squared per Hz]'\nEND\n{ CHECK frequency[3] 4 1e-9 }\n{ CHECK tone_peak 3 1e-9 }\n{ CHECK power 1 0.01 }\n{ CHECK reconstruction_error 0 1e-9 }"
   },
 {
    id: 'causal-zero-phase-filter',
    "title": "Causal filtering, zero-phase filtering and convolution",
-    "description": "Solve (F2). Causal filtering, zero-phase filtering and convolution",
-    "category": "Signal Processing",
+    "description": "A two-tap average on an impulse: Filter delays it, FiltFilt keeps it centred and Convolve gives the full response.",
+    "category": "Data & Analysis",
     "text": "samples = [0, 0, 0, 1, 0, 0, 0]\nb = [0.5, 0.5]\na = [1]\n[causal] = Filter(b, a, samples)\n[zero_phase] = FiltFilt(b, a, samples)\n[full_response] = Convolve(samples, b)\nsymmetry_error = zero_phase[3]-zero_phase[5]\n{ CHECK causal[4] 0.5 1e-9 }\n{ CHECK causal[5] 0.5 1e-9 }\n{ CHECK full_response[8] 0 1e-9 }\n{ CHECK symmetry_error 0 1e-9 }"
   },
 {
    id: 'transport-delay-peak-detection',
    "title": "Measure transport delay and detect peaks",
-    "description": "Solve (F2). Measure transport delay and detect peaks",
-    "category": "Signal Processing",
+    "description": "Cross-correlation finds a one-sample (0.1 s) lag between two pulses, and peakcount counts three peaks.",
+    "category": "Data & Analysis",
     "text": "late = [0, 0, 1, 2, 1, 0, 0]\nearly = [0, 1, 2, 1, 0, 0, 0]\n[correlation] = XCorr(late, early)\npeak_position = peakindex(1, 0, 0, correlation[1:13])\nlag_samples = peak_position - 7\ndelay_seconds = 0.1 [s]*lag_samples\npulses = [0, 3, 0, 0, 5, 0, 0, 2, 0]\ncount = peakcount(0, 0, pulses)\n{ CHECK lag_samples 1 1e-9 }\n{ CHECK delay_seconds 0.1 1e-9 }\n{ CHECK count 3 1e-9 }"
   },
 {
    id: 'correlated-temperature-heat-loss',
    "title": "Correlated temperature measurements in heat-loss estimation",
-    "description": "Solve (F2). Correlated temperature measurements in heat-loss estimation",
-    "category": "Uncertainty",
+    "description": "Heat loss from two temperature readings whose errors correlate at ρ = 0.5, which narrows the propagated spread.",
+    "category": "Data & Analysis",
     "text": "inside_temp = 293.15 [K]\noutside_temp = 273.15 [K]\nheat_loss = 10 [W/K]*(inside_temp-outside_temp)\nUncertaintyOf(inside_temp) = 0.2\nUncertaintyOf(outside_temp) = 0.3\nCorrelation(inside_temp, outside_temp) = 0.5\nheat_sigma = UncertaintyOf(heat_loss)\n{ CHECK heat_loss 200 1e-8 }\n{ CHECK heat_sigma 2.64575131106459 1e-7 }"
   },
 {
    id: 'uniform-area-tolerance',
    "title": "Uniform dimensional tolerance and propagated spread",
-    "description": "Solve (F2). Uniform dimensional tolerance and propagated spread",
-    "category": "Uncertainty",
+    "description": "A ±10 % uniform tolerance on piston area spreads a 35.5 N force by 2.05 N (one standard deviation).",
+    "category": "Data & Analysis",
     "text": "area = 0.001774 [m^2]\nforce = 20000 [Pa]*area\nDistributionOf(area) = Uniform(0.0015966, 0.0019514)\nforce_sigma = UncertaintyOf(force)\n{ CHECK force 35.48 1e-8 }\n{ CHECK force_sigma 2.048438755 1e-7 }"
   },
   {
    id: 'uncertain-tank-inventory',
    "title": "Tank inventory from uncertain measurements",
-    "description": "Solve (F2). Tank inventory from uncertain measurements",
-    "category": "Uncertainty",
+    "description": "Gas mass in a tank from pressure, volume and temperature readings, each carrying its own uncertainty.",
+    "category": "Data & Analysis",
     "text": "pressure = 934000 [Pa]\nvolume = 0.010 [m^3]\ntemperature = 295.45 [K]\nmass = pressure*volume/(208.1 [J/kg-K]*temperature)\nUncertaintyOf(pressure) = 22000\nUncertaintyOf(volume) = 0.0004\nUncertaintyOf(temperature) = 1.2\nmass_sigma = UncertaintyOf(mass)\n{ CHECK mass 0.151911552344956 1e-9 }\n{ CHECK mass_sigma 0.00707868056268796 1e-8 }"
   }
   ,{
     id: 'rc-step-charging',
     title: 'RC step charging',
-    description: 'Solve (F2), then inspect the dynamic table. A 10 V step charges a 1 µF capacitor through 1 kΩ.',
-    category: 'Electrical',
+    description: 'A 10 V step charges a 1 µF capacitor through 1 kΩ.',
+    category: 'Electrical & Powertrain',
     text: `VoltageSource VS(E=10 [V])
 Resistor R(R=1000 [ohm])
 Capacitor CAP(C=1e-6 [farad], V0=0 [V])
@@ -3931,8 +3931,8 @@ i_2ms = (10 [V] - v_2ms) / 1000 [ohm]
   {
     id: 'series-rlc-resonance',
     title: 'Series RLC resonance and damping',
-    description: 'Solve (F2), then inspect the dynamic table for underdamped ringing in a series RLC circuit.',
-    category: 'Electrical',
+    description: 'A 1 V step rings a series RLC circuit at 7071 rad/s with damping ratio 0.071.',
+    category: 'Electrical & Powertrain',
     text: `VoltageSource VS(E=1 [V])
 Inductor L1(L=0.001 [H], I0=0 [A])
 Resistor R1(R=1 [ohm])
@@ -3952,8 +3952,8 @@ zeta = 1 [ohm] / (2 * sqrt(0.001 [H] / 20e-6 [farad]))
   {
     id: 'resistor-bridge-equivalent',
     title: 'Resistor bridge equivalent resistance',
-    description: 'Solve (F2). Reduce a five-resistor bridge to its equivalent resistance.',
-    category: 'Electrical',
+    description: 'Reduce a five-resistor bridge to its equivalent resistance.',
+    category: 'Electrical & Powertrain',
     text: `VoltageSource VS(E=1 [V])
 Resistor R1(R=10 [ohm])
 Resistor R2(R=20 [ohm])
@@ -3973,7 +3973,7 @@ R_eq = 1 [V] / current
     id: 'resistor-bridge-parametric',
     title: 'Bridge network parametric study',
     description: 'Solve Table to sweep the bridge diagonal resistor and compare equivalent resistance.',
-    category: 'Electrical',
+    category: 'Electrical & Powertrain',
     text: `VoltageSource VS(E=1 [V])
 Resistor R1(R=10 [ohm])
 Resistor R2(R=20 [ohm])
@@ -3995,8 +3995,8 @@ END
   {
     id: 'pneumatic-diaphragm-fill',
     title: 'Orifice-fed diaphragm actuator',
-    description: 'Solve (F2), then inspect the dynamic table. A spring-loaded diaphragm fills through an orifice until the spring balances 20 kPa.',
-    category: 'Pneumatics',
+    description: 'A spring-loaded diaphragm fills through an orifice until the spring balances 20 kPa.',
+    category: 'Fluids & Fluid Power',
     text: `{ A 1774 mm2 diaphragm on a 1.33 N/mm spring is fed at 20 kPa gauge through an
   ISO 6358 orifice into a 15 cm3 chamber. The stem (0.1 kg) is critically damped.
   Near equal pressures the orifice flow is linear in the pressure difference, so
@@ -4027,8 +4027,8 @@ z_static = 20000 [Pa] * 0.001774 [m^2] / 1330 [N/m]
   {
     id: 'pneumatic-cylinder-stall-force',
     title: 'Double-acting cylinder stall force',
-    description: 'Solve (F2). Net rod force of a 25 mm bore cylinder at 7 barA, rod side vented.',
-    category: 'Pneumatics',
+    description: 'Net rod force of a 25 mm bore cylinder at 7 barA, rod side vented.',
+    category: 'Fluids & Fluid Power',
     text: `{ 25 mm bore, 12 mm rod, 7.0 barA on the cap side and atmosphere (1.013 barA)
   on the rod side, rod held still. The component reports the force of the two
   chamber pressures on the piston; atmosphere also pushes on the rod end outside
@@ -4055,8 +4055,8 @@ F_net = F_chambers - F_rod_end
   {
     id: 'pneumatic-accumulator-equalization',
     title: 'Three accumulators equalizing',
-    description: 'Solve (F2), then inspect the dynamic table. Three air receivers equalize through a large and a small orifice.',
-    category: 'Pneumatics',
+    description: 'Three air receivers equalize through a large and a small orifice.',
+    category: 'Fluids & Fluid Power',
     text: `{ Receivers of 20, 20 and 100 L at 15, 10 and 1 barA, joined in a chain by a
   500 mm2 and a 20 mm2 orifice (ISO 6358 conductance taken as 2e-9 m3/(s Pa)
   per mm2, b = 0.5). Isothermal mass conservation fixes the end state:
@@ -4099,8 +4099,8 @@ P_mass_balance = (1500000 [Pa] * 0.020 [m^3] + 1000000 [Pa] * 0.020 [m^3] + 1000
   {
     id: 'hydraulic-vertical-cylinder',
     title: 'Vertical cylinder under weight and spring',
-    description: 'Solve (F2). Oil pressure that holds a 3.2 kg piston against a 150 N spring.',
-    category: 'Hydraulics',
+    description: 'Oil pressure that holds a 3.2 kg piston against a 150 N spring.',
+    category: 'Fluids & Fluid Power',
     text: `{ A vertical cylinder of 35 cm2 bore, blocked inlet, carries a 3.2 kg piston
   and a 150 N spring load; the far side is at 95 kPa. The force balance gives
   P = Patm + (m g + F_spring) / A = 146.83 kPa. The source bank lists
@@ -4132,8 +4132,8 @@ P_hand = P_atm + (m_piston * g + F_spring) / A
   {
     id: 'hydraulic-orifice-lpm',
     title: 'Sharp-edged orifice in L/min',
-    description: 'Solve (F2). Oil flow through a 3 mm orifice at 40 bar, reported in L/min.',
-    category: 'Hydraulics',
+    description: 'Oil flow through a 3 mm orifice at 40 bar, reported in L/min.',
+    category: 'Fluids & Fluid Power',
     text: `{ Inputs written in engineering units ([mm], [bar]) are stored in SI, so the
   model reads as the problem does. Q = Cd * A * sqrt(2 dP / rho) with Cd = 0.61:
   4.159e-4 m3/s, or 24.95 L/min (textbook 4.16e-4 m3/s, 24.97 L/min). }
@@ -4159,8 +4159,8 @@ Q_hand = CdA * sqrt(2 * dP / rho)
   {
     id: 'tank-orifice-draining',
     title: 'Tank draining through a bottom orifice',
-    description: 'Solve (F2), then inspect the dynamic table. A 3 m tank drains through a 3 cm orifice.',
-    category: 'Fluids',
+    description: 'A 3 m tank drains through a 3 cm orifice.',
+    category: 'Fluids & Fluid Power',
     text: `{ A 3.0 m diameter open tank, 2.75 m of water, drains through a 3 cm bottom
   orifice (Cd = 0.55). Torricelli gives the time to empty in closed form,
   t = (D/d)^2 / Cd * sqrt(2 H0 / g) = 13,616 s, and the time to fall to a
@@ -4201,8 +4201,8 @@ t_quarter_hand = t_empty_hand * (1 - sqrt(1/4))
   {
     id: 'gear-impedance-reflection',
     title: 'Gear train and reflected stiffness',
-    description: 'Solve (F2), then inspect the dynamic table. A 25:50 gear reflects an output spring to the input shaft.',
-    category: 'Mechanical',
+    description: 'A 25:50 gear reflects an output spring to the input shaft.',
+    category: 'Mechanics',
     text: `{ A 10 N-m motor drives a 1 kg-m2 rotor through a 25:50 gear into a
   4 N-m/rad shaft spring. Seen from the input the spring is K2 / GR^2 =
   1 N-m/rad, so the rotor rings at 1 rad/s. Released from rest, the output
@@ -4243,8 +4243,8 @@ theta2_at_peak = ODEValue('shaft.theta', t_peak / (1 [s])) * 1 [rad]
   {
     id: 'vehicle-launch-equivalent-mass',
     title: 'Vehicle acceleration with rotating inertia',
-    description: 'Solve (F2), then inspect the dynamic table. Engine, gearbox, wheels and body; the wheels add equivalent mass.',
-    category: 'Powertrain',
+    description: 'Engine, gearbox, wheels and body; the wheels add equivalent mass.',
+    category: 'Electrical & Powertrain',
     text: `{ 2165 kg car, four 22.9 kg wheels (r = 0.33 m, taken as discs), 325 N-m at
   the engine through 4.28:1 at 85 % efficiency, Cd = 0.38, A = 1.86 m2,
   fr = 0.02, from 10 m/s. The wheels add J/r^2 = 45.8 kg of equivalent mass.
@@ -4289,7 +4289,7 @@ a_hand = (F_t - F_res) / m_eq
   {
     id: 'capstan-belt-friction',
     title: 'Belt friction lifting a load',
-    description: 'Solve (F2). Capstan equation in US customary units.',
+    description: 'Capstan equation in US customary units.',
     category: 'Mechanics',
     text: `{ A rope wrapped half a turn round a fixed drum (f = 0.30) lifts 50 lbf.
   The capstan equation P = W * exp(f * theta) gives 128.3 lbf. Inputs in
@@ -4307,7 +4307,7 @@ P_N = P / (1 [N])
   {
     id: 'second-order-step-metrics',
     title: 'Second-order step response metrics',
-    description: 'Solve (F2). Natural frequency, damping, peak time, overshoot and settling time of 121/(s^2+11s+121).',
+    description: 'Natural frequency, damping, peak time, overshoot and settling time of 121/(s^2+11s+121).',
     category: 'Control Systems',
     text: `{ T(s) = 121 / (s^2 + 11 s + 121): wn = 11 rad/s, zeta = 0.5. stepinfo
   measures the sampled response (5 ms grid) against the closed-form metrics:
@@ -4335,7 +4335,7 @@ Ts_formula = 4 / (zeta * omega_n)
   {
     id: 'pi-zero-overshoot',
     title: 'PI control with zero overshoot',
-    description: 'Solve (F2). A PI zero at 0.1 on 800/(s^2+101s+100) gives no overshoot and no steady-state error.',
+    description: 'A PI zero at 0.1 on 800/(s^2+101s+100) gives no overshoot and no steady-state error.',
     category: 'Control Systems',
     text: `{ Plant 800 / (s^2 + 101 s + 100) under PI control Kp (s + zc) / s with
   Kp = 0.48, zc = 0.10, unity feedback. The step never overshoots (the peak is
@@ -4365,7 +4365,7 @@ y_peak = max(ys[1:161])
   {
     id: 'first-order-motor-step',
     title: 'First-order motor speed step',
-    description: 'Solve (F2), then inspect the dynamic table. Time constant of G = 1000/(0.00992 s + 1).',
+    description: 'Time constant of G = 1000/(0.00992 s + 1).',
     category: 'Control Systems',
     text: `{ Motor speed G(s) = 1000 / (0.00992 s + 1) under a unit step. TimeAt finds
   when the speed reaches 63.2 % of 1000 rad/s, which is the time constant,
@@ -4387,8 +4387,8 @@ fraction_at_tau = w_at_tau / w_ss
   {
     id: 'moist-air-adiabatic-mixing',
     title: 'Adiabatic mixing of two air streams',
-    description: 'Solve (F2). 1000 L/s of warm air mixes with 500 L/s of cool air.',
-    category: 'HVAC',
+    description: '1000 L/s of warm air mixes with 500 L/s of cool air.',
+    category: 'HVAC & Refrigeration',
     text: `{ 1.0 m3/s at 38 C DB / 24 C WB mixes with 0.5 m3/s at 16 C DB / 10 C WB at
   101.325 kPa. Volume flows become dry-air mass flows through each stream's
   specific volume; the box conserves dry air, water and enthalpy. Result:
@@ -4422,8 +4422,8 @@ T_3 = Temperature(AirH2O, H=h_3, P=P, W=W_3)
   {
     id: 'cooling-coil-dehumidification',
     title: 'Cooling and dehumidifying coil',
-    description: 'Solve (F2). Back-solve the apparatus dew point and bypass factor for 28 C/50 % to 13 C/90 %.',
-    category: 'HVAC',
+    description: 'Back-solve the apparatus dew point and bypass factor for 28 C/50 % to 13 C/90 %.',
+    category: 'HVAC & Refrigeration',
     text: `{ 1.5 kg/s of air from 28 C / 50 % to 13 C / 90 %. The coil's apparatus dew
   point and bypass factor are unknowns, fixed by the two leaving conditions.
   The coil line crosses saturation twice; the GUESS picks the physical
@@ -4462,8 +4462,8 @@ condensate = coil.mdot_w
   {
     id: 'preheat-steam-humidifier-ip',
     title: 'Preheat coil and steam humidifier (IP units)',
-    description: 'Solve (F2). Winter air heated and humidified to 90 F / 40 %, in US customary units.',
-    category: 'HVAC',
+    description: 'Winter air heated and humidified to 90 F / 40 %, in US customary units.',
+    category: 'HVAC & Refrigeration',
     text: `{ 235 lbm/min of dry air at 40 F DB / 36 F WB is preheated, then a steam
   humidifier (h_g = 1156.9 Btu/lbm) brings it to 90 F / 40 %. Unknown: the
   preheat leaving temperature. The energy balance closes to rounding, giving
@@ -4503,7 +4503,7 @@ balance = Q_coil + steam.mdot_w * h_steam - mdot * (h_out - h_in)
   {
     id: 'crossflow-hx-effectiveness',
     title: 'Cross-flow exchanger by effectiveness-NTU',
-    description: 'Solve (F2). Effectiveness, duty and outlet temperatures of a cross-flow exchanger, both fluids unmixed.',
+    description: 'Effectiveness, duty and outlet temperatures of a cross-flow exchanger, both fluids unmixed.',
     category: 'Heat Transfer',
     text: `{ UA = 1000 W/K; hot stream 90 C, 3 kg/s, cp 2100; cold stream 20 C,
   2 kg/s, cp 1009. Cr = 0.3203 and NTU = 0.4955 as in the textbook.
@@ -4541,7 +4541,7 @@ eps_cmin_mixed = hx_effectiveness('crossflow_cmin_mixed', NTU, C_r)
   {
     id: 'annular-fin-efficiency',
     title: 'Annular fin efficiency and heat loss',
-    description: 'Solve (F2). Bessel-function efficiency of annular fins on a 2.5 cm tube.',
+    description: 'Bessel-function efficiency of annular fins on a 2.5 cm tube.',
     category: 'Heat Transfer',
     text: `{ Aluminium annular fins (k = 160 W/m-K), r1 = 12.5 mm, r2 = 22.5 mm, 1 mm
   thick, 100 per metre, h = 200 W/m2-K, base 170 C, air 30 C, insulated tip.
@@ -4576,7 +4576,7 @@ Q_bare = h * 2 * pi# * r_1 * (T_b - T_inf)
   {
     id: 'shell-tube-lmtd-sizing',
     title: 'Shell-and-tube sizing by LMTD',
-    description: 'Solve (F2). Area and tube count for a 150.75 kW exchanger with two shell passes.',
+    description: 'Area and tube count for a 150.75 kW exchanger with two shell passes.',
     category: 'Heat Transfer',
     text: `{ 150.75 kW, U = 400 W/m2-K, hot 100 -> 60 C, cold 20 -> 50 C, 26.67 mm
   tubes 2 m long. Counterflow LMTD 44.81 K. The textbook's F = 0.975 is the
@@ -4611,8 +4611,8 @@ N_tubes = ceil(N_exact)
   {
     id: 'beam-deflection-uncertainty',
     title: 'Beam deflection uncertainty',
-    description: 'Solve (F2). Root-sum-square and worst-case uncertainty of a cantilever deflection.',
-    category: 'Uncertainty',
+    description: 'Root-sum-square and worst-case uncertainty of a cantilever deflection.',
+    category: 'Data & Analysis',
     text: `{ Cantilever under a distributed load, y = w L^4 / (8 E I), with
   w = 750 +/- 30 N/m, L = 9.0 +/- 0.03 m, E = 7.5e9 +/- 5e7 Pa and
   I = 5e-4 +/- 5e-6 m4. UncertaintyOf propagates first-order, root-sum-
@@ -4640,8 +4640,8 @@ u_y_worst = rel_worst * y
   {
     id: 'linear-regression-diagnostics',
     title: 'Linear regression with diagnostics',
-    description: 'Solve (F2). Slope, intercept, standard error and correlation of seven points.',
-    category: 'Statistics',
+    description: 'Slope, intercept, standard error and correlation of seven points.',
+    category: 'Data & Analysis',
     text: `{ Least-squares line through seven points, with the standard error of the
   estimate s_y/x = sqrt(S_r / (n - 2)) and the correlation coefficient.
   Data and published answers: Chapra & Canale, Numerical Methods for
@@ -4668,8 +4668,8 @@ s_yx = sqrt(S_r / (n - 2))
   {
     id: 'quadratic-regression',
     title: 'Quadratic regression',
-    description: 'Solve (F2). Second-order polynomial fit of six points, with its standard error.',
-    category: 'Statistics',
+    description: 'Second-order polynomial fit of six points, with its standard error.',
+    category: 'Data & Analysis',
     text: `{ Second-order least-squares polynomial through six points. polyfit
   returns the coefficients constant term first. Data and published answer:
   Chapra & Canale, Example 17.5: y = 2.47857 + 2.35929 x + 1.86071 x^2,
@@ -4698,8 +4698,8 @@ r_sq = (S_t - S_r) / S_t
   {
     id: 'power-law-log-fit',
     title: 'Power law by log linearization',
-    description: 'Solve (F2). Fit y = alpha x^beta by a straight line through log10 data.',
-    category: 'Statistics',
+    description: 'Fit y = alpha x^beta by a straight line through log10 data.',
+    category: 'Data & Analysis',
     text: `{ y = alpha * x^beta becomes log10(y) = log10(alpha) + beta * log10(x), a
   straight line. Data and published answer: Chapra & Canale, Example 17.4:
   y = 0.5 x^1.75. The fit minimizes error in log10(y), so it weights relative
@@ -4721,8 +4721,8 @@ y_at_2_5 = alpha_2 * 2.5^beta_2
   {
     id: 'damping-sensitivity-oscillators',
     title: 'Damping sensitivity of a soft and a stiff oscillator',
-    description: 'Solve (F2), then inspect the dynamic table. Central-difference dx/db at t = 5 s for k = 1 and k = 50 N/m.',
-    category: 'Sensitivity',
+    description: 'Central-difference dx/db at t = 5 s for k = 1 and k = 50 N/m.',
+    category: 'Data & Analysis',
     text: `{ A 1 kg mass under a 1 N step, damping b = 3 N-s/m, read at t = 5 s. Each
   system runs twice, at b - 1 % and b + 1 %, for a central difference. The
   stiff oscillator (k = 50 N/m) has settled at F/k, so its position no longer
@@ -4767,8 +4767,8 @@ x_static_stiff = F / k_stiff
   {
     id: 'drive-cycle-energy-sensitivity',
     title: 'Normalized drive-cycle energy sensitivity',
-    description: 'Solve (F2). Normalized sensitivities of cycle traction energy to mass, drag area and rolling resistance.',
-    category: 'Sensitivity',
+    description: 'Normalized sensitivities of cycle traction energy to mass, drag area and rolling resistance.',
+    category: 'Data & Analysis',
     text: `{ A 1200 kg car (CdA = 0.60 m2, cr = 0.010) accelerates to 20 m/s in 20 s,
   cruises 160 s and brakes for 20 s; braking returns nothing. Traction energy
   integrates max(0, F v). Each parameter is raised 1 % in its own copy of the
@@ -4818,7 +4818,7 @@ S_cr_hand = E_rolling / E_hand
   {
     id: 'feedback-error-sensitivity',
     title: 'Feedback steady-state error and sensitivity',
-    description: 'Solve (F2). Steady-state error and the sensitivity of the closed loop to plant gain.',
+    description: 'Steady-state error and the sensitivity of the closed loop to plant gain.',
     category: 'Control Systems',
     text: `{ Closed loop T = a b / (a b + K) with a = 100, b = 1, K = 10. The
   steady-state error is e = K / (a b + K) = 0.0909; tripling the gain to
@@ -5047,7 +5047,7 @@ W_in = comp.W
     id: 'ideal-vapor-compression-cycle',
     title: 'Ideal vapor-compression refrigeration cycle',
     description: 'Solve. R-134a through Compressor, Condenser, Throttle and evaporator; Cengel Example 11-1.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Ideal vapor-compression refrigeration cycle (Cengel, Thermodynamics 9th ed.,
   Example 11-1). R-134a enters the compressor as saturated vapor at 0.14 MPa
   and leaves the condenser as saturated liquid at 0.8 MPa; the flow is
@@ -5082,7 +5082,7 @@ COP_R = Q_L / W_in
     id: 'square-duct-friction-loss',
     title: 'Friction loss in a rough air duct',
     description: 'Solve. Duct takes absolute roughness k [m]; Miller, Internal Flow Systems, Chapter 8 Example 1.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Friction loss in a square air duct (Miller, Internal Flow Systems 2nd ed.,
   Chapter 8, Example 1). Air (rho = 1.23 kg/m3, nu = 1.45e-5 m2/s) flows at
   0.8 m3/s through a 0.2 m square duct 25 m long with an absolute roughness of
@@ -5118,7 +5118,7 @@ H_water = dP / (rho_water * g)
     id: 'gravity-pipe-flow',
     title: 'Gravity flow through a pipe and fittings',
     description: 'Solve. Colebrook Pipe plus a Valve standing in for K = 6.5; Miller, Internal Flow Systems, Chapter 8 Example 2.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Gravity flow between two tanks (Miller, Internal Flow Systems 2nd ed.,
   Chapter 8, Example 2). Water at 15 C runs through 40 m of smooth 50 mm pipe
   under a 6 m level difference; the fittings add K = 6.5. Pipe solves Colebrook
@@ -5155,7 +5155,7 @@ Re = line.Re_d
     id: 'parallel-pipe-branches',
     title: 'Flow split between parallel pipe branches',
     description: 'Solve. Splitter, two Colebrook Pipes, a FlowSensor and a Mixer; NCEES HVAC&R Problem 127.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Flow split between two parallel branches (NCEES, HVAC and Refrigeration
   sample questions, Problem 127). 20 gpm of 60 F water enters two 1-in.
   Schedule 40 steel branches (1.049 in. bore): A has an equivalent length of
@@ -5203,7 +5203,7 @@ q_B_equal_f = q_total / (1 + sqrt(149.8 / 80))
     id: 'pump-valve-operating-point',
     title: 'Pump, pipe and throttling valve: the operating point',
     description: 'Solve, then open the Schematic and click P1 or V1: each card draws its curve and the point it runs at.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `// frees-language: 2
 { A centrifugal pump lifts water from one open tank to another at the same
   level through 120 m of 80 mm steel pipe and a control valve. The pump runs
@@ -5254,7 +5254,7 @@ dP_valve = c.P - d.P
     id: 'pipeline-pump-head',
     title: 'Pump head for a long cooling-water line',
     description: 'Solve. Pump into a smooth Pipe against a 160 ft lift; NCEES HVAC&R Problem 515.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Operating head of a cooling-pond pump (NCEES, HVAC and Refrigeration
   sample questions, Problem 515). 26,000 gpm of 90 F water flows through a
   smooth 36 in. OD pipe with a 3/8 in. wall; the equivalent length from the
@@ -5349,7 +5349,7 @@ T_two_zone = Temperature(Water, P=P_w, h=shower2.h)
     id: 'converging-diverging-nozzle',
     title: 'Converging-diverging nozzle at Mach 2',
     description: 'Solve. Throat state, choked flow and the exit state of the Nozzle component; Cengel Example 17-7.',
-    category: 'Aerospace',
+    category: 'Aerospace & Compressible Flow',
     text: `{ Isentropic flow through a converging-diverging nozzle (Cengel,
   Thermodynamics 9th ed., Example 17-7). Air enters at 1.0 MPa and 800 K with
   negligible velocity; the throat area is 20 cm2 and the exit Mach number is
@@ -5393,7 +5393,7 @@ V_e = cd.V_exit
     id: 'draining-tank-time-constant',
     title: 'Time constant of a draining tank',
     description: 'Solve (DYNAMIC). An Accumulator tank drains through a laminar Duct; the level reaches 1/e after one time constant.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Time constant of a draining fuel-oil tank (Chapter 5, Fluid Systems,
   Example 4: a liquid-level system). A 2 ft diameter tank of fuel oil at 70 F
   (rho = 1.82 slug/ft3, mu = 0.02 lbf-s/ft2) drains through a 1 in. pipe 2 ft
@@ -5723,7 +5723,7 @@ GUESS x_1 = 0.9
     id: 'ammonia-flash-intercooler',
     title: 'Ammonia two-stage compression with flash-gas removal',
     description: 'Solve. A combined intercooler and flash tank between two compressors serving one evaporator. Stoecker Example 16-3.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Two compressors and one evaporator with flash-gas removal (Stoecker,
   Refrigeration and Air Conditioning, Example 16-3). An ammonia system serves
   a 250 kW evaporator at -25 C and condenses at 35 C; the intercooler/flash
@@ -5775,7 +5775,7 @@ W_total = W_low + W_high
     id: 'ammonia-two-evaporator-intercooler',
     title: 'Ammonia two-evaporator system with intercooling',
     description: 'Solve. A high-temperature evaporator at the intercooler pressure and a low-temperature one on the low stage. Stoecker Example 16-4.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Two compressors and two evaporators with intercooling and flash-gas
   removal (Stoecker, Refrigeration and Air Conditioning, Example 16-4).
   Ammonia: 180 kW at -30 C, 200 kW at 5 C, condensing at 40 C. The 5 C
@@ -5834,7 +5834,7 @@ W_total = W_low + W_high
     id: 'liquid-suction-heat-exchanger',
     title: 'Liquid-suction heat exchanger',
     description: 'Solve. A TwoPhaseInternalHX subcools the liquid against the suction vapor; the vapor exit temperature fixes its effectiveness. Dossat Section 8-8.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Liquid-suction heat exchanger (Dossat, Principles of Refrigeration,
   Section 8-8). An R-12 saturated cycle evaporates at 20 F and condenses at
   100 F; a counterflow liquid-suction exchanger superheats the suction vapor
@@ -5883,7 +5883,7 @@ T_liquid_F = (T_liquid - 459.67 [R]) / (1 [R])
     id: 'pump-operating-cost',
     title: 'Pump power and annual operating cost',
     description: 'Solve. A LiquidPump lifts 200 gpm against 60 ft of head; motor efficiency and tariff give the yearly cost. NCEES sample question 125.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Pump operating cost (NCEES PE Mechanical HVAC and Refrigeration sample
   question 125). A centrifugal pump delivers 200 gpm of 60 F water against
   60 ft of head; pump efficiency 0.75, motor efficiency 0.83, electricity
@@ -5913,7 +5913,7 @@ cost = W_elec * 8000 [hr] * 0.06 / (1 [kW*hr])
     id: 'pipe-pressure-drop-brass',
     title: 'Friction loss in a brass water pipe',
     description: 'Solve. A LiquidPipe computes its own Colebrook friction factor for 5 ft/s of water in 1-in brass pipe. NCEES sample question 126.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Friction pressure drop in a brass pipe (NCEES PE Mechanical HVAC and
   Refrigeration sample question 126). Water at 60 F flows at 5 ft/s through
   100 ft of 1-in brass pipe (1.063 in ID). The book gives a Moody friction
@@ -5941,7 +5941,7 @@ dP_psi = dP / (1 [psi])
     id: 'chilled-water-coil-flow',
     title: 'Chilled-water flow for a coil load',
     description: 'Solve. A LiquidColdPlate carries the coil load; the 12 F chilled-water rise fixes the flow. NCEES sample question 513.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Chilled-water flow for a cooling-coil load (NCEES PE Mechanical HVAC and
   Refrigeration sample question 513). The coil carries 220,000 Btu/hr
   (100,000 sensible, 40,000 latent and 80,000 outdoor air) with a 12 F
@@ -5968,7 +5968,7 @@ gpm = m / Density(Water, T=T_supply, P=P) / (1 [gpm])
     id: 'run-around-coil-loop',
     title: 'Run-around heat-recovery loop',
     description: 'Solve. Two LiquidColdPlates move exhaust-air heat to cold outdoor air on a 15 gpm water loop. NCEES sample question 511.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Run-around heat-recovery loop (NCEES PE Mechanical HVAC and Refrigeration
   sample question 511). A 15 gpm water loop runs between 45 F and 55 F. It
   picks up heat in the exhaust-air coil and gives it to 4,000 cfm of 35 F
@@ -6001,7 +6001,7 @@ T_2 = T_1 + Q / (k_air * cfm_oa)
     id: 'pump-npsh-available',
     title: 'NPSH available for a hot-water pump',
     description: 'Solve. The LiquidPump npsh model reports the suction head above vapor pressure for 200 F water. NCEES sample question 517.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ NPSH available for a hot-water pump (NCEES PE Mechanical HVAC and
   Refrigeration sample question 517). 200 F water is drawn from a vented tank
   whose level is 6 in above the pump centerline; the suction loses 3 ft at
@@ -6054,7 +6054,7 @@ GUESS y = 1
     id: 'parallel-branches-three-way-valve',
     title: 'Parallel branches behind a three-way valve',
     description: 'Solve. A LiquidThreeWayValve splits the flow and a LiquidMixer ties the branch pressures, which fixes the split. NCEES sample question 127.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Parallel pipe branches with a three-way valve (NCEES PE Mechanical HVAC and
   Refrigeration sample question 127). 20 gpm of 60 F water splits between
   branch A (80 ft equivalent) and branch B (149.8 ft equivalent, including
@@ -6090,7 +6090,7 @@ q_A = branch_A.in.mdot / rho / (1 [gpm])
     id: 'valve-loss-coefficients',
     title: 'Valve and exit loss coefficients',
     description: 'Solve. A LiquidCheckValve and a LiquidOrifice reproduce K-factor losses in a pumping main. Miller, Internal Flow Systems, Section 3.3.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Loss coefficients in a pumping main (Miller, Internal Flow Systems 2nd ed.,
   Section 3.3, Table 3.1). 2.75 m3/s of water flows through the 0.8 m
   delivery line, past a reflux valve (K = 0.5) and out into the reservoir
@@ -6126,7 +6126,7 @@ H_velocity = U^2 / (2 * g#)
     id: 'closed-loop-pump-operating-point',
     title: 'Closed-loop pump operating point',
     description: 'Solve. A LiquidPumpMap head curve meets the Colebrook drop of a closed chilled-water loop; a LiquidExpansionTank is its one pressure reference.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Operating point of a closed chilled-water loop. A centrifugal pump with a
   catalogue head curve (eight points, read linearly between them) circulates
   water through a 40 kW load coil, 150 m of DN65 commercial steel piping
@@ -6181,7 +6181,7 @@ T_return = Temperature(Water, P=piping.out.P, h=piping.out.h)
     id: 'pipeline-hydrostatic-test',
     title: 'Pipeline hydrostatic test',
     description: 'Solve (DYNAMIC). A test pump pressurises a blind-flanged pipeline; the LiquidVolume reaches test pressure at the closed-form time C dP / mdot.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Time to pressurise a pipeline for a hydrostatic test. 500 m of DN150 steel
   line pipe (D = 0.15 m, wall 7.1 mm), filled with 15 C water and vented at
   1 bar, is closed with a blind flange and fed by a 2 L/min test pump until it
@@ -6273,7 +6273,7 @@ T_end = FinalValue('tank.tt') * 1 [K]
     id: 'thermostat-opening-flow',
     title: 'Engine thermostat opening flow',
     description: 'Solve. A LiquidThermostat passes coolant at 80, 85 and 92 C; the flows follow its tanh opening and the orifice law.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Flow through an engine thermostat as it opens. A wax thermostat with a
   full-open flow area CdA = 3 cm^2 sits between the engine block (1.8 bar) and
   the radiator (1.5 bar). It opens smoothly about T_open = 85 C over a 3 K
@@ -6329,7 +6329,7 @@ u_92 = m_92 / m_full
     id: 'small-hydro-turbine-power',
     title: 'Small hydro turbine power',
     description: 'Solve. A HydroTurbine with an efficiency map turns 0.6 m3/s through 28 m of head into shaft power and generator torque.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Shaft power of a small hydro turbine. 0.6 m^3/s of 12 C water falls through
   a 28 m net head to a Francis runner that turns a generator at 750 rpm. The
   runner's efficiency comes from a four-point map against mass flow, read
@@ -6371,7 +6371,7 @@ T_shaft = -runner.shaft.tau
     id: 'cooling-tower-range-approach',
     title: 'Cooling tower range and approach',
     description: 'Solve. A CoolingTower rejects condenser-water heat on the saturated-air enthalpy potential; range and approach follow.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Range and approach of a cooling tower. 10 L/s of condenser water at 35 C
   enters a tower that moves 8 kg/s of air at a 24 C wet bulb. The
   CoolingTower rates the heat rejected on the enthalpy potential between
@@ -6443,7 +6443,7 @@ T_3_1200 = ODEValue('tank.t3', 1200) * 1 [K]
     id: 'ice-bank-discharge',
     title: 'Ice bank discharge',
     description: 'Solve (DYNAMIC). Glycol melts an IceStorageBrine store; the time to half melted is checked against an epsilon-NTU estimate.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Discharging an ice bank. 0.5 kg/s of 50 % ethylene glycol returns at 8 C and
   passes an 800 kg ice store (UA = 1500 W/K) that starts at -3 C. The ice
   melts over a narrow band about 0 C (the PCMMass spreads L = 334 kJ/kg over a
@@ -6483,7 +6483,7 @@ t_half = TimeAt('bank.ice.port.t', T_m / 1 [K]) * 1 [s]
     id: 'fans-in-series-duct',
     title: 'Two fans in series on a duct',
     description: 'Solve. A FanCurve and a catalogue FanMap add their rises against the Colebrook drop of a 200 m exhaust duct.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Two fans in series on a long exhaust duct. Fan A is a FanCurve with a
   quadratic characteristic (600 Pa shut-off, 2.0 m^3/s free delivery); fan B
   is a FanMap read linearly from six catalogue points. Together they push air
@@ -6538,7 +6538,7 @@ f = duct.f
     id: 'fan-ventilation-duct',
     title: 'Ventilation fan on a roof duct',
     description: 'Solve. A Fan with a quadratic curve meets a 60 m duct; its losses warm the air by dP/(rho cp eta).',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Ventilation fan on a roof duct. A fan with a quadratic curve (800 Pa
   shut-off, 1.2 m^3/s free delivery, 60 % efficient) draws 20 C room air and
   discharges it through 60 m of 0.3 m galvanised duct to atmosphere. The Fan
@@ -6609,7 +6609,7 @@ W = comp.W
     id: 'pressure-reducing-valve-sizing',
     title: 'Sizing a pressure-reducing valve',
     description: 'Solve. An ExpansionValve with the downstream pressure pinned returns the flow area a 6-to-3 bar reduction needs.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Sizing a pressure-reducing valve. A building takes 4 L/s of 15 C water
   from a 6 bar main and needs 3 bar. The ExpansionValve is a square-law
   orifice, mdot |mdot| = CdA^2 2 rho dP; with the downstream pressure
@@ -6666,7 +6666,7 @@ T_out_closed = T_wall - (T_wall - T_in) * exp(-UA / (mdot * cp))
     id: 'gas-turbine-core-altitude',
     title: 'Gas-turbine core at 3000 m',
     description: 'Solve. An AtmosphereSource at ISA 3000 m feeds a compressor and a Combustor; turbine inlet temperature follows.',
-    category: 'Aerospace',
+    category: 'Aerospace & Compressible Flow',
     text: `{ Gas-turbine core at 3000 m. An engine flying at 3000 m (ISA) swallows
   20 kg/s of air, compresses it to a pressure ratio of 12 at 85 %
   isentropic efficiency, and burns 0.36 kg/s of kerosene (LHV 43 MJ/kg,
@@ -6742,7 +6742,7 @@ h_out = a2.h
     id: 'propeller-thrust',
     title: 'Thrust of a propeller in flight',
     description: 'Solve. A Propeller reads thrust and power coefficients from advance-ratio maps at 50 m/s and 2400 rpm.',
-    category: 'Aerospace',
+    category: 'Aerospace & Compressible Flow',
     text: `{ Thrust of a propeller in flight. A 1.8 m propeller turns at 2400 rpm on
   an aircraft flying at 50 m/s through air at 1.112 kg/m^3 (ISA, 1000 m).
   The Propeller reads its thrust and power coefficients from maps against
@@ -6783,7 +6783,7 @@ eta_p = thrust * v / P_shaft
     id: 'turbocharger-boost',
     title: 'Boost from a turbocharger',
     description: 'Solve. A Turbocharger balances turbine and compressor work; the boost pressure ratio follows in closed form.',
-    category: 'Powertrain',
+    category: 'Electrical & Powertrain',
     text: `{ Boost from a turbocharger. Exhaust at 900 K and 220 kPa (0.105 kg/s)
   expands to 105 kPa through the turbine (78 %), which drives the compressor
   (75 %) on 0.1 kg/s of 298 K air at 100 kPa. The Turbocharger takes one cp
@@ -6811,7 +6811,7 @@ W = tc.Wc
     id: 'two-phase-line-friedel',
     title: 'Two-phase line: Friedel pressure drop',
     description: 'Solve. A TwoPhaseFlowRes sets the flow of a quality-0.3 R-134a line from its 20 kPa drop; the saturation temperature glides with the pressure.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Pressure drop in a two-phase refrigerant line. R-134a at 400 kPa and
   quality 0.3 flows from a reservoir through 5 m of 10 mm smooth tube to a
   380 kPa suction header. The TwoPhaseFlowRes applies the Friedel
@@ -6845,7 +6845,7 @@ dT_glide = T_sat(R134a, P=P_1) - exit.T
     id: 'boiler-riser-lockhart-martinelli',
     title: 'Boiler riser: Lockhart-Martinelli friction',
     description: 'Solve. A TwoPhasePipe multiplies the liquid-alone drop of a steam-water riser by the Chisholm factor; checked by hand.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Friction in a boiler riser. A steam-water mixture of quality 0.2 rises at
   0.5 kg/s through 12 m of 50 mm commercial-steel tube (roughness 0.045 mm)
   from a 1 MPa header. The TwoPhasePipe takes the phase properties as
@@ -6872,7 +6872,7 @@ phi2 = riser.phi2
     id: 'short-tube-capillary-choke',
     title: 'Short tube and capillary choke on flashing',
     description: 'Solve. Two short tubes pass the same flow to different evaporator pressures; a capillary tube rides on the same flashing limit.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Fixed expansion devices choke on flashing. Liquid R-134a at 1.4 MPa and
   45 C (subcooled 7.4 K) feeds three devices: two identical short tubes
   (CdA = 1.5e-6 m^2) discharging to 300 and 400 kPa, and a capillary rated
@@ -6911,7 +6911,7 @@ rho_1 = tubeA.rho_in
     id: 'txv-evaporator-balance',
     title: 'TXV and evaporator balance point',
     description: 'Solve. A TXV with its bulb on the coil outlet and a UA evaporator settle on one flow and one evaporating pressure.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ A thermostatic expansion valve and its evaporator find their balance
   point. Saturated R-134a liquid at 1 MPa feeds a TXV (gain 4 g/s per
   kelvin above its 4 K static superheat) whose bulb sits on the evaporator
@@ -6947,7 +6947,7 @@ Q = coil.Q
     id: 'oil-separator-floating-head',
     title: 'Oil separator and floating-head condenser',
     description: 'Solve. An OilSeparator bleeds 1 % of the discharge; the floating-head condenser finds its own pressure from UA and ambient.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Oil separator ahead of an air-cooled condenser. Compressor discharge
   (R-134a, 50 g/s, 430 kJ/kg) passes an OilSeparator that bleeds 1 % of
   the flow back to the sump as saturated liquid, then a condenser with
@@ -6984,7 +6984,7 @@ x_exit = exit.x
     id: 'receiver-liquid-level',
     title: 'Receiver liquid level',
     description: 'Solve. A TwoPhaseReceiver after a floating-head condenser holds 3.2 kg of R-134a; its liquid level follows from the charge balance.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ How full is the receiver? A floating-head condenser (UA = 500 W/K to
   32 C air) condenses 40 g/s of R-134a discharge at 425 kJ/kg to
   saturated liquid; a 4 L receiver downstream holds 3.2 kg of the charge.
@@ -7013,7 +7013,7 @@ Q = cond.Q
     id: 'charge-sets-head-pressure',
     title: 'Charge sets the head pressure',
     description: 'Solve. With no receiver, a TwoPhaseCondenserUA and a TwoPhaseInventory share 1.8 kg of charge, which fixes the condensing pressure and subcooling.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Refrigerant charge sets the head pressure. With no receiver, the 1.8 kg
   of R-134a on the high side must fit in a 1.5 L condenser and a 0.8 L
   liquid line. The condenser (UA = 500 W/K to 32 C air) rejects
@@ -7100,7 +7100,7 @@ T_margin_C = cond.T_out - cond.wall.T
     id: 'reversing-valve-heating',
     title: 'Reversing valve in heating mode',
     description: 'Solve. A ReversingValve at mode = 1 sends compressor discharge to the indoor coil and the outdoor return to suction.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ A heat pump's reversing valve in heating mode. Compressor discharge
   (R-134a, 30 g/s, 1.6 MPa, 440 kJ/kg) enters port d; the outdoor coil's
   return (350 kPa, 400 kJ/kg) enters port o. With mode = 1 the valve sends
@@ -7135,7 +7135,7 @@ Q_heat = indoor.Q
     id: 'ejector-lift-two-ratings',
     title: 'Ejector lift: rated ratio and momentum balance',
     description: 'Solve. The same motive and suction streams through a lumped TwoPhaseEjector and an EjectorMomentum; the momentum lift is checked by hand.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Two ways to rate an ejector. Saturated R-134a vapor at 1.2 MPa
   (30 g/s) drives 12 g/s of 5 C suction vapor at 300 kPa. The lumped
   TwoPhaseEjector takes a rated pressure-lift ratio (1.25 here, from test
@@ -7180,7 +7180,7 @@ rho_mix = em.rho_mix
     id: 'co2-gas-cooler-back-pressure',
     title: 'CO2 gas cooler and back-pressure valve',
     description: 'Solve. A transcritical R-744 high side: a GasCooler against 35 C air and a commanded TranscriticalBackPressureValve set the flow.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ The high side of a transcritical CO2 cycle. Compressor discharge at
   10 MPa and 120 C passes a gas cooler (UA = 400 W/K, 50 kPa drop) against
   35 C air, then a back-pressure valve (CdA_max = 2e-6 m^2) held 60 % open
@@ -7216,7 +7216,7 @@ eps = gc.epsg
     id: 'blend-glide-mixing',
     title: 'Zeotropic blend: mixing and glide',
     description: 'Solve. Two R-407C streams meet in a BlendMixer that conserves the composition rider; a BlendSensor reads the quality and glide.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Mixing two streams of a zeotropic blend. At 400 kPa, 20 g/s of R-407C
   at quality 0.1 and composition rider z = 0.25 meets 30 g/s at quality
   0.9 and z = 0.21 (z is a circulating-composition marker, here the mass
@@ -7250,7 +7250,7 @@ T_dew = s.dew
     id: 'oil-circulation-degradation',
     title: 'Oil circulation degrades an evaporator',
     description: 'Solve. A TwoPhaseOilRider puts 4 % oil on the stream and scales the UA of the evaporator downstream.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ Oil in circulation degrades an evaporator. R-134a at 300 kPa and
   quality 0.25 carries 4 % oil (oil circulation ratio 0.04). The
   TwoPhaseOilRider puts the ratio on the stream and reports the heat
@@ -7369,7 +7369,7 @@ opening = rv.opening
     id: 'suction-accumulator-carryover',
     title: 'Suction accumulator traps carry-over',
     description: 'Solve (DYNAMIC). A SuctionAccumulator stores the liquid in a wet inlet and passes saturated vapor; the liquid grows linearly.',
-    category: 'HVAC',
+    category: 'HVAC & Refrigeration',
     text: `{ A suction accumulator traps liquid carry-over. Wet R-134a at 250 kPa
   and quality 0.9 arrives at 20 g/s; the accumulator already holds
   0.1 kg of liquid and sends saturated vapor on to the compressor. Its
@@ -7393,7 +7393,7 @@ mdot_out = FinalValue('acc.out.mdot') * 1 [kg/s]
     id: 'two-phase-volume-charging',
     title: 'Charging a closed two-phase volume',
     description: 'Solve (DYNAMIC). A TwoPhaseVolume behind a TwoPhaseCap charges at a constant rate; its pressure rises as the closed form says.',
-    category: 'Fluids',
+    category: 'Fluids & Fluid Power',
     text: `{ Charging a closed two-phase volume. A 2 L vessel of R-134a with its
   outlet capped (TwoPhaseCap) starts at 300 kPa; 5 g/s of two-phase
   refrigerant flows in at a fixed enthalpy, and the vessel's compliance
@@ -7498,8 +7498,8 @@ Q_C = (FinalValue('cond.q1') + FinalValue('cond.q2') + FinalValue('cond.q3')) * 
   {
     id: 'lesson-rc-charging',
     title: 'Lesson — RC charging',
-    description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: doubling R doubles τ = RC and slows the charge. Pairs with the thermal-mass lesson.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — RC charging. Pairs with the thermal-mass lesson.
 
@@ -7541,8 +7541,8 @@ END`,
   {
     id: 'lesson-thermal-mass',
     title: 'Lesson — a cooling thermal mass',
-    description: 'Predict, change one input, observe: doubling h halves τ = C/(hA). The same exponential as RC charging, in heat. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: doubling h halves τ = C/(hA). The same exponential as RC charging, in heat.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — a lumped thermal mass. Pairs with the RC-charging lesson.
 
@@ -7584,8 +7584,8 @@ END`,
   {
     id: 'lesson-rlc-ringing',
     title: 'Lesson — a ringing RLC circuit',
-    description: 'Predict, change one input, observe: doubling R doubles ζ and cuts the overshoot from 53 % to 25 %. Pairs with the mass-spring-damper lesson. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: doubling R doubles ζ and cuts the overshoot from 53 % to 25 %. Pairs with the mass-spring-damper lesson.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — a series RLC circuit rings. Pairs with the mass-spring-damper lesson.
 
@@ -7630,8 +7630,8 @@ END`,
   {
     id: 'lesson-mass-spring-damper',
     title: 'Lesson — a mass on a spring and damper',
-    description: 'Predict, change one input, observe: doubling c doubles ζ and cuts the overshoot from 53 % to 25 %. The same equation as the ringing RLC circuit. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: doubling c doubles ζ and cuts the overshoot from 53 % to 25 %. The same equation as the ringing RLC circuit.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — a mass on a spring and damper. Pairs with the RLC lesson.
 
@@ -7678,8 +7678,8 @@ END`,
   {
     id: 'lesson-diode',
     title: 'Lesson — a diode lets current one way',
-    description: 'Predict, change one input, observe: reversing the source stops the current. Pairs with the check-valve lesson. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: reversing the source stops the current. Pairs with the check-valve lesson.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — a diode conducts one way. Pairs with the check-valve lesson.
 
@@ -7708,8 +7708,8 @@ I_d = D.p.i
   {
     id: 'lesson-check-valve',
     title: 'Lesson — a check valve lets flow one way',
-    description: 'Predict, change one input, observe: dropping the inlet below the outlet pressure stops the flow. The same one-way rule as a diode. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: dropping the inlet below the outlet pressure stops the flow. The same one-way rule as a diode.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — a check valve passes flow one way. Pairs with the diode lesson.
 
@@ -7745,8 +7745,8 @@ mdot   = CV.in.mdot
   {
     id: 'lesson-capacitor-sharing',
     title: 'Lesson — two capacitors share their charge',
-    description: 'Predict, change one input, observe: a larger second capacitor lowers the shared voltage. Pairs with the gas-receivers lesson. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: a larger second capacitor lowers the shared voltage. Pairs with the gas-receivers lesson.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — two capacitors share a charge. Pairs with the gas-receivers lesson.
 
@@ -7784,8 +7784,8 @@ END`,
   {
     id: 'lesson-gas-receivers',
     title: 'Lesson — two air receivers equalize',
-    description: 'Predict, change one input, observe: a larger second receiver lowers the shared pressure. The same conservation as two capacitors. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: a larger second receiver lowers the shared pressure. The same conservation as two capacitors.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — two air receivers equalize. Pairs with the capacitor-sharing lesson.
 
@@ -7834,8 +7834,8 @@ END`,
   {
     id: 'lesson-throttling',
     title: 'Lesson — throttling on the P-h chart',
-    description: 'Predict, change one input, observe: a higher evaporator pressure flashes less liquid to vapour. Solve (F2), then read the P-h chart.',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: a higher evaporator pressure flashes less liquid to vapour.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — throttling a refrigerant, on the P-h chart.
 
@@ -7876,8 +7876,8 @@ END`,
   {
     id: 'lesson-air-mixing',
     title: 'Lesson — mixing two air streams',
-    description: 'Predict, change one input, observe: more cool air pulls the mix down its straight line on the psychrometric chart. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: more cool air pulls the mix down its straight line on the psychrometric chart.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — adiabatic mixing on the psychrometric chart.
 
@@ -7927,8 +7927,8 @@ END`,
   {
     id: 'lesson-cooling-coil',
     title: 'Lesson — a coil that cools and dries air',
-    description: 'Predict, change one input, observe: a colder supply condenses more water. Solve (F2), then read the psychrometric chart.',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: a colder supply condenses more water.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — cooling with dehumidification on the psychrometric chart.
 
@@ -7973,8 +7973,8 @@ END`,
   {
     id: 'lesson-sensor-lag',
     title: 'Lesson — a slow sensor in a speed loop',
-    description: 'Predict, change one input, observe: a slower speed sensor makes the cruise controller overshoot. Solve (F2).',
-    category: 'Lessons',
+    description: 'Predict, change one input, observe: a slower speed sensor makes the cruise controller overshoot.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lesson — from sensor to controller: a slow sensor in a speed loop.
 
@@ -8016,8 +8016,8 @@ END`,
   {
     id: 'lab-thermostat',
     title: 'Lab — a thermostat limit cycle',
-    description: 'A graded live lab: an on-off heater holds a room inside a band; widen the band live and the cycle slows. Run it live from the lesson panel. Solve (F2).',
-    category: 'Labs',
+    description: 'A graded live lab: an on-off heater holds a room inside a band; widen the band live and the cycle slows. Run it live from the lesson panel.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lab — a thermostat limit cycle.
 
@@ -8077,8 +8077,8 @@ END`,
   {
     id: 'lab-accumulator',
     title: 'Lab — charging a hydraulic accumulator',
-    description: 'A graded live lab: a gas-charged accumulator fills through a line restriction; step the supply pressure live and time the response. Run it live from the lesson panel. Solve (F2).',
-    category: 'Labs',
+    description: 'A graded live lab: a gas-charged accumulator fills through a line restriction; step the supply pressure live and time the response. Run it live from the lesson panel.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lab — charging a hydraulic accumulator.
 
@@ -8119,8 +8119,8 @@ END`,
   {
     id: 'lab-quarter-car',
     title: 'Lab — quarter-car resonance',
-    description: 'A graded live lab: a quarter car rides a sinusoidal road; move the road frequency live onto the body resonance and watch the body amplitude grow on an X-Y plot. Run it live from the lesson panel. Solve (F2).',
-    category: 'Labs',
+    description: 'A graded live lab: a quarter car rides a sinusoidal road; move the road frequency live onto the body resonance and watch the body amplitude grow on an X-Y plot. Run it live from the lesson panel.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lab — quarter-car resonance.
 
@@ -8178,8 +8178,8 @@ END`,
   {
     id: 'lab-refrigeration',
     title: 'Lab — refrigeration start-up on P-h',
-    description: 'A graded live lab: an R134a unit pulls a cold room down while its states trace paths on the P-h chart; halve the compressor live and watch the room settle warmer. Run it live from the lesson panel. Solve (F2).',
-    category: 'Labs',
+    description: 'A graded live lab: an R134a unit pulls a cold room down while its states trace paths on the P-h chart; halve the compressor live and watch the room settle warmer. Run it live from the lesson panel.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lab — refrigeration start-up on P-h.
 
@@ -8244,8 +8244,8 @@ END`,
   {
     id: 'lab-battery-windup',
     title: 'Lab — battery load step and PID anti-windup',
-    description: 'A graded live lab: a PI-controlled chiller holds a battery pack until a load step saturates the valve; back-calculation stops the integrator winding up. Run it live from the lesson panel. Solve (F2).',
-    category: 'Labs',
+    description: 'A graded live lab: a PI-controlled chiller holds a battery pack until a load step saturates the valve; back-calculation stops the integrator winding up. Run it live from the lesson panel.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lab — a battery load step and PID anti-windup.
 
@@ -8309,8 +8309,8 @@ END`,
   {
     id: 'lab-air-mixing',
     title: 'Lab — outdoor-air mixing on the psychrometric chart',
-    description: 'A graded live lab: a ventilated room and its mixed supply trace paths on the psychrometric chart; raise the outdoor-air fraction live and watch the room cool and dry. Run it live from the lesson panel. Solve (F2).',
-    category: 'Labs',
+    description: 'A graded live lab: a ventilated room and its mixed supply trace paths on the psychrometric chart; raise the outdoor-air fraction live and watch the room cool and dry. Run it live from the lesson panel.',
+    category: 'Lessons & Labs',
     text: `// frees-language: 2
 { Lab — outdoor-air mixing on the psychrometric chart.
 
