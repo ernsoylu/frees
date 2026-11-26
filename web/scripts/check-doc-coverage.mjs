@@ -84,15 +84,8 @@ for (const n of EXTRA_CALLABLES) callable.add(n);
 // is right.
 const NOTATION = new Set(['num', 'den', 'tname', 'name', 'port']);
 
-// Example ids in the verified library.
-//
-// EXAMPLES only, deliberately. Help's other catalogue, CYCLE_EXAMPLES, keys its
-// entries on `value` rather than `id`, and HelpPage resolves a binding with
-// `EXAMPLES.find((e) => e.id === exId)` — so a page binding a CYCLE_EXAMPLES
-// entry renders "Missing example" at runtime no matter what this gate says.
-// Accepting those ids here would license exactly the broken binding the gate
-// exists to catch. The two catalogues are unified for SEARCH, in
-// searchIndex.ts, which is where the split actually hurt discovery.
+// Example ids in the verified library: EXAMPLES, the one catalogue (EC2).
+// HelpPage resolves a binding with `EXAMPLES.find((e) => e.id === exId)`.
 //
 // Ids must be unique. Help resolves with .find(), so a repeated id silently
 // makes one of the two documents unreachable: 'rankine-cycle' named both the
