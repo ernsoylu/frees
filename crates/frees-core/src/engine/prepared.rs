@@ -58,6 +58,10 @@ pub struct PreparedDocument {
     pub stepping_iterations: usize,
     pub ode_accessors: bool,
     pub unaugmented: Option<Vec<Equation>>,
+    /// How many equations lowering a variable-limit `Integral` appended
+    /// behind the ordinary ones. Pins go in ahead of them, where the text
+    /// solve's appended override lines land.
+    integral_tail: usize,
     prep: Option<DocumentPrep>,
     /// The pin equations of a [`Self::solve_with_literal_pins`] call, in pin
     /// order; empty otherwise.
@@ -93,6 +97,12 @@ impl PreparedDocument {
             &self.extra_tables,
         )
         .map(Some)
+    }
+
+    /// Where the pins sit in the subsystem: after the ordinary equations,
+    /// ahead of a lowered integral's.
+    fn pin_at(&self) -> usize {
+        self.ordinary_equations.len() - self.integral_tail
     }
 
     /// Whether a pin must enter the text before lowering (complex mode,
@@ -195,6 +205,7 @@ impl PreparedDocument {
         let base_ctx = EvalContext::with_defs(&doc.defs);
         let integrals = find_integrals(&equations, &doc.defs, settings.complex_mode)?;
         let mut stepping_iterations = 0usize;
+        let mut integral_tail = 0usize;
         let equations = if integrals.is_empty() {
             if settings.complex_mode {
                 let mut complex_names: HashMap<String, String> = doc
@@ -219,6 +230,8 @@ impl PreparedDocument {
             let (lowered, driven) =
                 lower_integrals(&equations, &integrals, settings, &pre_specs, base_ctx)?;
             stepping_iterations = driven;
+            integral_tail =
+                lowered.len() - crate::integral::ordinary_equations(&equations, &integrals).len();
             lowered
         };
 
@@ -269,6 +282,7 @@ impl PreparedDocument {
             stepping_iterations,
             ode_accessors,
             unaugmented,
+            integral_tail,
             prep: None,
             literal_pins: Vec::new(),
             prep_count: 0,
@@ -296,6 +310,8 @@ impl PreparedDocument {
                 Some(raw) if !pinned.is_empty() => raw.clone(),
                 _ => self.ordinary_equations.to_vec(),
             };
+            let at = self.pin_at();
+            let tail = subsystem.split_off(at);
             for (k, (name, value)) in pinned.iter().enumerate() {
                 subsystem.push(match self.literal_pins.get(k) {
                     Some(literal) => literal.clone(),
@@ -306,6 +322,7 @@ impl PreparedDocument {
                     ),
                 });
             }
+            subsystem.extend(tail);
             // A pinned decision (an optimizer's `Kp`) that only a DYNAMIC block
             // reads is absent from the text the accessors were linked against,
             // so `FinalValue(...)` could be solved before the pin and integrate
@@ -326,12 +343,8 @@ impl PreparedDocument {
             )?;
             seed_property_argument_guesses(&subsystem, &mut specs, Missing::Skip);
             let unknown_names = unknowns(&subsystem, &knowns);
-            let mut block_cache = pinned_block_cache(
-                &report.blocks,
-                &subsystem,
-                self.ordinary_equations.len(),
-                &specs,
-            );
+            let mut block_cache =
+                pinned_block_cache(&report.blocks, &subsystem, at..at + pinned.len(), &specs);
             let mut work_scope: Scope =
                 Scope::with_capacity_and_hasher(specs.len() + constants.len(), Default::default());
             work_scope.extend(constants.iter().map(|(k, v)| (k.clone(), *v)));
@@ -367,7 +380,8 @@ impl PreparedDocument {
             let with_literals;
             let unit_equations = match self.unaugmented.as_deref() {
                 Some(raw) if !self.literal_pins.is_empty() => {
-                    with_literals = [raw, &self.literal_pins].concat();
+                    let (head, tail) = raw.split_at(raw.len() - self.integral_tail);
+                    with_literals = [head, &self.literal_pins, tail].concat();
                     &with_literals
                 }
                 Some(raw) => raw,
@@ -398,8 +412,8 @@ impl PreparedDocument {
             });
         }
 
+        let base = self.pin_at();
         let prep = self.prep.as_mut().expect("prep just ensured");
-        let base = self.ordinary_equations.len();
         for (k, (name, value)) in pinned.iter().enumerate() {
             let pin = &mut prep.subsystem[base + k];
             if let Some(literal) = self.literal_pins.get(k) {
