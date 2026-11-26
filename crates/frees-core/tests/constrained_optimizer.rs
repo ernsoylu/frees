@@ -207,3 +207,26 @@ fn a_capitalised_decision_uses_its_guess() {
         assert_eq!(run("X", method), lower, "{method}");
     }
 }
+
+/// FX4: a one-decision `"bobyqa"` request runs Nelder-Mead (BOBYQA needs two
+/// or more decisions) and now says so. Two decisions stay quiet.
+#[test]
+fn a_one_decision_bobyqa_request_warns_that_it_ran_nelder_mead() {
+    let mut p = make_problem("f = (x - 1)^2\n", "f", &["x"], &[-2.0], &[2.0], &[]);
+    p.method = Some("bobyqa".to_string());
+    let result = optimize(&p).unwrap();
+    assert!((result.decision_values[0] - 1.0).abs() < 1e-3);
+    let warning = result.warning.expect("warns");
+    assert!(warning.contains("ran Nelder-Mead"), "{warning}");
+
+    let mut p = make_problem(
+        "f = (x - 1)^2 + (y + 1)^2\n",
+        "f",
+        &["x", "y"],
+        &[-2.0, -2.0],
+        &[2.0, 2.0],
+        &[],
+    );
+    p.method = Some("bobyqa".to_string());
+    assert_eq!(optimize(&p).unwrap().warning, None);
+}

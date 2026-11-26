@@ -847,7 +847,12 @@ fn multivariate_optimize(
         objective_value,
         evaluations: ctx.evaluations,
         solution: Box::new(solution),
-        warning: None,
+        // FX4: say so when a one-decision `"bobyqa"` request ran the simplex.
+        warning: (problem.is_bobyqa() && !real_bobyqa).then(|| {
+            "BOBYQA needs at least two decisions; this one-decision request ran \
+             Nelder-Mead with the bounds enforced by projection."
+                .to_string()
+        }),
     })
 }
 

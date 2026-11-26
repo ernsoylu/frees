@@ -81,8 +81,9 @@ impl DepthGuard {
         let depth = CALL_DEPTH.with(Cell::get);
         if depth >= MAX_CALL_DEPTH {
             return Err(FreesError::evaluation(format!(
-                "{kind} calls nested more than {MAX_CALL_DEPTH} levels deep \
-                 (is `{name}` recursing without a base case?)"
+                "{kind} calls nested more than {MAX_CALL_DEPTH} levels deep in `{name}`. \
+                 This is a fixed limit, because a deeper stack would overflow the browser \
+                 engine: check the base case, or rewrite deep recursion as a FOR loop."
             )));
         }
         CALL_DEPTH.with(|d| d.set(depth + 1));
