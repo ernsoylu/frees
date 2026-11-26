@@ -15,7 +15,7 @@ schematic CR-SCHEMATIC-01 (01a–01e); the programmes of 2026-11-05 (A–E, lazy
 fluid chunks), 2026-11-06 (F–M, interactive simulation and teaching),
 2026-11-12 (N–R, workspace shell) and 2026-11-19 (D.2 component coverage);
 removal of the (P,h) table path (D12, #136); EC1, which runs one solve-and-CHECK
-gate over every example (#137); EC2, the Help library folded into `EXAMPLES`: all 85 entries graded by the EC1 gate, 263 examples in one catalogue, Help listing the 241 non-featured ones, and `helpExamples.ts` deleted (#139, #171–#174, #176); the slider drag it caught listing pins after a lowered `Integral` (#175); EC3, the 263 examples in 12 categories (the smallest holds 5) and the 64 descriptions that said only "Solve (F2)" or repeated their title rewritten, held by an `examples.test.ts` gate (#177); FX0, the three
+gate over every example (#137); EC2, the Help library folded into `EXAMPLES`: all 85 entries graded by the EC1 gate, 263 examples in one catalogue, Help listing the 241 non-featured ones, and `helpExamples.ts` deleted (#139, #171–#174, #176); the slider drag it caught listing pins after a lowered `Integral` (#175); EC3, the 263 examples in 12 categories (the smallest holds 5) and the 64 descriptions that said only "Solve (F2)" or repeated their title rewritten, held by an `examples.test.ts` gate (#177); EC4's first part, Help's Open in Editor naming its example so a lesson or lab opens with its panel (#178); FX0, the three
 project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#142;
 three event goldens regenerated against closed forms, owner-approved); FX1a,
 case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
@@ -102,7 +102,6 @@ each item carries its own repro, and each fix lands with that repro as a test.
 
 - **EC4. The picker becomes the curriculum.** `ExamplesModal` shows only `featured`, in this order: `ideal-gas`, `linear-regression-diagnostics`, `pump-valve-operating-point`, `rankine-cycle`, `hydraulic-metering-restriction`, `tank-draining`, `sounding-rocket-trajectory`, `projectile-trajectory`, `step-impulse-response`, `cruise-control`, `ev-battery-cooling-pid`, `ev-thermal-management`, `multi-objective-beam`, `correlated-temperature-heat-loss`, `vibration-tone-spectrum`, `lab-air-mixing`, `lesson-rc-charging`. The table is final (owner decision 2026-11-22).
   - Four examples gain content: `ideal-gas` gets `Convert()`, CHECKs and a REPL prompt; `linear-regression-diagnostics` gets a `TABLE` for the Curve Fit dialog; `rankine-cycle` gets a T–s `PLOT` and CHECKs; `correlated-temperature-heat-loss` gets a walk-through of Monte Carlo and Sensitivity.
-  - Help's Open in Editor passes the example id, so lessons and labs open with their panel.
   - A gate table of fundamental → pattern, about 41 rows, asserts that the featured set covers every fundamental.
 - **EC5. Documentation gaps.** In `analysis_examples.md`: Monte Carlo and Sobol/Morris requests on `correlated-temperature-heat-loss`, a `parameter_fit` dynamic calibration, and graded signal-processing and regression sections. In `getting_started.md`: "Projects and runs" (project library, autosave, Runs panel). No new guide files.
 

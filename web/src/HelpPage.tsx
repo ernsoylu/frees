@@ -109,7 +109,7 @@ function formatRunValue(v: number): string {
 /** A `vary=` slider spec parsed from a runnable fence's info string. */
 interface VarySpec { name: string; min: number; step: number; max: number }
 
-function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title?: string; vary?: VarySpec[] }>) {
+function RunnableCode({ code, title, vary = [], exampleId }: Readonly<{ code: string; title?: string; vary?: VarySpec[]; exampleId?: string }>) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vars, setVars] = useState<VariableResult[] | null>(null);
@@ -150,6 +150,7 @@ function RunnableCode({ code, title, vary = [] }: Readonly<{ code: string; title
     localStorage.setItem('frees.pendingSnippet', JSON.stringify({
       title: (title || firstComment || 'Documentation example').slice(0, 80),
       text: code,
+      example: exampleId,
       ts: Date.now(),
     }));
     window.open(import.meta.env.BASE_URL, '_blank');
@@ -1851,7 +1852,7 @@ export default function HelpPage() {
                               <BraytonCycleDiagram />
                             </Paper>
                           )}
-                          <RunnableCode code={ex.text} title={ex.title} />
+                          <RunnableCode code={ex.text} title={ex.title} exampleId={ex.id} />
                         </MantineAccordion.Panel>
                       </MantineAccordion.Item>
                     ))}

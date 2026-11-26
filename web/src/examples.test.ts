@@ -2,7 +2,7 @@
 // @ts-expect-error Node built-in module not declared in Vite client tsconfig
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { EXAMPLES } from './examples'
+import { EXAMPLES, exampleFromHandoff } from './examples'
 import { check, initSync, install_property_table, solve, solve_table } from './wasm/pkg/frees.js'
 import { installPackedFluids } from '../scripts/packed-fluids.mjs'
 
@@ -192,4 +192,17 @@ it('no description repeats its title or tells the reader to press Solve', () => 
   const bad = EXAMPLES.filter((e) =>
     e.description.toLowerCase().includes(e.title.toLowerCase()) || e.description.includes('Solve (F2)'))
   expect(bad.map((e) => e.id)).toEqual([])
+})
+
+// EC4: Help's Open in Editor names its example, so a lesson opens with its
+// panel; an unnamed or edited snippet stays a documentation snippet.
+it('a Help handoff loads the example it names', () => {
+  const now = 1_000_000
+  const lesson = EXAMPLES.find((e) => e.id === 'lesson-thermal-mass')!
+  const handoff = (fields: object) => JSON.stringify({ title: 'T', text: lesson.text, ts: now, ...fields })
+  expect(exampleFromHandoff(handoff({ example: lesson.id }), now)).toBe(lesson)
+  expect(exampleFromHandoff(handoff({}), now)?.id).toBe('doc-snippet')
+  expect(exampleFromHandoff(handoff({ example: lesson.id, text: 'x = 1' }), now)?.id).toBe('doc-snippet')
+  expect(exampleFromHandoff(handoff({ example: lesson.id }), now + 6 * 60_000)).toBeNull()
+  expect(exampleFromHandoff('{', now)).toBeNull()
 })

@@ -141,3 +141,19 @@ test('I6: a share link carries the open lesson and its sliders; past the cap the
   await expect(page.getByText('Too large to share by URL')).toBeVisible()
   await expect(page.getByText(/longer than 16,000 characters.*send the \.frees file instead/)).toBeVisible()
 })
+
+test('EC4: a lesson opened from Help opens with its panel', async ({ page, context }) => {
+  await page.goto('/help#examples')
+  await page.getByPlaceholder('Filter examples…').fill('cooling thermal mass')
+  await page.getByRole('button', { name: 'Lesson — a cooling thermal mass' }).click()
+  const [editor] = await Promise.all([
+    context.waitForEvent('page'),
+    page.getByRole('button', { name: 'Open in Editor', exact: true }).click(),
+  ])
+  await expect(editor.locator('.cm-content')).toBeVisible({ timeout: 60_000 })
+  await discardIfAsked(editor)
+  // A fresh tab greets first-time visitors, as the other journeys meet it.
+  const welcome = editor.getByRole('dialog').filter({ hasText: 'Welcome to frees' })
+  if (await welcome.waitFor({ timeout: 10_000 }).then(() => true, () => false)) await editor.keyboard.press('Escape')
+  await solvedLesson(editor, 'A cooling thermal mass')
+})
