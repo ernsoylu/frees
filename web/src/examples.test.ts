@@ -221,7 +221,7 @@ it('the featured examples are the curriculum, in order', () => {
 
 // EC4 gate: every fundamental the curriculum teaches, and the pattern that
 // finds it in a featured example's id, description or text. Dropping
-// `featured` from the only example that teaches one fails here. The five
+// `featured` from the only example that teaches one fails here. The four
 // `open` rows are not taught yet; NEXT_STEPS (EC4) says what each waits on.
 const FUNDAMENTALS: [string, RegExp | 'open'][] = [
   ['equations and units', /\[[\w^/.-]+\]/],
@@ -234,7 +234,7 @@ const FUNDAMENTALS: [string, RegExp | 'open'][] = [
   ['multi-output calls', /^\s*\[[\w\s,]+\]\s*=\s*\w+\(/m],
   ['linfit', /\blinfit\(/],
   ['statistics', /\b(pearson|corrcoef|mean|stdev)\(/],
-  ['the Curve Fit dialog', 'open'],
+  ['the Curve Fit dialog', /Tools > Curve Fit[\s\S]*^\s*TABLE\s/m],
   ['TABLE lookup', /^\s*TABLE\s+\w+\(/m],
   ['model$ variants', /\b(model|map|domain)\$\s*=/],
   ['components and connect()', /^\s*connect\(\s*\w+\.\w+/m],
@@ -276,5 +276,5 @@ it('the featured examples teach every fundamental', () => {
   expect(untaught).toEqual([])
   // An open row that starts matching is closed: drop 'open' and give it its pattern.
   expect(FUNDAMENTALS.filter(([, re]) => re === 'open').map(([name]) => name)).toEqual(
-    ['Convert()', 'the REPL', 'the Curve Fit dialog', 'Monte Carlo', 'Sobol/Morris sensitivity'])
+    ['Convert()', 'the REPL', 'Monte Carlo', 'Sobol/Morris sensitivity'])
 })

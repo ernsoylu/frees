@@ -245,6 +245,10 @@ pub struct Solution {
     /// The `PARAMETRIC … END` run-tables, in declaration order, carried off the
     /// same parse as `plots` so the frontend can list and run them.
     pub parametric_tables: std::sync::Arc<Vec<crate::parser::blocks::ParametricTable>>,
+    /// The document's own `TABLE … END` blocks, in declaration order and
+    /// without the request's GUI tables, so the frontend lists them in the
+    /// workbook (and the Curve Fit dialog) as code tables.
+    pub tables: std::sync::Arc<Vec<crate::parser::defs::FunctionTableDef>>,
 }
 
 /// Diagnostics captured at the point a block solve gave up — the Java
@@ -396,6 +400,10 @@ pub struct CheckReport {
     /// The `PARAMETRIC … END` run-tables, in declaration order, carried off the
     /// same parse as `plots` so the frontend can list and run them.
     pub parametric_tables: std::sync::Arc<Vec<crate::parser::blocks::ParametricTable>>,
+    /// The document's own `TABLE … END` blocks, in declaration order and
+    /// without the request's GUI tables, so the frontend lists them in the
+    /// workbook (and the Curve Fit dialog) as code tables.
+    pub tables: std::sync::Arc<Vec<crate::parser::defs::FunctionTableDef>>,
     /// Connection topology for the schematic — the same payload Solve reports,
     /// so Check can draw and validate wiring without a solve.
     pub connections: Vec<crate::components::expander::Connection>,
@@ -2096,6 +2104,7 @@ pub fn check_with_tables_complex(
                 diagnostics: check_diagnostics,
                 plots: doc.blocks.plots.clone(),
                 parametric_tables: doc.blocks.parametric_tables.clone(),
+                tables: std::sync::Arc::new(doc.defs.tables.clone()),
                 connections: layer_connections,
                 ports: layer_ports,
                 instances: identities.0.clone(),
@@ -2134,6 +2143,7 @@ pub fn check_with_tables_complex(
             diagnostics: check_diagnostics,
             plots: doc.blocks.plots.clone(),
             parametric_tables: doc.blocks.parametric_tables.clone(),
+            tables: std::sync::Arc::new(doc.defs.tables.clone()),
             connections: layer_connections.clone(),
             ports: layer_ports.clone(),
             instances: identities.0.clone(),
@@ -2190,6 +2200,7 @@ pub fn check_with_tables_complex(
         diagnostics,
         plots: doc.blocks.plots.clone(),
         parametric_tables: doc.blocks.parametric_tables.clone(),
+        tables: std::sync::Arc::new(doc.defs.tables.clone()),
         connections: layer_connections,
         ports: layer_ports,
         instances: identities.0,
@@ -3075,6 +3086,7 @@ fn syntax_failure_report(source: &str, err: &FreesError) -> CheckReport {
         // A document that did not parse declares nothing.
         plots: Vec::new(),
         parametric_tables: Default::default(),
+        tables: Default::default(),
         ports: Vec::new(),
         connections: Vec::new(),
         instances: Vec::new(),
