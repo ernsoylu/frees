@@ -55,7 +55,7 @@ const gallery = []
 for (const [, list] of [...byCat].sort((a, b) => a[0].localeCompare(b[0]))) {
   let taken = 0
   for (const e of list) {
-    if (taken === PER_CATEGORY && e.category !== 'Lessons' && e.category !== 'Labs') break
+    if (taken === PER_CATEGORY && e.category !== 'Lessons & Labs') break
     const r = JSON.parse(wasm.solve(e.text, '{}'))
     if (!r.success) continue
     gallery.push({ ex: e, result: r })

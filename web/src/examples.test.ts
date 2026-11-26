@@ -173,3 +173,23 @@ it('every example is dimensionally consistent', () => {
   })
   expect(warned).toEqual([])
 })
+
+// EC3: twelve categories, none thin, and descriptions that say something the
+// title does not.
+const CATEGORIES = [
+  'Systems', 'Thermodynamics', 'HVAC & Refrigeration', 'Heat Transfer', 'Fluids & Fluid Power', 'Mechanics',
+  'Electrical & Powertrain', 'Aerospace & Compressible Flow', 'Control Systems', 'Dynamics & ODEs',
+  'Data & Analysis', 'Lessons & Labs',
+]
+
+it('every example sits in one of the twelve categories, each holding at least three', () => {
+  expect(EXAMPLES.filter((e) => !CATEGORIES.includes(e.category)).map((e) => `${e.id}: ${e.category}`)).toEqual([])
+  const thin = CATEGORIES.filter((c) => EXAMPLES.filter((e) => e.category === c).length < 3)
+  expect(thin).toEqual([])
+})
+
+it('no description repeats its title or tells the reader to press Solve', () => {
+  const bad = EXAMPLES.filter((e) =>
+    e.description.toLowerCase().includes(e.title.toLowerCase()) || e.description.includes('Solve (F2)'))
+  expect(bad.map((e) => e.id)).toEqual([])
+})
