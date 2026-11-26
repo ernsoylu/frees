@@ -15,7 +15,7 @@ schematic CR-SCHEMATIC-01 (01a–01e); the programmes of 2026-11-05 (A–E, lazy
 fluid chunks), 2026-11-06 (F–M, interactive simulation and teaching),
 2026-11-12 (N–R, workspace shell) and 2026-11-19 (D.2 component coverage);
 removal of the (P,h) table path (D12, #136); EC1, which runs one solve-and-CHECK
-gate over every example (#137); EC2 groups 1–4, Power Cycles, Control Systems, ODEs and EV/Vehicle (#139, #171–#173); FX0, the three
+gate over every example (#137); EC2 groups 1–5, Power Cycles, Control Systems, ODEs, EV/Vehicle and HVAC (#139, #171–#174); FX0, the three
 project data-loss paths U01, U02 and U04 (#141); FX7, hybrid events E01–E03 (#142;
 three event goldens regenerated against closed forms, owner-approved); FX1a,
 case-sensitive milli/mega prefixes and `S`, with lowercase former-mega spellings
@@ -100,7 +100,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 
 **Binding rules.** No example is deleted; an example leaves the picker for the Help library. Grades stay frozen: Help-library examples are graded against their cited source or a stated closed form. No new example type, field, flag or registry is added.
 
-- **EC2. Fold the Help library into `EXAMPLES`. 60 of 85 done (#139, #171, #172, #173).** The remaining groups, one PR each: HVAC (10), then the remaining 15. Each entry becomes a non-featured `Example` in its EC3 category, with its Help note moved into the header and CHECKs at 1e-6 relative.
+- **EC2. Fold the Help library into `EXAMPLES`. 70 of 85 done (#139, #171–#174).** The remaining group is the last 15, in one PR. Each entry becomes a non-featured `Example` in its EC3 category, with its Help note moved into the header and CHECKs at 1e-6 relative.
   - `cd-nozzle-shock` is a different model from the gallery's and becomes `cd-nozzle-normal-shock-branch`.
   - The last PR deletes `helpExamples.ts`, the `EXAMPLE_CATEGORIES` path in `HelpPage.tsx`, the second branch in `searchIndex.ts` and the carve-out in `check-doc-coverage.mjs`.
   - **Acceptance:** 263 examples inside the EC1 gate, and Help lists exactly the non-featured ones.

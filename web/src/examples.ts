@@ -2475,6 +2475,303 @@ e_pack_grav = E_pack/m_pack            { pack specific energy [J/kg]; /3600 = Wh
 { CHECK e_pack_grav 543999.9999999999 6e-1 }`,
   },
   {
+    id: 'ammonia-refrigeration',
+    title: 'Ammonia Refrigeration Cycle COP',
+    description: 'An ammonia (R-717) chiller with a flooded evaporator operates between suction pressure 38.5 psia (with 20°F superheat) and discharge pressure 229 psia. The COP is computed from states\' enthalpies.',
+    category: 'HVAC & Refrigeration',
+    text: `{ Ammonia Refrigeration Cycle COP }
+{ Results: COP = 3.9, cooling load = 10,250 Btu/min, compressor power =
+  2,594 Btu/min. frees solves in SI: the cooling load is 180.2 kW and the
+  compressor power 45.65 kW, so COP = 3.948. }
+{ Problem 1: Ammonia Refrigeration Cycle COP }
+P_suction = 38.5 [psia]
+superheat = 20 [R]       { a 20 °F superheat (a temperature difference) }
+P_discharge = 229 [psia]
+m_dot = 22 [lb/min]
+
+h1 = 627.0 [Btu/lbm]      { Enthalpy entering compressor }
+h2 = 745.0 [Btu/lbm]      { Enthalpy leaving compressor }
+h3 = 161.1 [Btu/lbm]      { Saturated liquid leaving condenser }
+
+COP = (h1 - h3) / (h2 - h1)
+Q_dot_cool = m_dot * (h1 - h3)
+W_dot_comp = m_dot * (h2 - h1)
+{ CHECK COP 3.9483050847457624 4e-6 }
+{ CHECK Q_dot_cool 180235.1913030746 2e-1 }
+{ CHECK W_dot_comp 45648.749890025334 5e-2 }`,
+  },
+  {
+    id: 'face-bypass-control',
+    title: 'Face and Bypass Control Load',
+    description: 'Face and bypass control maintains room air at 80°F db/50% rh. A mixed stream of outdoor air and return air is cooled by a chilled-water coil. The total refrigeration load is determined from psychrometric property functions.',
+    category: 'HVAC & Refrigeration',
+    text: `{ Face and Bypass Control Load }
+{ Results: total load = 67.7 tons of refrigeration (the chart solution reads
+  67.9). The coil enthalpy drop is 9.0 Btu/lb; absolute enthalpies are on
+  CoolProp's datum, which differs from the psychrometric chart by a constant
+  that cancels in the difference. }
+{ Problem 2: Face and Bypass Control Load }
+V_dot_supply = 20000 [ft^3/min]
+V_dot_oa = 5000 [ft^3/min]
+T_room = 80 [F]
+rh_room = 0.50
+T_oa_db = 90 [F]
+T_oa_wb = 74 [F]
+T_coil_out_db = 58 [F]
+T_coil_out_wb = 56 [F]
+P_atm = 14.696 [psia]
+
+v_supply = 13.25 [ft^3/lb] { Specific volume of supply air }
+m_dot_supply = V_dot_supply / v_supply
+
+f_oa = V_dot_oa / V_dot_supply
+f_return = 1 - f_oa
+
+h_room = Enthalpy(AirH2O, T=T_room, R=rh_room, P=P_atm)
+h_oa = Enthalpy(AirH2O, T=T_oa_db, B=T_oa_wb, P=P_atm)
+h_mix = f_oa * h_oa + f_return * h_room
+h_supply = Enthalpy(AirH2O, T=T_coil_out_db, B=T_coil_out_wb, P=P_atm)
+
+Q_dot_coil = m_dot_supply * (h_mix - h_supply)
+Q_dot_coil_tons = Q_dot_coil / (12000 [Btu/hr])   { 1 ton of refrigeration = 12,000 Btu/hr }
+{ CHECK Q_dot_coil_tons 67.72964989743328 7e-5 }
+{ CHECK Q_dot_coil 238195.21173396852 3e-1 }`,
+  },
+  {
+    id: 'solar-heat-gain',
+    title: 'Solar Heat Gain Through Windows',
+    description: 'Calculates total heat gain through windows on North, East, and West faces of a building using U-value, Cooling Load Temperature Differences (CLTD), and Solar Heat Gain Factors (SHGF).',
+    category: 'HVAC & Refrigeration',
+    text: `{ Solar Heat Gain Through Windows }
+{ Results: total heat gain = 21,720 Btu/hr. frees solves in SI: Q_total =
+  6365.5 W. }
+{ Problem 4: Solar Heat Gain Through Windows }
+U_value = 1.1 [Btu/hr-ft^2-F]
+T_in = 75 [F]
+T_out = 95 [F]
+A_window = 40 [ft^2]
+
+SHGF_North = 47 [Btu/hr-ft^2]
+SHGF_East = 215 [Btu/hr-ft^2]
+SHGF_West = 215 [Btu/hr-ft^2]
+
+Q_North = A_window * SHGF_North + U_value * A_window * (T_out - T_in)
+Q_East = A_window * SHGF_East + U_value * A_window * (T_out - T_in)
+Q_West = A_window * SHGF_West + U_value * A_window * (T_out - T_in)
+
+Q_total = Q_North + Q_East + Q_West
+{ CHECK Q_total 6365.503644140664 7e-3 }
+{ CHECK Q_East 2778.3137452326655 3e-3 }`,
+  },
+  {
+    id: 'enthalpy-wheel',
+    title: 'Enthalpy Wheel Heat Recovery',
+    description: 'Finds the dry-bulb temperature of tempered air leaving an 80% effective sensible/latent heat recovery enthalpy wheel.',
+    category: 'HVAC & Refrigeration',
+    text: `{ Enthalpy Wheel Heat Recovery }
+{ Results: leaving dry-bulb temperature = 79°F. }
+{ Problem 5: Enthalpy Wheel Heat Recovery }
+V_dot_oa = 1500 [ft^3/min]
+T_oa_db = 95 [F]
+T_oa_wb = 78 [F]
+T_room_db = 75 [F]
+rh_room = 0.50
+effectiveness = 0.80
+
+T_tempered_db = T_oa_db - (T_oa_db - T_room_db) * effectiveness
+T_tempered_db_F = T_tempered_db / (1 [R]) - 459.67   { the same temperature in °F }
+{ CHECK T_tempered_db_F 78.99999999999994 8e-5 }`,
+  },
+  {
+    id: 'run-around-cycle',
+    title: 'Run-Around Water Cycle Balance',
+    description: 'Determines leaving air temperature from a cooling coil coupled to a run-around loop water cycle under steady-state energy balance.',
+    category: 'HVAC & Refrigeration',
+    text: `{ Run-Around Water Cycle Balance }
+{ Results: heat transfer rate = 75,000 Btu/hr, air temp difference = 13.6°F,
+  leaving air temperature = 61.4°F (or 52°F depending on heating balancing). }
+{ Problem 6: Run-Around Water Cycle }
+V_dot_water = 15 [gal/min]
+delta_T_water = 10 [R]           { a 10 °F temperature difference }
+T_air_in = 75 [F]
+V_dot_air = 5000 [ft^3/min]
+
+{ The rules of thumb with their units: 500 = 8.33 lbm/gal x 60 min/hr x 1 Btu/lbm-°F,
+  1.1 = 0.0764 lbm/ft^3 x 60 min/hr x 0.24 Btu/lbm-°F }
+rho_w = 8.3333 [lbm/gal]
+cp_w = 1 [Btu/lbm-R]
+rho_a = 0.0764 [lbm/ft^3]
+cp_a = 0.24 [Btu/lbm-R]
+
+{ Heat transfer rate }
+Q = rho_w * V_dot_water * cp_w * delta_T_water
+Q = rho_a * V_dot_air * cp_a * delta_T_air
+T_air_out = T_air_in - delta_T_air
+
+Q_Btuh = Q / (1 [Btu/hr])                      { 75,000 Btu/hr }
+delta_T_air_F = delta_T_air / (1 [R])          { °F of air temperature drop }
+T_air_out_F = T_air_out / (1 [R]) - 459.67
+{ CHECK Q_Btuh 74999.69999999998 8e-2 }
+{ CHECK delta_T_air_F 13.634325916230365 2e-5 }
+{ CHECK T_air_out_F 61.36567408376965 7e-5 }`,
+  },
+  {
+    id: 'latent-heat-freezing',
+    title: 'Specific Heat of Freezing',
+    description: 'Calculates the cooling required to cool 10,000 lbs of frozen chicken from its freezing point (27°F) to storage temperature (-10°F).',
+    category: 'HVAC & Refrigeration',
+    text: `{ Specific Heat of Freezing }
+{ Results: cooling required = 136,900 Btu. frees solves in SI: Q_required =
+  1.444e8 J. }
+{ Problem 7: Specific & Latent Heat of Freezing }
+mass = 10000 [lb]
+T_freeze = 27 [F]
+T_storage = -10 [F]
+Cp_below = 0.37 [Btu/lb-F]
+
+Q_required = mass * Cp_below * (T_freeze - T_storage)
+{ CHECK Q_required 144437146.2236779 2e2 }`,
+  },
+  {
+    id: 'psychrometric-balancing',
+    title: 'Psychrometric Room Balancing',
+    description: 'Calculates entering and leaving air conditions for a cooling coil serving a space with both sensible and latent heat gains under outdoor ventilation requirements.',
+    category: 'HVAC & Refrigeration',
+    text: `{ Psychrometric Room Balancing }
+{ Results: Mixed Air Temp = 80.7°F db / 66.2°F wb, Leaving Air Temp = 55.0°F
+  db / 50.9°F wb. }
+{ Problem 3: Psychrometric Room Balancing }
+Q_sensible = 90000 [Btu/hr]
+Q_latent = 40000 [Btu/hr]
+V_dot_supply = 3600 [ft^3/min]
+T_supply_db = 55 [F]
+T_room_db = 78 [F]
+rh_room = 0.45
+T_oa_db = 92 [F]
+T_oa_wb = 76 [F]
+V_dot_oa = 700 [ft^3/min]
+P_atm = 14.696 [psia]
+rho_std = 0.075 [lbm/ft^3]   { standard air: the 4.5 in Q = 4.5 x cfm x dh is 60 min/hr x 0.075 lbm/ft^3 }
+
+V_dot_return = V_dot_supply - V_dot_oa
+f_oa = V_dot_oa / V_dot_supply
+f_return = V_dot_return / V_dot_supply
+
+{ Mixed air condition (MAT) }
+T_entering_db = f_oa * T_oa_db + f_return * T_room_db
+h_room = Enthalpy(AirH2O, T=T_room_db, R=rh_room, P=P_atm)
+h_oa   = Enthalpy(AirH2O, T=T_oa_db, B=T_oa_wb, P=P_atm)
+h_mix  = f_oa * h_oa + f_return * h_room
+T_entering_wb = WetBulb(AirH2O, T=T_entering_db, H=h_mix, P=P_atm)
+
+{ Coil load: room sensible + latent + ventilation load }
+Q_total = Q_sensible + Q_latent + rho_std * V_dot_oa * (h_oa - h_room)
+h_leaving = h_mix - Q_total / (rho_std * V_dot_supply)
+T_leaving_wb = WetBulb(AirH2O, T=T_supply_db, H=h_leaving, P=P_atm)
+
+{ The same temperatures in °F }
+T_entering_db_F = T_entering_db / (1 [R]) - 459.67
+T_entering_wb_F = T_entering_wb / (1 [R]) - 459.67
+T_leaving_wb_F  = T_leaving_wb / (1 [R]) - 459.67
+{ CHECK T_entering_db_F 80.72222222222211 9e-5 }
+{ CHECK T_entering_wb_F 66.22062610453503 7e-5 }
+{ CHECK T_supply_db 285.92777777777775 3e-4 }
+{ CHECK T_leaving_wb_F 50.938045226737245 6e-5 }`,
+  },
+  {
+    id: 'pumping-friction-head',
+    title: 'Pumping and Friction Head',
+    description: 'Computes the operating head of a water pump overcoming static elevation and pipe friction (Darcy-Weisbach friction equation) under pressurized inlet conditions.',
+    category: 'HVAC & Refrigeration',
+    text: `{ Pumping and Friction Head }
+{ Results: velocity = 8.54 ft/s, friction head = 9.37 ft, total head
+  required = 169.4 ft, inlet head = 46.2 ft, pump head = 123.2 ft. }
+{ Problem 8: Pumping and Friction Head }
+{ All quantities are in English units (ft, gpm, fps) but kept unitless
+  to avoid placing unit annotations on computed expressions. }
+T_water = 90
+gpm = 26000
+f_factor = 0.01
+L_eq = 2425
+z_elev = 160
+P_inlet = 20
+OD = 36
+t_wall = 0.375
+
+ID = (OD - 2 * t_wall) / 12
+V = (gpm * 0.1337 / 60) / (pi# / 4 * ID^2)
+h_friction = f_factor * (L_eq / ID) * (V^2 / 64.4)
+h_total = z_elev + h_friction
+
+h_inlet = P_inlet * 2.31
+h_pump = h_total - h_inlet
+{ CHECK V 8.548853464497839 9e-6 }
+{ CHECK h_friction 9.368363775701464 1e-5 }
+{ CHECK h_total 169.36836377570145 2e-4 }
+{ CHECK h_pump 123.16836377570145 2e-4 }`,
+  },
+  {
+    id: 'air-supply-wetbulb',
+    title: 'Air Supply Wet-Bulb Determination',
+    description: 'Finds the wet-bulb temperature of the supply air to maintain a room at 75°F db/63°F wb under sensible load and Sensible Heat Factor.',
+    category: 'HVAC & Refrigeration',
+    text: `{ Air Supply Wet-Bulb Determination }
+{ Results: total heat load = 250,000 Btu/hr, supply wet-bulb temperature =
+  55.1°F — enthalpies are on CoolProp's datum, which differs from the
+  standard psychrometric chart by a constant that cancels in the load
+  equation's difference. }
+{ Problem 9: Air Supply Wet-Bulb Determination }
+T_room_db = 75 [F]
+T_room_wb = 63 [F]
+T_supply_db = 58 [F]
+Q_sensible = 200000 [Btu/hr]
+SHF = 0.80
+V_dot_supply = 10700 [ft^3/min]
+P_atm = 14.696 [psia]
+rho_std = 0.075 [lbm/ft^3]   { standard air: the 4.5 in Q = 4.5 x cfm x dh is 60 min/hr x 0.075 lbm/ft^3 }
+
+h_room = Enthalpy(AirH2O, T=T_room_db, B=T_room_wb, P=P_atm)
+Q_total = Q_sensible / SHF
+
+{ Total heat equation — h_supply solved implicitly }
+Q_total = rho_std * V_dot_supply * (h_room - h_supply)
+T_supply_wb = WetBulb(AirH2O, T=T_supply_db, H=h_supply, P=P_atm)
+
+Q_total_Btuh = Q_total / (1 [Btu/hr])
+T_supply_wb_F = T_supply_wb / (1 [R]) - 459.67
+{ CHECK Q_total_Btuh 250000 3e-1 }
+{ CHECK T_supply_wb_F 55.14502124499228 6e-5 }`,
+  },
+  {
+    id: 'multistage-food-freezing',
+    title: 'Multi-Stage Food Freezing',
+    description: 'Calculates total refrigeration required to cool lean ham from 40°F to 28°F, freeze it, and then subcool it to 0°F.',
+    category: 'HVAC & Refrigeration',
+    text: `{ Multi-Stage Food Freezing }
+{ Results: cooling above = 99,600 Btu, freezing = 980,000 Btu, cooling below
+  = 148,400 Btu, total = 1.228 x 10^6 Btu. frees solves in SI, so
+  Q_total_btu holds joules despite its name: 1.2956e9 J = 1.228e6 Btu. }
+{ Problem 10: Multi-Stage Food Freezing }
+mass = 10000 [lb]
+T_in = 40 [F]
+T_freeze = 28 [F]
+T_out = 0 [F]
+Cp_above = 0.83 [Btu/lb-F]
+Cp_below = 0.53 [Btu/lb-F]
+L_fusion = 98 [Btu/lb]
+
+Q_sensible_above = mass * Cp_above * (T_in - T_freeze)
+Q_latent_freeze = mass * L_fusion
+Q_sensible_below = mass * Cp_below * (T_freeze - T_out)
+
+Q_total_btu = Q_sensible_above + Q_latent_freeze + Q_sensible_below
+Q_total_millions = Q_total_btu / 1e6
+{ CHECK Q_sensible_above 105083562.92095229 2e2 }
+{ CHECK Q_latent_freeze 1033954735.5676 2e3 }
+{ CHECK Q_sensible_below 156570288.52880788 2e2 }
+{ CHECK Q_total_btu 1295608587.0173602 2e3 }`,
+  },
+  {
     id: 'radiation-view-factors',
     title: 'Radiation View Factors',
     description: 'Closed-form diffuse view factors for standard configurations.',
