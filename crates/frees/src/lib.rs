@@ -1241,6 +1241,8 @@ fn solve_success(
             // through `plotDefToSpec`, so this is what makes a declared plot
             // render.
             "definedPlots": plot_defs(&solution.plots),
+            // One entry per document `TABLE … END` block (`code_tables`).
+            "codeTables": code_tables(&solution.tables),
             // One entry per `PARAMETRIC … END` block, shaped as
             // `ParametricTableDto`; the Tables window lists and runs it.
             "parametricTables": parametric_defs(&solution.parametric_tables),
@@ -1297,6 +1299,33 @@ fn uncertainty_breakdown(solution: &Solution) -> Vec<Value> {
         .collect();
     entries.sort_by(|a, b| b.0.total_cmp(&a.0));
     entries.into_iter().map(|(_, value)| value).collect()
+}
+
+/// `codeTables[]` — the document's own `TABLE … END` blocks, shaped as the
+/// `FunctionTableDto` a request sends the other way. `App.tsx`'s
+/// `mergeCodeTables` lists each in the workbook as a `source: 'code'` table,
+/// which is what puts a document table in the Curve Fit dialog; the request
+/// leaves code tables out (`toFunctionTableDtos`), so none comes back twice.
+fn code_tables(tables: &[frees_core::parser::defs::FunctionTableDef]) -> Value {
+    Value::Array(
+        tables
+            .iter()
+            .map(|t| {
+                json!({
+                    "name": t.name,
+                    "argNames": t.arg_names,
+                    "xLog": t.x_log,
+                    "yLog": t.y_log,
+                    "curves": t.curves.iter().map(|c| json!({
+                        "param": c.param,
+                        "points": c.xs.iter().zip(&c.ys).map(|(x, y)| [*x, *y]).collect::<Vec<_>>(),
+                    })).collect::<Vec<_>>(),
+                    "outputUnit": t.output_unit,
+                    "argUnits": t.arg_units,
+                })
+            })
+            .collect(),
+    )
 }
 
 /// `definedPlots[]` — port of `SolveDtos.plotsOf`, which is a straight
@@ -1664,6 +1693,9 @@ fn check_response(report: &CheckReport, source: Option<&str>) -> String {
         // what lets the Plots tab populate before the first solve —
         // `App.tsx`'s `result?.definedPlots ?? checkResult?.definedPlots`.
         "definedPlots": plot_defs(&report.plots),
+        // Check lists the document's tables too, so the workbook has them
+        // before the first solve.
+        "codeTables": code_tables(&report.tables),
         // Check reports them too: an underspecified model falls back to its
         // first code-defined table (`checkWithFallback` in App.tsx).
         "parametricTables": parametric_defs(&report.parametric_tables),
@@ -1750,6 +1782,7 @@ fn check_failure(message: String) -> String {
         "errorLine": null,
         "errors": [],
         "definedPlots": [],
+        "codeTables": [],
         "parametricTables": [],
         "connections": [],
         "ports": [],
@@ -2247,6 +2280,36 @@ mod tests {
 
     /// `PARAMETRIC … END` reaches the frontend as `ParametricTableDto`, from a
     /// Check of the underspecified model (its fallback) and from a Solve.
+    #[test]
+    fn a_document_table_reaches_the_frontend_and_a_gui_table_does_not_echo() {
+        // The Curve Fit dialog lists the workbook's tables; a document TABLE
+        // only gets there if Check and Solve report it as a code table.
+        let text =
+            "TABLE pts(x [m]) [N]\n  1  0.5\n  2  2.5\n  3  2.0\nEND\ny = pts(2)\nz = gui(1)\n";
+        let request = serde_json::json!({ "functionTables": [{
+            "name": "gui", "argNames": ["x"], "xLog": false, "yLog": false,
+            "curves": [{ "param": null, "points": [[0.0, 0.0], [2.0, 4.0]] }],
+        }] })
+        .to_string();
+        let expected = serde_json::json!([{
+            "name": "pts", "argNames": ["x"], "xLog": false, "yLog": false,
+            "curves": [{ "param": null, "points": [[1.0, 0.5], [2.0, 2.5], [3.0, 2.0]] }],
+            "outputUnit": "N", "argUnits": ["m"],
+        }]);
+        let v = parsed(&solve(text, &request));
+        assert_eq!(v["success"], true, "{v}");
+        assert_eq!(v["codeTables"], expected, "{v}");
+        assert_eq!(parsed(&check(text, &request))["codeTables"], expected);
+        assert_eq!(
+            parsed(&check("x = 1\n", "{}"))["codeTables"],
+            serde_json::json!([])
+        );
+        assert_eq!(
+            parsed(&check("x = (\n", "{}"))["codeTables"],
+            serde_json::json!([])
+        );
+    }
+
     #[test]
     fn a_declared_parametric_table_reaches_the_frontend() {
         let table = serde_json::json!([{

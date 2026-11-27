@@ -50,6 +50,20 @@ P * Vol = m * R * T    { ideal gas equation }
   Data and published answers: Chapra & Canale, Numerical Methods for
   Engineers, Examples 17.1-17.2 (a1 = 0.8392857, a0 = 0.07142857,
   s_y/x = 0.7735, r = 0.932). The original problem's data was not kept. }
+{ The same seven points as a table, for the Curve Fit dialog. After Check,
+  open Tools > Curve Fit, choose 'Select from table' and regression_data,
+  pick the Linear template (y = a * x + b) and press Fit: a and b come out
+  as the a_1 and a_0 solved below. }
+TABLE regression_data(x)
+  1   0.5
+  2   2.5
+  3   2.0
+  4   4.0
+  5   3.5
+  6   6.0
+  7   5.5
+END
+y_table_4 = regression_data(4)     { the table is callable: y at x = 4 }
 x = [1, 2, 3, 4, 5, 6, 7]
 y = [0.5, 2.5, 2.0, 4.0, 3.5, 6.0, 5.5]
 [a_1, a_0, r_sq] = linfit(x, y)
@@ -66,7 +80,8 @@ s_yx = sqrt(S_r / (n - 2))
 { CHECK r_sq 0.868317610062893 1e-12 }
 { CHECK r 0.931835613218819 1e-12 }
 { CHECK S_r 2.99107142857143 1e-10 }
-{ CHECK s_yx 0.773443136703847 1e-10 }`,
+{ CHECK s_yx 0.773443136703847 1e-10 }
+{ CHECK y_table_4 4 1e-12 }`,
   },
   {
     id: 'pump-valve-operating-point',

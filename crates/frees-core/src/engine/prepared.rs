@@ -48,6 +48,9 @@ pub struct PreparedDocument {
     pub settings: SolverSettings,
     pub overrides: Vec<VariableOverride>,
     pub extra_tables: Vec<FunctionTableDef>,
+    /// The document's own `TABLE` blocks, captured before `extra_tables` are
+    /// merged into `doc.defs`; every `Solution` carries them out.
+    document_tables: std::sync::Arc<Vec<FunctionTableDef>>,
     pub doc: Document,
     pub diagnostics: Vec<Diagnostic>,
     pub component_instances: Vec<crate::components::metadata::ComponentInstMeta>,
@@ -195,6 +198,8 @@ impl PreparedDocument {
         doc.display_names = parsed_names;
         let equations = crate::parser::string_variables::resolve(equations, &doc.display_names)?;
         let extra_tables_vec = extra_tables.to_vec();
+        // The merge appends; what is there before it is the document's own.
+        let document_tables = std::sync::Arc::new(doc.defs.tables.clone());
         doc.defs.merge_extra_tables(&extra_tables_vec);
 
         let equations = crate::integral::hoist_nested(equations);
@@ -272,6 +277,7 @@ impl PreparedDocument {
             settings: *settings,
             overrides: overrides.to_vec(),
             extra_tables: extra_tables_vec,
+            document_tables,
             doc,
             diagnostics,
             component_instances: components.instances,
@@ -610,6 +616,7 @@ impl PreparedDocument {
                 uncertainty_correlations: Default::default(),
                 plots: self.doc.blocks.plots.clone(),
                 parametric_tables: self.doc.blocks.parametric_tables.clone(),
+                tables: self.document_tables.clone(),
             });
         }
 
@@ -733,6 +740,7 @@ impl PreparedDocument {
         let iterations = self.stepping_iterations + block_iterations;
         Self::assemble_solution(
             &self.doc,
+            &self.document_tables,
             &self.settings,
             &self.overrides,
             &self.declarations,
@@ -752,6 +760,7 @@ impl PreparedDocument {
     #[allow(clippy::too_many_arguments)]
     fn assemble_solution(
         doc: &Document,
+        document_tables: &std::sync::Arc<Vec<FunctionTableDef>>,
         settings: &SolverSettings,
         overrides: &[VariableOverride],
         declarations: &crate::analysis::uncertainty::DeclarationSet,
@@ -894,6 +903,7 @@ impl PreparedDocument {
             uncertainty_contributions: propagation.contributions,
             plots: doc.blocks.plots.clone(),
             parametric_tables: doc.blocks.parametric_tables.clone(),
+            tables: document_tables.clone(),
         })
     }
 
@@ -979,6 +989,7 @@ impl PreparedDocument {
         for scope in &scopes {
             let sol = Self::assemble_solution(
                 &self.doc,
+                &self.document_tables,
                 &self.settings,
                 &self.overrides,
                 &self.declarations,
