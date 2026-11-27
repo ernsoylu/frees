@@ -443,6 +443,22 @@ impl<'a> Structure<'a> {
             }
             sb.push('.');
         }
+        // Which member of an underdetermined family the matching leaves free
+        // is arbitrary, so `x[1]` can be named while the real hole is a bare
+        // `pi` written for the constant `pi#`. Name any such unknown outright.
+        for &v in free_flat.iter().chain(group.iter()) {
+            let name = &self.vars[v];
+            if name.contains(['$', '[', '.']) {
+                continue;
+            }
+            if let Some(constant) = crate::eval::lookup_constant(&format!("{name}#")) {
+                sb.push_str(&format!(
+                    " `{}` is an unknown here, not a constant; the built-in constant is `{}`.",
+                    display_name(name),
+                    constant.name
+                ));
+            }
+        }
         if hint {
             sb.push_str(
                 " A common cause: an element chain with no constitutive law for that quantity \
@@ -1015,6 +1031,26 @@ mod tests {
             message.starts_with("There are 2 equations and 1 variables."),
             "{message}"
         );
+    }
+
+    #[test]
+    fn a_bare_pi_in_an_underdetermined_family_is_named_with_its_constant() {
+        // `x[1] = 2*pi*t` without the `#`: the matching may name `x[1]` free,
+        // but the hole is `pi`, and the message must say so.
+        let system = [
+            eqn("x[1] = 2 * pi * t", &["x[1]", "pi", "t"]),
+            eqn("t = 1", &["t"]),
+        ];
+        let message = err_message(&system, &none());
+        assert!(
+            message.contains(
+                "`pi` is an unknown here, not a constant; the built-in constant is `pi#`."
+            ),
+            "{message}"
+        );
+        // An ordinary free unknown gets no constant hint.
+        let message = err_message(&[eqn("y + z = 3", &["y", "z"])], &none());
+        assert!(!message.contains("built-in constant"), "{message}");
     }
 
     // -- structural singularity --------------------------------------------
