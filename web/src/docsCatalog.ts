@@ -1859,6 +1859,12 @@ The full list of recognized units and built-in constants lives in the reference 
 
 Unit names ignore case (\`kPa\`, \`KPA\` and \`kpa\` are one unit), except where case is the whole difference: \`m\` is milli and \`M\` is mega (\`mW\` and \`MW\`, \`mPa\` and \`MPa\`, \`mg\` and \`Mg\`), \`s\` is a second and \`S\` a siemens, and \`h\` is an hour and \`H\` a henry. After the prefix letter, any case works, so \`Mpa\` is a megapascal. A lowercase spelling such as \`[mpa]\` or \`[mw]\` is ambiguous and is reported as an unknown unit that names both readings. Write \`MPa\` for mega or \`mPa\` for milli.
 
+A unit can also be spelled with underscores, as it would be in a name: \`_per_\` divides and a lone \`_\` multiplies, so \`[kg_per_m3]\` is \`[kg/m^3]\` and \`[kJ_per_kg_K]\` is \`[kJ/kg-K]\`.
+\`\`\`frees
+cp = 4.18 [kJ_per_kg_K]     { 4180 J/kg-K }
+{ CHECK cp 4180 1e-9 }
+\`\`\`
+
 ## Results are SI
 A computed result has the SI unit of its expression — \`P * Vol = m * R * T\` gives \`m\` in kg, \`q = k*A*dT/L\` gives watts. To display in engineering units, either convert explicitly, set display units in the Variable Settings window, or use the \`Convert\` function:
 \`\`\`
