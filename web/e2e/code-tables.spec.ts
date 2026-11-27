@@ -1,5 +1,6 @@
-// A document TABLE reaches the workbook, so the Curve Fit dialog can fit it.
-// Before the boundary carried code tables, the dropdown never listed one.
+// A document's TABLE and STATE TABLE blocks reach the browser: the Curve Fit
+// dialog can fit a TABLE, and each STATE TABLE gets its own window. Before the
+// boundary carried them, the dropdown listed none and no state window opened.
 //
 // Run:  npm run build && npx playwright test e2e/code-tables.spec.ts --project=chromium
 import { expect, test } from '@playwright/test'
@@ -51,4 +52,18 @@ test('after Check alone, the siyavula-correlation steps reach its published R²'
   await page.getByRole('option', { name: 'Linear (y = a * x + b)' }).click()
   await fit.getByRole('button', { name: 'Fit', exact: true }).click()
   await expect(fit).toContainText(/0\.992/, { timeout: 60_000 })
+})
+
+test('each STATE TABLE of the two-circuit example opens its own window', async ({ page }) => {
+  const text = EXAMPLES.find((e) => e.id === 'state-tables-multifluid')!.text
+  await openAndSolve(page, 'state-tables', text)
+  const welcome = page.getByRole('dialog').filter({ hasText: 'Welcome to frees' })
+  if (await welcome.isVisible()) await page.keyboard.press('Escape')
+
+  await page.getByRole('button', { name: 'Tables windows' }).click()
+  await expect(page.getByRole('menuitem', { name: /RefrigerantLoop/ })).toBeVisible()
+  await page.getByRole('menuitem', { name: /WaterLoop/ }).click()
+  const water = page.locator('[data-testid="dock-panel"], .dv-content-container').filter({ hasText: 'Solved state points' }).first()
+  await expect(water).toBeVisible({ timeout: 30_000 })
+  await expect(water).toContainText('Water')
 })

@@ -617,6 +617,7 @@ impl PreparedDocument {
                 plots: self.doc.blocks.plots.clone(),
                 parametric_tables: self.doc.blocks.parametric_tables.clone(),
                 tables: self.document_tables.clone(),
+                state_tables: std::sync::Arc::new(self.doc.blocks.state_tables.clone()),
             });
         }
 
@@ -904,6 +905,7 @@ impl PreparedDocument {
             plots: doc.blocks.plots.clone(),
             parametric_tables: doc.blocks.parametric_tables.clone(),
             tables: document_tables.clone(),
+            state_tables: std::sync::Arc::new(doc.blocks.state_tables.clone()),
         })
     }
 
