@@ -218,3 +218,63 @@ it('the featured examples are the curriculum, in order', () => {
     'lesson-rc-charging',
   ])
 })
+
+// EC4 gate: every fundamental the curriculum teaches, and the pattern that
+// finds it in a featured example's id, description or text. Dropping
+// `featured` from the only example that teaches one fails here. The five
+// `open` rows are not taught yet; NEXT_STEPS (EC4) says what each waits on.
+const FUNDAMENTALS: [string, RegExp | 'open'][] = [
+  ['equations and units', /\[[\w^/.-]+\]/],
+  ['implicit unknowns', /^\s*[\w.]+\s*[*/]\s*[\w.]+[^={\n]*=[^=]/m],
+  ['Convert()', 'open'],
+  ['CHECK', /\{\s*CHECK\s/],
+  ['the REPL', 'open'],
+  ['arrays', /\w\[(i|\d+(:\d+)?)\]/],
+  ['FOR loops', /^\s*FOR\s+\w+\s*=.*\bTO\b/m],
+  ['multi-output calls', /^\s*\[[\w\s,]+\]\s*=\s*\w+\(/m],
+  ['linfit', /\blinfit\(/],
+  ['statistics', /\b(pearson|corrcoef|mean|stdev)\(/],
+  ['the Curve Fit dialog', 'open'],
+  ['TABLE lookup', /^\s*TABLE\s+\w+\(/m],
+  ['model$ variants', /\b(model|map|domain)\$\s*=/],
+  ['components and connect()', /^\s*connect\(\s*\w+\.\w+/m],
+  ['operating point', /operating point/i],
+  ['real-fluid properties', /\b(Enthalpy|Entropy|Temperature|Quality)\((Water|R134a|R1234yf|Air)\b/],
+  ['property diagram', /kind\s*=\s*property/],
+  ['GUESS', /^\s*GUESS\s/m],
+  ['Integral()', /\bIntegral\(/],
+  ['DYNAMIC', /^\s*DYNAMIC\s/m],
+  ['EVENT', /\bEVENT\b/],
+  ['trajectory accessors', /\b(MaxValue|MinValue|FinalValue|ValueAt)\(/],
+  ['PARAMETRIC', /^\s*PARAMETRIC\b/m],
+  ['PLOT xy', /^\s*PLOT\s+'[^']*'\s*\n\s*(kind\s*=\s*xy|y\s*=)/m],
+  ['step and impulse responses', /=\s*(step|impulse)\(/],
+  ['LTI models', /\b(ss2tf|feedback)\(/],
+  ['Bode and pole-zero plots', /kind\s*=\s*(bode|polezero)/],
+  ['FUNCTION', /^\s*function\s/im],
+  ['stiff solver', /method\s*=\s*(ode23s|ode15s|radau5|radauiia)/],
+  ['DAE (IDA)', /method\s*=\s*ida\b/],
+  ['Min/Max', /Min\/Max/],
+  ['Pareto', /Pareto/],
+  ['solid materials', /\b(E_|rho_|k_)\((Steel|Aluminum|Copper)\)/],
+  ['uncertainty', /UncertaintyOf\(/],
+  ['Correlation()', /\bCorrelation\(/],
+  ['Monte Carlo', 'open'],
+  ['Sobol/Morris sensitivity', 'open'],
+  ['FFT', /\bFFT\(/i],
+  ['Welch', /\bWelch\(/],
+  ['psychrometrics', /\(AirH2O,/],
+  ['psychrometric chart', /psychrometric chart/i],
+  ['sliders', /slider/i],
+  ['live mode', /^lab-/m],
+  ['the lesson sequence', /^lesson-/m],
+]
+
+it('the featured examples teach every fundamental', () => {
+  const featured = EXAMPLES.filter((e) => e.featured).map((e) => `${e.id}\n${e.description}\n${e.text}`)
+  const untaught = FUNDAMENTALS.filter(([, re]) => re !== 'open' && !featured.some((t) => re.test(t))).map(([name]) => name)
+  expect(untaught).toEqual([])
+  // An open row that starts matching is closed: drop 'open' and give it its pattern.
+  expect(FUNDAMENTALS.filter(([, re]) => re === 'open').map(([name]) => name)).toEqual(
+    ['Convert()', 'the REPL', 'the Curve Fit dialog', 'Monte Carlo', 'Sobol/Morris sensitivity'])
+})
