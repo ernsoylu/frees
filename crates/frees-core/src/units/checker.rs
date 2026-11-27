@@ -517,7 +517,9 @@ fn offset_literals(text: &str) -> Vec<(f64, String)> {
         let Ok(q) = UnitRegistry::parse_with_offset(&text[open + 1..close]) else {
             continue;
         };
-        if q.offset == 0.0 {
+        // Only a temperature offset makes a value absolute in the °C/°F sense;
+        // a gauge pressure's atmosphere is not one.
+        if q.offset == 0.0 || q.dims != crate::units::registry::TEMPERATURE_DIMS {
             continue;
         }
         let head = text[..open].trim_end();
