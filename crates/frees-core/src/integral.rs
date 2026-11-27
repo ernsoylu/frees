@@ -364,6 +364,28 @@ pub fn ordinary_equations(equations: &[Equation], integrals: &[IntegralEquation]
         .collect()
 }
 
+/// The `Integral` equations as the unit checker reads them, to follow the
+/// ordinary ones: each as written, after its integration variable's pin at
+/// the upper limit as written, so `t` has that limit's unit before `F` is
+/// derived from it. Lowering replaces a constant-limit result with its bare
+/// value and pins `t` to a bare number, which would label `F` dimensionless
+/// whatever `f` and `t` are.
+pub fn unit_view(integrals: &[IntegralEquation]) -> Vec<Equation> {
+    let mut view = Vec::new();
+    let mut pinned: BTreeSet<&str> = BTreeSet::new();
+    for ie in integrals {
+        if pinned.insert(&ie.integration_var) {
+            view.push(Equation::new(
+                Expr::Var(ie.integration_var.clone()),
+                ie.upper_expr.clone(),
+                format!("{} (integration variable)", ie.integration_var),
+            ));
+        }
+        view.push(ie.original.clone());
+    }
+    view
+}
+
 /// Equations equivalent to the originals **for structure checking only**:
 /// each constant-limit `Integral` pins its result variable (it is driven
 /// internally) while a variable-limit `Integral` contributes its actual
