@@ -59,8 +59,12 @@ test.describe('Phase 9 End-to-End Browser Journeys', () => {
     await page.waitForTimeout(500)
     await page.getByRole('button', { name: 'Solve', exact: true }).click()
 
-    // Must show distinct 'unconverted units' warning rather than silently accepting or crashing
-    await expect(page.getByText(/unconverted units/i).first()).toBeVisible({ timeout: 15_000 })
+    // Must refuse by name (FX3e) rather than silently solving an unconverted value or crashing
+    const status = page.getByRole('button', { name: 'Status details' })
+    await expect(status).toHaveText(/Not solvable/i, { timeout: 15_000 })
+    await status.click()
+    await expect(page.getByText(/unknown unit `bogus_unit`/i).first()).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('Escape')
 
     // 3. Test Recovery & undo: restore clean equations and verify solve
     await setEditorContent(page, scalarDoc)

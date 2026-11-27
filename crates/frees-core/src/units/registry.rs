@@ -342,6 +342,41 @@ pub fn unit_hint(unit: &str) -> String {
     )
 }
 
+/// The known unit name nearest `name` by edit distance (case-insensitive), when
+/// it is close enough to be a plausible typo: at most a third of the name's
+/// length, and at least one edit. `kpas` → `kpa`, `zorkmids` → none.
+pub fn nearest_unit(name: &str) -> Option<&'static str> {
+    let lower = name.to_lowercase();
+    let budget = (lower.chars().count() / 3).max(1);
+    CASE_SENSITIVE_UNITS
+        .iter()
+        .map(|(n, _, _)| *n)
+        .chain(UNITS.iter().map(|(n, _, _)| *n))
+        .filter(|n| n.chars().count() > 1)
+        .map(|n| (edit_distance(&lower, &n.to_lowercase()), n))
+        .filter(|(d, _)| *d <= budget)
+        .min_by_key(|(d, _)| *d)
+        .map(|(_, n)| n)
+}
+
+/// Levenshtein distance over chars.
+fn edit_distance(a: &str, b: &str) -> usize {
+    let b: Vec<char> = b.chars().collect();
+    let mut row: Vec<usize> = (0..=b.len()).collect();
+    for (i, ca) in a.chars().enumerate() {
+        let mut diagonal = row[0];
+        row[0] = i + 1;
+        for (j, cb) in b.iter().enumerate() {
+            let above = row[j + 1];
+            row[j + 1] = (above + 1)
+                .min(row[j] + 1)
+                .min(diagonal + usize::from(ca != *cb));
+            diagonal = above;
+        }
+    }
+    row[b.len()]
+}
+
 /// Named SI units, tried in order, that [`UnitRegistry::si_name`] prefers over a
 /// composed `kg m^2/s^3` style string.
 static NAMED_SI_UNITS: &[(&str, Dims)] = &[
@@ -1308,6 +1343,13 @@ mod tests {
             (f.to_si(-40.0) - UnitRegistry::parse_with_offset("C").unwrap().to_si(-40.0)).abs()
                 < 1e-9
         );
+    }
+
+    #[test]
+    fn the_nearest_unit_names_a_plausible_typo_only() {
+        assert_eq!(nearest_unit("kpas"), Some("kpa"));
+        assert_eq!(nearest_unit("psgi"), Some("psi"));
+        assert_eq!(nearest_unit("zorkmids"), None);
     }
 
     #[test]

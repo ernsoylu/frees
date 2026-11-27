@@ -634,12 +634,26 @@ mod tests {
 
     #[test]
     fn diagnostics_are_carried_into_the_payload() {
-        let payload = solve_out("P = 140 [zorp]\n");
+        let payload = solve_out("GUESS removed_variable = 3\nx = 1\n");
         let diagnostics = payload["diagnostics"].as_array().unwrap();
-        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics.len(), 1, "{payload}");
         assert_eq!(diagnostics[0]["severity"], json!("warning"));
-        assert!(diagnostics[0]["message"].as_str().unwrap().contains("zorp"));
-        assert_eq!(diagnostics[0]["source_text"], json!("P = 140 [zorp]"));
+        assert!(diagnostics[0]["message"]
+            .as_str()
+            .unwrap()
+            .contains("removed_variable"));
+    }
+
+    #[test]
+    fn an_unknown_unit_fails_the_solve_and_names_the_unit() {
+        // FX3e: it used to solve with the value left unconverted.
+        let (payload, ok) = solve_json("P = 140 [kpas]\n", &SolverSettings::default());
+        assert!(!ok);
+        let message = payload["error"]["message"].as_str().unwrap();
+        assert!(
+            message.contains("unknown unit `kpas`") && message.contains("`kpa`"),
+            "{message}"
+        );
     }
 
     #[test]

@@ -10,7 +10,7 @@ const checked: CheckResponse = {
 
 it('shows successful checks as structurally solvable, preserving warnings and actual errors', () => {
   expect(checkPill(checked)).toMatchObject({ color: 'green', label: 'Structurally solvable', message: checked.message })
-  expect(checkPill({ ...checked, unitWarnings: ['Unknown unit foo'] }).label).toBe('Structurally solvable · unconverted units')
+  expect(checkPill({ ...checked, unitWarnings: ['F = m*a: units differ'] }).label).toBe('Structurally solvable · 1 warnings')
   expect(checkPill({ ...checked, solvable: false, message: 'Underspecified. No syntax errors were detected.' }).label).toBe('Underspecified')
   expect(checkPill({ ...checked, solvable: false, errors: [{ line: 1, column: 2, message: 'Expected expression' }] }).label).toBe('Syntax error')
   expect(checkPill({ ...checked, solvable: false, errors: undefined, message: 'Syntax error: expected expression' }).label).toBe('Syntax error')
