@@ -131,29 +131,59 @@ dP_valve = c.P - d.P
 P_boiler = 8000 [kPa]
 P_cond = 10 [kPa]
 
+{ States 1-4 are numbered so the T-s plot below finds P, T, h and s at each }
+P1 = P_cond
+P2 = P_boiler
+P3 = P_boiler
+P4 = P_cond
+
 { State 1: saturated liquid leaving the condenser }
-h1 = Enthalpy(Water, P=P_cond, x=0)
-v1 = Volume(Water, P=P_cond, x=0)
+h1 = Enthalpy(Water, P=P1, x=0)
+v1 = Volume(Water, P=P1, x=0)
 
 { Pump (state 1 -> 2) }
-w_pump = v1 * (P_boiler - P_cond)
+w_pump = v1 * (P2 - P1)
 h2 = h1 + w_pump
 
 { State 3: boiler exit (superheated) }
-h3 = Enthalpy(Water, P=P_boiler, T=480 [C])
-s3 = Entropy(Water, P=P_boiler, T=480 [C])
+h3 = Enthalpy(Water, P=P3, T=480 [C])
+s3 = Entropy(Water, P=P3, T=480 [C])
 
 { State 4: turbine exit (isentropic, s4 = s3) }
-h4 = Enthalpy(Water, P=P_cond, s=s3)
+h4 = Enthalpy(Water, P=P4, s=s3)
+x4 = Quality(Water, P=P4, h=h4)
+
+{ Temperature and entropy at every state, for the T-s plot }
+T1 = Temperature(Water, P=P1, h=h1)
+s1 = Entropy(Water, P=P1, h=h1)
+T2 = Temperature(Water, P=P2, h=h2)
+s2 = Entropy(Water, P=P2, h=h2)
+T3 = Temperature(Water, P=P3, h=h3)
+T4 = Temperature(Water, P=P4, h=h4)
+s4 = Entropy(Water, P=P4, h=h4)
 
 { Performance }
 q_in = h3 - h2
 w_turb = h3 - h4
 eta_th = (w_turb - w_pump) / q_in
 
+{ The cycle on a temperature-entropy diagram, in the Plots pane }
+PLOT 'Rankine T-s'
+  kind = property
+  fluid = Water
+  diagram = 'T-s'
+  overlaystates = true
+  connectstates = true
+END
+
 { CHECK q_in 3149767.154885827 3.2e-3 }
 { CHECK w_turb 1240252.0387124298 1.3e-3 }
-{ CHECK eta_th 0.39119716208990235 4e-10 }`,
+{ CHECK eta_th 0.39119716208990235 4e-10 }
+{ CHECK h1 191805.94455888413 2e-1 }
+{ CHECK h2 199878.01103599244 2e-1 }
+{ CHECK h4 2109393.127209397 3 }
+{ CHECK x4 0.8016492114992454 9e-7 }
+{ CHECK T1 318.9563289237973 4e-4 }`,
   },
   {
    id: 'hydraulic-metering-restriction',
