@@ -3,8 +3,7 @@
   "source": "{ Degenerate limits short-circuit to zero before the kernel runs. }\nZ = Integral(1/w, w, 2, 2)\n",
   "expect": {
     "variables": {
-      "Z": 0.0,
-      "w": 2.0
+      "Z": 0.0
     },
     "display_names": {
       "w": "w",
@@ -14,7 +13,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `w` is no longer a result row."
   }
 }

@@ -4,10 +4,9 @@
   "expect": {
     "variables": {
       "C": 0.02,
-      "V": 2.559999973099274,
+      "V": 2.560000000013044,
       "V0": 1.0,
-      "drop": -1.559999973099274,
-      "t": 60.0
+      "drop": -1.5600000000130438
     },
     "display_names": {
       "c": "C",
@@ -17,12 +16,11 @@
       "v0": "V0"
     },
     "block_count": 5,
-    "ode_tables": [
-    ],
+    "ode_tables": [],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: drop = 1 - (1 + 0.02*60/2)^2 = -1.56, V = 2.56 (separable: sqrt(V0 - drop) = 1 + C*t/2)."
   }
 }

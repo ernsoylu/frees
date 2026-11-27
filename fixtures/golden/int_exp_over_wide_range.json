@@ -3,8 +3,7 @@
   "source": "{ e^x from 0 to 5 is e^5 - 1 = 147.4131591025766. }\nE = Integral(exp(u), u, 0, 5)\n",
   "expect": {
     "variables": {
-      "E": 147.41316201707653,
-      "u": 5.0
+      "E": 147.41315910074644
     },
     "display_names": {
       "e": "E",
@@ -14,7 +13,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `u` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: E = e^5 - 1 = 147.4131591025766."
   }
 }

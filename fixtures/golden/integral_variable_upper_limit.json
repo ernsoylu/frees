@@ -4,8 +4,7 @@
   "expect": {
     "variables": {
       "F": 9.0,
-      "b": 3.0,
-      "t": 3.0
+      "b": 3.0
     },
     "display_names": {
       "b": "b",
@@ -16,7 +15,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row."
   }
 }

@@ -5,8 +5,7 @@
     "variables": {
       "A": 8.0,
       "b": 4.0,
-      "c": 2.0,
-      "v": 4.0
+      "c": 2.0
     },
     "display_names": {
       "a": "A",
@@ -18,7 +17,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `v` is no longer a result row."
   }
 }

@@ -5,8 +5,7 @@
     "variables": {
       "F": 8.0,
       "b": 2.0,
-      "g": 12.0,
-      "t": 2.0
+      "g": 12.0
     },
     "display_names": {
       "b": "b",
@@ -15,12 +14,11 @@
       "t": "t"
     },
     "block_count": 3,
-    "ode_tables": [
-    ],
+    "ode_tables": [],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row."
   }
 }

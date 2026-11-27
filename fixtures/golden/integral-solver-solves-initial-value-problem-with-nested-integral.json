@@ -3,10 +3,9 @@
   "source": "y = y0 + Integral(dydt, t, 0, 5)\ndydt = y * cos(t)\ny0 = 1\n",
   "expect": {
     "variables": {
-      "dydt": 0.10872913921636329,
-      "integral_1": -0.6166949816070607,
-      "t": 5.0,
-      "y": 0.3833050183929393,
+      "dydt": 0.10872913262757206,
+      "integral_1": -0.6166950048346588,
+      "y": 0.3833049951653412,
       "y0": 1.0
     },
     "display_names": {
@@ -16,12 +15,11 @@
       "y0": "y0"
     },
     "block_count": 5,
-    "ode_tables": [
-    ],
+    "ode_tables": [],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: y = e^sin(5) = 0.38330499517227, dydt = y*cos(5) (y' = y*cos(t), y(0) = 1)."
   }
 }

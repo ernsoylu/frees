@@ -5850,9 +5850,9 @@ fn find_integrals(
 ///   `F = <value>`, with `t` pinned at the upper limit.
 ///
 /// Those pins are what make an integral document square: without them
-/// `F = Integral(t^2, t, 0, 1)` is one equation in two unknowns. They are also
-/// why the integration variable **survives as a result variable** sitting at
-/// the upper limit, which is the parent engine's documented behaviour.
+/// `F = Integral(t^2, t, 0, 1)` is one equation in two unknowns. The pinned
+/// integration variable is still the integral's dummy, so the prepared
+/// solve leaves it out of the solution's variables (FX1e).
 ///
 /// Returns the lowered equations and the Newton iterations the sweeps
 /// consumed (the Java `IntegrationState.iterations`, which is added to the
@@ -5911,7 +5911,7 @@ fn lower_integrals(
             },
             ie.lower(),
             ie.upper(),
-            ie.fixed_step,
+            ie.max_step,
         )?;
 
         if pinned_integration_vars.insert(ie.integration_var.clone()) {

@@ -3,8 +3,7 @@
   "source": "{ Upper limit below the lower one: the integral must change sign. }\nR = Integral(2*t, t, 3, 1)\n",
   "expect": {
     "variables": {
-      "R": -7.9999999999995834,
-      "t": 1.0
+      "R": -7.9999999999995834
     },
     "display_names": {
       "r": "R",
@@ -14,7 +13,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row."
   }
 }
