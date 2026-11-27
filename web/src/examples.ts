@@ -228,14 +228,14 @@ END
   How the ODE is written: frees integrates an ODE only when the
   integrand references the integral's OWN result, and that result
   starts at 0. So we integrate the DROP from the initial level and
-  rebuild h = h0 - drop. Integration limits must be plain numbers
-  (here 0 to 60 seconds). }
+  rebuild h = h0 - drop. Integration limits must be constants
+  (here 0 to 60 [s]; the unit makes tau, and so drop, come out right). }
 g = 9.81 [m/s^2]
 A_tank = 1.0 [m^2]        { tank cross-section }
 a_orifice = 0.0015 [m^2]  { orifice area }
 h0 = 2.0 [m]              { initial water height }
 
-drop = Integral((a_orifice/A_tank)*sqrt(2*g*(h0 - drop)), tau, 0, 60)
+drop = Integral((a_orifice/A_tank)*sqrt(2*g*(h0 - drop)), tau, 0, 60 [s])
 h = h0 - drop            { water height after 60 s }
 
 { CHECK h 1.4759539485188307 1e-10 }
@@ -930,12 +930,12 @@ END
   The Integral ODE feedback only works when the integrand
   references its own result (which starts at 0), so we integrate
   the temperature DROP and rebuild T = T0 - drop. Limits must be
-  plain numbers (0 to 30 seconds). }
+  constants (0 to 30 [s]; the unit makes tau, and so drop, come out right). }
 k = 0.05 [1/s]           { cooling constant }
 T_inf = 20 [C]           { ambient temperature }
 T0 = 90 [C]              { initial temperature }
 
-drop = Integral(k*(T0 - drop - T_inf), tau, 0, 30)
+drop = Integral(k*(T0 - drop - T_inf), tau, 0, 30 [s])
 T = T0 - drop            { temperature after 30 s }
 
 { CHECK T 308.76911121039007 1e-8 }

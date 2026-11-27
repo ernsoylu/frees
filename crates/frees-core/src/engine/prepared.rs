@@ -65,6 +65,9 @@ pub struct PreparedDocument {
     /// behind the ordinary ones. Pins go in ahead of them, where the text
     /// solve's appended override lines land.
     integral_tail: usize,
+    /// The `Integral`s as the unit checker reads them, in place of that
+    /// lowered tail (`integral::unit_view`).
+    integral_units: Vec<Equation>,
     /// Every `Integral`'s integration variable. Lowering pins each at its
     /// upper limit so the system is square, but it is the integral's dummy,
     /// not a result, so it is left out of the solution's variables.
@@ -219,6 +222,7 @@ impl PreparedDocument {
             .iter()
             .map(|ie| ie.integration_var.clone())
             .collect();
+        let integral_units = crate::integral::unit_view(&integrals);
         let equations = if integrals.is_empty() {
             if settings.complex_mode {
                 let mut complex_names: HashMap<String, String> = doc
@@ -297,6 +301,7 @@ impl PreparedDocument {
             ode_accessors,
             unaugmented,
             integral_tail,
+            integral_units,
             integration_vars,
             prep: None,
             literal_pins: Vec::new(),
@@ -392,18 +397,15 @@ impl PreparedDocument {
             }
             let display_names = complete_display_names(&names, &subsystem);
             // Literal pins carry units, which the text solve would infer from.
-            let with_literals;
-            let unit_equations = match self.unaugmented.as_deref() {
-                Some(raw) if !self.literal_pins.is_empty() => {
-                    let (head, tail) = raw.split_at(raw.len() - self.integral_tail);
-                    with_literals = [head, &self.literal_pins, tail].concat();
-                    &with_literals
-                }
-                Some(raw) => raw,
-                None => &subsystem,
+            // The lowered integral tail is replaced by the integrals as written.
+            let (head, pins): (&[Equation], &[Equation]) = match self.unaugmented.as_deref() {
+                Some(raw) => (raw, &self.literal_pins),
+                None => (&subsystem, &[]),
             };
+            let head = &head[..head.len() - self.integral_tail];
+            let unit_equations = [head, pins, &self.integral_units].concat();
             let (declared, unit_report) = unit_check(
-                unit_equations,
+                &unit_equations,
                 &self.doc.dynamics,
                 &self.overrides,
                 &self.component_member_units,

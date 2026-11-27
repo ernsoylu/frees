@@ -2045,6 +2045,9 @@ pub fn check_with_tables_complex(
     // The DYNAMIC bodies after the component layer rewrote their dotted
     // references, for the unit check below.
     let mut dynamics = doc.dynamics.clone();
+    // A document with `Integral`s is unit-checked on the integrals as
+    // written, not on the structural placeholders (`integral::unit_view`).
+    let mut integral_unit_equations: Option<Vec<Equation>> = None;
     let expanded = (|| {
         let mut doc = doc.clone();
         // Stage 1b — the component layer, at the Java position (see
@@ -2092,6 +2095,9 @@ pub fn check_with_tables_complex(
         if integrals.is_empty() {
             crate::parser::complex::expand_complex(equations, complex_mode)
         } else {
+            let mut units = crate::integral::ordinary_equations(&equations, &integrals);
+            units.extend(crate::integral::unit_view(&integrals));
+            integral_unit_equations = Some(units);
             crate::integral::structural_view(&equations, &integrals)
         }
     })();
@@ -2198,10 +2204,17 @@ pub fn check_with_tables_complex(
     // `unit_check` puts them back into the *reported* map too (`putIfAbsent`),
     // because a port member's unit comes from its physical domain and nothing
     // else can derive it.
-    let (_, unit_report) = unit_check(&equations, &dynamics, overrides, &member_units, &doc.defs);
+    let unit_equations = integral_unit_equations.as_deref().unwrap_or(&equations);
+    let (_, unit_report) = unit_check(
+        unit_equations,
+        &dynamics,
+        overrides,
+        &member_units,
+        &doc.defs,
+    );
     let mut inferred_units = unit_report.inferred;
     let converted_units = unit_report.converted;
-    inferred_units.extend(literal_units(&equations));
+    inferred_units.extend(literal_units(unit_equations));
 
     let base = CheckReport {
         registered_calls: doc.registered_calls.clone(),

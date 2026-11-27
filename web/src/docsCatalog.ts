@@ -1021,6 +1021,8 @@ with \`x=0\` (liquid) or \`x=1\` (vapour); pressure and temperature at saturatio
 not determine the vapour fraction. \`Quality\` returns \`-1\` for a single-phase
 state, not an extrapolated fraction or a value to clamp to the interval 0–1.
 
+Each real fluid's equation of state has an upper validity limit, \`Tmax\` and \`pmax\`. A call whose \`T=\` or \`P=\` input lies above it still returns the equation's extrapolation, and the solve adds a warning that names the fluid and the limit. For example, \`Enthalpy(Water, T=5000 [C], P=1 [atm])\` is above Water's \`Tmax\` of 2000 K.
+
 Pass the fluid name first, then **two** named coordinates. The recognized coordinate keys are \`T\` (temperature), \`P\` (pressure), \`h\` (enthalpy), \`s\` (entropy), \`v\` (specific volume), \`x\` (quality: 0 saturated liquid, 1 saturated vapour), \`u\` (internal energy), \`D\` (density).
 
 \`\`\`
@@ -1516,6 +1518,12 @@ Each menu acts on the row or tab you opened it on, and also opens with the menu 
 - **Runs & Scenarios** is its own panel, beside the Variable Explorer: the run on screen, named scenarios, and the comparison with a baseline. Dock or float it to read it next to the values.
 - The playback and live strip, and the Runs & Scenarios panel, start with one label that says what the values are: **Live**, **Running**, **Stopped**, **Recorded time**, **Failed**, **Stale** or **Current**, with the run's number.
 
+### Projects and runs
+- **Autosave.** The whole workspace (equations, tables, plots, guesses and layout) is saved in this browser a moment after each change, and a reload brings it back. A second copy in the browser's larger storage keeps updating once the workspace outgrows the first. If that copy is newer than what loaded, a notice offers to restore it instead of replacing what is on screen.
+- **Browser Projects…** (File) keeps named projects in this browser, with no server and no files. **Save “name”** stores the open project under its name; saving the same name again overwrites it. Each row has **Open**, **Rename** and **Delete** (click twice). If another tab saves, renames or deletes the project you have open, a notice says so, and the last save wins.
+- **Save Project** (\`Ctrl + S\`) writes a \`.frees\` file instead. Use it to move a project between machines.
+- **Runs & Scenarios** numbers each solve. A scenario (**New**, **Rename**, **Delete**) is a named set of input values that the solve uses in place of the document's own, so the text never changes. **Set as baseline** pins the current run, and the panel then compares it with each new one: **Variable**, **Baseline**, **Current** and **Change**, for values whose units convert. **Clear baseline** drops it.
+
 ### Analysis tools as windows
 Optimization, Curve Fit, Parameter Estimation, Monte Carlo, Global Sensitivity and the PID Tuner each list their settings in the same order: **Target**, **Inputs**, **Method**, **Advanced**, **Run**, **Results**, **Apply / Export**. A tool leaves out a step it has nothing for.
 
@@ -1849,6 +1857,8 @@ T = 25 [C]         { stored as 298.15 K }
 \`\`\`
 The full list of recognized units and built-in constants lives in the reference table below (\`[Component: UnitsReference]\`).
 
+Unit names ignore case (\`kPa\`, \`KPA\` and \`kpa\` are one unit), except where case is the whole difference: \`m\` is milli and \`M\` is mega (\`mW\` and \`MW\`, \`mPa\` and \`MPa\`, \`mg\` and \`Mg\`), \`s\` is a second and \`S\` a siemens, and \`h\` is an hour and \`H\` a henry. After the prefix letter, any case works, so \`Mpa\` is a megapascal. A lowercase spelling such as \`[mpa]\` or \`[mw]\` is ambiguous and is reported as an unknown unit that names both readings. Write \`MPa\` for mega or \`mPa\` for milli.
+
 ## Results are SI
 A computed result has the SI unit of its expression — \`P * Vol = m * R * T\` gives \`m\` in kg, \`q = k*A*dT/L\` gives watts. To display in engineering units, either convert explicitly, set display units in the Variable Settings window, or use the \`Convert\` function:
 \`\`\`
@@ -1861,6 +1871,7 @@ P_kPa2 = P * Convert(Pa, kPa)    { using Convert }
 \`\`\`
 area_in2 = area_ft2 * Convert(ft^2, in^2)     { ×144 }
 \`\`\`
+A variable set this way holds the number of \`To\` units, so it is shown labelled in \`To\` (\`area_in2\` as \`[in^2]\`), and a Variable Information unit converts it from there. Use it as that number, for example in a correlation written in inches.
 
 ## Temperature conversions
 Temperature scales have offsets as well as scaling, so use \`ConvertTemp(From, To, value)\` instead of \`Convert\`:
@@ -1880,6 +1891,13 @@ P_kPa = P * Convert(Pa, kPa)  { converts SI Pa to kPa: 689.5 kPa }
 
 ## Absolute temperatures versus differences
 \`T = 25 [C]\` is an **absolute** temperature (stored as 298.15 K). A *difference* such as a 10 °C rise is 10 K — annotate it \`[deltaC]\` / \`[deltaK]\`, or write the kelvin difference directly. \`Convert(C, K)\` is the wrong tool for either: it has no offset, so it cannot turn 25 °C into 298.15 K, and it is unnecessary for a difference that is already 10 K.
+
+## Gauge pressures
+\`psig\` and \`barg\` are gauge scales measured over the fixed standard atmosphere, 101.325 kPa. So \`P = 30 [psig]\` is stored as 308167.7 Pa absolute, and \`0 [barg]\` is 101,325 Pa. As with °C, only a bare \`[psig]\` literal carries the offset; inside a compound unit such as \`[psig/s]\` it is a difference. Where the local atmosphere matters, write the absolute pressure in \`psia\`, \`bar\` or \`kPa\`.
+\`\`\`
+P = 30 [psig]          { 308167.7 Pa absolute }
+{ CHECK P 308167.71879504 1e-6 }
+\`\`\`
 
 ## Currency units
 Money is a dimension of its own, with USD as its base unit, so ISO currency codes
@@ -4564,8 +4582,8 @@ Query cells or statistical summaries of the active **Parametric Table**. These a
 
 ## Accessor functions
 - **\`TableValue(run, col)\`** — a cell value in the parametric table.
-- **\`TableRun#()\`** — the current run index (1-based).
-- **\`NParametricRuns()\`** — total configured runs.
+- **\`TableRun#(0)\`** — the current run index (1-based). The \`0\` is a placeholder; a call needs an argument.
+- **\`NParametricRuns(0)\`** — total configured runs.
 - **\`TableSum('col')\` / \`TableAvg('col')\`** — sum / average of a column.
 - **\`TableMin('col')\` / \`TableMax('col')\`** — minimum / maximum.
 - **\`TableStdDev('col')\`** — standard deviation.
@@ -4576,7 +4594,7 @@ Query cells or statistical summaries of the active **Parametric Table**. These a
 { Whole-cycle energy from a speed-sweep table }
 E_total = IntegralValue('P', 't')      { trapezoid integral of power over time }
 P_avg   = TableAvg('P')                { mean power, same in every row }
-current_index = TableRun#()
+current_index = TableRun#(0)
 \`\`\`
 
 [Related: optimization, lookup-tables, plot-code]`,

@@ -471,3 +471,56 @@ fn a_synthetic_name_never_collides_with_a_document_variable() {
     );
     assert_within(get(&solution, "y"), 4.5, 1e-9);
 }
+
+/// An `Integral` carries the integrand's unit times the integration
+/// variable's, on both paths and in Check as in Solve: a dimensionless
+/// integral is `-` either way, and `∫x dx` over metres is `m^2`.
+#[test]
+fn an_integral_carries_the_integrand_unit_times_the_variable_unit() {
+    let source = "F = Integral(t^2, t, 0, 2)\n\
+                  B = Integral(x, x, 0, 2 [m])\n\
+                  L = 2 [m]\n\
+                  C = Integral(y, y, 0, L)\n\
+                  v = 3 [m/s]\n\
+                  D = Integral(v, tau, 0, 4 [s])\n\
+                  w = 3 [m/s]\n\
+                  E = Integral(w, z, 0, T_end)\n\
+                  T_end = 4 [s]\n\
+                  G = GaussIntegral(s, s, 0, 2 [m])\n";
+    let solution = solved(source);
+    let report = checked(source);
+    for (name, unit) in [
+        ("f", "-"),
+        ("b", "m^2"),
+        ("c", "m^2"),
+        ("d", "m"),
+        ("e", "m"),
+        ("g", "m^2"),
+    ] {
+        assert_eq!(
+            solution.inferred_units.get(name).map(String::as_str),
+            Some(unit),
+            "solve: {name}"
+        );
+        assert_eq!(
+            report.inferred_units.get(name).map(String::as_str),
+            Some(unit),
+            "check: {name}"
+        );
+    }
+    assert!(
+        solution.unit_warnings.is_empty(),
+        "{:?}",
+        solution.unit_warnings
+    );
+    // Using the metres as seconds is now a unit warning, like any mismatch.
+    let wrong = solved("v = 3 [m/s]\nD = Integral(v, tau, 0, 4 [s])\nX = D + 1 [s]\n");
+    assert!(
+        wrong
+            .unit_warnings
+            .iter()
+            .any(|w| w.contains("[s]") && w.contains("[m]")),
+        "{:?}",
+        wrong.unit_warnings
+    );
+}
