@@ -182,6 +182,10 @@ pub struct Solution {
     /// `SolverApiSupport.unitsByLowerName` composition, which fills the
     /// `variables[].units` column of the solve response.
     pub inferred_units: BTreeMap<String, String>,
+    /// The variables whose value is in a `Convert` target unit rather than SI
+    /// (`x * Convert(A, B)` results), keyed to that unit, which display reads
+    /// them on.
+    pub converted_units: BTreeMap<String, String>,
     /// Unit-consistency warning sentences from [`crate::units::checker`], in
     /// Java emission order (`unitWarnings[]` in `api.ts`). Unit problems are
     /// warnings by the parent engine's invariant — they never block a solve.
@@ -389,6 +393,10 @@ pub struct CheckReport {
     /// `CheckController` composition (`deriveUnits` then `putAll(inferUnits)`),
     /// which deliberately leaves external `VariableInfo` units out.
     pub inferred_units: BTreeMap<String, String>,
+    /// The variables whose value is in a `Convert` target unit rather than SI
+    /// (`x * Convert(A, B)` results), keyed to that unit, which display reads
+    /// them on.
+    pub converted_units: BTreeMap<String, String>,
     /// Unit-consistency warning sentences from [`crate::units::checker`], in
     /// Java emission order (`unitWarnings[]` in `api.ts`). Never affects
     /// [`CheckReport::solvable`].
@@ -2106,6 +2114,7 @@ pub fn check_with_tables_complex(
                 errors: Vec::new(),
                 diagnosis: err.diagnosis().cloned(),
                 inferred_units: BTreeMap::new(),
+                converted_units: Default::default(),
                 unit_warnings: Vec::new(),
                 diagnostics: check_diagnostics,
                 plots: doc.blocks.plots.clone(),
@@ -2145,6 +2154,7 @@ pub fn check_with_tables_complex(
             error_line: None,
             errors: Vec::new(),
             diagnosis: None,
+            converted_units: unit_report.converted,
             inferred_units: unit_report.inferred,
             unit_warnings: merge_advisory_warnings(unit_report.warnings, &check_diagnostics),
             diagnostics: check_diagnostics,
@@ -2190,6 +2200,7 @@ pub fn check_with_tables_complex(
     // else can derive it.
     let (_, unit_report) = unit_check(&equations, &dynamics, overrides, &member_units, &doc.defs);
     let mut inferred_units = unit_report.inferred;
+    let converted_units = unit_report.converted;
     inferred_units.extend(literal_units(&equations));
 
     let base = CheckReport {
@@ -2204,6 +2215,7 @@ pub fn check_with_tables_complex(
         errors: Vec::new(),
         diagnosis: None,
         inferred_units,
+        converted_units,
         unit_warnings: merge_advisory_warnings(unit_report.warnings, &diagnostics),
         diagnostics,
         plots: doc.blocks.plots.clone(),
@@ -3090,6 +3102,7 @@ fn syntax_failure_report(source: &str, err: &FreesError) -> CheckReport {
         errors,
         diagnosis: err.diagnosis().cloned(),
         inferred_units: BTreeMap::new(),
+        converted_units: Default::default(),
         unit_warnings: Vec::new(),
         diagnostics: vec![diagnostic],
         // A document that did not parse declares nothing.

@@ -225,6 +225,7 @@ P_kPa2 = P * Convert(Pa, kPa)    { using Convert }
 ```
 area_in2 = area_ft2 * Convert(ft^2, in^2)     { ×144 }
 ```
+A variable set this way holds the number of `To` units, so it is shown labelled in `To` (`area_in2` as `[in^2]`), and a Variable Information unit converts it from there. Use it as that number, for example in a correlation written in inches.
 
 ## Temperature conversions
 Temperature scales have offsets as well as scaling, so use `ConvertTemp(From, To, value)` instead of `Convert`:

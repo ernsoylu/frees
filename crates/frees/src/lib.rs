@@ -962,8 +962,15 @@ fn variable_rows(
             // `toVariableDto`: the uncertainty is looked up by the row's own
             // key — the display name lowercased — into `Result.uncertainties`.
             let si_unc = solution.uncertainties.get(&key).copied();
-            let (display_value, display_unit, display_unc) =
-                to_display(&key, *value, si_unc, unit, system, explicit_units);
+            let (display_value, display_unit, display_unc) = to_display(
+                &key,
+                *value,
+                si_unc,
+                unit,
+                solution.converted_units.get(&key).map(String::as_str),
+                system,
+                explicit_units,
+            );
             (
                 VariableRow {
                     name: display.clone(),
@@ -1097,14 +1104,28 @@ fn component_entries(solution: &Solution, vars: &[VariableRow]) -> Vec<Value> {
 ///    the recorded unit);
 /// 4. otherwise the recorded unit itself (factor-1 SI names pass through);
 /// 5. an unparseable unit string falls back to the SI value with the raw text.
+///
+/// `in_unit` names the unit a value is already in, when that is not SI (a
+/// `x * Convert(A, B)` result, `Solution::converted_units`). The value is
+/// lifted to SI on that unit's scale first, so the rules below treat it like
+/// any other: in the SI system it shows as it is, labelled with that unit, and
+/// an explicit or preferred unit converts it correctly.
 fn to_display(
     name_lower: &str,
     si_value: f64,
     si_unc: Option<f64>,
     unit: &str,
+    in_unit: Option<&str>,
     system: UnitSystem,
     explicit_units: &BTreeMap<String, String>,
 ) -> (f64, String, Option<f64>) {
+    let (si_value, si_unc) = match in_unit.map(UnitRegistry::parse_with_offset) {
+        Some(Ok(scale)) => (
+            si_value * scale.factor + scale.offset,
+            si_unc.map(|u| u * scale.factor),
+        ),
+        _ => (si_value, si_unc),
+    };
     // A stated sigma scales by the display unit's FACTOR only — it is an
     // interval width, so the additive offset of e.g. [C] must not touch it.
     // Port of `SolverApiSupport.convertToDisplayUnit`, which divides
@@ -2296,6 +2317,45 @@ mod tests {
 
     /// `PARAMETRIC … END` reaches the frontend as `ParametricTableDto`, from a
     /// Check of the underspecified model (its fallback) and from a Solve.
+    #[test]
+    fn a_convert_result_displays_its_number_in_the_target_unit() {
+        // `Convert` returns the factor, so E_kWh holds kilowatt-hours: shown
+        // as 66000 [kWh], not 66000 [J] (the old label) nor rescaled from SI.
+        let text = "E_total = 2.376e11 [J]\nE_kWh = E_total * Convert(J, kWh)\nm = 0.29216 [kg]\nm_g = m * Convert(kg, g)\nmoney = E_kWh * 0.12\n";
+        let v = parsed(&solve(text, "{}"));
+        let row = |name: &str| {
+            v["variables"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|r| r["name"] == name)
+                .unwrap_or_else(|| panic!("{name}: {v}"))
+                .clone()
+        };
+        assert_eq!(row("E_kWh")["units"], "kWh");
+        assert!((row("E_kWh")["value"].as_f64().unwrap() - 66000.0).abs() < 1e-6);
+        assert_eq!(row("m_g")["units"], "g");
+        assert!((row("m_g")["value"].as_f64().unwrap() - 292.16).abs() < 1e-9);
+        // The numbers themselves are unchanged: money is still 0.12 per kWh.
+        assert!((row("money")["value"].as_f64().unwrap() - 7920.0).abs() < 1e-6);
+        // A Variable Information unit converts it from kWh, not from SI.
+        let v = parsed(&solve(
+            text,
+            r#"{"variableInfo": [{"name": "E_kWh", "units": "MJ"}]}"#,
+        ));
+        let mj = v["variables"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["name"] == "E_kWh")
+            .unwrap();
+        assert_eq!(mj["units"], "MJ", "{v}");
+        assert!(
+            (mj["value"].as_f64().unwrap() - 237600.0).abs() < 1e-6,
+            "{v}"
+        );
+    }
+
     #[test]
     fn declared_state_tables_reach_the_frontend() {
         let text = "P_1 = 1\nT_1 = 2\nP_2 = 3\nSTATE TABLE Loop(P_1, T_1)\n  FLUID = Water\nEND\nSTATE TABLE Other(P_2)\nEND\n";

@@ -123,8 +123,15 @@ pub fn store_session(
             .map(String::as_str)
             .unwrap_or("");
         let si_unc = solution.uncertainties.get(&key).copied();
-        let (display, display_unit, display_unc) =
-            to_display(&key, *si, si_unc, unit, system, explicit_units);
+        let (display, display_unit, display_unc) = to_display(
+            &key,
+            *si,
+            si_unc,
+            unit,
+            solution.converted_units.get(&key).map(String::as_str),
+            system,
+            explicit_units,
+        );
         vars.insert(
             canonical.clone(),
             ReplVar {
