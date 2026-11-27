@@ -49,6 +49,10 @@ pub struct UnitReport {
     /// dimensionless). Contains only variables *derived* here, never the
     /// declared ones.
     pub inferred: BTreeMap<String, String>,
+    /// The derived variables whose value is in a `Convert` target unit, not in
+    /// SI, keyed to that unit: `E_kWh = E_total * Convert(J, kWh)` holds the
+    /// number of kilowatt-hours, so display reads it on the kWh scale.
+    pub converted: BTreeMap<String, String>,
 }
 
 /// Check all equations against declared variable units and derive SI units for
@@ -242,10 +246,68 @@ pub fn check_units_full(
     }
 
     warnings.extend(checker.warnings);
+    let converted = convert_labels(equations, &checker.variable_dims, &mut derived);
     UnitReport {
         warnings,
         inferred: derived,
+        converted,
     }
+}
+
+/// `v = … Convert(A, B) …` holds the number of `B`s (Convert is folded to the
+/// bare factor at parse time), so it is read on the `B` scale, and a derived
+/// `v` is labelled `B` rather than the SI unit its dimensions give. Applies
+/// when exactly one `Convert` appears in the equation's source text and `B`
+/// has the dimensions known for `v` (derived or declared); returns those names
+/// with `B`. A dimension mismatch, or any doubt, keeps the SI reading.
+fn convert_labels(
+    equations: &[Equation],
+    dims: &HashMap<String, Quantity>,
+    derived: &mut BTreeMap<String, String>,
+) -> BTreeMap<String, String> {
+    let mut converted = BTreeMap::new();
+    for eq in equations {
+        let Expr::Var(name) = &eq.lhs else { continue };
+        let Some([_, to]) = single_convert_args(&eq.source_text) else {
+            continue;
+        };
+        let (Ok(target), Some(current)) = (UnitRegistry::parse(&to), dims.get(name)) else {
+            continue;
+        };
+        if target.same_dimensions_as(current) {
+            if let Some(label) = derived.get_mut(name) {
+                label.clone_from(&to);
+            }
+            converted.insert(name.clone(), to);
+        }
+    }
+    converted
+}
+
+/// The two unit arguments of the only `Convert(…)` call in `source`,
+/// unquoted; `None` for zero or several calls.
+fn single_convert_args(source: &str) -> Option<[String; 2]> {
+    let lower = source.to_ascii_lowercase();
+    let mut found = None;
+    let mut from = 0;
+    while let Some(at) = lower[from..].find("convert(").map(|i| i + from) {
+        from = at + "convert(".len();
+        let preceded = lower[..at].chars().next_back();
+        if preceded.is_some_and(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$') {
+            continue;
+        }
+        if found.is_some() {
+            return None;
+        }
+        let close = source[from..].find(')')? + from;
+        let args: Vec<String> = source[from..close]
+            .split(',')
+            .map(|a| a.trim().trim_matches(|c| c == '\'' || c == '"').to_string())
+            .collect();
+        let [a, b]: [String; 2] = args.try_into().ok()?;
+        found = Some([a, b]);
+    }
+    found
 }
 
 /// SI unit expression of each property function output, or `None` when the
@@ -1462,6 +1524,35 @@ mod tests {
     }
 
     // -- inference ----------------------------------------------------------
+
+    #[test]
+    fn a_convert_result_is_labelled_in_its_target_unit() {
+        // Convert is folded to the bare factor, so `E_kWh` holds kilowatt-hours:
+        // its label is kWh, and it is marked as already in that unit.
+        let report = check_units(
+            &eqs("E_kWh = E * Convert(J, kWh)\nm_g = m * Convert('kg', 'g')"),
+            &units(&[("E", "J"), ("m", "kg")]),
+        );
+        assert_eq!(
+            report.inferred.get("e_kwh").map(String::as_str),
+            Some("kWh")
+        );
+        assert_eq!(report.inferred.get("m_g").map(String::as_str), Some("g"));
+        assert_eq!(
+            report.converted.get("e_kwh").map(String::as_str),
+            Some("kWh")
+        );
+        assert_eq!(report.converted.get("m_g").map(String::as_str), Some("g"));
+        // A target whose dimensions disagree with the derived ones keeps the
+        // SI label, and so do two Converts in one equation.
+        let report = check_units(
+            &eqs("x = E * Convert(Pa, kPa)\ny = E * Convert(J, kWh) * Convert(kWh, J)"),
+            &units(&[("E", "J")]),
+        );
+        assert_eq!(report.inferred.get("x").map(String::as_str), Some("J"));
+        assert_eq!(report.inferred.get("y").map(String::as_str), Some("J"));
+        assert!(report.converted.is_empty());
+    }
 
     #[test]
     fn infers_units_for_multiplicative_definitions() {

@@ -37,7 +37,14 @@ T = 25 [C]
 R = 0.287 [kJ/kg-K]    { gas constant for air }
 P * Vol = m * R * T    { ideal gas equation }
 
-{ CHECK m 0.2921617103380253 3e-10 }`,
+{ Convert(From, To) is the factor between two units of one dimension, so
+  m_g is the number of grams, and it is labelled [g]. }
+m_g = m * Convert(kg, g)
+
+{ After Solve, open the REPL and ask for m_g: it answers 292.162 [g]. }
+
+{ CHECK m 0.2921617103380253 3e-10 }
+{ CHECK m_g 292.1617103380253 3e-7 }`,
   },
   {
     id: 'linear-regression-diagnostics',

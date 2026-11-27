@@ -603,6 +603,7 @@ impl PreparedDocument {
                     max_residual: 0.0,
                     elapsed_ms: None,
                 },
+                converted_units: unit_report.converted,
                 inferred_units: unit_report.inferred,
                 unit_warnings: merge_advisory_warnings(unit_report.warnings, &self.diagnostics),
                 diagnostics: self.diagnostics.clone(),
@@ -863,6 +864,7 @@ impl PreparedDocument {
         }
 
         let mut inferred_units = prep.unit_report.inferred.clone();
+        let converted_units = prep.unit_report.converted.clone();
         inferred_units.extend(prep.declared_units.clone());
         let mut live = live;
         if let Some(c) = live.as_deref_mut() {
@@ -892,6 +894,7 @@ impl PreparedDocument {
                 elapsed_ms: None,
             },
             inferred_units,
+            converted_units,
             unit_warnings: merge_advisory_warnings(prep.unit_report.warnings.clone(), &diagnostics),
             diagnostics,
             iterations,

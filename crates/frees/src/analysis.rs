@@ -694,7 +694,16 @@ fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> 
             .get(key)
             .map(String::as_str)
             .unwrap_or("");
-        crate::to_display(key, si, None, unit, system, &explicit_units).0
+        crate::to_display(
+            key,
+            si,
+            None,
+            unit,
+            base.converted_units.get(key).map(String::as_str),
+            system,
+            &explicit_units,
+        )
+        .0
     };
     let display_width = |key: &str, about: f64, width: f64| -> f64 {
         let unit = base
@@ -702,9 +711,17 @@ fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> 
             .get(key)
             .map(String::as_str)
             .unwrap_or("");
-        crate::to_display(key, about, Some(width), unit, system, &explicit_units)
-            .2
-            .unwrap_or(width)
+        crate::to_display(
+            key,
+            about,
+            Some(width),
+            unit,
+            base.converted_units.get(key).map(String::as_str),
+            system,
+            &explicit_units,
+        )
+        .2
+        .unwrap_or(width)
     };
 
     let mut stats: Vec<&frees_core::analysis::montecarlo::VariableStats> = outcome

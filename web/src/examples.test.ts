@@ -221,14 +221,14 @@ it('the featured examples are the curriculum, in order', () => {
 
 // EC4 gate: every fundamental the curriculum teaches, and the pattern that
 // finds it in a featured example's id, description or text. Dropping
-// `featured` from the only example that teaches one fails here. The four
+// `featured` from the only example that teaches one fails here. The two
 // `open` rows are not taught yet; NEXT_STEPS (EC4) says what each waits on.
 const FUNDAMENTALS: [string, RegExp | 'open'][] = [
   ['equations and units', /\[[\w^/.-]+\]/],
   ['implicit unknowns', /^\s*[\w.]+\s*[*/]\s*[\w.]+[^={\n]*=[^=]/m],
-  ['Convert()', 'open'],
+  ['Convert()', /\w\s*\*\s*Convert\(\w+,\s*\w+\)/],
   ['CHECK', /\{\s*CHECK\s/],
-  ['the REPL', 'open'],
+  ['the REPL', /open the REPL and ask for \w+/],
   ['arrays', /\w\[(i|\d+(:\d+)?)\]/],
   ['FOR loops', /^\s*FOR\s+\w+\s*=.*\bTO\b/m],
   ['multi-output calls', /^\s*\[[\w\s,]+\]\s*=\s*\w+\(/m],
@@ -276,5 +276,5 @@ it('the featured examples teach every fundamental', () => {
   expect(untaught).toEqual([])
   // An open row that starts matching is closed: drop 'open' and give it its pattern.
   expect(FUNDAMENTALS.filter(([, re]) => re === 'open').map(([name]) => name)).toEqual(
-    ['Convert()', 'the REPL', 'Monte Carlo', 'Sobol/Morris sensitivity'])
+    ['Monte Carlo', 'Sobol/Morris sensitivity'])
 })
