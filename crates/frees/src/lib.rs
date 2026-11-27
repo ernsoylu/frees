@@ -1243,6 +1243,8 @@ fn solve_success(
             "definedPlots": plot_defs(&solution.plots),
             // One entry per document `TABLE … END` block (`code_tables`).
             "codeTables": code_tables(&solution.tables),
+            // One entry per `STATE TABLE … END` block (`state_table_defs`).
+            "stateTableDefs": state_table_defs(&solution.state_tables),
             // One entry per `PARAMETRIC … END` block, shaped as
             // `ParametricTableDto`; the Tables window lists and runs it.
             "parametricTables": parametric_defs(&solution.parametric_tables),
@@ -1324,6 +1326,18 @@ fn code_tables(tables: &[frees_core::parser::defs::FunctionTableDef]) -> Value {
                     "argUnits": t.arg_units,
                 })
             })
+            .collect(),
+    )
+}
+
+/// `stateTableDefs[]` — each `STATE TABLE … END` block as the frontend's
+/// `StateTableDto`: its name as written, its state-point variables
+/// (lowercased, as the solve's own names are) and its fluid, or `null`.
+fn state_table_defs(tables: &[frees_core::parser::blocks::StateTableDef]) -> Value {
+    Value::Array(
+        tables
+            .iter()
+            .map(|t| json!({ "name": t.name, "variables": t.variables, "fluid": t.fluid }))
             .collect(),
     )
 }
@@ -1696,6 +1710,7 @@ fn check_response(report: &CheckReport, source: Option<&str>) -> String {
         // Check lists the document's tables too, so the workbook has them
         // before the first solve.
         "codeTables": code_tables(&report.tables),
+        "stateTableDefs": state_table_defs(&report.state_tables),
         // Check reports them too: an underspecified model falls back to its
         // first code-defined table (`checkWithFallback` in App.tsx).
         "parametricTables": parametric_defs(&report.parametric_tables),
@@ -1783,6 +1798,7 @@ fn check_failure(message: String) -> String {
         "errors": [],
         "definedPlots": [],
         "codeTables": [],
+        "stateTableDefs": [],
         "parametricTables": [],
         "connections": [],
         "ports": [],
@@ -2280,6 +2296,27 @@ mod tests {
 
     /// `PARAMETRIC … END` reaches the frontend as `ParametricTableDto`, from a
     /// Check of the underspecified model (its fallback) and from a Solve.
+    #[test]
+    fn declared_state_tables_reach_the_frontend() {
+        let text = "P_1 = 1\nT_1 = 2\nP_2 = 3\nSTATE TABLE Loop(P_1, T_1)\n  FLUID = Water\nEND\nSTATE TABLE Other(P_2)\nEND\n";
+        let expected = serde_json::json!([
+            { "name": "Loop", "variables": ["p_1", "t_1"], "fluid": "Water" },
+            { "name": "Other", "variables": ["p_2"], "fluid": null },
+        ]);
+        let v = parsed(&solve(text, "{}"));
+        assert_eq!(v["success"], true, "{v}");
+        assert_eq!(v["stateTableDefs"], expected, "{v}");
+        assert_eq!(parsed(&check(text, "{}"))["stateTableDefs"], expected);
+        assert_eq!(
+            parsed(&check("x = 1\n", "{}"))["stateTableDefs"],
+            serde_json::json!([])
+        );
+        assert_eq!(
+            parsed(&check("x = (\n", "{}"))["stateTableDefs"],
+            serde_json::json!([])
+        );
+    }
+
     #[test]
     fn a_document_table_reaches_the_frontend_and_a_gui_table_does_not_echo() {
         // The Curve Fit dialog lists the workbook's tables; a document TABLE

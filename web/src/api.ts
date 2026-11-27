@@ -382,15 +382,13 @@ export async function check(
       errorLine: data.errorLine ?? null,
       errors: data.errors ?? [],
       diagnosis: data.diagnosis ?? null,
-      // PLOT, PARAMETRIC and TABLE blocks reach the boundary, so the Plots and
-      // Tables windows (and the Curve Fit dialog) populate from a Check as well
-      // as from a Solve. STATE TABLE blocks are not produced by the wasm
-      // boundary yet; App.tsx treats the empty collection as "the document
-      // declares none".
+      // PLOT, PARAMETRIC, TABLE and STATE TABLE blocks reach the boundary, so
+      // the Plots and Tables windows (and the Curve Fit dialog) populate from
+      // a Check as well as from a Solve.
       definedPlots: data.definedPlots ?? [],
       codeTables: data.codeTables ?? [],
       parametricTables: data.parametricTables ?? [],
-      stateTableDefs: [],
+      stateTableDefs: data.stateTableDefs ?? [],
       connections: data.connections ?? [],
       ports: data.ports ?? [],
       instances: data.instances ?? [],
