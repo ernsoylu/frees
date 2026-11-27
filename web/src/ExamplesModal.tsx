@@ -9,21 +9,23 @@ interface Props {
   onSelect: (example: Example) => void
 }
 
-// A gallery of ready-to-solve examples. Picking one replaces the editor
-// document; the user can then press Solve (F2) to see a full result.
+// The curriculum (EC4): the featured examples, in EXAMPLES order. Picking one
+// replaces the editor document; the rest live in Help's Examples Library.
+const CURRICULUM = EXAMPLES.filter((ex) => ex.featured)
+
 export default function ExamplesModal({ opened, onClose, onSelect }: Readonly<Props>) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
   const categories = useMemo(() => {
-    const cats = new Set(EXAMPLES.map((ex) => ex.category))
+    const cats = new Set(CURRICULUM.map((ex) => ex.category))
     return Array.from(cats).sort((a, b) => a.localeCompare(b))
   }, [])
 
   const filteredExamples = useMemo(() => {
     if (!selectedCategory) {
-      return EXAMPLES
+      return CURRICULUM
     }
-    return EXAMPLES.filter((ex) => ex.category === selectedCategory)
+    return CURRICULUM.filter((ex) => ex.category === selectedCategory)
   }, [selectedCategory])
 
   return (
@@ -39,7 +41,7 @@ export default function ExamplesModal({ opened, onClose, onSelect }: Readonly<Pr
           <Text size="sm" c="dimmed" style={{ flex: 1, maxWidth: '80%' }}>
             Pick a worked example to load into the editor, then press{' '}
             <strong>Solve</strong> (F2). Each one is ready to run — edit the inputs
-            to explore.
+            to explore. More examples are in Help → Engineering Examples Library.
           </Text>
           <Select
             placeholder="All Categories"

@@ -206,3 +206,15 @@ it('a Help handoff loads the example it names', () => {
   expect(exampleFromHandoff(handoff({ example: lesson.id }), now + 6 * 60_000)).toBeNull()
   expect(exampleFromHandoff('{', now)).toBeNull()
 })
+
+// EC4: the picker is the curriculum — exactly these, in this order (owner
+// decision 2026-11-22). EXAMPLES order is the picker's order.
+it('the featured examples are the curriculum, in order', () => {
+  expect(EXAMPLES.filter((e) => e.featured).map((e) => e.id)).toEqual([
+    'ideal-gas', 'linear-regression-diagnostics', 'pump-valve-operating-point', 'rankine-cycle',
+    'hydraulic-metering-restriction', 'tank-draining', 'sounding-rocket-trajectory', 'projectile-trajectory',
+    'step-impulse-response', 'cruise-control', 'ev-battery-cooling-pid', 'ev-thermal-management',
+    'multi-objective-beam', 'correlated-temperature-heat-loss', 'vibration-tone-spectrum', 'lab-air-mixing',
+    'lesson-rc-charging',
+  ])
+})
