@@ -57,9 +57,8 @@ each item carries its own repro, and each fix lands with that repro as a test.
   - Not reverified on FX1f: a cold `Temperature(R134a, P=1282785, h=261234)` (compressed liquid) differed by 7.3e-10 between native and WASM with the seed bypassed, where every other call measured agreed to 4e-13. If `md-hpwh` still splits the targets, start there.
 
 **FX3. Wrong or surprising results from the language (not silent, but wrong).**
-- **FX3e. Gauge units and unknown units.** `mbar`, `ton` (refrigeration), `mph`, `knot` and `inH2O` were added (#166). Two parts wait on the owner:
-  - *Owner decision:* `psig` and `barg` need an atmosphere convention: a fixed 101.325 kPa, or a refusal that names `psia`.
-    **Decided 2026-11-27:** a fixed standard atmosphere, 101.325 kPa (0 psig = 101.325 kPa absolute).
+- **FX3e. Gauge units and unknown units.** `mbar`, `ton` (refrigeration), `mph`, `knot` and `inH2O` were added (#166).
+  - Done (decided 2026-11-27): `psig` and `barg` are gauge scales over the fixed standard atmosphere, 101.325 kPa, so `0 [psig]` is 101,325 Pa absolute. Like °C, only a bare literal carries the offset (`[psig/s]` is a difference), and the checker's absolute-temperature rules no longer read a gauge offset as a temperature. The language guide has a "Gauge pressures" section.
   - *Owner decision:* an unknown unit leaves the value unconverted and the solve reports OK, with a warning. Making an unknown unit on a literal a preparation error changes the frozen golden `units_unknown_unit_warns`, which pins the warning, so it needs approval to regenerate that golden. No other corpus, doc or gallery document carries an unknown unit (scanned 2026-11-25).
     **Decided 2026-11-27:** an unknown unit on a literal is an error that quotes the unit and suggests the nearest known one; `units_unknown_unit_warns` is regenerated for this cause.
 

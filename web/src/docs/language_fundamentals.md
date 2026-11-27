@@ -246,6 +246,13 @@ P_kPa = P * Convert(Pa, kPa)  { converts SI Pa to kPa: 689.5 kPa }
 ## Absolute temperatures versus differences
 `T = 25 [C]` is an **absolute** temperature (stored as 298.15 K). A *difference* such as a 10 °C rise is 10 K — annotate it `[deltaC]` / `[deltaK]`, or write the kelvin difference directly. `Convert(C, K)` is the wrong tool for either: it has no offset, so it cannot turn 25 °C into 298.15 K, and it is unnecessary for a difference that is already 10 K.
 
+## Gauge pressures
+`psig` and `barg` are gauge scales measured over the fixed standard atmosphere, 101.325 kPa. So `P = 30 [psig]` is stored as 308167.7 Pa absolute, and `0 [barg]` is 101,325 Pa. As with °C, only a bare `[psig]` literal carries the offset; inside a compound unit such as `[psig/s]` it is a difference. Where the local atmosphere matters, write the absolute pressure in `psia`, `bar` or `kPa`.
+```
+P = 30 [psig]          { 308167.7 Pa absolute }
+{ CHECK P 308167.71879504 1e-6 }
+```
+
 ## Currency units
 Money is a dimension of its own, with USD as its base unit, so ISO currency codes
 work exactly like engineering units — `[USD]`, `[EUR]`, `[GBP]`, `[TRY]`, `[JPY]`,

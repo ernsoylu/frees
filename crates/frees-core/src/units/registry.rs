@@ -36,6 +36,11 @@ pub const FAHRENHEIT_OFFSET_K: f64 = 459.67 * 5.0 / 9.0;
 /// Kelvin offset of the Celsius scale.
 pub const CELSIUS_OFFSET_K: f64 = 273.15;
 
+/// The atmosphere a gauge pressure (`psig`, `barg`) is measured over: the
+/// fixed standard atmosphere, so `0 [psig]` is 101 325 Pa absolute (decided
+/// 2026-11-27, FX3e). A site's local pressure needs `psia` or `bar`.
+pub const STANDARD_ATMOSPHERE_PA: f64 = 101_325.0;
+
 // ---------------------------------------------------------------------------
 // Dimension vectors — index order is [kg, m, s, K, mol, A, cd]
 // ---------------------------------------------------------------------------
@@ -84,7 +89,7 @@ const KINEMATIC_VISCOSITY: Dims = dims_from(&[0.0, 2.0, -1.0]);
 
 /// The dimension of an absolute temperature (and of a temperature difference —
 /// they are indistinguishable, which is why offsets are opt-in).
-const TEMPERATURE_DIMS: Dims = TEMPERATURE;
+pub const TEMPERATURE_DIMS: Dims = TEMPERATURE;
 
 /// The energy/torque dimension `kg·m²·s⁻²` — shared by joules and moments.
 const MOMENT_DIMS: Dims = ENERGY;
@@ -173,6 +178,10 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("atm", 101325.0, PRESSURE),
     ("psi", 6894.757293168, PRESSURE),
     ("psia", 6894.757293168, PRESSURE),
+    // Gauge scales: a bare `[psig]`/`[barg]` adds the standard atmosphere
+    // (`parse_with_offset`); inside a compound unit they are a difference.
+    ("psig", 6894.757293168, PRESSURE),
+    ("barg", 1e5, PRESSURE),
     ("torr", 133.3223684, PRESSURE),
     ("mmhg", 133.3223684, PRESSURE),
     // FX3e. inH2O is the conventional inch of water, 0.0254 m x 1000 kg/m3 x g_n.
@@ -495,10 +504,12 @@ impl UnitRegistry {
     }
 
     /// Like [`UnitRegistry::parse`] but retains the additive offset that `C`
-    /// and `F` need. Conversion to SI is `value * factor + offset`.
+    /// and `F` need, and the gauge pressures `psig` and `barg` (over
+    /// [`STANDARD_ATMOSPHERE_PA`]). Conversion to SI is `value * factor + offset`.
     ///
     /// Only the *bare* scales carry an offset: a compound expression such as
-    /// `kJ/kg-C` is a per-degree (delta) unit and stays multiplicative.
+    /// `kJ/kg-C` or `psig/s` is a per-degree (delta) unit and stays
+    /// multiplicative.
     pub fn parse_with_offset(_unit: &str) -> Result<OffsetQuantity> {
         let text = _unit.trim().to_lowercase();
         if text == "c" {
@@ -509,6 +520,14 @@ impl UnitRegistry {
                 5.0 / 9.0,
                 FAHRENHEIT_OFFSET_K,
                 TEMPERATURE_DIMS,
+            ));
+        }
+        if text == "psig" || text == "barg" {
+            let gauge = UnitRegistry::parse(&text)?;
+            return Ok(OffsetQuantity::new(
+                gauge.factor,
+                STANDARD_ATMOSPHERE_PA,
+                gauge.dims,
             ));
         }
         Ok(UnitRegistry::parse(_unit)?.into())
@@ -1288,6 +1307,22 @@ mod tests {
         assert!(
             (f.to_si(-40.0) - UnitRegistry::parse_with_offset("C").unwrap().to_si(-40.0)).abs()
                 < 1e-9
+        );
+    }
+
+    #[test]
+    fn gauge_pressures_are_measured_over_the_standard_atmosphere() {
+        let psig = UnitRegistry::parse_with_offset("psig").unwrap();
+        assert_eq!(psig.to_si(0.0), 101_325.0);
+        assert_close(psig.to_si(30.0), 30.0 * 6894.757293168 + 101_325.0);
+        assert_close(psig.from_si(101_325.0 + 6894.757293168), 1.0);
+        let barg = UnitRegistry::parse_with_offset(" BARG ").unwrap();
+        assert_close(barg.to_si(2.0), 301_325.0);
+        assert_dims("barg", PRESSURE);
+        // Inside a compound unit a gauge scale is a difference: no offset.
+        assert_eq!(
+            UnitRegistry::parse_with_offset("psig/s").unwrap().offset,
+            0.0
         );
     }
 

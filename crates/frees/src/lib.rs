@@ -2318,6 +2318,43 @@ mod tests {
     /// `PARAMETRIC … END` reaches the frontend as `ParametricTableDto`, from a
     /// Check of the underspecified model (its fallback) and from a Solve.
     #[test]
+    fn a_gauge_pressure_is_measured_over_the_standard_atmosphere() {
+        // FX3e: `psig`/`barg` add 101.325 kPa; they used to be unknown units.
+        let text = "P = 30 [psig]\nP2 = 2 [barg]\ndP = P - P2\n";
+        let v = parsed(&solve(
+            text,
+            r#"{"variableInfo": [{"name": "P2", "units": "psig"}]}"#,
+        ));
+        let row = |name: &str| {
+            v["variables"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|r| r["name"] == name)
+                .unwrap()
+                .clone()
+        };
+        assert!(v["unitWarnings"].as_array().unwrap().is_empty(), "{v}");
+        let p = 30.0 * 6894.757293168 + 101_325.0;
+        assert!(
+            (row("P")["value"].as_f64().unwrap() - p).abs() < 1e-6,
+            "{v}"
+        );
+        assert_eq!(row("P")["units"], "Pa");
+        // Shown back on the gauge scale: 2 barg is 29.0075 psig.
+        assert_eq!(row("P2")["units"], "psig");
+        assert!(
+            (row("P2")["value"].as_f64().unwrap() - 2e5 / 6894.757293168).abs() < 1e-9,
+            "{v}"
+        );
+        // The atmospheres cancel in a difference.
+        assert!(
+            (row("dP")["value"].as_f64().unwrap() - (p - 301_325.0)).abs() < 1e-6,
+            "{v}"
+        );
+    }
+
+    #[test]
     fn a_convert_result_displays_its_number_in_the_target_unit() {
         // `Convert` returns the factor, so E_kWh holds kilowatt-hours: shown
         // as 66000 [kWh], not 66000 [J] (the old label) nor rescaled from SI.
