@@ -37,6 +37,11 @@ taken wider than it, so a feature narrower than the range is not stepped
 over. The same integral gives the same value with or without it, and whether
 the limits are numbers or unknowns.
 
+The result has the unit of `expr` times the unit of `var`, and `var` has its
+limits' unit: `Integral(v, tau, 0, 60 [s])` with `v` in `[m/s]` is in metres.
+Plain-number limits make `var` dimensionless, so give a limit its unit when
+the integrand has one.
+
 ## Mathematical Formulation
 
 $$ A = \int_{\text{lower}}^{\text{upper}} \text{expr}(\text{var})\,d(\text{var}) $$

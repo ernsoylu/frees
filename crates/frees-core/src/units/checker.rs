@@ -909,6 +909,40 @@ impl Checker {
         }
     }
 
+    /// `Integral(f, t, a, b)` and `GaussIntegral(f, t, a, b)` have the units
+    /// of `f` times `t`'s. `t` takes the units of a limit that has them, then
+    /// its own; with two bare-number limits and nothing else it is
+    /// dimensionless, as `t = 2` would make it. `f` is read with `t` bound to
+    /// those units, since `GaussIntegral` binds `t` and pins nothing.
+    fn dim_of_integral(&mut self, args: &[Expr]) -> Dim {
+        let [integrand, Expr::Var(var), lower, upper, ..] = args else {
+            return Dim::unknown();
+        };
+        let limit = [upper, lower]
+            .into_iter()
+            .map(|e| self.dim_of(e))
+            .find(|d| d.known);
+        let var_dims = match (limit, self.variable_dims.get(var)) {
+            (Some(d), _) => d.quantity,
+            (None, Some(q)) => *q,
+            (None, None) if lower.variables().is_empty() && upper.variables().is_empty() => {
+                Quantity::dimensionless(1.0)
+            }
+            (None, None) => return Dim::unknown(),
+        };
+        let saved = self.variable_dims.insert(var.clone(), var_dims);
+        let f = self.dim_of(integrand);
+        match saved {
+            Some(q) => self.variable_dims.insert(var.clone(), q),
+            None => self.variable_dims.remove(var),
+        };
+        if f.known {
+            Dim::of(f.quantity.multiply(&var_dims))
+        } else {
+            Dim::unknown()
+        }
+    }
+
     fn dim_of_num(&mut self, unit: Option<&str>) -> Dim {
         let Some(unit) = unit else {
             // A bare numeric constant adapts to its context.
@@ -1247,9 +1281,7 @@ impl Checker {
                     Dim::unknown()
                 }
             }
-            // Integral(f, t, a, b) has the dimensions of f*t; the checker does
-            // not track them, so stay agnostic instead of warning.
-            "integral" | "gaussintegral" => Dim::unknown(),
+            "integral" | "gaussintegral" => self.dim_of_integral(args),
             // Descriptive statistics carry the data's units (the data are the
             // arguments; for percentile the first argument is the percentile p).
             "mean" | "median" | "stdev" | "stddev" | "std" | "variance" | "var" | "rms" => {
