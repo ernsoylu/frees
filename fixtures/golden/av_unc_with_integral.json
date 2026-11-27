@@ -3,9 +3,8 @@
   "source": "{ Uncertainty alongside an Integral — the extraction happens BEFORE\n  findIntegrals, so the declaration must not reach the quadrature driver. }\nc = 2\nUncertaintyOf(c) = 0.05\nF = Integral(c*tt^2, tt, 0, 3)\nuF = UncertaintyOf(F)\n",
   "expect": {
     "variables": {
-      "F": 18.00000014422142,
+      "F": 18.000000000000004,
       "c": 2.0,
-      "tt": 3.0,
       "uF": 0.0,
       "uncertaintyof$c": 0.05,
       "uncertaintyof$f": 0.0,
@@ -19,12 +18,11 @@
       "uf": "uF"
     },
     "block_count": 4,
-    "ode_tables": [
-    ],
+    "ode_tables": [],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `tt` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: F = 18 (the integral of 2*tt^2 over [0, 3])."
   }
 }

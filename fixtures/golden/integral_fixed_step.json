@@ -3,8 +3,7 @@
   "source": "{ A fifth argument pins the step size instead of adapting.\n  Java IntegralTest.supportsFixedStepSize: F = 2. }\nF = Integral(t, t, 0, 2, 0.01)\n",
   "expect": {
     "variables": {
-      "F": 1.9999999999999984,
-      "t": 2.0
+      "F": 1.9999999999999984
     },
     "display_names": {
       "f": "F",
@@ -14,7 +13,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row."
   }
 }

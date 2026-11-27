@@ -3,8 +3,7 @@
   "source": "{ Default-step Simpson on a function with curvature: how close to 2? }\nS = Integral(sin(x), x, 0, 3.141592653589793)\n",
   "expect": {
     "variables": {
-      "S": 1.9999993342983777,
-      "x": 3.141592653589793
+      "S": 2.0000000000367755
     },
     "display_names": {
       "s": "S",
@@ -14,7 +13,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `x` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: S = 2 (the integral of sin over [0, pi])."
   }
 }

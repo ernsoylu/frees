@@ -3,8 +3,7 @@
   "source": "{ The subsystem is re-solved at every quadrature step: x = 2t, so\n  the integral of x^2 from 0 to 1 is 4/3 and the final x is 2.\n  Java IntegralTest.solvesSubsystemAtEveryStep. }\nx = 2*t\nF = Integral(x^2, t, 0, 1)\n",
   "expect": {
     "variables": {
-      "F": 1.3333333440164552,
-      "t": 1.0,
+      "F": 1.333333333333333,
       "x": 2.0
     },
     "display_names": {
@@ -16,7 +15,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: F = 4/3."
   }
 }

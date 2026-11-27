@@ -3,8 +3,7 @@
   "source": "{ A user FUNCTION inside the integrand must resolve through the defs map. }\nFUNCTION Sq(u)\n  Sq := u * u\nEND\n\nA = Integral(Sq(t), t, 0, 3)\n",
   "expect": {
     "variables": {
-      "A": 9.00000007211071,
-      "t": 3.0
+      "A": 9.000000000000002
     },
     "display_names": {
       "a": "A",
@@ -15,7 +14,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: A = 9 (the integral of u^2 over [0, 3])."
   }
 }
