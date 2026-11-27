@@ -363,6 +363,7 @@ starting from 0 at the lower limit.
 
 \`\`\`
 A = Integral(expr, var, lower, upper)
+A = Integral(expr, var, lower, upper, step)
 \`\`\`
 
 ## Description
@@ -372,6 +373,15 @@ For a plain definite integral, \`expr\` depends only on \`var\`. For the ODE pat
 rebuild the quantity of interest from the integrated increment. For coupled,
 stiff, or multi-state systems use a \`DYNAMIC\` block instead.
 
+\`var\` is the integral's dummy variable, not a result: it does not appear among
+the solved variables. Other variables that depend on it are reported at
+\`var = upper\`.
+
+The optional \`step\` is an accuracy hint, not a different method: no step is
+taken wider than it, so a feature narrower than the range is not stepped
+over. The same integral gives the same value with or without it, and whether
+the limits are numbers or unknowns.
+
 ## Mathematical Formulation
 
 $$ A = \\int_{\\text{lower}}^{\\text{upper}} \\text{expr}(\\text{var})\\,d(\\text{var}) $$
@@ -380,8 +390,11 @@ In the self-referential (ODE) form, with \`y\` the result and \`y(lower) = 0\`,
 
 $$ \\frac{dy}{d\\,\\text{var}} = \\text{expr}(y, \\text{var}), \\qquad y = \\int_{\\text{lower}}^{\\text{var}} \\text{expr}\\,d(\\text{var}) $$
 
-> **Method:** adaptive quadrature for a definite integral; an initial-value ODE
-> integration when self-reference is detected.
+> **Method:** with numeric limits, adaptive Dormand–Prince 5(4) stepping of
+> $dA/d\\,\\text{var} = \\text{expr}$, which re-solves the rest of the system at
+> each point and also serves the self-referential form; with an unknown limit,
+> adaptive Simpson quadrature inside the equation. Both are held to about
+> $10^{-10}$ relative error.
 
 ## Examples
 
@@ -394,16 +407,17 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 \`\`\`frees
 // frees-language: 2
 F = Integral(t, t, 0, 1)
+G = Integral(t^2, t, 0, 2, 0.5)     { step 0.5 is a hint: still 8/3 }
 
-{ CHECK F 0.5 4.999999999999601e-7 }
-{ CHECK t 1 0.000001 }
+{ CHECK F 0.5 1e-12 }
+{ CHECK G 2.6666666666666667 1e-12 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
 F = 0.5
-t = 1
+G = 2.66667
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -422,7 +436,8 @@ tank volume after the elapsed time.
 | \`expr\` | Expression | Yes | Integrand (may self-reference the result for the ODE form). |
 | \`var\` | Variable | Yes | Integration variable. |
 | \`lower\` | Number | Yes | Lower limit. |
-| \`upper\` | Number | Yes | Upper limit. |
+| \`upper\` | Number | Yes | Upper limit (may be an unknown). |
+| \`step\` | Number | No | Largest step: an accuracy hint for narrow features. |
 
 ## Output Arguments
 
@@ -22599,7 +22614,7 @@ $$
 \\begin{aligned}
 out.h &= in.h \\\\
 t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
-in.mdot &= \\text{iso6358}\\left(c, b, in.p, t_{in}, out.p\\right) \\\\
+in.mdot &= \\text{iso6358}\\left(c, b, in.p, t_{in}, out.p, \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right)\\right) \\\\
 out.mdot &= in.mdot
 \\end{aligned}
 $$
@@ -22683,7 +22698,7 @@ $$
 \\begin{aligned}
 out.h &= in.h \\\\
 t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
-in.mdot &= \\text{iso6358}\\left(u\\cdot cmax, b, in.p, t_{in}, out.p\\right) \\\\
+in.mdot &= \\text{iso6358}\\left(u\\cdot cmax, b, in.p, t_{in}, out.p, \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right)\\right) \\\\
 out.mdot &= in.mdot
 \\end{aligned}
 $$
@@ -22766,7 +22781,7 @@ $$
 \\begin{aligned}
 out.h &= in.h \\\\
 t_{in} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, h=in.h\\right) \\\\
-in.mdot &= \\text{iso6358}\\left(u.sig\\cdot cmax, b, in.p, t_{in}, out.p\\right) \\\\
+in.mdot &= \\text{iso6358}\\left(u.sig\\cdot cmax, b, in.p, t_{in}, out.p, \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right)\\right) \\\\
 out.mdot &= in.mdot
 \\end{aligned}
 $$
@@ -22980,15 +22995,15 @@ END
 p_end = FinalValue('tnk.in.p')
 t_end = FinalValue('tnk.t')
 
-{ CHECK p_end 599985.2636 0.5999852635647348 }
-{ CHECK t_end 315.5042778 0.00031550427777316036 }
+{ CHECK p_end 599882.4025 0.5998824025 }
+{ CHECK t_end 315.5032282 0.0003155032282 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-p_end = 599985.2636
-t_end = 315.5042778
+p_end = 599882.4025
+t_end = 315.5032282
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -23036,8 +23051,8 @@ $$
 \\begin{aligned}
 t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=sup_{in.p}, h=sup_{in.h}\\right) \\\\
 t_{w} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=work.p, h=work.h\\right) \\\\
-m_{in} &= \\text{iso6358}\\left(u.sig\\cdot c, b, sup_{in.p}, t_{s}, work.p\\right) \\\\
-m_{out} &= \\text{iso6358}\\left(\\left(1 - u.sig\\right)\\cdot c, b, work.p, t_{w}, exh_{out.p}\\right) \\\\
+m_{in} &= \\text{iso6358}\\left(u.sig\\cdot c, b, sup_{in.p}, t_{s}, work.p, t_{w}\\right) \\\\
+m_{out} &= \\text{iso6358}\\left(\\left(1 - u.sig\\right)\\cdot c, b, work.p, t_{w}, exh_{out.p}, \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=exh_{out.p}, h=exh_{out.h}\\right)\\right) \\\\
 sup_{in.mdot} &= m_{in} \\\\
 work.mdot &= m_{in} - m_{out} \\\\
 exh_{out.mdot} &= m_{out} \\\\
@@ -23131,10 +23146,10 @@ $$
 t_{s} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=sup_{in.p}, h=sup_{in.h}\\right) \\\\
 t_{a} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=wa.p, h=wa.h\\right) \\\\
 t_{b} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=wb.p, h=wb.h\\right) \\\\
-m_{sa} &= \\text{iso6358}\\left(u.sig\\cdot c, b, sup_{in.p}, t_{s}, wa.p\\right) \\\\
-m_{be} &= \\text{iso6358}\\left(u.sig\\cdot c, b, wb.p, t_{b}, eb_{out.p}\\right) \\\\
-m_{sb} &= \\text{iso6358}\\left(\\left(1 - u.sig\\right)\\cdot c, b, sup_{in.p}, t_{s}, wb.p\\right) \\\\
-m_{ae} &= \\text{iso6358}\\left(\\left(1 - u.sig\\right)\\cdot c, b, wa.p, t_{a}, ea_{out.p}\\right) \\\\
+m_{sa} &= \\text{iso6358}\\left(u.sig\\cdot c, b, sup_{in.p}, t_{s}, wa.p, t_{a}\\right) \\\\
+m_{be} &= \\text{iso6358}\\left(u.sig\\cdot c, b, wb.p, t_{b}, eb_{out.p}, \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=eb_{out.p}, h=eb_{out.h}\\right)\\right) \\\\
+m_{sb} &= \\text{iso6358}\\left(\\left(1 - u.sig\\right)\\cdot c, b, sup_{in.p}, t_{s}, wb.p, t_{b}\\right) \\\\
+m_{ae} &= \\text{iso6358}\\left(\\left(1 - u.sig\\right)\\cdot c, b, wa.p, t_{a}, ea_{out.p}, \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=ea_{out.p}, h=ea_{out.h}\\right)\\right) \\\\
 sup_{in.mdot} &= m_{sa} + m_{sb} \\\\
 wa.mdot &= m_{sa} - m_{ae} \\\\
 wb.mdot &= m_{sb} - m_{be} \\\\
@@ -23271,13 +23286,13 @@ DYNAMIC fill(method = ode23s, time = 0 .. 30, points = 100)
 END
 Pf = FinalValue('vol.in.p')
 
-{ CHECK Pf 700001.2966 0.7000012966479059 }
+{ CHECK Pf 700000 0.7 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
 
 \`\`\`text
-Pf = 700001.2966
+Pf = 700000
 \`\`\`
 
 <!-- verified-reference-example:end -->`,
@@ -23751,7 +23766,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_fx = 0 tol 1e-9
 // EXPECT fx_e = 3695.175 tol 0.01
 
-time = 0
+time = 0 [s]
 TABLE flat10(t [s]) [m/s]
   0    10
   100  10
@@ -24700,7 +24715,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_fx = 0 tol 1e-9
 // EXPECT fx_e = 3695.175 tol 0.01
 
-time = 0
+time = 0 [s]
 TABLE flat10(t [s]) [m/s]
   0    10
   100  10
@@ -24816,7 +24831,7 @@ Paste this complete document into the editor and select **Solve**. The \`CHECK\`
 // EXPECT d_fx = 0 tol 1e-9
 // EXPECT fx_e = 3695.175 tol 0.01
 
-time = 0
+time = 0 [s]
 TABLE flat10(t [s]) [m/s]
   0    10
   100  10
@@ -29504,14 +29519,14 @@ out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
 tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
 hf &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
-l_{need} &= \\frac{in.mdot\\cdot \\left(in.h - hf\\right)}{u_{cond}\\cdot 3.141592653589793\\cdot d\\cdot \\left(tsat - wall.t\\right)} \\\\
-l_{cond} &= 0.5\\,\\left(\\text{max}\\left(l_{need}, 0\\right) + l - \\sqrt{\\left(\\text{max}\\left(l_{need}, 0\\right) - l\\right)^{2} + eps_{zone}^{2}}\\right) \\\\
-q_{cond} &= u_{cond}\\cdot 3.141592653589793\\cdot d\\cdot l_{cond}\\cdot \\left(tsat - wall.t\\right) \\\\
+l_{need} &= \\text{if}\\left(wall.t, tsat, \\frac{in.mdot\\cdot \\left(in.h - hf\\right)}{u_{cond}\\cdot 3.141592653589793\\cdot d\\cdot \\left(tsat - wall.t\\right)}, l, l\\right) \\\\
+l_{cond} &= \\text{if}\\left(wall.t, tsat, \\text{max}\\left(0.5\\,\\left(\\text{max}\\left(l_{need}, 0\\right) + l - \\sqrt{\\left(\\text{max}\\left(l_{need}, 0\\right) - l\\right)^{2} + eps_{zone}^{2}}\\right), 0\\right), l, l\\right) \\\\
+q_{cond} &= u_{cond}\\cdot 3.141592653589793\\cdot d\\cdot l_{cond}\\cdot \\text{max}\\left(tsat - wall.t, 0\\right) \\\\
 l_{sc} &= l - l_{cond} \\\\
 r_{sc} &= \\text{zone\\_ramp}\\left(l_{sc}, eps_{zone}\\right) \\\\
 cp_{sc} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, x=0\\right) \\\\
 ntu_{sc} &= \\frac{u_{sc}\\cdot 3.141592653589793\\cdot d\\cdot l_{sc}\\cdot r_{sc}}{in.mdot\\cdot cp_{sc}} \\\\
-q_{sc} &= \\left(1 - \\text{exp}\\left(-ntu_{sc}\\right)\\right)\\cdot in.mdot\\cdot \\text{max}\\left(hf - \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=wall.t\\right), 0\\right) \\\\
+q_{sc} &= \\text{if}\\left(wall.t, tsat, \\left(1 - e^{-ntu_{sc}}\\right)\\cdot in.mdot\\cdot \\text{max}\\left(hf - \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=wall.t\\right), 0\\right), 0, 0\\right) \\\\
 t_{out} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right) \\\\
 out.h &= in.h - \\frac{q_{cond} + q_{sc}}{in.mdot} \\\\
 q &= q_{cond} + q_{sc} \\\\
@@ -29601,19 +29616,19 @@ out.mdot &= in.mdot \\\\
 out.p &= in.p \\\\
 tsat &= \\text{T\\_sat}\\left(\\mathrm{fluid\\$}, p=in.p\\right) \\\\
 hg &= \\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
-l_{need} &= \\frac{in.mdot\\cdot \\left(hg - in.h\\right)}{u_{tp}\\cdot 3.141592653589793\\cdot d\\cdot \\left(wall.t - tsat\\right)} \\\\
-l_{tp} &= 0.5\\,\\left(\\text{max}\\left(l_{need}, 0\\right) + l - \\sqrt{\\left(\\text{max}\\left(l_{need}, 0\\right) - l\\right)^{2} + eps_{zone}^{2}}\\right) \\\\
-q_{tp} &= u_{tp}\\cdot 3.141592653589793\\cdot d\\cdot l_{tp}\\cdot \\left(wall.t - tsat\\right) \\\\
+l_{need} &= \\text{if}\\left(wall.t, tsat, l, l, \\frac{in.mdot\\cdot \\left(hg - in.h\\right)}{u_{tp}\\cdot 3.141592653589793\\cdot d\\cdot \\left(wall.t - tsat\\right)}\\right) \\\\
+l_{tp} &= \\text{if}\\left(wall.t, tsat, l, l, \\text{max}\\left(0.5\\,\\left(\\text{max}\\left(l_{need}, 0\\right) + l - \\sqrt{\\left(\\text{max}\\left(l_{need}, 0\\right) - l\\right)^{2} + eps_{zone}^{2}}\\right), 0\\right)\\right) \\\\
+q_{tp} &= u_{tp}\\cdot 3.141592653589793\\cdot d\\cdot l_{tp}\\cdot \\text{max}\\left(wall.t - tsat, 0\\right) \\\\
 l_{sh} &= l - l_{tp} \\\\
 r_{sh} &= \\text{zone\\_ramp}\\left(l_{sh}, eps_{zone}\\right) \\\\
 cp_{sh} &= \\text{Cp}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right) \\\\
 ntu_{sh} &= \\frac{u_{sh}\\cdot 3.141592653589793\\cdot d\\cdot l_{sh}\\cdot r_{sh}}{in.mdot\\cdot cp_{sh}} \\\\
-q_{sh} &= \\left(1 - \\text{exp}\\left(-ntu_{sh}\\right)\\right)\\cdot in.mdot\\cdot \\text{max}\\left(\\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=wall.t\\right) - hg, 0\\right) \\\\
+q_{sh} &= \\text{if}\\left(wall.t, tsat, 0, 0, \\left(1 - e^{-ntu_{sh}}\\right)\\cdot in.mdot\\cdot \\text{max}\\left(\\text{Enthalpy}\\left(\\mathrm{fluid\\$}, p=in.p, t=wall.t\\right) - hg, 0\\right)\\right) \\\\
 t_{out} &= \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=out.p, h=out.h\\right) \\\\
 out.h &= in.h + \\frac{q_{tp} + q_{sh}}{in.mdot} \\\\
 q &= q_{tp} + q_{sh} \\\\
 wall.qdot &= q \\\\
-sh &= t_{out} - tsat
+sh &= t_{out} - \\text{Temperature}\\left(\\mathrm{fluid\\$}, p=in.p, x=1\\right)
 \\end{aligned}
 $$
 
@@ -31428,8 +31443,8 @@ g &= \\frac{in.mdot}{a} \\\\
 v_{lo} &= \\frac{g}{rho_{l}} \\\\
 re_{lo} &= \\text{reynolds}\\left(rho_{l}, v_{lo}, d, mu_{l}\\right) \\\\
 f_{lo} &= \\text{friction\\_factor}\\left(re_{lo}, 0\\right) \\\\
-dp_{lo} &= \\frac{f_{lo}\\cdot \\frac{l}{d}\\cdot rho_{l}\\cdot v_{lo}^{2}}{2} \\\\
-phi2 &= \\text{friedel\\_phi2}\\left(x, rho_{l}, rho_{g}, mu_{l}, mu_{g}, g, d, sigma\\right) \\\\
+dp_{lo} &= \\frac{f_{lo}\\cdot \\frac{l}{d}\\cdot rho_{l}\\cdot v_{lo}\\cdot \\left|v_{lo}\\right|}{2} \\\\
+phi2 &= \\text{friedel\\_phi2}\\left(x, rho_{l}, rho_{g}, mu_{l}, mu_{g}, \\text{max}\\left(\\left|g\\right|, 1\\,\\left[kg/m^2-s\\right]\\right), d, sigma\\right) \\\\
 out.p &= in.p - phi2\\cdot dp_{lo}
 \\end{aligned}
 $$
@@ -48640,7 +48655,7 @@ Interpolate1('t', x)
 
 ## Description
 
-Cubic-spline interpolation of table t at x
+Cubic-spline interpolation of table t at x. On a table declared \`XLOG\` or \`YLOG\` the spline is fitted in log10 space on that axis, the same space \`Interpolate\` uses, so a power law tabulated on log axes is followed exactly.
 
 ## Mathematical Formulation
 
@@ -49292,6 +49307,8 @@ T_end = 60
     guides: [],
     body: `Generates one equation per index value. At the top level each iteration adds an equation to the system; inside a function body it is an ordinary loop over \`:=\` assignments.
 
+Both bounds must be integers. The step is 1 unless written, and a range the step points away from runs zero times: \`FOR i = 3 TO 1\` generates nothing. To count down, write the step: \`FOR i = 3 : -1 : 1\`.
+
 ## Syntax
 
 \`\`\`
@@ -49300,6 +49317,10 @@ FOR i = 1 TO n
 END
 
 FOR i = 1 : n
+  …
+END
+
+FOR i = n : -1 : 1
   …
 END
 \`\`\`
@@ -49333,6 +49354,8 @@ Q_total = 100
 | Error | Cause | Fix |
 | --- | --- | --- |
 | \`\`unterminated FOR block: expected \`END\` \`\` | Missing \`END\`. | Close the loop. |
+| \`FOR range end must be an integer, got 2.5\` | A bound is not a whole number. | Round the bound, e.g. \`floor(n)\`. |
+| A reversed loop such as \`FOR i = 3 TO 1\` creates no equations | The default step is \`+1\`, so a descending range is empty. | Write the step: \`FOR i = 3 : -1 : 1\`. |
 | \`CALL is not supported inside a FOR loop within a PROCEDURE or FUNCTION …\` | Legacy \`CALL\` in a loop body. | Call the function directly. |`,
   },
   {
@@ -49422,6 +49445,8 @@ a = 55   b = 120   c = 1   d = 0.5
 | Error | Cause | Fix |
 | --- | --- | --- |
 | \`FUNCTION f never assigned a return value ('y := ...' missing)\` | A branch leaves the output unassigned. | Assign the output on every path. |
+| \`\` \`f\` is already defined as a FUNCTION; … names are case-insensitive and must be unique \`\` | Two definitions share a name, in any case (\`f\` and \`F\`), or a FUNCTION reuses a TABLE, MODULE or PROCEDURE name. | Rename one. |
+| \`FUNCTION calls nested more than 64 levels deep in \`h\`…\` | A recursion deeper than 64 calls, even with a correct base case. The limit is fixed, because a deeper stack would overflow the browser engine. | Rewrite the recursion as a \`FOR\` loop over \`:=\` assignments. |
 | \`SYMBOLIC declarations are not allowed inside a PROCEDURE or FUNCTION.\` | \`SYMBOLIC\` in a body. | Move it to the top level. |
 | \`FUNCTION f defines 'y' with the equation … and also assigns it elsewhere\` | A body both assigns \`y := …\` and defines it with an equation \`y = …\`. | An equation defines a variable once; use \`:=\` for every assignment to it. |`,
   },
@@ -52987,6 +53012,8 @@ product(i, lo, hi, term)
 
 Product series Pi(term) over i = lo..hi
 
+The index runs upward from \`lo\` to \`hi\`. When \`lo > hi\` the range is empty and the product is 1, as with \`FOR\` (\`Sum\` gives 0).
+
 ## Mathematical Formulation
 
 $$ \\prod_{i=\\text{lo}}^{\\text{hi}} \\text{term}(i) $$
@@ -56251,15 +56278,31 @@ y3 = 3
 
 \`\`\`
 iso6358(C, b, Pup, Tup, Pdown)
+iso6358(C, b, Pup, Tup, Pdown, Tdown)
 \`\`\`
 
 ## Description
 
-ISO 6358 pneumatic mass flow [kg/s] (sonic conductance C, critical ratio b)
+ISO 6358 pneumatic mass flow [kg/s] through a restriction of sonic conductance
+\`C\` and critical pressure ratio \`b\`: choked at or below \`b\`, elliptic above it.
+
+Above a pressure ratio of 0.999 the flow is linear in the pressure drop,
+matched in value at 0.999. The elliptic law's slope is infinite at ratio 1,
+the zero-flow point a Newton or IDA solve must cross; the linear segment keeps
+it finite.
+
+With five arguments the flow is forward-only: a reversed ratio
+(\`Pdown > Pup\`) returns 0. With the downstream temperature \`Tdown\` it is
+signed: a reversed ratio returns the negative flow from the downstream state,
+\`-iso6358(C, b, Pdown, Tdown, Pup)\`.
 
 ## Mathematical Formulation
 
-$$ \\dot m = C\\,\\rho_0\\,P_{up}\\sqrt{\\tfrac{T_0}{T_{up}}}\\cdot\\begin{cases} 1 & P_{down}/P_{up} \\le b \\\\ \\sqrt{1 - \\big(\\tfrac{P_{down}/P_{up} - b}{1-b}\\big)^2} & \\text{else} \\end{cases} $$
+With $r = P_{down}/P_{up}$ and $r_l = \\max(0.999,\\ b)$:
+
+$$ \\dot m = C\\,\\rho_0\\,P_{up}\\sqrt{\\tfrac{T_0}{T_{up}}}\\cdot\\phi(r), \\qquad \\phi(r) = \\begin{cases} 1 & r \\le b \\\\ \\sqrt{1 - \\big(\\tfrac{r - b}{1-b}\\big)^2} & b < r \\le r_l \\\\ \\phi(r_l)\\,\\dfrac{1 - r}{1 - r_l} & r_l < r < 1 \\\\ 0 & r \\ge 1 \\end{cases} $$
+
+and, when \`Tdown\` is given and $P_{down} > P_{up}$, $\\dot m = -\\dot m(P_{down}, T_{down} \\to P_{up})$.
 
 ## Examples
 
@@ -56292,9 +56335,17 @@ mdot_zeroC = iso6358(0, b, Pup, Tup, 100000 [Pa])
 mdot_badP = iso6358(C, b, -100, Tup, 50000 [Pa])
 mdot_badT = iso6358(C, b, Pup, -5, 50000 [Pa])
 
+{ Within 0.1 % of ratio 1 the flow is linear: half of its value at 0.999. }
+mdot_laminar = iso6358(C, b, Pup, Tup, 699650 [Pa])
+{ With the downstream temperature, a reversed ratio flows back. }
+mdot_signed = iso6358(C, b, Pup, Tup, 900000 [Pa], 300 [K])
+
 { CHECK mdot_atchoke 0.00705075 1e-8 }
 { CHECK mdot_b0 0.004934497087 1e-8 }
 { CHECK mdot_badP 0 1e-8 }
+{ CHECK mdot_reverse 0 1e-12 }
+{ CHECK mdot_laminar 0.0001954773934 1e-12 }
+{ CHECK mdot_signed -0.006746975083 1e-11 }
 \`\`\`
 
 Expected output (selected solution values; numerical rounding may vary):
@@ -56303,6 +56354,9 @@ Expected output (selected solution values; numerical rounding may vary):
 mdot_atchoke = 0.00705075 [kg/s]
 mdot_b0 = 0.004934497087 [kg/s]
 mdot_badP = 0 [kg/s]
+mdot_reverse = 0 [kg/s]
+mdot_laminar = 0.0001954773934 [kg/s]
+mdot_signed = -0.006746975083 [kg/s]
 \`\`\`
 
 <!-- verified-reference-example:end -->
@@ -56311,11 +56365,12 @@ mdot_badP = 0 [kg/s]
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
-| \`C\` | Number | Yes | Empirical constant. |
-| \`b\` | Number | Yes | Second operand. |
+| \`C\` | Number | Yes | Sonic conductance [m³/(s·Pa)], ≥ 0. |
+| \`b\` | Number | Yes | Critical pressure ratio, in [0, 1). |
 | \`Pup\` | Number | Yes | Upstream pressure [Pa]. |
 | \`Tup\` | Number | Yes | Upstream temperature [K]. |
 | \`Pdown\` | Number | Yes | Downstream pressure [Pa]. |
+| \`Tdown\` | Number | No | Downstream temperature [K]. Given, the flow is signed and a reversed ratio flows back. |
 
 ## References
 
@@ -64400,12 +64455,13 @@ Expected \`summary\` column, in row order:
 ## Syntax
 
 \`\`\`
-NParametricRuns()
+NParametricRuns(0)
 \`\`\`
 
 ## Description
 
-Total number of configured parametric runs
+Total number of configured parametric runs. The argument is a placeholder and is ignored: a call needs at least
+one argument, so \`NParametricRuns()\` is refused with "expected an expression".
 
 
 ## Mathematical Formulation
@@ -64828,12 +64884,13 @@ Expected \`summary\` column, in row order:
 ## Syntax
 
 \`\`\`
-TableRun#()
+TableRun#(0)
 \`\`\`
 
 ## Description
 
-Current parametric run index (1-based)
+Current parametric run index (1-based). The argument is a placeholder and is ignored: a call needs at least
+one argument, so \`TableRun#()\` is refused with "expected an expression".
 
 
 ## Mathematical Formulation
