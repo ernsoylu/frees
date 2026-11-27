@@ -106,7 +106,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
     - `ideal-gas` gets `Convert()`, CHECKs and a REPL prompt. *Owner decision:* a `Convert` result keeps its SI label, so `m * Convert(kg, g)` displays as `292.16 [kg]`, and no document syntax sets a display unit (a trailing `[g]` is a syntax error). The guide's own `P * Convert(Pa, kPa)` example has the same label. Either the unit inference labels a `Convert` product in its target unit, or the example teaches the label as it stands.
     - `linear-regression-diagnostics` gets a `TABLE` for the Curve Fit dialog. *Blocked:* code `TABLE` and `STATE TABLE` blocks do not cross the WASM boundary (`api.ts` sends `codeTables: []` and `stateTableDefs: []`), so a document table never reaches the dialog's dropdown. The same gap makes the `siyavula-correlation` header's dropdown steps false in the browser. The fix is to carry the document's own tables (not the workbook's) on `Solution` and the check report, as `plots` already is.
   - Gate done: `examples.test.ts` `FUNDAMENTALS` lists 45 fundamentals with the pattern that finds each in a featured example (#181). The five not yet taught (`Convert()`, the REPL, Curve Fit, Monte Carlo, Sobol/Morris) are `'open'` rows; each closes with the content item above it waits on.
-- **EC5. Documentation gaps.** In `analysis_examples.md`: Monte Carlo and Sobol/Morris requests on `correlated-temperature-heat-loss`, a `parameter_fit` dynamic calibration, and graded signal-processing and regression sections. In `getting_started.md`: "Projects and runs" (project library, autosave, Runs panel). No new guide files.
+- **EC5. Documentation gaps.** Done (#182): `analysis_examples.md` titles its four requests and adds Monte Carlo on `correlated-temperature-heat-loss` (correlation honoured, σ = 2.56 W against the first-order 2.65 W), a graded `Detrend` → `Welch` / `Window` → `FFT` section and a regression section where `linfit`, `polyfit` and a graded `curve_fit` request agree; `check-doc-examples.mjs` now runs `curve_fit` requests. `getting_started.md` has "Projects and runs". Sobol/Morris on that model stays refused, because the document declares a `Correlation`; examples 3 and 4 run it without one and say why.
 
 ### Usability validation (not run)
 
@@ -116,6 +116,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 
 ### Open findings (not reverified since the date given)
 
+- **2026-11-26.** Writing `pi` for π (the constant is `pi#`) leaves `pi` a free unknown, but the underspecified-system diagnostic names the first element of an array output (`Free quantity (no defining relation): xd[1]. Coupled to: pi, …`). It should name `pi` and suggest `pi#`.
 - **2026-11-06.** The RustProp crates.io publish was blocked by the new-crate burst limit; frees pins the `v0.3.0` tag. A scenario's baseline is not saved with the project. Spokes of one net can share a lane past their junction dot.
 - **2026-11-07.** There are no switch, transformer, op-amp or lamp symbols; they need Figma masters.
 - **Live-mode ceilings:**

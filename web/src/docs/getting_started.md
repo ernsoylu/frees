@@ -313,6 +313,12 @@ Each menu acts on the row or tab you opened it on, and also opens with the menu 
 - **Runs & Scenarios** is its own panel, beside the Variable Explorer: the run on screen, named scenarios, and the comparison with a baseline. Dock or float it to read it next to the values.
 - The playback and live strip, and the Runs & Scenarios panel, start with one label that says what the values are: **Live**, **Running**, **Stopped**, **Recorded time**, **Failed**, **Stale** or **Current**, with the run's number.
 
+### Projects and runs
+- **Autosave.** The whole workspace (equations, tables, plots, guesses and layout) is saved in this browser a moment after each change, and a reload brings it back. A second copy in the browser's larger storage keeps updating once the workspace outgrows the first. If that copy is newer than what loaded, a notice offers to restore it instead of replacing what is on screen.
+- **Browser Projects…** (File) keeps named projects in this browser, with no server and no files. **Save “name”** stores the open project under its name; saving the same name again overwrites it. Each row has **Open**, **Rename** and **Delete** (click twice). If another tab saves, renames or deletes the project you have open, a notice says so, and the last save wins.
+- **Save Project** (`Ctrl + S`) writes a `.frees` file instead. Use it to move a project between machines.
+- **Runs & Scenarios** numbers each solve. A scenario (**New**, **Rename**, **Delete**) is a named set of input values that the solve uses in place of the document's own, so the text never changes. **Set as baseline** pins the current run, and the panel then compares it with each new one: **Variable**, **Baseline**, **Current** and **Change**, for values whose units convert. **Clear baseline** drops it.
+
 ### Analysis tools as windows
 Optimization, Curve Fit, Parameter Estimation, Monte Carlo, Global Sensitivity and the PID Tuner each list their settings in the same order: **Target**, **Inputs**, **Method**, **Advanced**, **Run**, **Results**, **Apply / Export**. A tool leaves out a step it has nothing for.
 
