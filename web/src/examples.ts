@@ -238,8 +238,8 @@ h0 = 2.0 [m]              { initial water height }
 drop = Integral((a_orifice/A_tank)*sqrt(2*g*(h0 - drop)), tau, 0, 60)
 h = h0 - drop            { water height after 60 s }
 
-{ CHECK h 1.475953951579557 1.5e-9 }
-{ CHECK drop 0.5240460484204431 5.3e-10 }`,
+{ CHECK h 1.4759539485188307 1e-10 }
+{ CHECK drop 0.5240460514811693 1e-10 }`,
   },
   {
     id: 'sounding-rocket-trajectory',
@@ -938,8 +938,8 @@ T0 = 90 [C]              { initial temperature }
 drop = Integral(k*(T0 - drop - T_inf), tau, 0, 30)
 T = T0 - drop            { temperature after 30 s }
 
-{ CHECK T 308.76911265027184 3.1e-7 }
-{ CHECK drop 54.38088734972817 5.5e-8 }`,
+{ CHECK T 308.76911121039007 1e-8 }
+{ CHECK drop 54.38088878960991 1e-8 }`,
   },
   {
     id: 'damped-oscillator',

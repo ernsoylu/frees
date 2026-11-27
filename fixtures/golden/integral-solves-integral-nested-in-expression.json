@@ -4,20 +4,18 @@
   "expect": {
     "variables": {
       "F": 0.9999999999999202,
-      "integral_1": 0.4999999999999601,
-      "t": 1.0
+      "integral_1": 0.4999999999999601
     },
     "display_names": {
       "f": "F",
       "t": "t"
     },
     "block_count": 3,
-    "ode_tables": [
-    ],
+    "ode_tables": [],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row."
   }
 }

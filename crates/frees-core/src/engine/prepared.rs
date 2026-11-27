@@ -65,6 +65,10 @@ pub struct PreparedDocument {
     /// behind the ordinary ones. Pins go in ahead of them, where the text
     /// solve's appended override lines land.
     integral_tail: usize,
+    /// Every `Integral`'s integration variable. Lowering pins each at its
+    /// upper limit so the system is square, but it is the integral's dummy,
+    /// not a result, so it is left out of the solution's variables.
+    integration_vars: BTreeSet<String>,
     prep: Option<DocumentPrep>,
     /// The pin equations of a [`Self::solve_with_literal_pins`] call, in pin
     /// order; empty otherwise.
@@ -211,6 +215,10 @@ impl PreparedDocument {
         let integrals = find_integrals(&equations, &doc.defs, settings.complex_mode)?;
         let mut stepping_iterations = 0usize;
         let mut integral_tail = 0usize;
+        let integration_vars: BTreeSet<String> = integrals
+            .iter()
+            .map(|ie| ie.integration_var.clone())
+            .collect();
         let equations = if integrals.is_empty() {
             if settings.complex_mode {
                 let mut complex_names: HashMap<String, String> = doc
@@ -289,6 +297,7 @@ impl PreparedDocument {
             ode_accessors,
             unaugmented,
             integral_tail,
+            integration_vars,
             prep: None,
             literal_pins: Vec::new(),
             prep_count: 0,
@@ -748,6 +757,7 @@ impl PreparedDocument {
             &self.declarations,
             &self.component_instances,
             &self.component_connections,
+            &self.integration_vars,
             prep,
             &prep.work_scope,
             iterations,
@@ -768,6 +778,7 @@ impl PreparedDocument {
         declarations: &crate::analysis::uncertainty::DeclarationSet,
         component_instances: &[crate::components::metadata::ComponentInstMeta],
         component_connections: &[crate::components::expander::Connection],
+        integration_vars: &BTreeSet<String>,
         prep: &DocumentPrep,
         scope: &Scope,
         iterations: usize,
@@ -816,6 +827,7 @@ impl PreparedDocument {
             .specs
             .keys()
             .filter(|name| !crate::parser::toplevel::is_ignored_sink(name))
+            .filter(|name| !integration_vars.contains(*name))
             .map(|name| {
                 let value = scope_mut.get(name).copied().unwrap_or(f64::NAN);
                 (name.clone(), value)
@@ -1000,6 +1012,7 @@ impl PreparedDocument {
                 &self.declarations,
                 &self.component_instances,
                 &self.component_connections,
+                &self.integration_vars,
                 prep,
                 scope,
                 iterations,

@@ -8,7 +8,6 @@
       "Cp_n2": 32.60933580800637,
       "H_products": -74850.0,
       "H_reactants": -74850.0,
-      "T": 2344.669306422365,
       "T_flame": 2344.669306422365,
       "T_reactants": 298.15,
       "dH_co2": 113602.62588360484,
@@ -39,12 +38,11 @@
       "t_reactants": "T_reactants"
     },
     "block_count": 12,
-    "ode_tables": [
-    ],
+    "ode_tables": [],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust)",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row."
   }
 }

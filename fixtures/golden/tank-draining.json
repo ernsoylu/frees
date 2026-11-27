@@ -5,11 +5,10 @@
     "variables": {
       "A_tank": 1.0,
       "a_orifice": 0.0015,
-      "drop": 0.5240460484204431,
+      "drop": 0.524046051479754,
       "g": 9.81,
-      "h": 1.475953951579557,
-      "h0": 2.0,
-      "tau": 60.0
+      "h": 1.475953948520246,
+      "h0": 2.0
     },
     "display_names": {
       "a_orifice": "a_orifice",
@@ -24,7 +23,7 @@
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `tau` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: drop = h0 - (sqrt(h0) - (a/A)*sqrt(2g)*t/2)^2 = 0.52404605148."
   }
 }

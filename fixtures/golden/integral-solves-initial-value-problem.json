@@ -3,20 +3,18 @@
   "source": "F = Integral(-0.5*(F + 1), t, 0, 2)\n",
   "expect": {
     "variables": {
-      "F": -0.6321205458186983,
-      "t": 2.0
+      "F": -0.6321205588203817
     },
     "display_names": {
       "f": "F",
       "t": "t"
     },
     "block_count": 2,
-    "ode_tables": [
-    ],
+    "ode_tables": [],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `t` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: F = e^-1 - 1."
   }
 }

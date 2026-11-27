@@ -3,20 +3,18 @@
   "source": "{ Integrates 3*x^2 from 0 to 1 -> 1.0 }\narea = Integral(3 * x^2, x, 0, 1)\n",
   "expect": {
     "variables": {
-      "area": 1.0000000080123408,
-      "x": 1.0
+      "area": 0.9999999999999999
     },
     "display_names": {
       "area": "area",
       "x": "x"
     },
     "block_count": 2,
-    "ode_tables": [
-    ],
+    "ode_tables": [],
     "error": null
   },
   "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+    "engine": "frees-core (Rust), graded against a closed form",
+    "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX1e (owner-approved). The integration variable `x` is no longer a result row. The stepper is Dormand-Prince 5(4) instead of the Java Heun predictor-corrector, so the value is the closed form to ~1e-11: area = 1 (the integral of 3*x^2 over [0, 1])."
   }
 }

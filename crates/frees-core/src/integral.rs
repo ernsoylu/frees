@@ -7,20 +7,20 @@
 //! evaluated *inside an expression* (`integralQuadrature`,
 //! `gaussLegendreQuadrature`).
 //!
-//! # Two different integrators, on purpose
+//! # Two execution paths, one answer
 //!
-//! `Integral(f, t, a, b[, step])` has **two** execution paths in the parent
-//! engine, and they do not share an algorithm:
+//! `Integral(f, t, a, b[, step])` has **two** execution paths, and since FX1e
+//! (2026-11-27) they give the same value for the same integral, with or
+//! without `step`, which is an accuracy hint (a cap on the step) on both:
 //!
 //! * **Constant limits** — the engine drives `t` from `a` to `b` itself,
-//!   re-solving the rest of the system at every step, and accumulates with a
-//!   second-order predictor–corrector ([`integrate`], Java
-//!   `IntegralSolver.integrate`). The driver lives in [`crate::engine`]; this
-//!   module owns the stepper. Because `t` is driven, it **survives as a result
-//!   variable pinned at the upper limit** — that is why
-//!   `F = Integral(t^2, t, 0, 1)` reports both `F` and `t = 1`, and why the
-//!   value (`0.33333333600411386`) carries the stepper's truncation error
-//!   rather than being exactly `1/3`.
+//!   re-solving the rest of the system at every step, and accumulates with
+//!   adaptive Dormand–Prince 5(4) ([`integrate`]; the Java
+//!   `IntegralSolver.integrate` used a Heun predictor–corrector whose
+//!   truncation error left `Integral(t^2, t, 0, 1)` at 0.33333333600411386).
+//!   The driver lives in [`crate::engine`]; this module owns the stepper. `t`
+//!   is pinned at the upper limit so the rest of the system is reported
+//!   there, but it is the integral's dummy and is not a result variable.
 //! * **Variable limits** (`F = Integral(2*t, t, 0, b)`) — the limit is an
 //!   unknown, so stepping is impossible. [`inlined_equation`] rewrites the
 //!   integral into an ordinary equation whose integrand is closed-form in `t`,
@@ -62,8 +62,8 @@ use crate::parser::defs::Definitions;
 /// `IntegralSolver.FUNCTION_NAME`.
 pub const FUNCTION_NAME: &str = "integral";
 
-/// Step-doubling/halving tolerance on the predictor–corrector difference.
-const REL_TOL: f64 = 1.0e-6;
+/// Local error tolerance of the stepper, relative to the running `∫|f|`.
+const REL_TOL: f64 = 1.0e-10;
 /// Floor for the relative error scale, so a near-zero running total does not
 /// force the step size to collapse.
 const ABS_FLOOR: f64 = 1.0e-10;
@@ -98,9 +98,9 @@ pub struct IntegralEquation {
     pub lower_const: Option<f64>,
     /// The upper limit if it evaluates against an *empty* scope, else `None`.
     pub upper_const: Option<f64>,
-    /// Forced step size (argument 4), `0.0` when absent — a positive value
-    /// disables step adaptation in [`integrate`].
-    pub fixed_step: f64,
+    /// Largest step (argument 4), `0.0` when absent: an accuracy hint both
+    /// [`integrate`] and [`integral`] honour, never a different method.
+    pub max_step: f64,
 }
 
 impl IntegralEquation {
@@ -316,7 +316,7 @@ fn to_integral_equation(
             eq.source_text
         )));
     };
-    let fixed_step = match args.get(4) {
+    let max_step = match args.get(4) {
         Some(step) => constant_arg(step, "step size", eq, defs)?,
         None => 0.0,
     };
@@ -329,7 +329,7 @@ fn to_integral_equation(
         upper_expr: args[3].clone(),
         lower_const: try_constant(&args[2], defs),
         upper_const: try_constant(&args[3], defs),
-        fixed_step,
+        max_step,
     })
 }
 
@@ -607,44 +607,55 @@ fn inline(
 // The stepping driver (constant limits)
 // ---------------------------------------------------------------------------
 
-/// Second-order predictor–corrector integration with adaptive step sizing
-/// (Heun's method). The integrand receives `(t, F)` where `F` is the running
-/// integral value, so `dF/dt = f(t, F)` initial-value problems work too.
+/// Adaptive Dormand–Prince 5(4) integration of `dF/dt = f(t, F)` from
+/// `F(lower) = 0`. The integrand receives `(t, F)` where `F` is the running
+/// integral value, so initial-value problems work too; for a plain quadrature
+/// (`f` independent of `F`) the 5th-order weights are exact for polynomials up
+/// to degree 4, so `Integral(t^2, t, 0, 1)` is 1/3 to rounding.
 ///
-/// Per step: predictor `F_p = F + h·f(t, F)` (Euler), corrector
-/// `F_c = F + h·(f(t, F) + f(t+h, F_p))/2` (trapezoid); their difference
-/// estimates the local error and drives halving/doubling of `h`. A positive
-/// `fixed_step` disables adaptation.
+/// The local error estimate is held to [`REL_TOL`] of the running `∫|f|`
+/// (or `|F|`, whichever is larger), so an integral that ends near zero, such
+/// as `sin` over a period, does not force tiny steps. `max_step > 0` caps the
+/// step size: an accuracy hint (a feature narrower than the span is not
+/// stepped over), never a different method, so the value agrees with the
+/// variable-limit path ([`integral`]) whether or not a step is given.
 ///
-/// Port of `IntegralSolver.integrate`, minus its `deadlineNanos` check (see the
-/// module docs — there is no clock on `wasm32-unknown-unknown`).
+/// The stepper replaces the Java `IntegralSolver.integrate`'s Heun
+/// predictor–corrector, whose truncation error depended on the step
+/// (`Integral(t^2, t, 0, 2, 0.5)` gave 2.75 where the variable-limit path gave
+/// 8/3). Its `deadlineNanos` check has no counterpart here (see the module
+/// docs — there is no clock on `wasm32-unknown-unknown`).
 ///
 /// # Errors
 ///
 /// [`FreesError::Solver`] when the sweep exceeds [`MAX_STEPS`], plus whatever
 /// `integrand` itself raises (in the engine driver, a subsystem that will not
 /// solve at some `t`).
-pub fn integrate<F>(mut integrand: F, lower: f64, upper: f64, fixed_step: f64) -> Result<f64>
+pub fn integrate<F>(mut integrand: F, lower: f64, upper: f64, max_step: f64) -> Result<f64>
 where
     F: FnMut(f64, f64) -> Result<f64>,
 {
     if lower == upper {
         return Ok(0.0);
     }
+    let rk = crate::ode::methods::ButcherTableau::dopri54();
+    let b_err = rk.b_err.as_deref().expect("ode45 is an embedded pair");
+    let dot = |w: &[f64], k: &[f64]| w.iter().zip(k).map(|(w, k)| w * k).sum::<f64>();
     let direction = (upper - lower).signum();
     let span = (upper - lower).abs();
-    let adaptive = fixed_step <= 0.0;
-    let mut h = if adaptive {
-        (upper - lower) / INITIAL_STEPS as f64
-    } else {
-        fixed_step.min(span) * direction
-    };
-    let h_max = span / 4.0;
+    let mut h_max = span / 4.0;
+    if max_step > 0.0 {
+        h_max = h_max.min(max_step);
+    }
     let h_min = span * 1.0e-9;
+    let mut h = (span / INITIAL_STEPS as f64).min(h_max);
 
     let mut t = lower;
     let mut total = 0.0;
-    let mut f_left = integrand(lower, total)?;
+    // The running ∫|f|: the scale the local error is held against.
+    let mut mass = 0.0;
+    let mut k = vec![0.0; rk.stages];
+    k[0] = integrand(lower, total)?;
     let mut steps = 0usize;
     while direction * (upper - t) > span * 1.0e-12 {
         steps += 1;
@@ -653,24 +664,31 @@ where
                 "Integral did not converge within {MAX_STEPS} steps."
             )));
         }
-        if direction * (t + h - upper) > 0.0 {
-            h = upper - t;
+        let remaining = direction * (upper - t);
+        let h_abs = h.min(remaining);
+        let hs = direction * h_abs;
+        for i in 1..rk.stages {
+            k[i] = integrand(t + rk.c[i] * hs, total + hs * dot(&rk.a[i], &k[..i]))?;
         }
-        let predicted = total + h * f_left;
-        let f_right = integrand(t + h, predicted)?;
-        let corrected = total + h * (f_left + f_right) / 2.0;
-        let error = (corrected - predicted).abs();
-        let scale = corrected.abs().max(ABS_FLOOR);
-        if adaptive && error > REL_TOL * scale && h.abs() > h_min {
-            h /= 2.0;
+        let next = total + hs * dot(&rk.b, &k);
+        let error = (hs * dot(b_err, &k)).abs();
+        let step_mass = h_abs * rk.b.iter().zip(&k).map(|(b, k)| (b * k).abs()).sum::<f64>();
+        let tol = REL_TOL * (mass + step_mass).max(next.abs()).max(ABS_FLOOR);
+        let grow = if error == 0.0 {
+            5.0
+        } else {
+            (0.9 * (tol / error).powf(0.2)).clamp(0.2, 5.0)
+        };
+        if error > tol && h_abs > h_min {
+            h = (h_abs * grow).max(h_min);
             continue;
         }
-        total = corrected;
-        t += h;
-        f_left = integrand(t, total)?;
-        if adaptive && error < REL_TOL * scale / 16.0 {
-            h = direction * (h.abs() * 2.0).min(h_max);
-        }
+        total = next;
+        mass += step_mass;
+        t = if h_abs == remaining { upper } else { t + hs };
+        // First same as last: the final stage is f(t + h, F(t + h)).
+        k[0] = k[rk.stages - 1];
+        h = (h_abs * grow).min(h_max);
     }
     Ok(total)
 }
@@ -690,10 +708,9 @@ const SIMPSON_MAX_DEPTH: u32 = 24;
 /// `Evaluator.integralQuadrature`.
 ///
 /// This is the path [`inlined_equation`] produces for variable limits, so it is
-/// re-entered at every Newton residual evaluation. `step` is accepted and
-/// **ignored**, exactly as the Java arm ignores its fifth argument: a fixed
-/// step belongs to the stepping driver ([`integrate`]), which only runs for
-/// constant limits.
+/// re-entered at every Newton residual evaluation. `step` is the same
+/// accuracy hint [`integrate`] takes: the refinement starts from panels no
+/// wider than it (the Java arm ignored it), so both paths give one value.
 ///
 /// Reversed limits (`b < a`) integrate backwards and return the negated value,
 /// as adaptive Simpson naturally does and the Java arm allows.
@@ -730,25 +747,39 @@ pub(crate) fn integral_in(
     var: &str,
     a: f64,
     b: f64,
-    _step: Option<f64>,
+    step: Option<f64>,
     env: &Env<'_>,
 ) -> Result<f64> {
     if a == b {
         return Ok(0.0);
     }
     let var = var.to_ascii_lowercase();
-    let fa = bind_and_eval(integrand, &var, a, env)?;
-    let fm = bind_and_eval(integrand, &var, (a + b) / 2.0, env)?;
-    let fb = bind_and_eval(integrand, &var, b, env)?;
-    let whole = (b - a) / 6.0 * (fa + 4.0 * fm + fb);
-    adaptive_simpson(
-        integrand,
-        &var,
-        env,
-        Panel { a, b, fa, fm, fb },
-        whole,
-        SIMPSON_MAX_DEPTH,
-    )
+    // A step starts the refinement from panels no wider than it, so a feature
+    // narrower than the span is not sampled straight past.
+    let panels = match step {
+        Some(step) if step > 0.0 => ((b - a).abs() / step).ceil().clamp(1.0, MAX_STEPS as f64),
+        _ => 1.0,
+    } as usize;
+    let width = (b - a) / panels as f64;
+    let mut total = 0.0;
+    let mut fa = bind_and_eval(integrand, &var, a, env)?;
+    for i in 0..panels {
+        let pa = a + width * i as f64;
+        let pb = if i + 1 == panels { b } else { pa + width };
+        let fm = bind_and_eval(integrand, &var, (pa + pb) / 2.0, env)?;
+        let fb = bind_and_eval(integrand, &var, pb, env)?;
+        let whole = (pb - pa) / 6.0 * (fa + 4.0 * fm + fb);
+        let panel = Panel {
+            a: pa,
+            b: pb,
+            fa,
+            fm,
+            fb,
+        };
+        total += adaptive_simpson(integrand, &var, env, panel, whole, SIMPSON_MAX_DEPTH)?;
+        fa = fb;
+    }
+    Ok(total)
 }
 
 /// One Simpson panel: its ends and midpoint plus the integrand values there.
@@ -1223,7 +1254,7 @@ mod tests {
         assert_eq!(ie.upper(), 1.0);
         assert_eq!(ie.result_var, "f");
         assert_eq!(ie.integration_var, "t");
-        assert_eq!(ie.fixed_step, 0.0);
+        assert_eq!(ie.max_step, 0.0);
     }
 
     #[test]
@@ -1449,17 +1480,57 @@ mod tests {
     }
 
     #[test]
-    fn integrate_matches_the_java_stepper_on_a_polynomial() {
-        // The oracle value for `F = Integral(t^2, t, 0, 1)`, carrying the
-        // stepper's truncation error rather than being exactly 1/3.
+    fn integrate_is_exact_on_a_polynomial() {
+        // The Java Heun stepper gave 0.33333333600411386 here.
         let value = integrate(|t, _| Ok(t * t), 0.0, 1.0, 0.0).unwrap();
-        assert_eq!(value, 0.333_333_336_004_113_86);
+        assert!((value - 1.0 / 3.0).abs() < 1e-15, "{value}");
     }
 
     #[test]
-    fn integrate_honours_a_fixed_step() {
-        let value = integrate(|t, _| Ok(t), 0.0, 2.0, 0.01).unwrap();
-        assert!((value - 2.0).abs() < 1e-9, "{value}");
+    fn a_step_is_an_accuracy_hint_not_a_different_method() {
+        // FX1e: `Integral(t^2, t, 0, 2, 0.5)` gave 2.75 (a fixed Heun step)
+        // where the variable-limit path gave 8/3. Every step agrees now, and
+        // agrees with the in-expression quadrature.
+        let scope = Scope::default();
+        let simpson = integral(&parse_expression("t^2"), "t", 0.0, 2.0, Some(0.5), &scope).unwrap();
+        for step in [0.0, 0.5, 0.01] {
+            let stepped = integrate(|t, _| Ok(t * t), 0.0, 2.0, step).unwrap();
+            assert!(
+                (stepped - 8.0 / 3.0).abs() < 1e-12,
+                "step {step}: {stepped}"
+            );
+            assert!(
+                (stepped - simpson).abs() < 1e-12,
+                "step {step}: {stepped} vs {simpson}"
+            );
+        }
+        // A narrow bump the default panels miss is found once the step is
+        // smaller than it, on both paths.
+        let bump = "exp(-((t - 7.3) / 0.01)^2)";
+        let exact = 0.01 * std::f64::consts::PI.sqrt();
+        let narrow = |t: f64| (-((t - 7.3) / 0.01).powi(2)).exp();
+        let stepped = integrate(|t, _| Ok(narrow(t)), 0.0, 10.0, 0.005).unwrap();
+        let simpson =
+            integral(&parse_expression(bump), "t", 0.0, 10.0, Some(0.005), &scope).unwrap();
+        assert!((stepped - exact).abs() < 1e-10 * exact, "{stepped}");
+        assert!((simpson - exact).abs() < 1e-10 * exact, "{simpson}");
+    }
+
+    #[test]
+    fn an_integral_ending_near_zero_takes_few_steps() {
+        let mut calls = 0;
+        let value = integrate(
+            |t, _| {
+                calls += 1;
+                Ok(t.sin())
+            },
+            0.0,
+            2.0 * std::f64::consts::PI,
+            0.0,
+        )
+        .unwrap();
+        assert!(value.abs() < 1e-9, "{value}");
+        assert!(calls < 2_000, "{calls} integrand calls");
     }
 
     #[test]
@@ -1467,7 +1538,10 @@ mod tests {
         let forward = integrate(|t, _| Ok(t * t), 0.0, 1.0, 0.0).unwrap();
         let backward = integrate(|t, _| Ok(t * t), 1.0, 0.0, 0.0).unwrap();
         assert!(backward < 0.0, "{backward}");
-        assert!((backward + forward).abs() < 1e-6, "{backward} vs {forward}");
+        assert!(
+            (backward + forward).abs() < 1e-15,
+            "{backward} vs {forward}"
+        );
     }
 
     #[test]
@@ -1475,7 +1549,7 @@ mod tests {
         // dF/dt = -0.5*(F + 1), F(0) = 0  =>  F(2) = e^-1 - 1
         let value = integrate(|_, f| Ok(-0.5 * (f + 1.0)), 0.0, 2.0, 0.0).unwrap();
         assert!(
-            (value - (std::f64::consts::E.recip() - 1.0)).abs() < 1e-3,
+            (value - (std::f64::consts::E.recip() - 1.0)).abs() < 1e-9,
             "{value}"
         );
     }
