@@ -529,7 +529,23 @@ impl UnitRegistry {
         if text.is_empty() || text == "-" {
             return Ok(Quantity::dimensionless(1.0));
         }
-        let mut parser = UnitExprParser::new(text);
+        // `kg_per_m3` is `kg/m3`: `_per_` divides, and a lone `_` multiplies
+        // (`kJ_per_kg_K` is `kJ/kg-K`), so identifier-safe spellings parse.
+        let lower = text.to_ascii_lowercase();
+        let text = if lower.contains("_per_") {
+            let mut out = String::with_capacity(text.len());
+            let mut from = 0;
+            while let Some(at) = lower[from..].find("_per_").map(|i| i + from) {
+                out.push_str(&text[from..at]);
+                out.push('/');
+                from = at + "_per_".len();
+            }
+            out.push_str(&text[from..]);
+            std::borrow::Cow::Owned(out)
+        } else {
+            std::borrow::Cow::Borrowed(text)
+        };
+        let mut parser = UnitExprParser::new(&text);
         let quantity = parser.parse_expr()?;
         if !parser.at_end() {
             // A stray ')' (or anything else `parse_expr` refuses to consume).
@@ -748,6 +764,7 @@ fn lookup(name: &str) -> Result<Quantity> {
 /// dash is the important one: inside a unit string it is *never* a minus.
 fn is_separator(c: char) -> bool {
     c == '-'
+        || c == '_'
         || c == '*'
         || c == '\u{b7}'
         || c == '\u{2219}'
@@ -760,7 +777,8 @@ fn is_separator(c: char) -> bool {
 ///
 /// ```text
 /// expr   := term ('/' term)*          // every '/' opens a denominator factor
-/// term   := factor (sep+ factor)*     // sep = '-' | '*' | '·' | '.' | space
+/// term   := factor (sep+ factor)*     // sep = '-' | '_' | '*' | '·' | '.' | space
+/// (`_per_` is read as '/' before parsing)
 /// factor := (name | '(' expr ')' | '1') exponent?
 /// exp    := '^' ws* ('-' | '+')? number | digits
 /// ```
@@ -1390,6 +1408,32 @@ mod tests {
 
         let per_f = UnitRegistry::parse_with_offset("Btu/lbm-F").unwrap();
         assert_eq!(per_f.offset, 0.0);
+    }
+
+    #[test]
+    fn underscore_per_spellings_divide_and_underscores_multiply() {
+        for (spelled, slash) in [
+            ("kg_per_m3", "kg/m^3"),
+            ("m_per_s2", "m/s^2"),
+            ("m_Per_s", "m/s"),
+            ("kPa_per_mA", "kPa/mA"),
+            ("N_per_cm", "N/cm"),
+            ("kJ_per_kg_K", "kJ/kg-K"),
+            ("W_per_m2_K", "W/m^2-K"),
+            ("m_per_s_per_s", "m/s^2"),
+            ("N_m", "N-m"),
+        ] {
+            let got = UnitRegistry::parse(spelled).unwrap();
+            let want = UnitRegistry::parse(slash).unwrap();
+            assert!(got.same_dimensions_as(&want), "{spelled}");
+            assert!(
+                (got.factor - want.factor).abs() <= 1e-12 * want.factor,
+                "{spelled}"
+            );
+        }
+        // Only the whole word divides; an unknown piece is still unknown.
+        assert!(UnitRegistry::parse("kg_per_zork").is_err());
+        assert!(UnitRegistry::parse("kgper_m3").is_err());
     }
 
     #[test]
