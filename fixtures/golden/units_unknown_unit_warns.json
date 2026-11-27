@@ -1,20 +1,17 @@
 {
-  "name": "units_unknown_unit_warns",
-  "source": "{ An unrecognised unit must warn, never fail the parse. }\nq = 5 [zorkmids]\nr = q * 2\n",
-  "expect": {
-    "variables": {
-      "q": 5.0,
-      "r": 10.0
-    },
-    "display_names": {
-      "q": "q",
-      "r": "r"
-    },
-    "block_count": 2,
-    "error": null
-  },
-  "oracle": {
-    "engine": "frEES backend/core (Java)",
-    "generated_by": "tools/golden-dumper"
+ "name": "units_unknown_unit_warns",
+ "source": "{ An unrecognised unit must warn, never fail the parse. }\nq = 5 [zorkmids]\nr = q * 2\n",
+ "expect": {
+  "variables": {},
+  "display_names": {},
+  "block_count": 0,
+  "error": {
+   "type": "ParseException",
+   "message": "In q = 5 [zorkmids]: unknown unit `zorkmids`"
   }
+ },
+ "oracle": {
+  "engine": "frees-core (Rust)",
+  "generated_by": "Regenerated 2026-11-27 from the Rust engine after FX3e (owner-approved): an unknown unit on a literal is now an error that quotes the line and the unit, where the Java oracle solved with q = 5 left unconverted (not in SI) and only warned. `zorkmids` is too far from any known unit for a \"did you mean\"."
+ }
 }

@@ -2184,8 +2184,8 @@ pub fn check_with_tables_complex(
         .filter(|name| !crate::parser::toplevel::is_ignored_sink(name))
         .collect();
 
-    let mut diagnostics = check_diagnostics;
-    collect_unit_warnings(&equations, &mut diagnostics);
+    reject_unknown_units(&equations)?;
+    let diagnostics = check_diagnostics;
 
     // Dimensional check + SI unit inference (the Java `CheckController` path):
     // declared units — annotated literals plus external `VariableInfo` units —
@@ -2928,34 +2928,47 @@ fn merge_advisory_warnings(
     unit_warnings
 }
 
-fn collect_unit_warnings(equations: &[Equation], diagnostics: &mut Vec<Diagnostic>) {
-    let mut seen = BTreeSet::new();
+/// An unknown unit on a literal is an error (FX3e, decided 2026-11-27): the
+/// parser leaves such a literal unconverted, so solving on would silently mix
+/// a non-SI number into the system. The message quotes the equation and the
+/// unit, and names the nearest known unit when one is a plausible typo.
+fn reject_unknown_units(equations: &[Equation]) -> Result<()> {
     for equation in equations {
         for side in [&equation.lhs, &equation.rhs] {
+            let mut first = None;
             walk_units(side, &mut |unit| {
-                let Err(err) = UnitRegistry::parse(unit) else {
-                    return;
-                };
-                if seen.insert(unit.to_string()) {
-                    // The failing *name* inside the expression carries the hint
-                    // (`kJ/mpa` → `mpa`), so read it off the error.
-                    let hint = match &err {
-                        FreesError::UnknownUnit { unit: name } => {
-                            crate::units::registry::unit_hint(name)
-                        }
-                        _ => String::new(),
-                    };
-                    diagnostics.push(
-                        Diagnostic::warning(format!(
-                            "unknown unit `{unit}`{hint}: the literal was left unconverted, \
-                             so this value is not in SI"
-                        ))
-                        .with_source_text(equation.source_text.clone()),
-                    );
+                if first.is_none() {
+                    if let Err(err) = UnitRegistry::parse(unit) {
+                        first = Some((unit.to_string(), err));
+                    }
                 }
             });
+            let Some((unit, err)) = first else { continue };
+            // The failing *name* inside the expression (`kJ/mpa` → `mpa`)
+            // carries the hint.
+            let name = match &err {
+                FreesError::UnknownUnit { unit: name } => name.clone(),
+                _ => unit.clone(),
+            };
+            let mut hint = crate::units::registry::unit_hint(&name);
+            if hint.is_empty() {
+                if let Some(near) = crate::units::registry::nearest_unit(&name) {
+                    hint = format!(" — did you mean `{near}`?");
+                }
+            }
+            // A pathological line (a 100k-deep unit) is quoted by its start.
+            let clip = |text: &str| match text.char_indices().nth(80) {
+                Some((at, _)) => format!("{}…", &text[..at]),
+                None => text.to_string(),
+            };
+            return Err(FreesError::parse(format!(
+                "In {}: unknown unit `{}`{hint}",
+                clip(equation.source_text.trim()),
+                clip(&unit)
+            )));
         }
     }
+    Ok(())
 }
 
 fn walk_units(expr: &Expr, report: &mut impl FnMut(&str)) {

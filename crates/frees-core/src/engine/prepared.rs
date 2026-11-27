@@ -6,9 +6,9 @@ use crate::analysis::parametric::ParametricAccessors;
 use crate::ast::{Equation, Expr};
 use crate::diag::Diagnostic;
 use crate::engine::{
-    block_equation_texts, block_system, builtin_constants, check_bounds, collect_unit_warnings,
-    complete_display_names, dense_export, dense_plan, initial_guess, merge_advisory_warnings,
-    override_uncertainties, pinned_block_cache, relaxed_ode_settings, residuals_at, run_blocks,
+    block_equation_texts, block_system, builtin_constants, check_bounds, complete_display_names,
+    dense_export, dense_plan, initial_guess, merge_advisory_warnings, override_uncertainties,
+    pinned_block_cache, reject_unknown_units, relaxed_ode_settings, residuals_at, run_blocks,
     seed_property_argument_guesses, solve_dynamic_systems, solve_equation_list, surfaced_count,
     unconverged_equation, unit_check, unknowns, variable_specs, BlockLoopFailure, DensePlan,
     DenseRun, Missing, PartialDiagnostics, PinnedBlockCache, Solution, SolveFailure, SolveStats,
@@ -338,8 +338,8 @@ impl PreparedDocument {
             }
             let (constants, knowns) = builtin_constants(&subsystem);
             let report = block_system(&subsystem, &knowns)?;
+            reject_unknown_units(&subsystem)?;
             let mut diagnostics = self.diagnostics.clone();
-            collect_unit_warnings(&subsystem, &mut diagnostics);
             let mut specs = variable_specs(
                 &subsystem,
                 &knowns,

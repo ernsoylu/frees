@@ -28,7 +28,6 @@
 //! constructs, non-ASCII input, enormous and subnormal numbers, degenerate
 //! systems, and division by zero.
 
-use frees_core::diag::Severity;
 use frees_core::parser::expr::MAX_EXPR_DEPTH;
 use frees_core::units::registry::UnitRegistry;
 use frees_core::{
@@ -324,15 +323,15 @@ fn a_deeply_nested_unit_expression_is_refused_not_fatal() {
         "a 100k-deep unit must be refused"
     );
 
-    // Reached through a document, an unparseable unit is a *warning*: the
-    // engine's invariant is that a unit problem never blocks a solve.
+    // Reached through a document, an unparseable unit is refused with an
+    // ordinary error (FX3e), whose quote of the line stays short.
     let src = format!("P = 1 [{deep}]");
-    let solution = solve(&src, &settings()).expect("unit trouble must not fail the solve");
-    assert_eq!(solution.values.get("p"), Some(&1.0));
-    assert!(solution
-        .diagnostics
-        .iter()
-        .any(|d| d.severity == Severity::Warning && d.message.contains("unknown unit")));
+    let message = match solve(&src, &settings()) {
+        Ok(_) => panic!("an unparseable unit must be refused"),
+        Err(failure) => failure.to_string_message(),
+    };
+    assert!(message.contains("unknown unit"), "{message}");
+    assert!(message.len() < 400, "{} bytes", message.len());
 }
 
 #[test]
@@ -346,7 +345,7 @@ fn realistic_unit_nesting_still_parses() {
 }
 
 #[test]
-fn malformed_and_unknown_units_warn_but_never_panic() {
+fn malformed_and_unknown_units_are_refused_but_never_panic() {
     let corpus = [
         "P = 140 [zorp]",
         "P = 140 []",
@@ -361,13 +360,12 @@ fn malformed_and_unknown_units_warn_but_never_panic() {
         "P = 1 [µm]",
     ];
     none_panic(&corpus);
-    // and the archetype resolves to the unconverted value plus a warning
-    let solution = solve("P = 140 [zorp]", &settings()).unwrap();
-    assert_eq!(solution.values.get("p"), Some(&140.0));
-    assert!(solution
-        .diagnostics
-        .iter()
-        .any(|d| d.message.contains("zorp")));
+    // and the archetype is refused by name (FX3e), not solved unconverted
+    let message = match solve("P = 140 [zorp]", &settings()) {
+        Ok(_) => panic!("an unknown unit must be refused"),
+        Err(failure) => failure.to_string_message(),
+    };
+    assert!(message.contains("unknown unit `zorp`"), "{message}");
 }
 
 // ── percentile: the NaN index underflow ─────────────────────────────────────

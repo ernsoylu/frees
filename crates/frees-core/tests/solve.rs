@@ -812,32 +812,26 @@ fn syntax_errors_are_parse_errors_with_a_source_position() {
 /// invariant is that dimensional trouble is surfaced and the solve proceeds.
 /// The literal keeps its face value (no conversion was possible) and the
 /// document still solves, but the engine says so.
+/// FX3e (decided 2026-11-27): an unknown unit on a literal is an error that
+/// quotes the line and the unit, and names a plausible correction. It used to
+/// solve with the value left unconverted, so not in SI.
 #[test]
-fn an_unknown_unit_warns_and_still_solves() {
-    let solution = solved("P = 140 [zorp]\nQ = P * 2\n");
-    assert_near(get(&solution, "p"), 140.0);
-    assert_near(get(&solution, "q"), 280.0);
+fn an_unknown_unit_is_an_error_that_names_the_unit() {
+    let message = match solve("P = 140 [kpas]\nQ = P * 2\n", &SolverSettings::default()) {
+        Ok(solution) => panic!("expected an error, got {:?}", solution.values),
+        Err(failure) => failure.to_string_message(),
+    };
+    assert!(message.contains("P = 140 [kpas]"), "{message}");
+    assert!(message.contains("unknown unit `kpas`"), "{message}");
+    assert!(message.contains("did you mean `kpa`"), "{message}");
 
-    let warnings: Vec<&str> = solution
-        .diagnostics
-        .iter()
-        .filter(|d| d.severity == Severity::Warning)
-        .map(|d| d.message.as_str())
-        .collect();
-    assert_eq!(warnings.len(), 1, "{warnings:?}");
-    assert!(warnings[0].contains("zorp"), "{warnings:?}");
-    assert!(warnings[0].contains("not in SI"), "{warnings:?}");
-    // The warning quotes the user's own line.
-    assert_eq!(
-        solution.diagnostics[0].source_text.as_deref(),
-        Some("P = 140 [zorp]")
+    // `check` refuses it too, without solving, and an implausible name gets
+    // no guess.
+    let err = check("P = 140 [zorp]\n").unwrap_err().to_string_message();
+    assert!(
+        err.contains("unknown unit `zorp`") && !err.contains("did you mean"),
+        "{err}"
     );
-
-    // `check` reports it too, without solving.
-    let report = check("P = 140 [zorp]\n").unwrap();
-    assert!(report.solvable);
-    assert_eq!(report.diagnostics.len(), 1);
-    assert!(report.diagnostics[0].message.contains("zorp"));
 }
 
 /// A known unit produces no warning at all — the check must not be noisy.

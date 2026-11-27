@@ -555,17 +555,10 @@ function solvePill(result: SolveResponse): PillContent {
     }
   }
   const warnings = result.unitWarnings
-  const unknown = warnings.some((w) => /unknown unit/i.test(w))
   return {
     color: warnings.length > 0 ? 'yellow' : 'green',
-    label: unknown
-      ? 'Solved · unconverted units'
-      : warnings.length > 0
-        ? `Solved · ${warnings.length} warnings`
-        : 'Solved',
-    message: unknown
-      ? 'The solve converged. Some literals used unknown units and were left unconverted — those values are not verified SI.'
-      : 'Solve converged.',
+    label: warnings.length > 0 ? `Solved · ${warnings.length} warnings` : 'Solved',
+    message: 'Solve converged.',
     warnings,
   }
 }
@@ -595,17 +588,10 @@ export function checkPill(checkResult: CheckResponse): PillContent {
       helpHref: helpHrefForMessage(checkResult.message),
     }
   }
-  const unknown = warnings.some((w) => /unknown unit/i.test(w))
   return {
     color: warnings.length > 0 ? 'yellow' : 'green',
-    label: unknown
-      ? 'Structurally solvable · unconverted units'
-      : warnings.length > 0
-        ? `Structurally solvable · ${warnings.length} warnings`
-        : 'Structurally solvable',
-    message: unknown
-      ? `${checkResult.message} Unknown units were left unconverted and are not verified SI.`
-      : checkResult.message,
+    label: warnings.length > 0 ? `Structurally solvable · ${warnings.length} warnings` : 'Structurally solvable',
+    message: checkResult.message,
     warnings,
   }
 }

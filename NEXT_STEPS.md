@@ -59,8 +59,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
 **FX3. Wrong or surprising results from the language (not silent, but wrong).**
 - **FX3e. Gauge units and unknown units.** `mbar`, `ton` (refrigeration), `mph`, `knot` and `inH2O` were added (#166).
   - Done (decided 2026-11-27): `psig` and `barg` are gauge scales over the fixed standard atmosphere, 101.325 kPa, so `0 [psig]` is 101,325 Pa absolute. Like °C, only a bare literal carries the offset (`[psig/s]` is a difference), and the checker's absolute-temperature rules no longer read a gauge offset as a temperature. The language guide has a "Gauge pressures" section.
-  - *Owner decision:* an unknown unit leaves the value unconverted and the solve reports OK, with a warning. Making an unknown unit on a literal a preparation error changes the frozen golden `units_unknown_unit_warns`, which pins the warning, so it needs approval to regenerate that golden. No other corpus, doc or gallery document carries an unknown unit (scanned 2026-11-25).
-    **Decided 2026-11-27:** an unknown unit on a literal is an error that quotes the unit and suggests the nearest known one; `units_unknown_unit_warns` is regenerated for this cause.
+  - Done (decided 2026-11-27): an unknown unit on a literal is a preparation error (Check and Solve) that quotes the line and the unit, keeps the mega/milli hint, and otherwise names the nearest known unit within a third of the name's length (`kpas` → `kpa`; `zorkmids` gets no guess). `units_unknown_unit_warns` is regenerated for this cause, and the frontend's "unconverted units" pill, summary and report heading, which only that warning reached, are removed.
 
 
 **FX6. Measure, then optimise.** Both profiles were recorded on 2026-11-25 (native release build, `fx3e`, callgrind with line tables). The next step for each changes numbers or representation, so each waits on an *owner decision*.
