@@ -259,6 +259,18 @@ P = 30 [psig]          { 308167.7 Pa absolute }
 { CHECK P 308167.71879504 1e-6 }
 ```
 
+## Temperature differences
+A bare `[C]` or `[F]` literal is an absolute temperature: `10 [C]` is 283.15 K. For a rise, a drop or a span, write `[dC]` or `[dF]`. These are degrees with no offset, so `10 [dC]` is 10 K and `9 [dF]` is 5 K. Adding one to a temperature, or scaling one, is what they are for; doing the same with a `[C]` value draws a warning. Inside a compound unit (`[kJ/kg-C]`, `[W/m2-dC]`) either spelling is a per-degree difference.
+```frees
+T_in  = 20 [C]
+rise  = 15 [dC]
+T_out = T_in + rise          { 308.15 K }
+drop  = 18 [dF]              { 10 K }
+T_low = T_in - drop          { 283.15 K }
+{ CHECK T_out 308.15 1e-9 }
+{ CHECK T_low 283.15 1e-9 }
+```
+
 ## Currency units
 Money is a dimension of its own, with USD as its base unit, so ISO currency codes
 work exactly like engineering units — `[USD]`, `[EUR]`, `[GBP]`, `[TRY]`, `[JPY]`,
