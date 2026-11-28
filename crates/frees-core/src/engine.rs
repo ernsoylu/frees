@@ -239,6 +239,11 @@ pub struct Solution {
     /// Phase 4.3: the resolved `Correlation(A, B) = ρ` coefficients, already
     /// validated against the source list by the propagation.
     pub uncertainty_correlations: crate::analysis::sampling::CorrelationEntries,
+    /// The sigma the document itself states for each source, through
+    /// `UncertaintyOf(X) = σ` or `DistributionOf(X) = …`, at the solution.
+    /// Monte Carlo and Sensitivity start from these, and a Variable
+    /// Information uncertainty overrides them.
+    pub declared_uncertainties: BTreeMap<String, f64>,
     /// The `PLOT '…' … END` blocks the document declares, in declaration
     /// order — the Java `SolveController`'s `plotsOf(parsed.plots())`.
     ///

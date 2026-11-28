@@ -221,8 +221,8 @@ it('the featured examples are the curriculum, in order', () => {
 
 // EC4 gate: every fundamental the curriculum teaches, and the pattern that
 // finds it in a featured example's id, description or text. Dropping
-// `featured` from the only example that teaches one fails here. The two
-// `open` rows are not taught yet; NEXT_STEPS (EC4) says what each waits on.
+// `featured` from the only example that teaches one fails here. An `open`
+// row is one not taught yet; NEXT_STEPS (EC4) says what it waits on.
 const FUNDAMENTALS: [string, RegExp | 'open'][] = [
   ['equations and units', /\[[\w^/.-]+\]/],
   ['implicit unknowns', /^\s*[\w.]+\s*[*/]\s*[\w.]+[^={\n]*=[^=]/m],
@@ -259,8 +259,8 @@ const FUNDAMENTALS: [string, RegExp | 'open'][] = [
   ['solid materials', /\b(E_|rho_|k_)\((Steel|Aluminum|Copper)\)/],
   ['uncertainty', /UncertaintyOf\(/],
   ['Correlation()', /\bCorrelation\(/],
-  ['Monte Carlo', 'open'],
-  ['Sobol/Morris sensitivity', 'open'],
+  ['Monte Carlo', /Tools > Monte Carlo/],
+  ['Sobol/Morris sensitivity', /Global Sensitivity[\s\S]*\bSobol\b/],
   ['FFT', /\bFFT\(/i],
   ['Welch', /\bWelch\(/],
   ['psychrometrics', /\(AirH2O,/],
@@ -275,6 +275,5 @@ it('the featured examples teach every fundamental', () => {
   const untaught = FUNDAMENTALS.filter(([, re]) => re !== 'open' && !featured.some((t) => re.test(t))).map(([name]) => name)
   expect(untaught).toEqual([])
   // An open row that starts matching is closed: drop 'open' and give it its pattern.
-  expect(FUNDAMENTALS.filter(([, re]) => re === 'open').map(([name]) => name)).toEqual(
-    ['Monte Carlo', 'Sobol/Morris sensitivity'])
+  expect(FUNDAMENTALS.filter(([, re]) => re === 'open').map(([name]) => name)).toEqual([])
 })

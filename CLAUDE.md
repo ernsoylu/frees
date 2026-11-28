@@ -27,12 +27,12 @@ Guidelines and reference architecture for AI coding assistants and developers wo
 - **Worker Pool**: Up to 4 Web Workers executing independent parametric sweep chunks in parallel with weighted progress, preserving deterministic row ordering.
 - **WASM Bundle Budget**: Strictly gated at $\le 5,120\text{ KiB}$ raw (measured 2026-11-06: 3,900.8 KiB raw / 1,556.5 KiB gzipped, 1,219.2 KiB headroom, after Phase E moved 24 fluids and the mixture tables out of the module). Raised from 4,096 on 2026-09-10, owner-authorized; the `ci.yml` header carries the full ledger.
 - **Test Suite Health**:
-  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,482 tests pass across all workspace crates (2026-11-27, after FX1e's `Integral` units).
+  - `cargo test --workspace -- --skip golden_corpus_parity`: 3,487 tests pass across all workspace crates (2026-11-28, after EC4's declared sources).
   - `cargo test --release --test parity`: 1,308/1,308 golden fixtures passing.
-  - `vitest run` (Node 22): 111 test files, 1,528 tests passing (2026-11-27; needs the built `web/src/wasm/pkg`).
+  - `vitest run` (Node 22): 111 test files, 1,528 tests passing (2026-11-28; needs the built `web/src/wasm/pkg`).
   - `cargo clippy`: 0 warnings with `-D warnings` on native and `wasm32-unknown-unknown`.
   - `npm run lint`: 0 errors.
-  - `npm run check-examples`: 830/830 documentation blocks (2,978 assertions), including the 20 multi-domain examples and their 19 optimization requests. Every graded block must also check with zero unit warnings.
+  - `npm run check-examples`: 831/831 documentation blocks (2,980 assertions), including the 20 multi-domain examples and their 19 optimization requests. Every graded block must also check with zero unit warnings.
   - `npm run check-docs`: 771/771 documentable symbols have a reference page. Every family is reconciled against the Rust registries (`eval::INTRINSICS`, `procedures::EXPANDED_CALL_TARGETS`, `parser::expand::MATRIX_FUNCTIONS`, `props::propfun`, `props::solids`, `repl::CAS_NAMES`, `token::keyword_or_ident`); a keyword page lists companion keywords in `covers:` frontmatter and the builder **exits non-zero** rather than reporting coverage from a cached list. It no longer reads the Java reference repo at all; the 100% it used to print from that fallback was stale, not earned.
 
 ---
