@@ -92,7 +92,8 @@ export default function MonteCarloModal({
       <Stack gap="sm">
         <ToolSection step="Target">
         <Text size="sm" c="dimmed">
-          Samples every variable with a declared uncertainty (Variable Settings window) around
+          Samples every variable with a declared uncertainty (an UncertaintyOf or DistributionOf
+          line, or the Variable Settings window, which overrides a line) around
           its solved value, re-solves, and aggregates the distributions — the sampling counterpart
           of the first-order propagation shown in the Solution window.
         </Text>

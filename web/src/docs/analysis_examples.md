@@ -267,26 +267,14 @@ Sobol' and Morris assume independent inputs and refuse a document with a `Correl
 
 This is the `correlated-temperature-heat-loss` example. Its first-order uncertainty already accounts for the correlation: σ = 10·√(0.2² + 0.3² − 2·0.5·0.2·0.3) = 2.65 W, against 3.61 W if the two readings were independent. Monte Carlo draws correlated samples and agrees: 1,000 samples give σ = 2.56 W.
 
-Monte Carlo honours the document's `Correlation` declaration, but takes each input's uncertainty from the Variable Information window (`variableInfo` here), not from its `UncertaintyOf` line. Enter 0.2 K and 0.3 K there before **Tools → Monte Carlo**.
+Monte Carlo takes each input's uncertainty from its `UncertaintyOf` line and honours the `Correlation` declaration, so **Tools → Monte Carlo** needs nothing entered. An uncertainty typed in the Variable Information window (`variableInfo` in a request) replaces the line's.
 
 ```json
 {
   "operation": "monte_carlo",
   "request": {
     "samples": 1000,
-    "seed": 42,
-    "variableInfo": [
-      {
-        "name": "inside_temp",
-        "units": "K",
-        "uncertainty": 0.2
-      },
-      {
-        "name": "outside_temp",
-        "units": "K",
-        "uncertainty": 0.3
-      }
-    ]
+    "seed": 42
   },
   "checks": [
     {

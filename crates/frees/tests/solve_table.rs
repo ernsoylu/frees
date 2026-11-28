@@ -729,3 +729,103 @@ fn deadline_returns_row_statuses_instead_of_discarding_the_table() {
         }
     }
 }
+
+// ── declared sigmas as sources (EC4, decided 2026-11-27) ───────────────────
+
+/// `UncertaintyOf(x) = σ` makes `x` a source: the run is exactly the one the
+/// same σ entered in Variable Information gives.
+#[test]
+fn a_declared_uncertainty_is_a_monte_carlo_source() {
+    let declared = mc(
+        "x = 2\ny = 3 * x\nUncertaintyOf(x) = 0.1\n",
+        r#"{"samples": 8, "seed": 42}"#,
+    );
+    let entered = mc(
+        "x = 2\ny = 3 * x\n",
+        r#"{"samples": 8, "seed": 42,
+            "variableInfo": [{"name": "x", "guess": 2, "uncertainty": 0.1}]}"#,
+    );
+    assert!(declared.get("error").is_none(), "{declared}");
+    assert_eq!(declared["sources"], json_arr(&["x"]));
+    assert_eq!(declared["samples"], entered["samples"]);
+    assert_eq!(declared["stats"], entered["stats"]);
+
+    // A `DistributionOf` line is a source too, drawn from its own shape.
+    let uniform = mc(
+        "x = 2\ny = 3 * x\nDistributionOf(x) = Uniform(1.9, 2.1)\n",
+        r#"{"samples": 64, "seed": 42}"#,
+    );
+    assert!(uniform.get("error").is_none(), "{uniform}");
+    assert_eq!(uniform["sources"], json_arr(&["x"]));
+    for sample in uniform["samples"].as_array().unwrap() {
+        let x = sample["values"]["x"].as_f64().unwrap();
+        assert!((1.9..=2.1).contains(&x), "{x}");
+    }
+}
+
+/// A Variable Information uncertainty overrides the document's.
+#[test]
+fn a_variable_information_uncertainty_overrides_the_declared_one() {
+    let overridden = mc(
+        "x = 2\ny = 3 * x\nUncertaintyOf(x) = 0.5\n",
+        r#"{"samples": 8, "seed": 42,
+            "variableInfo": [{"name": "x", "uncertainty": 0.1}]}"#,
+    );
+    let entered = mc(
+        "x = 2\ny = 3 * x\n",
+        r#"{"samples": 8, "seed": 42,
+            "variableInfo": [{"name": "x", "uncertainty": 0.1}]}"#,
+    );
+    assert_eq!(overridden["samples"], entered["samples"]);
+}
+
+/// The `correlated-temperature-heat-loss` example runs from its own lines,
+/// correlation honoured: σ = 2.56 W at 1,000 samples (seed 42), against the
+/// first-order 2.65 W — the run EC5 measured with the sigmas re-entered.
+#[test]
+fn the_correlated_heat_loss_example_samples_its_declared_sigmas() {
+    let out = mc(
+        "inside_temp = 293.15 [K]\noutside_temp = 273.15 [K]\n\
+         heat_loss = 10 [W/K]*(inside_temp-outside_temp)\n\
+         UncertaintyOf(inside_temp) = 0.2\nUncertaintyOf(outside_temp) = 0.3\n\
+         Correlation(inside_temp, outside_temp) = 0.5\n",
+        r#"{"samples": 1000, "seed": 42}"#,
+    );
+    assert!(out.get("error").is_none(), "{out}");
+    assert_eq!(out["sources"], json_arr(&["inside_temp", "outside_temp"]));
+    let heat = out["stats"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["variable"] == "heat_loss")
+        .unwrap();
+    let sigma = heat["sigma"].as_f64().unwrap();
+    assert!((sigma - 2.56).abs() < 0.01, "{sigma}");
+    let first = heat["firstOrderSigma"].as_f64().unwrap();
+    assert!((first - 7f64.sqrt()).abs() < 1e-7, "{first}");
+}
+
+/// Sensitivity takes the same sources; it still refuses a correlation.
+#[test]
+fn a_declared_uncertainty_is_a_sensitivity_input() {
+    let run = |source: &str| -> Value {
+        serde_json::from_str(&frees::sensitivity(
+            source,
+            r#"{"method": "sobol", "samples": 64, "seed": 42, "outputs": ["y"]}"#,
+        ))
+        .expect("valid JSON out")
+    };
+    let out = run("a = 1\nb = 2\ny = a + 3*b\nUncertaintyOf(a) = 0.1\nUncertaintyOf(b) = 0.1\n");
+    assert!(out.get("error").is_none(), "{out}");
+    let correlated = run(
+        "a = 1\nb = 2\ny = a + 3*b\nUncertaintyOf(a) = 0.1\nUncertaintyOf(b) = 0.1\n\
+         Correlation(a, b) = 0.5\n",
+    );
+    assert!(
+        correlated["error"]
+            .as_str()
+            .unwrap_or("")
+            .contains("independent inputs"),
+        "{correlated}"
+    );
+}
