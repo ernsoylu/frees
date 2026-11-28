@@ -2,16 +2,16 @@
   "_comment": "Recorded native-versus-WASM browser divergences for the WASM parity gate. Each entry must state the fixture, the mechanism, the measured magnitude, and a tight bound so differences cannot silently grow.",
   "fixtures": {
     "components_i_cabinzone_dynamic": {
-      "relative": 1e-8,
-      "measured": 6.66e-9,
+      "relative": 2e-8,
+      "measured": 1.23e-8,
       "mechanism": "rustprop-transcendentals-glibc-vs-wasm32-libm",
-      "reason": "ode23s transient with MoistAirSource/CabinZone evaluating HAPropsSI in the loop. rustprop uses std::f64::exp/ln/powf which resolves to glibc natively and compiler-rt/libm on wasm32; 1-ulp property variations integrate to a 6.66e-9 trajectory difference against the JDK/native baseline."
+      "reason": "ode23s transient with MoistAirSource/CabinZone evaluating HAPropsSI in the loop. rustprop uses std::f64::exp/ln/powf which resolves to glibc natively and compiler-rt/libm on wasm32; 1-ulp property variations integrate to a trajectory difference against the native golden. Since 2026-11-28 ode23s reuses its Jacobian (FX6), and an ulp can tip a refresh decision, so the difference is 1.23e-8 (shell$q, row 4); it was 6.66e-9 when every step formed its own."
     },
     "ev-battery-cooling-pid": {
-      "relative": 6e-6,
-      "measured": 4.43e-6,
+      "relative": 2e-5,
+      "measured": 1.38e-5,
       "mechanism": "rustprop-transcendentals-glibc-vs-wasm32-libm",
-      "reason": "ode23s transient (4000 s, 400 rows) of a five-domain closed loop: BatteryPack -> LiquidWallHX cold plate -> Chiller (MovingBoundaryEvaporator, R134a) -> EXVCmd under a clamped PID. Its golden was regenerated natively on 2026-10-21 (LiquidWallHX exact isothermal-wall law), so native replay is exact; wasm32 resolves rustprop's exp/ln/powf through compiler-rt/libm instead of glibc, and the 1-ulp property differences integrate through the PID loop. The worst cell is ch.ev$l_tp at row 45 (diff 4.20e-6 m on a column scale of 0.948, 4.43e-6), where the evaporator's smooth-min zone-length corner amplifies them; the solved scalars agree to 1.8e-11. Before the regeneration this fixture carried a 3.6e-6 rustprop-vs-Java relaxation that absorbed the same effect."
+      "reason": "ode23s transient (4000 s, 400 rows) of a five-domain closed loop: BatteryPack -> LiquidWallHX cold plate -> Chiller (MovingBoundaryEvaporator, R134a) -> EXVCmd under a clamped PID. Its golden was regenerated natively on 2026-10-21 (LiquidWallHX exact isothermal-wall law), so native replay is exact; wasm32 resolves rustprop's exp/ln/powf through compiler-rt/libm instead of glibc, and the 1-ulp property differences integrate through the PID loop. The worst cell is ch.ev$l_tp at row 49 (1.38e-5 of its column scale), where the evaporator's smooth-min zone-length corner amplifies them. Since 2026-11-28 ode23s reuses its Jacobian (FX6) and the golden is regenerated for it; an ulp can tip a refresh decision, which took the worst cell from 4.43e-6 (row 45) to 1.38e-5. Before the regeneration this fixture carried a 3.6e-6 rustprop-vs-Java relaxation that absorbed the same effect."
     },
     "moving-boundary-hx-transient-warmup-births-superheat-zone-on-ida": {
       "relative": 4e-5,
