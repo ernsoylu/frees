@@ -584,7 +584,6 @@ impl Flattener<'_> {
                     ),
                     _ => Ok(()),
                 };
-                self.out.truncate(len);
                 let new: Vec<String> = found
                     .keys()
                     .filter(|k| !before.contains(*k))
@@ -596,6 +595,11 @@ impl Flattener<'_> {
                     }
                 }
             }
+            // Kept until the pass ends, so the equation budget counts what the
+            // real pass would: a scope's later statement is refused up front
+            // instead of being built (`call_fft_over_equation_budget_rejected`
+            // ran wasm32 out of memory).
+            self.out.truncate(len);
             let before = forward.len();
             for (name, shape) in found {
                 if !known.contains(&name) {
