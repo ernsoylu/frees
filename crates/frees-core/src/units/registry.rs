@@ -160,6 +160,10 @@ pub static UNITS: &[(&str, f64, Dims)] = &[
     ("c", 1.0, TEMPERATURE),
     ("r", 5.0 / 9.0, TEMPERATURE),
     ("f", 5.0 / 9.0, TEMPERATURE),
+    // FX5: temperature differences. A degree of either scale with no offset,
+    // so `10 [dC]` is 10 K and `9 [dF]` is 5 K, bare or compound.
+    ("dc", 1.0, TEMPERATURE),
+    ("df", 5.0 / 9.0, TEMPERATURE),
     // ---- Amount / current / luminosity ------------------------------------
     ("mol", 1.0, AMOUNT),
     ("kmol", 1000.0, AMOUNT),
@@ -1408,6 +1412,17 @@ mod tests {
 
         let per_f = UnitRegistry::parse_with_offset("Btu/lbm-F").unwrap();
         assert_eq!(per_f.offset, 0.0);
+    }
+
+    #[test]
+    fn dc_and_df_are_temperature_differences_without_an_offset() {
+        for (unit, factor) in [("dC", 1.0), ("dF", 5.0 / 9.0)] {
+            let q = UnitRegistry::parse_with_offset(unit).unwrap();
+            assert_eq!((q.factor, q.offset), (factor, 0.0), "{unit}");
+            assert!(dims_match(&q.dims, &TEMPERATURE_DIMS));
+        }
+        let per = UnitRegistry::parse("W/m2-dC").unwrap();
+        assert_eq!(per.factor, 1.0);
     }
 
     #[test]

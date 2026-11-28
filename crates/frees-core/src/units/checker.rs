@@ -672,7 +672,7 @@ impl Checker {
                 };
                 let message = format!(
                     "{}: {what}. A °C or °F value is absolute, so `{text}` is {kelvin} K; {fix} \
-                     in [K] or [R].",
+                     in [dC], [dF], [K] or [R].",
                     self.current_equation
                 );
                 self.warn(message);
@@ -1896,6 +1896,17 @@ mod tests {
         assert_eq!(report.inferred.get("pct").map(String::as_str), Some("K"));
     }
 
+    /// FX5: `[dC]` and `[dF]` are differences, so adding one to an absolute
+    /// temperature or scaling one is what they are for.
+    #[test]
+    fn a_dc_or_df_difference_adds_to_a_temperature_without_a_warning() {
+        let report = check_units(
+            &eqs("T1 = 20 [C]\ndT = 10 [dC]\nT2 = T1 + dT\nT3 = T1 + 9 [dF]\nr = 2 * dT"),
+            &units(&[]),
+        );
+        assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+    }
+
     /// FX1c: a °C or °F value is absolute, so `T1 + dT` with `dT = 10 [C]`
     /// gave 576.3 K, and `2 * 20 [C]` 586.3 K, without a word.
     #[test]
@@ -1907,9 +1918,9 @@ mod tests {
         );
         let expected = [
             "T2 = T1 + dT: adds absolute temperatures. A °C or °F value is absolute, so \
-             `10 [C]` is 283.15 K; write a temperature difference in [K] or [R].",
+             `10 [C]` is 283.15 K; write a temperature difference in [dC], [dF], [K] or [R].",
             "y = 2 * 20 [C]: scales an absolute temperature. A °C or °F value is absolute, so \
-             `20 [C]` is 293.15 K; scale a difference in [K] or [R].",
+             `20 [C]` is 293.15 K; scale a difference in [dC], [dF], [K] or [R].",
             // A mean of absolute temperatures is one too.
             "z = Tm + dT: adds absolute temperatures.",
         ];
