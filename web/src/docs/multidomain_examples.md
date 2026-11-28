@@ -250,12 +250,12 @@ T_supply  = COIL.T_out
 RH_supply = RelHum(AirH2O, h=VENT.h, P=VENT.P, W=VENT.W)
 m_cond    = 0.25 * (0.0135 - VENT.W) * 3600   { condensate drained, kg/h }
 
-{ CHECK P_evap 302615.09579131793 3.03 }
-{ CHECK P_cond 1277877.7105402707 12.8 }
-{ CHECK Q_cool 6614.643325158678 0.0661 }
-{ CHECK Q_lat 2819.637596910635 0.0282 }
-{ CHECK COP 2.8257981637968475 2.83e-05 }
-{ CHECK T_supply 285.5255421537056 0.00286 }
+{ CHECK P_evap 302704.823155783 3.03 }
+{ CHECK P_cond 1277719.3596478277 12.8 }
+{ CHECK Q_cool 6612.002433356918 0.0661 }
+{ CHECK Q_lat 2818.075126848074 0.0282 }
+{ CHECK COP 2.8253208039383337 2.83e-05 }
+{ CHECK T_supply 285.52970835182464 0.00286 }
 ```
 
 ### Key results
@@ -1125,6 +1125,7 @@ connect(COIL.out, EXH.in)
 connect(COIL.wall, EVAP.wall)
 
 GUESS CMP.in.P    = 3.0e5
+GUESS EVAP.in.P   = 3.03e5   { suction + the evaporator dP: a consistent start }
 GUESS CMP.out.P   = 1.35e6
 GUESS CMP.in.h    = 4.0e5
 GUESS CMP.out.h   = 4.45e5
@@ -1143,11 +1144,11 @@ P_cond   = CMP.out.P
 T_cond   = COND.Tsat
 P_evap   = CMP.in.P
 
-{ CHECK P_cond 1282785.417673716 12.8 }
-{ CHECK P_evap 275533.51843606815 2.76 }
-{ CHECK Q_heat 2529.3627993590853 0.0253 }
-{ CHECK T_hot 312.34815872801204 0.00312 }
-{ CHECK COP_h 3.8564543475330524 3.86e-05 }
+{ CHECK P_cond 1282577.6373321596 12.8 }
+{ CHECK P_evap 275565.83689662593 2.76 }
+{ CHECK Q_heat 2528.779771248393 0.0253 }
+{ CHECK T_hot 312.3425779834571 0.00312 }
+{ CHECK COP_h 3.8563836853220526 3.86e-05 }
 ```
 
 ### Key results
@@ -1176,7 +1177,7 @@ In the app: delete (or comment out) the `mdot_w = …` line so `mdot_w` is free,
 ```json
 {
   "operation": "optimize",
-  "text": "// Air-source heat-pump water heater (closed R134a loop)\n{ Domains: two-phase refrigerant (closed loop: compressor, moving-boundary\n  condenser, thermostatic expansion, superheat-controlled evaporator) +\n  liquid (city water heated in the condenser's water channel) + moist air\n  (outdoor air cooled on the evaporator coil) + heat (the two shared walls).\n\n  The condensing pressure floats until the water side absorbs the condenser\n  duty; the evaporating pressure floats until the coil air supplies the\n  evaporator duty at the compressor's volumetric flow. The water flow sets\n  the delivery temperature - and the COP pays for every kelvin of it. }\n\nfunction [in, out] = IdealTXV(domain$ = twophase)\nport(in)\nport(out)\n  out.mdot = in.mdot\n  out.h    = in.h\nend\n\n\n{ ---- refrigerant loop ---- }\nTwoPhaseCompressor      CMP(fluid$=R134a, model$=volumetric, eta=0.68, eta_v=0.88, disp=2.4e-5 [m^3], rpm=2900)\nMovingBoundaryCondenser COND(fluid$=R134a, U_cond=1800 [W/m^2-K], U_sc=500 [W/m^2-K], D=0.009 [m], L=14 [m], eps_zone=0.05 [m])\nIdealTXV                TXV()\nTwoPhaseEvaporatorUA    EVAP(fluid$=R134a, UA=320 [W/K], dP=3000 [Pa], SH=5 [K])\nconnect(CMP.out, COND.in)\nconnect(COND.out, TXV.in)\nconnect(TXV.out, EVAP.in)\nconnect(EVAP.out, CMP.in)\nEVAP.frac = 1\nCOND.SC   = 4            { charge closure: the refrigerant inventory sets the\n                           high side; a design subcooling stands in for it }\n\n{ ---- water side of the condenser ---- }\nLiquidSource  CITY(fluid$=Water, mdot=mdot_w, P=300000 [Pa], T=288.15 [K])\nLiquidWallHX  WCH(fluid$=Water, UA=180 [W/K])\nLiquidSink    TAP()\nconnect(CITY.out, WCH.in)\nconnect(WCH.out, TAP.in)\nconnect(COND.wall, WCH.wall)\n\n{ ---- outdoor air over the evaporator coil: 12 C, 70 % RH ---- }\nMoistAirSource OUTA(P=101325 [Pa], T=285.15 [K], W=HumRat(AirH2O, T=285.15, P=101325, R=0.7), mdot=0.35 [kg/s])\nMoistAirWallHX COIL(eps=0.7)\nMoistAirSink   EXH()\nconnect(OUTA.out, COIL.in)\nconnect(COIL.out, EXH.in)\nconnect(COIL.wall, EVAP.wall)\n\nGUESS CMP.in.P    = 3.0e5\nGUESS CMP.out.P   = 1.35e6\nGUESS CMP.in.h    = 4.0e5\nGUESS CMP.out.h   = 4.45e5\nGUESS COND.out.h  = 2.6e5\nGUESS COND.wall.T = 321\nGUESS EVAP.wall.T = 280\nGUESS COIL.T_out  = 281\nGUESS CMP.in.mdot = 0.015\nGUESS COND.T_out  = 321\n\nT_hot    = Temperature(Water, P=TAP.P, h=TAP.h)     { delivered water }\nQ_heat   = COND.Q                                    { heating duty, W }\nW_comp   = CMP.W\nCOP_h    = Q_heat / W_comp\nP_cond   = CMP.out.P\nT_cond   = COND.Tsat\nP_evap   = CMP.in.P\n",
+  "text": "// Air-source heat-pump water heater (closed R134a loop)\n{ Domains: two-phase refrigerant (closed loop: compressor, moving-boundary\n  condenser, thermostatic expansion, superheat-controlled evaporator) +\n  liquid (city water heated in the condenser's water channel) + moist air\n  (outdoor air cooled on the evaporator coil) + heat (the two shared walls).\n\n  The condensing pressure floats until the water side absorbs the condenser\n  duty; the evaporating pressure floats until the coil air supplies the\n  evaporator duty at the compressor's volumetric flow. The water flow sets\n  the delivery temperature - and the COP pays for every kelvin of it. }\n\nfunction [in, out] = IdealTXV(domain$ = twophase)\nport(in)\nport(out)\n  out.mdot = in.mdot\n  out.h    = in.h\nend\n\n\n{ ---- refrigerant loop ---- }\nTwoPhaseCompressor      CMP(fluid$=R134a, model$=volumetric, eta=0.68, eta_v=0.88, disp=2.4e-5 [m^3], rpm=2900)\nMovingBoundaryCondenser COND(fluid$=R134a, U_cond=1800 [W/m^2-K], U_sc=500 [W/m^2-K], D=0.009 [m], L=14 [m], eps_zone=0.05 [m])\nIdealTXV                TXV()\nTwoPhaseEvaporatorUA    EVAP(fluid$=R134a, UA=320 [W/K], dP=3000 [Pa], SH=5 [K])\nconnect(CMP.out, COND.in)\nconnect(COND.out, TXV.in)\nconnect(TXV.out, EVAP.in)\nconnect(EVAP.out, CMP.in)\nEVAP.frac = 1\nCOND.SC   = 4            { charge closure: the refrigerant inventory sets the\n                           high side; a design subcooling stands in for it }\n\n{ ---- water side of the condenser ---- }\nLiquidSource  CITY(fluid$=Water, mdot=mdot_w, P=300000 [Pa], T=288.15 [K])\nLiquidWallHX  WCH(fluid$=Water, UA=180 [W/K])\nLiquidSink    TAP()\nconnect(CITY.out, WCH.in)\nconnect(WCH.out, TAP.in)\nconnect(COND.wall, WCH.wall)\n\n{ ---- outdoor air over the evaporator coil: 12 C, 70 % RH ---- }\nMoistAirSource OUTA(P=101325 [Pa], T=285.15 [K], W=HumRat(AirH2O, T=285.15, P=101325, R=0.7), mdot=0.35 [kg/s])\nMoistAirWallHX COIL(eps=0.7)\nMoistAirSink   EXH()\nconnect(OUTA.out, COIL.in)\nconnect(COIL.out, EXH.in)\nconnect(COIL.wall, EVAP.wall)\n\nGUESS CMP.in.P    = 3.0e5\nGUESS EVAP.in.P   = 3.03e5   { suction + the evaporator dP: a consistent start }\nGUESS CMP.out.P   = 1.35e6\nGUESS CMP.in.h    = 4.0e5\nGUESS CMP.out.h   = 4.45e5\nGUESS COND.out.h  = 2.6e5\nGUESS COND.wall.T = 321\nGUESS EVAP.wall.T = 280\nGUESS COIL.T_out  = 281\nGUESS CMP.in.mdot = 0.015\nGUESS COND.T_out  = 321\n\nT_hot    = Temperature(Water, P=TAP.P, h=TAP.h)     { delivered water }\nQ_heat   = COND.Q                                    { heating duty, W }\nW_comp   = CMP.W\nCOP_h    = Q_heat / W_comp\nP_cond   = CMP.out.P\nT_cond   = COND.Tsat\nP_evap   = CMP.in.P\n",
   "request": {
     "objective": "COP_h",
     "maximize": true,
