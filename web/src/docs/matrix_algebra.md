@@ -36,7 +36,7 @@ Standard algebraic operators work element-wise or as matrix operations depending
 ## Operators
 - **`+` / `-`** — add/subtract same-shaped matrices (element-wise).
 - **`*`** — matrix multiplication (sized automatically). A scalar times a matrix scales every element.
-- **`'`** (postfix apostrophe) — transpose: `At = A'`.
+- **`'`** (postfix apostrophe) — transpose: `At = A'`. A quote right after a name, `)` or `]` is always a transpose, so `A' + B'` and `(A*x)'` work alongside string literals elsewhere in the document; anywhere else a quote opens a string.
 - **`\`** (left division) — solves $A x = b$ directly: `x = A \ b`. Equivalent to `SolveLinear(A, b)`.
 
 ## Example: solve a 2×2 system

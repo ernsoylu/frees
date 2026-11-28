@@ -423,33 +423,32 @@ fn transpose_binds_after_the_exponent_within_one_powexpr() {
 }
 
 #[test]
-fn a_second_quote_on_the_same_line_lexes_as_a_string_like_antlr() {
-    // THE WART, pinned down. STRING_LITERAL : '\'' (~'\'')* '\'' outbids
-    // TRANSPOSE by maximal munch whenever another quote follows anywhere later
-    // in the document, so `A' + B'` is IDENT + STRING(" + B"). The port
-    // reproduces the JVM oracle instead of silently improving on it.
+fn a_quote_after_an_atom_is_a_transpose_even_with_a_later_quote() {
+    // FX5 (decided 2026-11-27). The Java engine let STRING_LITERAL outbid
+    // TRANSPOSE whenever any later quote followed, so `A' + B'` was IDENT +
+    // STRING(" + B"). After a name, `)`, `]` or a transpose, a quote is now a
+    // transpose; a legacy import that relied on the old reading is refused
+    // (FREES-MIG-009, in `lexer.rs`).
     assert_eq!(
-        kinds("A' + B'"),
-        vec![
-            TokenKind::Ident("A".into()),
-            TokenKind::StringLiteral(" + B".into())
-        ]
+        rhs("A' + B'"),
+        bin(
+            BinOp::Add,
+            call("transpose", vec![var("a")]),
+            call("transpose", vec![var("b")])
+        )
     );
-    // Consequences at the parser level: a doubled tick is an empty string, not
-    // two transposes (unlike the stand-in lexer in `parser::expr`'s own tests).
     assert_eq!(
-        kinds("a''"),
-        vec![
-            TokenKind::Ident("a".into()),
-            TokenKind::StringLiteral("".into())
-        ]
+        rhs("a''"),
+        call("transpose", vec![call("transpose", vec![var("a")])])
     );
-    assert!(fails("b = a''").contains("expected end of statement"));
-    // A single transpose per line, with no other quote, is unambiguous — which
-    // is why `C = A' * B` still works.
     assert_eq!(
         equation("C = A' * B").rhs,
         bin(BinOp::Mul, call("transpose", vec![var("a")]), var("b"))
+    );
+    // Elsewhere a quote still opens a string, so the later literal survives.
+    assert_eq!(
+        kinds("x = A'; s$ = 'w'").last(),
+        Some(&TokenKind::StringLiteral("w".into()))
     );
 }
 
