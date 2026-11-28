@@ -109,7 +109,7 @@ impl<'a> Lexer<'a> {
                 b'\r' | b'\n' => self.scan_newline(start)?,
                 b'0'..=b'9' => self.scan_number(start)?,
                 b'.' => self.scan_dot(start)?,
-                b'\'' => self.scan_quote(start),
+                b'\'' => self.scan_quote(start)?,
                 b'a'..=b'z' | b'A'..=b'Z' => self.scan_word(start),
                 _ => self.scan_operator(start)?,
             }
@@ -272,23 +272,42 @@ impl<'a> Lexer<'a> {
 
     /// Resolve a single quote.
     ///
-    /// `STRING_LITERAL : '\'' (~'\'')* '\''` and `TRANSPOSE : '\''` both start
-    /// here. ANTLR takes the longest match: since `~'\''` cannot contain a
-    /// quote, the string can only end at the *next* quote, so
+    /// Right after an identifier, `)`, `]` or another transpose, a quote is a
+    /// TRANSPOSE (FX5, decided 2026-11-27), so `A' + B'` is two transposes and
+    /// `C = A'` no longer pairs with a later `'string'`. Anywhere else it opens
+    /// a STRING_LITERAL that ends at the next quote, or, with no later quote,
+    /// is a transpose (`STRING_LITERAL : '\'' (~'\'')* '\''` does not match).
     ///
-    /// * if another `'` exists anywhere later in the document → STRING_LITERAL;
-    /// * otherwise the string alternative cannot match at all → TRANSPOSE.
-    ///
-    /// **Tradeoff.** This reproduces the Java engine bit for bit, including its
-    /// wart: `A' + B'` lexes as `IDENT(A)` + `STRING_LITERAL(" + B")`, not as
-    /// two transposes. The alternative — deciding from the previous token,
-    /// MATLAB-style (a quote right after an atom is a transpose) — reads better
-    /// but would silently disagree with the Java oracle on documents that mix
-    /// the two, which is exactly what the parity harness is there to catch. So
-    /// the port stays faithful; a transpose is unambiguous whenever no later
-    /// quote follows it, which is the case in single-quote-free documents.
-    fn scan_quote(&mut self, start: usize) {
-        match self.src[start + 1..].find('\'') {
+    /// The Java engine took ANTLR's longest match everywhere, so a document
+    /// with a transpose and a later quote lexed differently there. The golden
+    /// scan of 2026-11-28 found none in the corpus, the examples or the docs;
+    /// a legacy import that has one is refused (`FREES-MIG-009`) rather than
+    /// read with the other meaning.
+    fn scan_quote(&mut self, start: usize) -> Result<()> {
+        let after_atom = self.tokens.last().is_some_and(|t| {
+            matches!(
+                t.kind,
+                TokenKind::Ident(_)
+                    | TokenKind::RParen
+                    | TokenKind::RBracket
+                    | TokenKind::Transpose
+            )
+        });
+        let later = self.src[start + 1..].find('\'');
+        if let (true, Some(off)) = (after_atom, later) {
+            if crate::parser::legacy_import_enabled() {
+                let close = start + 1 + off;
+                return Err(FreesError::parse_at(
+                    format!(
+                        "FREES-MIG-009: this quote is a transpose, but the Java engine read \
+                         `{}` as a string; write `transpose(…)` for a transpose, then import again",
+                        &self.src[start..=close]
+                    ),
+                    Span::new(start, start + 1),
+                ));
+            }
+        }
+        match later.filter(|_| !after_atom) {
             Some(off) => {
                 let close = start + 1 + off;
                 let content = self.src[start + 1..close].to_string();
@@ -300,6 +319,7 @@ impl<'a> Lexer<'a> {
                 self.push(TokenKind::Transpose, start);
             }
         }
+        Ok(())
     }
 
     // ── IDENT / keywords / STATE TABLE ──────────────────────────────────────
@@ -1000,22 +1020,58 @@ mod tests {
     }
 
     #[test]
-    fn two_transposes_on_one_line_lex_as_a_string_like_antlr() {
-        // THE TRADEOFF, spelled out: ANTLR's maximal munch prefers the longer
-        // STRING_LITERAL match, so the text between the two quotes becomes a
-        // string. This is the Java engine's behaviour and the port reproduces
-        // it rather than silently diverging from the oracle.
-        assert_eq!(kinds("A' + B'"), vec![ident("A"), string(" + B")]);
-        // The same wart across lines — `~'\''` matches newlines too.
-        assert_eq!(kinds("A'\nB'"), vec![ident("A"), string("\nB")]);
+    fn a_quote_after_an_atom_is_a_transpose_even_with_a_later_quote() {
+        let t = TokenKind::Transpose;
+        let plus = TokenKind::Plus;
+        assert_eq!(
+            kinds("A' + B'"),
+            vec![ident("A"), t.clone(), plus, ident("B"), t.clone()]
+        );
+        assert_eq!(
+            kinds("A'\nB'"),
+            vec![
+                ident("A"),
+                t.clone(),
+                TokenKind::Newline,
+                ident("B"),
+                t.clone()
+            ]
+        );
+        assert_eq!(kinds("A''"), vec![ident("A"), t.clone(), t.clone()]);
+        assert_eq!(
+            kinds("(A)' + [1, 2]'"),
+            vec![
+                TokenKind::LParen,
+                ident("A"),
+                TokenKind::RParen,
+                t.clone(),
+                TokenKind::Plus,
+                TokenKind::LBracket,
+                num(1.0, "1"),
+                TokenKind::Comma,
+                num(2.0, "2"),
+                TokenKind::RBracket,
+                t.clone(),
+            ]
+        );
     }
 
     #[test]
-    fn a_transpose_followed_by_a_real_string_still_misbinds_faithfully() {
-        // `x = A' ; s$ = 'w'` — the first quote pairs with the opening quote of
-        // the later literal, exactly as ANTLR does it.
+    fn a_transpose_leaves_a_later_string_intact() {
         let toks = kinds("x = A'; s$ = 'w'");
-        assert_eq!(toks[3], string("; s$ = "));
+        assert_eq!(toks[3], TokenKind::Transpose);
+        assert_eq!(toks.last(), Some(&string("w")));
+        // Elsewhere a quote still opens a string.
+        assert_eq!(kinds("f('a', 'b')")[2], string("a"));
+    }
+
+    #[test]
+    fn a_legacy_import_refuses_a_transpose_the_java_engine_read_as_a_string() {
+        let err = crate::parser::with_legacy_import(|| tokenize("x = A'; s$ = 'w'")).unwrap_err();
+        assert!(err.to_string().contains("FREES-MIG-009"), "{err}");
+        assert!(err.to_string().contains("`'; s$ = '`"), "{err}");
+        // Without a later quote both engines read a transpose.
+        assert!(crate::parser::with_legacy_import(|| tokenize("x = A'")).is_ok());
     }
 
     // ── comments ────────────────────────────────────────────────────────────

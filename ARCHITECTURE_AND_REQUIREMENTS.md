@@ -457,6 +457,7 @@ Diagnostics are stable by category and include source location:
 | `FREES-MIG-006` | array indexing syntax or invalid index |
 | `FREES-MIG-007` | unknown, repeated, or ambiguous named argument |
 | `FREES-MIG-008` | unsupported recursive or graph-changing evaluation |
+| `FREES-MIG-009` | a quote after a name, `)` or `]` that the Java engine paired with a later quote as a string (now a transpose) |
 
 The legacy adapter may preserve behavior, but it must not silently reinterpret
 a construct whose equation/ordered meaning changes. Native and WASM builds
