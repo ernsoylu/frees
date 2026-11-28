@@ -56,7 +56,10 @@ each item carries its own repro, and each fix lands with that repro as a test.
       - FD step size: 1e-5, 1e-6, 1e-7 and 1e-8 give 85, 87, 85 and 89 iterations; 1e-9 stalls.
       - The warm start, natively: 87 iterations without it, against 85 with it.
       - A zero or weak Jacobian column at any cold start.
-    - Next: test whether `Q_sc`'s `If`/`max` switches and `zone_ramp` are the kink. A smooth form changes the component law, so it needs an owner decision and moves its goldens.
+    - The owner approved smoothing the switches (2026-11-28), but measurement then ruled them out, so the condenser law is unchanged. With `dT_w = ½(ΔT + √(ΔT² + 0.01))` in place of the `If`/`max` clamps, and the same smooth positive part on both duty clips, the first rung still fails, now after 24 iterations instead of 12. Two other attempts did not help either:
+      - Widening `eps_zone` from 0.05 to 0.2, 0.5 or 1.0 m leaves the first rung failing after 10–12 iterations; only the rescue gets shorter (13, 8 or 13 iterations).
+      - Round-number GUESS lines for the unguessed `COIL.out.W`, `COIL.out.h` and `EVAP.in.P` (which start at 1, 1 and 1.42e6 Pa) leave it failing too. `COIL.out.W` alone takes the first rung from 12 iterations to 5 before it fails.
+    - In the failing first rung only `WCH.wall.Qdot` moves, about 1 W per iteration, while every other unknown is frozen and the norm stays at 2.82e6. The steps are being cut to almost nothing. Next: find what cuts them (step halving on a non-finite property call, or a bound) before changing any law.
   - Not reverified on FX1f: a cold `Temperature(R134a, P=1282785, h=261234)` (compressed liquid) differed by 7.3e-10 between native and WASM with the seed bypassed, where every other call measured agreed to 4e-13. If `md-hpwh` still splits the targets, start there.
 
 **FX3. Wrong or surprising results from the language (not silent, but wrong).**
