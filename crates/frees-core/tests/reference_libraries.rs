@@ -32,11 +32,11 @@
 //! series and a trapezoid-rule `K`, and `filtfilt` (8.6e-3) now starts each
 //! pass from `lfilter_zi` as SciPy does.
 //!
-//! SALib standardises `Y` by its global mean before the Saltelli estimator and
-//! frees does not, so the Sobol' group subtracts the generator's `centre` in
-//! the model. Both are Saltelli 2010 for `S1` and Jansen for `ST`; the centring
-//! is the only difference, and on this design it moves `S1` by at most 2.1e-4
-//! and `ST` not at all.
+//! SALib standardises `Y` by its global mean before the Saltelli estimator, and
+//! since 2026-11-28 frees centres on the same mean (it used not to, and this
+//! group subtracted the generator's `centre` in the model to compensate). Both
+//! are Saltelli 2010 for `S1` and Jansen for `ST`, so the raw Ishigami model
+//! now matches, and a copy shifted by 200 gives the same indices.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -361,7 +361,6 @@ fn sobol_indices_match_salib_on_the_same_design() {
     let r = reference();
     let c = &r["sobol_indices"];
     let b = floats(&c["bounds"]);
-    let centre = c["centre"].as_f64().unwrap();
     let plan = SobolPlan {
         space: uniform_space(&["x1", "x2", "x3"], &[(b[0], b[1]); 3]),
         base_samples: c["base_samples"].as_u64().unwrap() as usize,
@@ -371,24 +370,26 @@ fn sobol_indices_match_salib_on_the_same_design() {
     };
     let ishigami =
         |p: &[f64]| p[0].sin() + 7.0 * p[1].sin().powi(2) + 0.1 * p[2].powi(4) * p[0].sin();
-    let (out, _) = sobol(
-        &plan,
-        |p| Some(BTreeMap::from([("y".to_string(), ishigami(p) - centre)])),
-        || false,
-    )
-    .unwrap();
-    let s1: Vec<f64> = out[0].indices.iter().map(|i| i.first_order).collect();
-    let st: Vec<f64> = out[0].indices.iter().map(|i| i.total).collect();
-    report(
-        "sobol S1 vs SALib",
-        norm_err(&s1, &floats(&c["s1"])),
-        ROUND_OFF,
-    );
-    report(
-        "sobol ST vs SALib",
-        norm_err(&st, &floats(&c["st"])),
-        ROUND_OFF,
-    );
+    for shift in [0.0, 200.0] {
+        let (out, _) = sobol(
+            &plan,
+            |p| Some(BTreeMap::from([("y".to_string(), ishigami(p) + shift)])),
+            || false,
+        )
+        .unwrap();
+        let s1: Vec<f64> = out[0].indices.iter().map(|i| i.first_order).collect();
+        let st: Vec<f64> = out[0].indices.iter().map(|i| i.total).collect();
+        report(
+            &format!("sobol S1 vs SALib, model + {shift}"),
+            norm_err(&s1, &floats(&c["s1"])),
+            ROUND_OFF,
+        );
+        report(
+            &format!("sobol ST vs SALib, model + {shift}"),
+            norm_err(&st, &floats(&c["st"])),
+            ROUND_OFF,
+        );
+    }
 }
 
 #[test]

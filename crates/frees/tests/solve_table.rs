@@ -829,3 +829,26 @@ fn a_declared_uncertainty_is_a_sensitivity_input() {
         "{correlated}"
     );
 }
+
+/// Sobol' first-order indices on an output far from zero: the
+/// `correlated-temperature-heat-loss` example without its correlation, whose
+/// exact indices are 4/13 and 9/13. Uncentred, the default run read 0.43 ± 1.97
+/// and 1.02 ± 3.05; centred on the outputs' mean, as SALib does, it is close.
+#[test]
+fn sobol_first_order_indices_hold_on_an_output_far_from_zero() {
+    let out: Value = serde_json::from_str(&frees::sensitivity(
+        "inside_temp = 293.15 [K]\noutside_temp = 273.15 [K]\n\
+         heat_loss = 10 [W/K]*(inside_temp-outside_temp)\n\
+         UncertaintyOf(inside_temp) = 0.2\nUncertaintyOf(outside_temp) = 0.3\n",
+        r#"{"method": "sobol", "seed": 42, "bootstrap": 64, "outputs": ["heat_loss"]}"#,
+    ))
+    .expect("valid JSON out");
+    let indices = &out["outputs"][0]["indices"];
+    for (i, exact) in [(0, 4.0 / 13.0), (1, 9.0 / 13.0)] {
+        let s1 = indices[i]["firstOrder"].as_f64().unwrap();
+        let se = indices[i]["firstOrderStdError"].as_f64().unwrap();
+        eprintln!("S1[{i}] = {s1} ± {se} (exact {exact})");
+        assert!((s1 - exact).abs() < 0.05, "{out}");
+        assert!(se < 0.1, "{out}");
+    }
+}

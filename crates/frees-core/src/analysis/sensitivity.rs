@@ -255,9 +255,23 @@ where
 
     let mut outcomes = Vec::with_capacity(outputs.len());
     for output in &outputs {
-        let fa = column(0, output);
-        let fb = column(1, output);
-        let fab: Vec<Vec<f64>> = (0..p).map(|i| column(i + 2, output)).collect();
+        let mut fa = column(0, output);
+        let mut fb = column(1, output);
+        let mut fab: Vec<Vec<f64>> = (0..p).map(|i| column(i + 2, output)).collect();
+        // Centre on the mean of every evaluation, as SALib does. `V` and `STᵢ`
+        // do not see a shift, but Saltelli's `Sᵢ` multiplies by `f(B)`: on an
+        // output near 200 with a variance of 13 the uncentred estimate read
+        // 0.43 ± 1.97 where the index is 0.31.
+        let evaluations = fa.iter().chain(&fb).chain(fab.iter().flatten());
+        let count = (p + 2) * fa.len();
+        let centre = evaluations.sum::<f64>() / count as f64;
+        for v in fa
+            .iter_mut()
+            .chain(fb.iter_mut())
+            .chain(fab.iter_mut().flatten())
+        {
+            *v -= centre;
+        }
         let all: Vec<usize> = (0..keep.len()).collect();
         let (variance, first, total) = sobol_estimates(&fa, &fb, &fab, &all);
 
@@ -301,7 +315,8 @@ where
 /// * `STᵢ` is Jansen's `E[(f(A) − f(AB^i))²] / (2V)`, which is the one that
 ///   stays accurate when the index is small.
 ///
-/// Both divide by the variance of `A` and `B` pooled.
+/// Both divide by the variance of `A` and `B` pooled. The caller centres the
+/// outputs first, which `Sᵢ` needs and the others do not notice.
 fn sobol_estimates(
     fa: &[f64],
     fb: &[f64],

@@ -206,7 +206,7 @@ Sobol' and Morris assume independent inputs and refuse a document with a `Correl
       "tolerance": 0.03
     }
   ],
-  "text": "inside_temp = 293.15\noutside_temp = 273.15\nheat_loss = 10*(inside_temp-outside_temp)\nheat_deviation = heat_loss-200\nDistributionOf(inside_temp) = Uniform(292.15, 294.15)\nDistributionOf(outside_temp) = Uniform(271.15, 275.15)\n"
+  "text": "inside_temp = 293.15\noutside_temp = 273.15\nheat_loss = 10*(inside_temp-outside_temp)\nDistributionOf(inside_temp) = Uniform(292.15, 294.15)\nDistributionOf(outside_temp) = Uniform(271.15, 275.15)\n"
 }
 ```
 
@@ -259,7 +259,7 @@ Sobol' and Morris assume independent inputs and refuse a document with a `Correl
       "tolerance": 1e-06
     }
   ],
-  "text": "inside_temp = 293.15\noutside_temp = 273.15\nheat_loss = 10*(inside_temp-outside_temp)\nheat_deviation = heat_loss-200\nDistributionOf(inside_temp) = Uniform(292.15, 294.15)\nDistributionOf(outside_temp) = Uniform(271.15, 275.15)\n"
+  "text": "inside_temp = 293.15\noutside_temp = 273.15\nheat_loss = 10*(inside_temp-outside_temp)\nDistributionOf(inside_temp) = Uniform(292.15, 294.15)\nDistributionOf(outside_temp) = Uniform(271.15, 275.15)\n"
 }
 ```
 
