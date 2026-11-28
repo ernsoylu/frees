@@ -70,6 +70,7 @@ each item carries its own repro, and each fix lands with that repro as a test.
   - Rerunning the simulation per sample is only about 15 %. A memo for it was measured (23 s → 20 s at N = 2000) and not kept.
   - *Owner decision:* the fix is representational. Options are to substitute a constant time vector's values into the call, so the samples are not variables, or to make the time responses one vector-valued call node.
   - **Decided 2026-11-27:** substitute a constant time vector's values into the call; a non-constant time vector keeps today's path.
+  - Done 2026-11-28: after expansion, a time (or `lsim` input) sample an equation fixes to a constant goes into the `step$`/`impulse$`/`lsim$` calls as its number (`parser/expand.rs`, `inline_constant_response_samples`); the model's coefficients stay names, and a non-constant vector keeps its names. Measured with the release CLI, `t[i] = (i-1)*dt` in a FOR: 1.53 → 0.20 s at N = 500, 8.31 → 0.69 s at 1000, 54.7 → 2.54 s at 2000, same answer, no golden moved. Still superlinear (796 MB at 2000): each of the N calls carries N numbers and re-simulates, which the vector-valued call node would remove; not decided.
   - Note that 25,000 equations is the generator's limit, so N above about 20,000 is refused.
 
 **FX5. Language-contract items (owner decision before any work).** Each changes how existing text parses, so each needs a migration-matrix row (§4) and a golden scan.

@@ -157,7 +157,77 @@ pub fn expand_document_with(
         generated_names: display_names,
     };
     flattener.flatten(&doc.statements, &Scope::default())?;
-    Ok(flattener.out)
+    let mut out = flattener.out;
+    inline_constant_response_samples(&mut out);
+    Ok(out)
+}
+
+/// A control response is emitted once per sample, and each `step$`,
+/// `impulse$` or `lsim$` call names every sample of `t` (and of `u`): N
+/// equations of N arguments, so each pass that lists an equation's variables
+/// is O(N²) (FX6: 55 s at N = 2000). A sample that an equation fixes to a
+/// constant (`t[i] = (i - 1)*dt` with `dt = 0.01`) goes into the calls as its
+/// value. Its own equation stays, so nothing solved changes; a sample that is
+/// not constant keeps its name. Only the samples are inlined, the trailing N
+/// (`step`, `impulse`) or 2N (`lsim`'s `u` and `t`) arguments: the model's few
+/// coefficients stay names, so a slider on one reads as it always did.
+fn inline_constant_response_samples(equations: &mut [Equation]) {
+    fn is_response(e: &Expr) -> bool {
+        matches!(e, Expr::Call { function, .. }
+            if ["step$", "impulse$", "lsim$"].iter().any(|p| function.starts_with(p)))
+    }
+    if !equations.iter().any(|eq| is_response(&eq.rhs)) {
+        return;
+    }
+    // Fixed point, as `extract_constants`, over the expanded equations, so a
+    // FOR body's samples count. The responses themselves are not evaluated.
+    let mut constants = Scope::default();
+    let mut progress = true;
+    while progress {
+        progress = false;
+        for eq in equations.iter() {
+            let Expr::Var(name) = &eq.lhs else { continue };
+            if constants.contains_key(name) || is_response(&eq.rhs) {
+                continue;
+            }
+            if !eq.rhs.variables().iter().all(|v| constants.contains_key(v)) {
+                continue;
+            }
+            if let Ok(value) = eval::eval(&eq.rhs, &constants) {
+                constants.insert(name.clone(), value);
+                progress = true;
+            }
+        }
+    }
+    for eq in equations.iter_mut() {
+        if !is_response(&eq.rhs) {
+            continue;
+        }
+        let Expr::Call { function, args } = &mut eq.rhs else {
+            continue;
+        };
+        // `step$<i>$<tag>$<N>`, `lsim$<i>$<inputs>$<N>`.
+        let Some(n) = function
+            .rsplit('$')
+            .next()
+            .and_then(|n| n.parse::<usize>().ok())
+        else {
+            continue;
+        };
+        let samples = if function.starts_with("lsim$") {
+            2 * n
+        } else {
+            n
+        };
+        let first = args.len().saturating_sub(samples);
+        for arg in &mut args[first..] {
+            if let Expr::Var(name) = arg {
+                if let Some(&value) = constants.get(name.as_str()) {
+                    *arg = Expr::num(value);
+                }
+            }
+        }
+    }
 }
 
 fn parse_err(message: impl Into<String>) -> FreesError {
@@ -4167,6 +4237,45 @@ mod tests {
 
     fn expand(source: &str) -> Vec<Equation> {
         expand_document(&parse_document(source).expect("parse")).expect("expand")
+    }
+
+    /// FX6: a constant time vector's samples go into the `step$` calls as
+    /// numbers, so no call names all N of them; one that is not constant
+    /// keeps its names. Either way the answers are the default grid's.
+    #[test]
+    fn a_constant_time_vector_goes_into_the_response_as_numbers() {
+        let response_vars = |source: &str| -> std::collections::BTreeSet<String> {
+            expand(source)
+                .iter()
+                .filter(|eq| matches!(&eq.rhs, Expr::Call { function, .. } if function.starts_with("step$")))
+                .flat_map(|eq| eq.rhs.variables())
+                .collect()
+        };
+        let constant =
+            "num = [1]\nden = [1, 1]\ndt = 10/49\nFOR i = 1 TO 50\n  t[i] = (i-1)*dt\nEND\n\
+                        [y] = step(num, den, t[1:50])\n";
+        assert!(
+            response_vars(constant).iter().all(|v| !v.starts_with("t[")),
+            "{:?}",
+            response_vars(constant)
+        );
+        // The model's coefficients stay names, as a slider on one reads them.
+        assert!(response_vars(constant).contains("den[2]"));
+        // `2*h = 0.2` fixes h only through the solve, so t is not constant here.
+        let solved = "num = [1]\nden = [1, 1]\n2*h = 0.2\nFOR i = 1 TO 50\n  t[i] = (i-1)*h\nEND\n\
+                      [y] = step(num, den, t[1:50])\n";
+        assert!(response_vars(solved).contains("t[50]"));
+
+        let grid = crate::solve(
+            "num = [1]\nden = [1, 1]\n[y, tt] = step(num, den)\n",
+            &Default::default(),
+        )
+        .expect("default grid solves");
+        let ours = crate::solve(constant, &Default::default()).expect("constant t solves");
+        for k in [1, 2, 25, 50] {
+            let name = format!("y[{k}]");
+            assert_eq!(ours.values[&name], grid.values[&name], "{name}");
+        }
     }
 
     fn expand_err(source: &str) -> String {
