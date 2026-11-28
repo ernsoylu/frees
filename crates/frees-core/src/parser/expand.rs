@@ -49,17 +49,24 @@
 //! same validation and value formulas (`| Log` = geometric spacing with an
 //! exact endpoint).
 //!
+//! # Where FX5 departs from the Java (decided 2026-11-28)
+//!
+//! * A scope knows every shape its statements declare before it flattens the
+//!   first, so a bare matrix name resolves above its declaration. The Java
+//!   resolved it only after (plus `inferElementwiseShapes` for
+//!   element-by-element writes). A name a statement assigns as a scalar gets
+//!   no forward shape.
+//! * A `FOR` body starts from the enclosing scope's shapes; the Java gave
+//!   each iteration a fresh map, so an outer matrix did not resolve inside.
+//! * A matrix literal takes matrix elements as blocks (`[A; A]`, `[A, b]`);
+//!   the Java read a name inside a literal as a scalar.
+//!
+//! Each of these documents was underspecified before, and the expansion of
+//! every fixture, example and documentation block is otherwise unchanged.
+//!
 //! # Behaviour ported bug-for-bug
 //!
-//! * Bare-name resolution is **statement-order dependent**: a name resolves
-//!   only after the statement that declared its shape has been flattened
-//!   (plus `inferElementwiseShapes` pre-registration for element-by-element
-//!   writes).
-//! * Each `FOR` iteration flattens its body with a **fresh shape scope**
-//!   (the Java `flatten` recursion allocates a new map), so top-level matrix
-//!   names do not bare-resolve inside loop bodies.
-//! * `resolveShapes` does not descend into array literals, comparisons or
-//!   `not` — a matrix name inside `[a; b]` stays a scalar variable.
+//! * `resolveShapes` does not descend into comparisons or `not`.
 //! * Scalar call arguments that are slices flatten to multiple scalar
 //!   arguments (`sqrt(A)` becomes `sqrt(a[1,1], a[1,2], …)`), exactly like
 //!   `expandExpr`.
@@ -156,7 +163,7 @@ pub fn expand_document_with(
         module_counter: module_counter_base,
         generated_names: display_names,
     };
-    flattener.flatten(&doc.statements, &Scope::default())?;
+    flattener.flatten(&doc.statements, &Scope::default(), &HashMap::new())?;
     let mut out = flattener.out;
     inline_constant_response_samples(&mut out);
     Ok(out)
@@ -462,13 +469,32 @@ impl Flattener<'_> {
         sink
     }
 
-    /// Port of `EquationParser.flatten`: each invocation opens a fresh shape
-    /// scope (which is why bare names registered at the top level do not
-    /// resolve inside FOR bodies — a Java behaviour kept as-is).
-    fn flatten(&mut self, statements: &[Statement], loop_vars: &Scope) -> Result<()> {
-        let mut shapes: HashMap<String, Shape> = HashMap::new();
+    /// Port of `EquationParser.flatten`. FX5 (decided 2026-11-28): a scope
+    /// starts from its enclosing scope's shapes, so a `FOR` body sees the
+    /// matrices around it, and knows every shape its own statements declare
+    /// before it flattens the first, so a matrix may be used above its
+    /// declaring statement. The Java opened a fresh scope per call and
+    /// resolved a bare name only after its declaration.
+    fn flatten(
+        &mut self,
+        statements: &[Statement],
+        loop_vars: &Scope,
+        enclosing: &HashMap<String, Shape>,
+    ) -> Result<()> {
+        let mut shapes = enclosing.clone();
         self.infer_elementwise_shapes(statements, loop_vars, &mut shapes);
-        for statement in statements {
+        let declares = self.preregister_shapes(statements, loop_vars, &mut shapes);
+        let mut registered: HashSet<&str> = HashSet::new();
+        for (statement, own) in statements.iter().zip(&declares) {
+            // A statement flattens as if its own outputs were still unknown,
+            // as when it came first, unless an earlier one registered them;
+            // it registers them itself.
+            for name in own {
+                if !registered.contains(name.as_str()) {
+                    shapes.remove(name);
+                }
+            }
+            registered.extend(own.iter().map(String::as_str));
             match statement {
                 Statement::For {
                     var_name,
@@ -476,7 +502,13 @@ impl Flattener<'_> {
                     step,
                     end,
                     body,
-                } => self.flatten_for(var_name, start, step.as_ref(), end, body, loop_vars)?,
+                } => self.flatten_for(
+                    var_name,
+                    (start, step.as_ref(), end),
+                    body,
+                    loop_vars,
+                    &shapes,
+                )?,
                 Statement::Eq(eq) => {
                     self.flatten_eq(&eq.lhs, &eq.rhs, &eq.source_text, loop_vars, &mut shapes)?
                 }
@@ -499,6 +531,101 @@ impl Flattener<'_> {
             }
         }
         Ok(())
+    }
+
+    /// The shapes the statements of one scope declare, found by flattening
+    /// them once and throwing the result away: the equations, the sink and
+    /// MODULE counters and the display names are put back as they were. A
+    /// shape can need another to resolve, so this repeats while it finds more.
+    /// A statement that fails here is left for the real pass to report.
+    ///
+    /// Each forward shape goes into `shapes`, and the names each statement
+    /// declares come back so the real pass can withdraw them from that
+    /// statement. A name some statement of the scope assigns as a scalar
+    /// (`c = 50` beside `C = [1, 0]`, names being case-insensitive) gets no
+    /// forward shape, as [`Self::infer_elementwise_shapes`] already does.
+    fn preregister_shapes(
+        &mut self,
+        statements: &[Statement],
+        loop_vars: &Scope,
+        shapes: &mut HashMap<String, Shape>,
+    ) -> Vec<Vec<String>> {
+        let mut declares = vec![Vec::new(); statements.len()];
+        let has_declaration =
+            |st: &Statement| matches!(st, Statement::Eq(_) | Statement::CallProc { .. });
+        if !statements.iter().any(has_declaration) {
+            return declares;
+        }
+        let (len, sinks, modules) = (self.out.len(), self.sinks, self.module_counter);
+        let names = self.generated_names.clone();
+        let known: HashSet<String> = shapes.keys().cloned().collect();
+        let mut forward: HashMap<String, Shape> = HashMap::new();
+        for _pass in 0..8 {
+            let mut found = shapes.clone();
+            found.extend(forward.iter().map(|(k, v)| (k.clone(), *v)));
+            for (i, statement) in statements.iter().enumerate() {
+                let before: HashSet<String> = found.keys().cloned().collect();
+                let _ = match statement {
+                    Statement::Eq(eq) => {
+                        self.flatten_eq(&eq.lhs, &eq.rhs, &eq.source_text, loop_vars, &mut found)
+                    }
+                    Statement::CallProc {
+                        name,
+                        inputs,
+                        outputs,
+                        source_text,
+                    } => self.flatten_call_proc(
+                        name,
+                        inputs,
+                        outputs,
+                        source_text,
+                        loop_vars,
+                        &mut found,
+                    ),
+                    _ => Ok(()),
+                };
+                self.out.truncate(len);
+                let new: Vec<String> = found
+                    .keys()
+                    .filter(|k| !before.contains(*k))
+                    .cloned()
+                    .collect();
+                for name in new {
+                    if !declares[i].contains(&name) {
+                        declares[i].push(name);
+                    }
+                }
+            }
+            let before = forward.len();
+            for (name, shape) in found {
+                if !known.contains(&name) {
+                    forward.entry(name).or_insert(shape);
+                }
+            }
+            if forward.len() == before {
+                break;
+            }
+        }
+        (self.sinks, self.module_counter) = (sinks, modules);
+        *self.generated_names = names;
+        // Scalar: a bare name assigned by a statement that declared nothing.
+        let scalar: HashSet<String> = statements
+            .iter()
+            .zip(&declares)
+            .filter_map(|(statement, own)| match statement {
+                Statement::Eq(eq) if own.is_empty() => match &eq.lhs {
+                    Expr::Var(name) => Some(name.to_ascii_lowercase()),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect();
+        forward.retain(|name, _| !scalar.contains(name));
+        for own in &mut declares {
+            own.retain(|name| forward.contains_key(name));
+        }
+        shapes.extend(forward);
+        declares
     }
 
     /// Pre-registers the shape of matrices declared element-by-element
@@ -583,11 +710,10 @@ impl Flattener<'_> {
     fn flatten_for(
         &mut self,
         var_name: &str,
-        start: &Expr,
-        step: Option<&Expr>,
-        end: &Expr,
+        (start, step, end): (&Expr, Option<&Expr>, &Expr),
         body: &[Statement],
         loop_vars: &Scope,
+        shapes: &HashMap<String, Shape>,
     ) -> Result<()> {
         let start_val = self.eval_index_expr(&self.expand_expr(start, loop_vars)?, loop_vars)?;
         let end_val = self.eval_index_expr(&self.expand_expr(end, loop_vars)?, loop_vars)?;
@@ -608,7 +734,7 @@ impl Flattener<'_> {
         for k in 0..count as i64 {
             let mut new_loop_vars = loop_vars.clone();
             new_loop_vars.insert(var_name.clone(), (first + k * step) as f64);
-            self.flatten(body, &new_loop_vars)?;
+            self.flatten(body, &new_loop_vars, shapes)?;
         }
         Ok(())
     }
@@ -2572,7 +2698,7 @@ impl Flattener<'_> {
             Expr::ArrayAccess { name, indices } => {
                 self.matrix_from_array_access(e, name, indices, loop_vars)
             }
-            Expr::ArrayLiteral(elements) => self.matrix_from_literal(elements, loop_vars),
+            Expr::ArrayLiteral(elements) => self.matrix_from_literal(elements, loop_vars, shapes),
             Expr::BinOp { op, left, right } => {
                 self.compile_matrix_bin_op(*op, left, right, loop_vars, shapes)
             }
@@ -2605,7 +2731,15 @@ impl Flattener<'_> {
     /// Port of `matrixFromLiteral` / `matrixFromRowLiterals`: a literal whose
     /// first element is itself a literal is row-major (`[1 2; 3 4]`); a flat
     /// literal is a column vector.
-    fn matrix_from_literal(&self, elements: &[Expr], loop_vars: &Scope) -> Result<Matrix> {
+    /// A matrix literal. FX5: an element may itself be a matrix (`[A; A]`,
+    /// `[A, b]`), whose block is placed where it stands; blocks in a row share
+    /// their row count and rows share their column count.
+    fn matrix_from_literal(
+        &mut self,
+        elements: &[Expr],
+        loop_vars: &Scope,
+        shapes: &mut HashMap<String, Shape>,
+    ) -> Result<Matrix> {
         if elements.is_empty() {
             return Err(parse_err("Matrix literal must not be empty."));
         }
@@ -2622,28 +2756,59 @@ impl Flattener<'_> {
                 if row_elements.is_empty() {
                     return Err(parse_err("Matrix literal rows must not be empty."));
                 }
+                let mut band: Matrix = Vec::new();
+                for element in row_elements {
+                    let block = self.literal_block(element, loop_vars, shapes)?;
+                    if band.is_empty() {
+                        band = block;
+                    } else if band.len() != block.len() {
+                        return Err(parse_err(
+                            "Matrix literal blocks in one row must have the same number of rows.",
+                        ));
+                    } else {
+                        for (out_row, block_row) in band.iter_mut().zip(block) {
+                            out_row.extend(block_row);
+                        }
+                    }
+                }
                 match num_cols {
-                    None => num_cols = Some(row_elements.len()),
-                    Some(cols) if cols != row_elements.len() => {
+                    None => num_cols = Some(band[0].len()),
+                    Some(cols) if cols != band[0].len() => {
                         return Err(parse_err(
                             "Matrix literal rows must have compatible column dimensions.",
                         ))
                     }
                     Some(_) => {}
                 }
-                let mut out_row = Vec::with_capacity(row_elements.len());
-                for element in row_elements {
-                    out_row.push(self.expand_expr(element, loop_vars)?);
-                }
-                matrix.push(out_row);
+                matrix.extend(band);
             }
             return Ok(matrix);
         }
         let mut matrix = Vec::with_capacity(elements.len());
         for element in elements {
-            matrix.push(vec![self.expand_expr(element, loop_vars)?]);
+            let block = self.literal_block(element, loop_vars, shapes)?;
+            if block[0].len() != 1 {
+                return Err(parse_err(
+                    "Matrix literal rows must have compatible column dimensions.",
+                ));
+            }
+            matrix.extend(block);
         }
         Ok(matrix)
+    }
+
+    /// One element of a matrix literal: a scalar is a 1×1 block, and a matrix
+    /// expression its own block.
+    fn literal_block(
+        &mut self,
+        element: &Expr,
+        loop_vars: &Scope,
+        shapes: &mut HashMap<String, Shape>,
+    ) -> Result<Matrix> {
+        if is_matrix_expr(element) {
+            return self.compile_matrix_expr(element, loop_vars, shapes);
+        }
+        Ok(vec![vec![self.expand_expr(element, loop_vars)?]])
     }
 
     /// Port of `EquationParser.compileMatrixBinOp`.
@@ -3750,9 +3915,9 @@ fn register_shape(
 }
 
 /// Rewrites bare references to a registered matrix/vector variable into the
-/// explicit `A[1:r,1:c]` form. Port of `EquationParser.resolveShapes` — note
-/// it does **not** descend into array accesses, literals, comparisons or
-/// `not`, exactly like the Java switch.
+/// explicit `A[1:r,1:c]` form. Port of `EquationParser.resolveShapes`, which
+/// does not descend into array accesses, comparisons or `not`. FX5: it does
+/// descend into array literals, so `[A; A]` stacks the matrix.
 fn resolve_shapes(e: &Expr, shapes: &HashMap<String, Shape>) -> Expr {
     match e {
         Expr::Var(name) => match shapes.get(&name.to_ascii_lowercase()) {
@@ -3769,6 +3934,9 @@ fn resolve_shapes(e: &Expr, shapes: &HashMap<String, Shape>) -> Expr {
             function: function.clone(),
             args: args.iter().map(|a| resolve_shapes(a, shapes)).collect(),
         },
+        Expr::ArrayLiteral(elements) => {
+            Expr::ArrayLiteral(elements.iter().map(|a| resolve_shapes(a, shapes)).collect())
+        }
         _ => e.clone(),
     }
 }
@@ -4242,6 +4410,44 @@ mod tests {
     /// FX6: a constant time vector's samples go into the `step$` calls as
     /// numbers, so no call names all N of them; one that is not constant
     /// keeps its names. Either way the answers are the default grid's.
+    /// FX5 (decided 2026-11-28): a scope knows every shape it declares, a
+    /// `FOR` body sees the enclosing ones, and a literal places a matrix as a
+    /// block. All three were "underspecified" before.
+    #[test]
+    fn a_matrix_resolves_above_its_declaration_in_a_for_and_in_a_literal() {
+        let lhs = |source: &str| -> Vec<String> {
+            expand(source)
+                .iter()
+                .map(|eq| match &eq.lhs {
+                    Expr::Var(name) => name.clone(),
+                    other => format!("{other:?}"),
+                })
+                .collect()
+        };
+        let above = lhs("x = A*b\nA = [2, 0; 0, 4]\nb = [1; 1]\n");
+        assert!(above.contains(&"x[2]".to_string()), "{above:?}");
+        let body = lhs("A = [2, 0; 0, 4]\nb = [1; 1]\nFOR k = 1 TO 1\n  x = A*b\nEND\n");
+        assert!(body.contains(&"x[2]".to_string()), "{body:?}");
+        let stacked = expand("A = [1, 2; 3, 4]\nB = [A; A]\nC = [A, A]\n");
+        let element = |name: &str| {
+            stacked
+                .iter()
+                .find(|eq| matches!(&eq.lhs, Expr::Var(n) if n.eq_ignore_ascii_case(name)))
+                .unwrap_or_else(|| panic!("{name} in {stacked:?}"))
+                .rhs
+                .variables()
+        };
+        assert!(element("b[4,1]")
+            .iter()
+            .any(|v| v.eq_ignore_ascii_case("a[2,1]")));
+        assert!(element("c[2,3]")
+            .iter()
+            .any(|v| v.eq_ignore_ascii_case("a[2,1]")));
+        // A scalar beside a matrix of the same name keeps its scalar reading.
+        let both = lhs("c = 50\ny = c + 1\nC = [1, 0]\n");
+        assert!(both.iter().any(|n| n == "y"), "{both:?}");
+    }
+
     #[test]
     fn a_constant_time_vector_goes_into_the_response_as_numbers() {
         let response_vars = |source: &str| -> std::collections::BTreeSet<String> {
