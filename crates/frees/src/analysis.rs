@@ -597,6 +597,38 @@ fn specs_from_variable_info(
     specs
 }
 
+/// Fold the document's own `UncertaintyOf`/`DistributionOf` sigmas into the
+/// Variable Information specs, so the analyses take them as sources. A
+/// Variable Information uncertainty overrides the document's (decided
+/// 2026-11-27). A variable with no Variable Information entry gets its solved
+/// value as its guess, so naming it changes nothing else.
+fn with_declared_sources(
+    specs: &mut BTreeMap<String, frees_core::analysis::uncertainty::UncertaintySpec>,
+    facade: &SolveRequest,
+    base: &frees_core::Solution,
+) {
+    for (name, sigma) in &base.declared_uncertainties {
+        let stated = facade
+            .variable_info
+            .iter()
+            .any(|dto| dto.uncertainty.is_some() && dto.name.trim().eq_ignore_ascii_case(name));
+        if stated {
+            continue;
+        }
+        let spec = specs.entry(name.clone()).or_insert_with(|| {
+            frees_core::analysis::uncertainty::UncertaintySpec {
+                guess: base
+                    .values
+                    .get(name)
+                    .copied()
+                    .unwrap_or(frees_core::engine::DEFAULT_GUESS),
+                ..Default::default()
+            }
+        });
+        spec.uncertainty = *sigma;
+    }
+}
+
 fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> {
     frees_core::props::tables::install_builtin_once();
 
@@ -644,7 +676,7 @@ fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> 
     let system = unit_system_of(&facade);
     let explicit_units = explicit_units_of(&facade);
 
-    let specs = specs_from_variable_info(&facade);
+    let mut specs = specs_from_variable_info(&facade);
 
     // The base solve the Java reads `base.uncertainties()` from —
     // `montecarlo::run` keeps only the base *values*, so the first-order
@@ -653,6 +685,7 @@ fn monte_carlo_inner(source: &str, request_json: &str) -> Result<Value, String> 
     // same shape differently (its `run` returns the whole base result).
     let base = frees_core::solve_with_tables(source, &settings, &overrides, &extra_tables)
         .map_err(|failure| failure.to_string_message())?;
+    with_declared_sources(&mut specs, &facade, &base);
 
     // Phase 4.3/4.6: the document's own `DistributionOf`/`Correlation`
     // declarations ride out on the base solve, and the request picks the
@@ -901,10 +934,11 @@ fn sensitivity_inner(source: &str, request_json: &str) -> Result<Value, String> 
     );
     let settings = settings_of(&facade);
     let overrides = overrides_of(&facade);
-    let specs = specs_from_variable_info(&facade);
+    let mut specs = specs_from_variable_info(&facade);
 
     let base = frees_core::solve_with_tables(source, &settings, &overrides, &extra_tables)
         .map_err(|failure| failure.to_string_message())?;
+    with_declared_sources(&mut specs, &facade, &base);
 
     // The sources are exactly Monte Carlo's: a declared uncertainty (a bare `±`
     // or one implied by a distribution) on a variable the base solve produced.

@@ -626,6 +626,7 @@ impl PreparedDocument {
                 uncertainty_contributions: BTreeMap::new(),
                 uncertainty_distributions: BTreeMap::new(),
                 uncertainty_correlations: Default::default(),
+                declared_uncertainties: BTreeMap::new(),
                 plots: self.doc.blocks.plots.clone(),
                 parametric_tables: self.doc.blocks.parametric_tables.clone(),
                 tables: self.document_tables.clone(),
@@ -824,6 +825,12 @@ impl PreparedDocument {
                     .map(|inner| inner.values)
             },
         )?;
+        let declared_uncertainties: BTreeMap<String, f64> = declarations
+            .uncertainty_exprs
+            .keys()
+            .chain(declarations.distribution_exprs.keys())
+            .filter_map(|name| Some((name.clone(), unc_specs.get(name)?.uncertainty)))
+            .collect();
 
         let mut solved: BTreeMap<String, f64> = prep
             .specs
@@ -919,6 +926,7 @@ impl PreparedDocument {
             uncertainty_distributions: propagation.distributions,
             uncertainty_correlations: propagation.correlations,
             uncertainty_contributions: propagation.contributions,
+            declared_uncertainties,
             plots: doc.blocks.plots.clone(),
             parametric_tables: doc.blocks.parametric_tables.clone(),
             tables: document_tables.clone(),
