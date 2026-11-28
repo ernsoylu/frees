@@ -132,7 +132,7 @@ port(wall)
   // zone does not model: Enthalpy(T=wall.T) is then liquid, and the clamp keeps
   // that latent jump out of the duty (continuous through wall.T = Tsat). At
   // wall.T = Tsat, (P, T) does not fix the state, so that side is not evaluated.
-  Q_sh      = If(wall.T, Tsat, 0, 0, (1 - exp(-NTU_sh)) * in.mdot * max(Enthalpy(fluid$, P=in.P, T=wall.T) - hg, 0))
+  Q_sh      = If(wall.T, Tsat, 0, 0, (1 - exp(-max(NTU_sh, 0))) * in.mdot * max(Enthalpy(fluid$, P=in.P, T=wall.T) - hg, 0))
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
   out.h     = in.h + (Q_tp + Q_sh) / in.mdot
   Q         = Q_tp + Q_sh
@@ -165,7 +165,7 @@ port(wall)
   cp_sc     = Cp(fluid$, P=in.P, x=0)
   NTU_sc    = U_sc * pi# * D * L_sc * r_sc / (in.mdot * cp_sc)
   // A wall above Tsat would boil the liquid; clamped as in the evaporator.
-  Q_sc      = If(wall.T, Tsat, (1 - exp(-NTU_sc)) * in.mdot * max(hf - Enthalpy(fluid$, P=in.P, T=wall.T), 0), 0, 0)
+  Q_sc      = If(wall.T, Tsat, (1 - exp(-max(NTU_sc, 0))) * in.mdot * max(hf - Enthalpy(fluid$, P=in.P, T=wall.T), 0), 0, 0)
   T_out     = Temperature(fluid$, P=out.P, h=out.h)
   out.h     = in.h - (Q_cond + Q_sc) / in.mdot
   Q         = Q_cond + Q_sc
@@ -393,7 +393,9 @@ port(wall)
   out.P     = in.P - dP
   Tevap     = T_sat(fluid$, P=in.P)
   Q         = frac * UA * (wall.T - Tevap)
-  out.h     = if(SH, Enthalpy(fluid$, P=out.P, T=Tevap + SH), Enthalpy(fluid$, P=out.P, x=1))
+  // The superheat is over the outlet's own dew point (FX8/E05): Tevap, at the
+  // inlet pressure, drives the heat transfer only.
+  out.h     = if(SH, Enthalpy(fluid$, P=out.P, T=Temperature(fluid$, P=out.P, x=1) + SH), Enthalpy(fluid$, P=out.P, x=1))
   in.mdot   = Q / (out.h - in.h)
   out.mdot  = in.mdot
   wall.Qdot = Q

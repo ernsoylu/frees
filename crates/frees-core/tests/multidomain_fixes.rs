@@ -461,3 +461,18 @@ fn a_two_phase_line_passes_zero_and_reversed_flow() {
         );
     }
 }
+
+#[test]
+fn an_ua_evaporator_delivers_its_set_superheat_after_its_pressure_drop() {
+    // FX8/E05: the superheat was set over Tevap, the inlet saturation
+    // temperature, so the outlet, at in.P - dP, left 6.27 K and 11.80 K
+    // above its own dew point at dP = 20 and 100 kPa for SH = 5.
+    for dp in [0.0, 20000.0, 100000.0] {
+        let v = values(&format!(
+            "TwoPhaseEvaporatorUA E(fluid$=R134a, UA=320 [W/K], dP={dp} [Pa], SH=5 [K])\n\
+             E.in.P = 300000\nE.in.h = 250000\nE.wall.T = 285\nE.frac = 1\n\
+             sh = Temperature(R134a, P=E.out.P, h=E.out.h) - Temperature(R134a, P=E.out.P, x=1)\n"
+        ));
+        assert!((v["sh"] - 5.0).abs() < 1e-9, "dP = {dp}: {v:?}");
+    }
+}

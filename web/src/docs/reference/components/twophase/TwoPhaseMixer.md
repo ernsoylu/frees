@@ -99,7 +99,7 @@ CHLR.frac = 1
 AUX.frac = 1
 
 { CHECK aux.in.h 236295.613 0.2362956130154989 }
-{ CHECK aux.in.mdot 0.01823337195 1.8233371952084952e-8 }
+{ CHECK aux.in.mdot 0.018454857615858362 1.8233371952084952e-8 }
 { CHECK aux.in.p 350000 0.35 }
 ```
 
@@ -107,7 +107,7 @@ Expected output (selected solution values; numerical rounding may vary):
 
 ```text
 aux.in.h = 236295.613
-aux.in.mdot = 0.01823337195
+aux.in.mdot = 0.01845485762
 aux.in.p = 350000
 ```
 

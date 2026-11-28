@@ -44,7 +44,7 @@ $$
 out.p &= in.p - dp \\
 tevap &= \text{T\_sat}\left(\mathrm{fluid\$}, p=in.p\right) \\
 q &= frac\cdot ua\cdot \left(wall.t - tevap\right) \\
-out.h &= \text{if}\left(sh, \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=tevap + sh\right), \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, x=1\right)\right) \\
+out.h &= \text{if}\left(sh, \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, t=\text{Temperature}\left(\mathrm{fluid\$}, p=out.p, x=1\right) + sh\right), \text{Enthalpy}\left(\mathrm{fluid\$}, p=out.p, x=1\right)\right) \\
 in.mdot &= \frac{q}{out.h - in.h} \\
 out.mdot &= in.mdot \\
 wall.qdot &= q
@@ -106,8 +106,14 @@ connect(CHLR.wall, CHL.wall)
 CHLR.frac = 1
 AUX.frac = 1
 
+// Each outlet leaves its set superheat above its own dew point.
+SH_chlr = Temperature(R1234yf, P=CHLR.out.P, h=CHLR.out.h) - Temperature(R1234yf, P=CHLR.out.P, x=1)
+SH_aux  = Temperature(R1234yf, P=AUX.out.P, h=AUX.out.h) - Temperature(R1234yf, P=AUX.out.P, x=1)
+
+{ CHECK SH_chlr 5 1e-6 }
+{ CHECK SH_aux 8 1e-6 }
 { CHECK aux.in.h 236295.613 0.2362956130154989 }
-{ CHECK aux.in.mdot 0.01823337195 1.8233371952084952e-8 }
+{ CHECK aux.in.mdot 0.018454857615858362 1.8233371952084952e-8 }
 { CHECK aux.in.p 350000 0.35 }
 ```
 
@@ -115,7 +121,7 @@ Expected output (selected solution values; numerical rounding may vary):
 
 ```text
 aux.in.h = 236295.613
-aux.in.mdot = 0.01823337195
+aux.in.mdot = 0.01845485762
 aux.in.p = 350000
 ```
 
