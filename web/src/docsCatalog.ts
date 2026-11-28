@@ -2025,7 +2025,7 @@ frees uses array-language-like syntax for matrices and vectors. **You must decla
 \`\`\`
 A[1:2, 1:2] = [1, 2; 3, 4]
 \`\`\`
-- **Slice suffixes:** \`[start:end]\` (1-based) tell the compiler the dimensions. Always include them on the left of an assignment when you first define an array; once sized, the bare name works downstream.
+- **Slice suffixes:** \`[start:end]\` (1-based) tell the compiler the dimensions. Always include them on the left of an assignment when you first define an array; once sized, the bare name works anywhere in the document: above the line that sizes it, inside a \`FOR\` loop, and inside another literal.
 
 ## Generation helpers
 - **\`zeros(m, n)\`** — $m \\times n$ zero matrix.
@@ -2038,6 +2038,25 @@ A[1:2, 1:2] = [1, 2; 3, 4]
 \`\`\`
 I[1:3, 1:3] = eye(3)                 { 3x3 identity }
 grid[1:11] = linspace(0, 1, 11)      { 0, 0.1, …, 1.0 }
+\`\`\`
+
+## Order, loops and blocks
+Equations are unordered, so a matrix can be used before the line that declares it, and a \`FOR\` body sees the matrices around it. Inside a literal, a matrix is placed as a block: \`[A; A]\` stacks two copies, \`[A, b]\` appends a column.
+
+\`\`\`frees
+x = A*b                    { A and b are declared below }
+A = [2, 0; 0, 4]
+b = [1; 1]
+S = [A; A]                 { 4×2 }
+Ab = [A, b]                { 2×3 }
+FOR k = 1 TO 2
+  y[k] = k*S[k + 2, k]     { S from outside the loop }
+END
+
+{ CHECK x[2] 4 0 }
+{ CHECK S[3,1] 2 0 }
+{ CHECK Ab[2,3] 1 0 }
+{ CHECK y[2] 8 0 }
 \`\`\`
 
 > **Tip:** for control-systems work, transfer-function coefficient arrays are just vectors — \`num = [0, 0, 1]\` and \`den = [1, 3, 2]\` represent $1/(s^2+3s+2)$. See *Control Systems & Symbolic CAS*.
