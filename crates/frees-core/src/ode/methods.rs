@@ -135,6 +135,10 @@ pub trait OdeMethod {
         h: f64,
         problem: &OdeProblem<'_>,
     ) -> Result<StepResult>;
+
+    /// The state jumped or the right-hand side changed (a set event, a live
+    /// input): forget anything carried from earlier steps.
+    fn restart(&self) {}
 }
 
 // ---------------------------------------------------------------------------
@@ -495,8 +499,77 @@ const ROS_MAX_SCALE: f64 = 5.0;
 /// linear solves; the third stage yields an embedded order-3 error estimate for
 /// adaptive step control. L-stable and well-suited to Van der Pol (large μ) and
 /// Robertson kinetics.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct RosenbrockMethod;
+///
+/// The Jacobian is reused across steps (FX6, decided 2026-11-27): it costs n
+/// right-hand-side evaluations, each a nested algebraic solve, and was 57 % of
+/// `ev-battery-cooling-pid`. It is formed again when a step taken with an
+/// older one is rejected, when `h` has moved more than [`ROS_JACOBIAN_H_RATIO`]
+/// from the `h` it was formed at, when it no longer explains how `f` moved
+/// over the last step ([`ROS_SECANT`]), and after a [`OdeMethod::restart`].
+/// `W`, `∂f/∂t` and the error estimate are still per step.
+#[derive(Debug, Default)]
+pub struct RosenbrockMethod {
+    frozen: std::cell::RefCell<Option<FrozenJacobian>>,
+}
+
+/// A Jacobian kept from an earlier `ode23s` step, with where it was formed.
+#[derive(Debug)]
+struct FrozenJacobian {
+    jac: Vec<Vec<f64>>,
+    t: f64,
+    y: Vec<f64>,
+    h: f64,
+    /// A step taken with it, away from where it was formed, was rejected.
+    spoiled: bool,
+    /// The last attempt's start: `t`, `y`, `f` and `∂f/∂t`.
+    last: (f64, Vec<f64>, Vec<f64>, Vec<f64>),
+}
+
+impl FrozenJacobian {
+    fn formed_at(&self, t: f64, y: &[f64]) -> bool {
+        self.t == t && self.y == y
+    }
+
+    /// Whether it may serve a step from `(t, y)` of size `h`: no step taken
+    /// with it was rejected, `h` is within [`ROS_JACOBIAN_H_RATIO`] of the `h`
+    /// it was formed at, and it still explains how `f` moved since the last
+    /// attempt — `f − f_last` against `J·Δy + ∂f/∂t·Δt`, to [`ROS_SECANT`].
+    fn still_fits(&self, t: f64, y: &[f64], f0: &[f64], h: f64) -> bool {
+        let (tl, yl, fl, dl) = &self.last;
+        if self.spoiled
+            || y.len() != self.y.len()
+            || h > ROS_JACOBIAN_H_RATIO * self.h
+            || h * ROS_JACOBIAN_H_RATIO < self.h
+        {
+            return false;
+        }
+        let (mut miss, mut moved) = (0.0f64, 0.0f64);
+        for (i, row) in self.jac.iter().enumerate() {
+            let df = f0[i] - fl[i];
+            let lin: f64 = row
+                .iter()
+                .zip(y.iter().zip(yl))
+                .map(|(j, (a, b))| j * (a - b))
+                .sum::<f64>()
+                + dl[i] * (t - tl);
+            miss = miss.max((df - lin).abs());
+            moved = moved.max(df.abs());
+        }
+        miss <= ROS_SECANT * moved
+    }
+}
+
+/// How far `h` may move from the step a frozen Jacobian was formed at, either
+/// way, before it is formed again.
+const ROS_JACOBIAN_H_RATIO: f64 = 2.0;
+
+/// How much of the change in `f` over the last step a frozen Jacobian may fail
+/// to explain (max norm) before it is formed again. The ode23s error estimate
+/// assumes an exact Jacobian, so a stale one is not always rejected: without
+/// this test `components_g4_pcmmass` (a 2 K Gaussian latent bump) ran 10x off a
+/// tight reference. At 0.1 every ode23s golden is at least as close to one as
+/// with a Jacobian formed every step.
+const ROS_SECANT: f64 = 0.1;
 
 impl RosenbrockMethod {
     /// `RosenbrockMethod.D` — `1 / (2 + √2)`.
@@ -536,9 +609,26 @@ impl OdeMethod for RosenbrockMethod {
         let e32 = RosenbrockMethod::e32();
         let n = y.len();
         let span = p.tf - p.t0;
-        let jac = jacobian(f, t, y, f0)?;
         let dfdt = dfdt(f, t, y, f0, span)?;
-        let w = identity_minus(h * d, &jac);
+        let (w, reused) = {
+            let mut frozen = self.frozen.borrow_mut();
+            let keep = frozen
+                .as_ref()
+                .is_some_and(|fz| fz.formed_at(t, y) || fz.still_fits(t, y, f0, h));
+            if !keep {
+                *frozen = Some(FrozenJacobian {
+                    jac: jacobian(f, t, y, f0)?,
+                    t,
+                    y: y.to_vec(),
+                    h,
+                    spoiled: false,
+                    last: (t, y.to_vec(), f0.to_vec(), dfdt.clone()),
+                });
+            }
+            let fz = frozen.as_mut().expect("formed above");
+            fz.last = (t, y.to_vec(), f0.to_vec(), dfdt.clone());
+            (identity_minus(h * d, &fz.jac), !fz.formed_at(t, y))
+        };
 
         // Stage 1: W·k1 = f0 + h·d·(∂f/∂t)
         let mut b1 = vec![0.0; n];
@@ -596,8 +686,17 @@ impl OdeMethod for RosenbrockMethod {
             }
             return Ok(StepResult::accept(y_new, f2, h_next));
         }
+        if reused {
+            if let Some(fz) = self.frozen.borrow_mut().as_mut() {
+                fz.spoiled = true;
+            }
+        }
         let scale = java_max(ROS_MIN_SCALE, ROS_SAFETY * libm::pow(err_norm, -exponent));
         Ok(StepResult::reject(h * scale))
+    }
+
+    fn restart(&self) {
+        self.frozen.replace(None);
     }
 }
 
@@ -1064,11 +1163,11 @@ mod tests {
             RungeKuttaMethod::new(ButcherTableau::bogacki_shampine32()).order(),
             3
         );
-        assert_eq!(RosenbrockMethod.order(), 2);
+        assert_eq!(RosenbrockMethod::default().order(), 2);
         assert_eq!(BdfMethod.order(), 2);
-        assert_eq!(RosenbrockMethod.name(), "ode23s");
+        assert_eq!(RosenbrockMethod::default().name(), "ode23s");
         assert_eq!(BdfMethod.name(), "ode15s");
-        assert!(RosenbrockMethod.adaptive());
+        assert!(RosenbrockMethod::default().adaptive());
         assert!(BdfMethod.adaptive());
     }
 
@@ -1178,7 +1277,7 @@ mod tests {
         let rhs = |_t: f64, y: &[f64]| Ok(vec![-y[0]]);
         let p = problem(&rhs, vec![1.0]);
         let h = 0.01;
-        let sr = RosenbrockMethod
+        let sr = RosenbrockMethod::default()
             .step(&rhs, 0.0, &[1.0], &[-1.0], h, &p)
             .unwrap();
         assert!(sr.accepted);
@@ -1236,7 +1335,7 @@ mod tests {
         for (label, sr) in [
             (
                 "ode23s",
-                RosenbrockMethod
+                RosenbrockMethod::default()
                     .step(&rhs, 0.0, &[1.0], &[lambda], h, &p)
                     .unwrap(),
             ),

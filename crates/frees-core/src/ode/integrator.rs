@@ -381,6 +381,7 @@ impl ExplicitStepper {
         self.g_prev = g;
         self.consecutive_sets = 0;
         self.window_start_t = self.t;
+        self.method.restart();
         knots.push(self.t, self.y.clone(), self.f.clone());
         Ok(())
     }
@@ -499,6 +500,7 @@ impl ExplicitStepper {
                 }
                 self.t = hit.time;
                 self.y = hit.y.clone();
+                self.method.restart();
                 // The left limit at the discontinuity (FX7/E02): without it the
                 // samples before the crossing interpolate toward the post-set
                 // state and show the reset before it happens. Two knots at one
@@ -715,7 +717,7 @@ pub fn resolve_method(name: &str) -> Result<Box<dyn OdeMethod>> {
         "ode5" => Box::new(RungeKuttaMethod::new(ButcherTableau::dopri5_fixed())),
         "ode45" => Box::new(RungeKuttaMethod::new(ButcherTableau::dopri54())),
         "ode23" => Box::new(RungeKuttaMethod::new(ButcherTableau::bogacki_shampine32())),
-        "ode23s" => Box::new(RosenbrockMethod),
+        "ode23s" => Box::new(RosenbrockMethod::default()),
         "radau" | "radau5" | "radauiia" => Box::new(crate::ode::radau::RadauMethod),
         "ode15s" | "ode23t" | "ode23tb" => Box::new(BdfMethod),
         _ => {
@@ -1271,6 +1273,30 @@ mod tests {
         for row in &r.states {
             assert!(row[0].is_finite() && row[0].abs() < 4.0, "x = {}", row[0]);
         }
+    }
+
+    /// FX6: `ode23s` keeps its Jacobian across steps. Formed every attempt it
+    /// costs n + 3 evaluations (J, ∂f/∂t, two stages); reused, close to the
+    /// floor of 3, and the answer still meets the closed form.
+    #[test]
+    fn ode23s_reuses_its_jacobian_and_keeps_its_accuracy() {
+        let evals = std::cell::Cell::new(0usize);
+        let rhs = |_t: f64, y: &[f64]| {
+            evals.set(evals.get() + 1);
+            Ok(vec![-y[0], -100.0 * y[1], -1000.0 * y[2]])
+        };
+        let p = dynamic_problem("ode23s", &rhs, vec![1.0, 1.0, 1.0], 0.0, 5.0, 11);
+        let r = integrate(&p).unwrap();
+        for (i, &t) in r.times.iter().enumerate() {
+            assert_close(r.states[i][0], libm::exp(-t), 1e-4, "y1");
+            assert_close(r.states[i][1], libm::exp(-100.0 * t), 1e-4, "y2");
+        }
+        let attempts = r.accepted_steps + r.rejected_steps;
+        assert!(
+            evals.get() < attempts * 4,
+            "{} evaluations over {attempts} attempts",
+            evals.get()
+        );
     }
 
     #[test]
