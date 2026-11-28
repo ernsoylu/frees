@@ -460,5 +460,8 @@ Diagnostics are stable by category and include source location:
 | `FREES-MIG-009` | a quote after a name, `)` or `]` that the Java engine paired with a later quote as a string (now a transpose) |
 
 The legacy adapter may preserve behavior, but it must not silently reinterpret
-a construct whose equation/ordered meaning changes. Native and WASM builds
+a construct whose equation/ordered meaning changes. FX5's matrix-order change
+(a bare matrix name above its declaration, inside a `FOR` body, or inside a
+literal) needs no code: the Java engine left each such document
+underspecified, so a legacy import that now solves had no meaning to change. Native and WASM builds
 share these categories and the same callable resolution rules.
